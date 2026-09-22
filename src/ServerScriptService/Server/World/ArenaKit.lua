@@ -211,12 +211,49 @@ end
 
 -- Small floating debris scattered through open air between islands.
 function ArenaKit.MakeDebris(pos: Vector3, size: number, parent: Instance, palette: Palette, topAccent: boolean?)
-	local rock = ArenaKit.NewPart("Rock", Vector3.new(size, size * 0.7, size), CFrame.new(pos), palette.StoneDark, Enum.Material.Slate, parent)
-	rock.Shape = Enum.PartType.Ball
-	rock.CanCollide = false
-	if topAccent ~= false and math.random() > 0.4 then
-		local tuft = ArenaKit.NewPart("Tuft", Vector3.new(size * 0.5, size * 0.2, size * 0.5), CFrame.new(pos + Vector3.new(0, size * 0.4, 0)), palette.Top, Enum.Material.SmoothPlastic, parent)
-		tuft.Shape = Enum.PartType.Ball
+	local folder = Instance.new("Folder")
+	folder.Name = "FloatingChunk"
+	folder.Parent = parent
+	local yaw = math.rad(math.random(0, 359))
+	local top = ArenaKit.NewPart(
+		"ChunkTop",
+		Vector3.new(size * 1.45, size * 0.26, size * 1.15),
+		CFrame.new(pos + Vector3.new(0, size * 0.18, 0)) * CFrame.Angles(0, yaw, math.rad(math.random(-5, 5))),
+		(topAccent ~= false) and palette.Top or palette.Stone,
+		(topAccent ~= false) and Enum.Material.Grass or Enum.Material.Slate,
+		folder
+	)
+	top.CanCollide = false
+	local core = ArenaKit.NewPart(
+		"ChunkCore",
+		Vector3.new(size * 1.28, size * 0.9, size),
+		CFrame.new(pos - Vector3.new(0, size * 0.25, 0)) * CFrame.Angles(math.rad(math.random(-10, 10)), yaw, math.rad(math.random(-8, 8))),
+		palette.Stone,
+		Enum.Material.Slate,
+		folder
+	)
+	core.CanCollide = false
+	for i = 1, 3 do
+		local a = yaw + math.rad(i * 115)
+		local shard = ArenaKit.NewWedge(
+			"ChunkFacet" .. i,
+			Vector3.new(size * 0.42, size * 0.82, size * 0.36),
+			CFrame.new(pos + Vector3.new(math.cos(a) * size * 0.34, -size * 0.38, math.sin(a) * size * 0.34)) * CFrame.Angles(0, a, 0),
+			(i % 2 == 0) and palette.StoneDark or palette.Stone,
+			Enum.Material.Slate,
+			folder
+		)
+		shard.CanCollide = false
+	end
+	if topAccent ~= false and math.random() > 0.45 then
+		local tuft = ArenaKit.NewPart(
+			"ChunkTuft",
+			Vector3.new(size * 0.42, size * 0.18, size * 0.34),
+			CFrame.new(pos + Vector3.new(0, size * 0.42, 0)) * CFrame.Angles(0, yaw + math.rad(18), 0),
+			palette.TopDark,
+			Enum.Material.Grass,
+			folder
+		)
 		tuft.CanCollide = false
 	end
 end

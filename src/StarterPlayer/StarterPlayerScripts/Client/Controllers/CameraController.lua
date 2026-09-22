@@ -21,6 +21,7 @@ local camera = Workspace.CurrentCamera
 local yaw, pitch = 0, 0.15
 local distance = GameConfig.Camera.ThirdPersonDistance
 local enabled = false
+local lobbyView = false
 local touchRotating = false
 local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
@@ -94,6 +95,14 @@ local function updateGamepad(dt: number)
 end
 
 local function step(dt: number)
+	if lobbyView then
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = 58
+		local base = CFrame.lookAt(Vector3.new(-86, 58, 126), Vector3.new(0, 14, 0))
+		local drift = math.sin(os.clock() * 0.22) * 1.4
+		camera.CFrame = base * CFrame.new(drift, math.sin(os.clock() * 0.18) * 0.55, 0)
+		return
+	end
 	if not enabled then
 		return
 	end
@@ -168,14 +177,32 @@ end
 function CameraController.SetEnabled(on: boolean)
 	enabled = on
 	if on then
+		lobbyView = false
+	end
+	if on then
 		if not isMobile() and UserInputService.MouseEnabled then
 			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 			UserInputService.MouseIconEnabled = false
 		end
 	else
-		camera.CameraType = Enum.CameraType.Custom
+		if not lobbyView then
+			camera.CameraType = Enum.CameraType.Custom
+		end
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
+	end
+end
+
+function CameraController.SetLobbyView(on: boolean)
+	lobbyView = on
+	if on then
+		enabled = false
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = 58
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	else
+		camera.CameraType = Enum.CameraType.Custom
 	end
 end
 

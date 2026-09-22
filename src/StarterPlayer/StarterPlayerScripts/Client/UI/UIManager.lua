@@ -107,6 +107,7 @@ local function buildTransitionLayer()
 end
 
 local function enableGameplay(on: boolean)
+	CameraController.SetLobbyView(not on)
 	CameraController.SetEnabled(on)
 	CombatController.SetEnabled(on)
 end
@@ -197,6 +198,7 @@ function UIManager.Start()
 		warn("[PAW MAYHEM] Results screen failed to build: " .. tostring(resultsErr))
 	end
 	buildTransitionLayer()
+	CameraController.SetLobbyView(true)
 
 	ClientState.MatchChanged:Connect(onPhase)
 
