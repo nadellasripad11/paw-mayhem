@@ -6831,7 +6831,7 @@ local function buildPlayPanel(parent)
 	-- reference flow: choose an arena first, then load into the round.
 	local MAPS = {
 		{ id = "SkyIslands", name = "Sky Islands", subtitle = "Floating Village", accent = Color3.fromRGB(95, 205, 255), kind = "sky" },
-		{ id = "Volcano", name = "Ember Crater", subtitle = "Lava Foundry", accent = Color3.fromRGB(255, 120, 54), kind = "volcano" },
+		{ id = "Volcano", name = "Volcano", subtitle = "Lava Foundry", accent = Color3.fromRGB(255, 120, 54), kind = "volcano" },
 		{ id = "Toybox", name = "Toybox", subtitle = "Candy Playground", accent = Color3.fromRGB(255, 133, 190), kind = "toy" },
 	}
 	local selectedMapId = "SkyIslands"
@@ -6839,19 +6839,21 @@ local function buildPlayPanel(parent)
 
 	local shell = UIUtil.panel({ Parent = root, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(7, 35, 61), BackgroundTransparency = 0.06, ZIndex = 10 })
 	UIUtil.padding(18, shell)
-	UIUtil.label({ Parent = shell, Text = "CHOOSE YOUR BATTLEFIELD", Font = Theme.Font.Title, TextSize = 26, Size = UDim2.new(1, -260, 0, 32), ZIndex = 11 })
-	UIUtil.label({ Parent = shell, Text = "Pick one of the three arenas before loading into Team Deathmatch.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, -260, 0, 18), ZIndex = 11 })
+	UIUtil.label({ Parent = shell, Text = "MAPS", Font = Theme.Font.Title, TextSize = 26, Size = UDim2.new(1, -260, 0, 32), ZIndex = 11 })
+	UIUtil.label({ Parent = shell, Text = "Choose your arena before dropping into Team Deathmatch.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, -260, 0, 18), ZIndex = 11 })
 	local teamPill = UIUtil.panel({ Parent = shell, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(230, 48), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 11 })
 	UIUtil.label({ Parent = teamPill, Text = "BLUE PAWS     3  v  3     RED CLAWS", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Accent, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 12 })
 
 	local row = UIUtil.make("Frame", { Parent = shell, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 0, 270), BackgroundTransparency = 1, ZIndex = 11 })
-	UIUtil.gridLayout(row, UDim2.fromOffset(220, 262), UDim2.fromOffset(12, 12))
+	UIUtil.listLayout(row, 10, Enum.FillDirection.Vertical).HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 	local function addToyShapes(parent, map)
 		if map.kind == "volcano" then
 			for i = 1, 5 do
-				local glow = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(18 + i * 5, 18 + i * 5), Position = UDim2.fromScale(0.14 + i * 0.17, 0.38 + (i % 2) * 0.06), BackgroundColor3 = Color3.fromRGB(255, 100 + i * 18, 42), BackgroundTransparency = 0.12, BorderSizePixel = 0, ZIndex = 12 })
-				UIUtil.corner(UDim.new(0.5, 0), glow)
+				local rock = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(48 + (i % 2) * 14, 34 + (i % 3) * 9), Position = UDim2.fromScale(0.08 + i * 0.17, 0.42 - (i % 2) * 0.08), BackgroundColor3 = Color3.fromRGB(58, 38, 55), BorderSizePixel = 0, ZIndex = 12 })
+				UIUtil.corner(UDim.new(0, 7), rock)
+				local lava = UIUtil.make("Frame", { Parent = rock, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(0.42, 0, 0.72, 0), BackgroundColor3 = Color3.fromRGB(255, 118 + i * 12, 42), BorderSizePixel = 0, ZIndex = 13 })
+				UIUtil.corner(UDim.new(0, 5), lava)
 			end
 		elseif map.kind == "toy" then
 			for i = 1, 7 do
@@ -6873,9 +6875,9 @@ local function buildPlayPanel(parent)
 	end
 
 	for _, map in ipairs(MAPS) do
-		local card = UIUtil.panel({ Parent = row, Size = UDim2.fromOffset(220, 262), BackgroundColor3 = Theme.Color.Panel, ClipsDescendants = true, ZIndex = 11 })
+		local card = UIUtil.panel({ Parent = row, Size = UDim2.new(1, 0, 0, 82), BackgroundColor3 = Theme.Color.Panel, ClipsDescendants = true, ZIndex = 11 })
 		local stroke = card:FindFirstChildOfClass("UIStroke") :: UIStroke
-		local preview = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 148), BackgroundColor3 = map.accent, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 12 })
+		local preview = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 66), BackgroundColor3 = map.accent, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 12 })
 		UIUtil.corner(Theme.CornerSmall, preview)
 		if map.kind == "sky" then
 			pcall(function()
@@ -6890,10 +6892,11 @@ local function buildPlayPanel(parent)
 			UIUtil.gradient(Color3.fromRGB(113, 206, 255), Color3.fromRGB(236, 137, 202), 90, preview)
 			addToyShapes(preview, map)
 		end
-		local title = UIUtil.label({ Parent = card, Text = map.name, Font = Theme.Font.Heading, TextSize = 16, Position = UDim2.fromOffset(12, 164), Size = UDim2.new(1, -24, 0, 20), ZIndex = 13 })
-		UIUtil.label({ Parent = card, Text = map.subtitle, Font = Theme.Font.Bold, TextSize = 10, TextColor3 = map.accent, Position = UDim2.fromOffset(12, 185), Size = UDim2.new(1, -24, 0, 15), ZIndex = 13 })
-		UIUtil.label({ Parent = card, Text = "TEAM DEATHMATCH  •  6 SPAWNS", TextSize = 9, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(12, 207), Size = UDim2.new(1, -24, 0, 14), ZIndex = 13 })
-		local check = UIUtil.label({ Parent = card, Text = "✓ SELECTED", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Color3.fromRGB(182, 241, 112), Position = UDim2.fromOffset(12, 230), Size = UDim2.new(1, -24, 0, 16), Visible = false, ZIndex = 13 })
+		local tag = UIUtil.panel({ Parent = preview, Position = UDim2.fromOffset(10, 34), Size = UDim2.fromOffset(170, 26), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.08, ZIndex = 14 })
+		local title = UIUtil.label({ Parent = tag, Text = map.name, Font = Theme.Font.Heading, TextSize = 15, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 15 })
+		UIUtil.label({ Parent = card, Text = map.subtitle, Font = Theme.Font.Bold, TextSize = 11, TextColor3 = map.accent, Position = UDim2.fromOffset(200, 16), Size = UDim2.new(0.45, 0, 0, 16), ZIndex = 13 })
+		UIUtil.label({ Parent = card, Text = "TEAM DEATHMATCH  •  6 GROUNDED SPAWNS", TextSize = 9, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(200, 39), Size = UDim2.new(0.58, 0, 0, 14), ZIndex = 13 })
+		local check = UIUtil.label({ Parent = card, Text = "✓ SELECTED", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Color3.fromRGB(182, 241, 112), TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(1, -132, 0, 14), Size = UDim2.fromOffset(116, 18), Visible = false, ZIndex = 13 })
 		local hit = UIUtil.button({ Parent = card, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 20 }, function() selectMap(map) end)
 		table.insert(cards, { map = map, card = card, stroke = stroke, check = check, title = title, hit = hit })
 	end
