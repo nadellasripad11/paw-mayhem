@@ -2267,7 +2267,13 @@ local function spawnPickup()
 				conn:Disconnect()
 			end
 			grant(player, def.Id)
-			Remotes.Get("PowerUpTaken"):FireAllClients({ id = id, playerName = player.DisplayName, powerId = def.Id })
+			Remotes.Get("PowerUpTaken"):FireAllClients({
+				id = id,
+				playerName = player.DisplayName,
+				powerId = def.Id,
+				position = orb.Position,
+				color = def.Color,
+			})
 			activePickups[id] = nil
 			orb:Destroy()
 		end
@@ -4705,7 +4711,9 @@ function EffectsController.Start()
 	end)
 
 	Remotes.Get("PowerUpTaken").OnClientEvent:Connect(function(data)
-		-- sparkle handled where the orb was; keep simple
+		if data and data.position then
+			pickupSparkle(data.position, data.color or Color3.fromRGB(255, 255, 255))
+		end
 	end)
 
 	Remotes.Get("PowerUpSpawned").OnClientEvent:Connect(function(data)
