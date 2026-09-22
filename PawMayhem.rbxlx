@@ -6506,8 +6506,8 @@ return HUD
 -- Leaderboard: your lifetime stats + a live in-server ranking by eliminations.
 -- (A true cross-server global board would use OrderedDataStore; documented in
 -- CONFIG.md. This shows the current server's players, which is accurate + safe.
--- Weekly/Friends tabs are shown for layout parity with the reference but are
--- clearly marked "coming soon" rather than faking data.)
+-- Every visible tab is backed by real local data: live ranking, this-match
+-- ranking, or the player's saved lifetime statistics.
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
@@ -6516,7 +6516,7 @@ local Icons = require(script.Parent.Parent.Icons)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 
 local Leaderboard = {}
-local boardList, statsHolder, tabButtons, comingSoonLabel
+local boardList, statsHolder, tabButtons
 local activeTab = "Global"
 
 local RANK_COLOR = {
@@ -6552,13 +6552,26 @@ end
 
 local function rebuildBoard()
 	if not boardList then return end
-	boardList.Visible = (activeTab == "Global")
-	comingSoonLabel.Visible = (activeTab ~= "Global")
-	if activeTab ~= "Global" then
-		return
-	end
+	boardList.Visible = true
 	boardList:ClearAllChildren()
 	UIUtil.listLayout(boardList, 6)
+	if activeTab == "My Stats" then
+		local p = ClientState.Profile
+		if not p then
+			UIUtil.label({ Parent = boardList, Text = "Profile loading…", TextColor3 = Theme.Color.TextMuted, TextSize = 13, Size = UDim2.new(1, 0, 0, 22) })
+			return
+		end
+		for _, meta in ipairs(STAT_META) do
+			local row = UIUtil.panel({ Parent = boardList, Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = Theme.Color.PanelLight })
+			UIUtil.padding(8, row)
+			local iconSlot = UIUtil.make("Frame", { Parent = row, Size = UDim2.fromOffset(24, 24), BackgroundColor3 = meta.color, BorderSizePixel = 0 })
+			UIUtil.corner(UDim.new(0.3, 0), iconSlot)
+			Icons.Place(meta.icon, iconSlot, 15, Color3.new(1, 1, 1))
+			UIUtil.label({ Parent = row, Text = meta.label, Font = Theme.Font.Bold, TextSize = 13, Position = UDim2.fromOffset(34, 0), Size = UDim2.new(1, -110, 1, 0) })
+			UIUtil.label({ Parent = row, Text = tostring(p.Stats[meta.key] or 0), Font = Theme.Font.Number, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(1, -68, 0, 0), Size = UDim2.fromOffset(60, 24) })
+		end
+		return
+	end
 	local board = ClientState.Match.board or {}
 	if #board == 0 then
 		UIUtil.label({ Parent = boardList, Text = "No live match ranking yet — play a match!", TextColor3 = Theme.Color.TextMuted, TextSize = 13, Size = UDim2.new(1, 0, 0, 20) })
@@ -6601,7 +6614,7 @@ function Leaderboard.Build(parent)
 	local tabs = UIUtil.make("Frame", { Parent = root, Position = UDim2.new(1, -260, 0, 176), Size = UDim2.fromOffset(260, 28), BackgroundTransparency = 1 })
 	UIUtil.listLayout(tabs, 6, Enum.FillDirection.Horizontal)
 	tabButtons = {}
-	for _, name in ipairs({ "Global", "Weekly", "Friends" }) do
+	for _, name in ipairs({ "Global", "This Match", "My Stats" }) do
 		tabButtons[name] = UIUtil.button({
 			Parent = tabs, Size = UDim2.fromOffset(82, 28), BackgroundColor3 = Theme.Color.PanelDark,
 			Text = name, TextSize = 12, CornerRadius = Theme.CornerSmall,
@@ -6617,7 +6630,6 @@ function Leaderboard.Build(parent)
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	})
-	comingSoonLabel = UIUtil.label({ Parent = listWrap, Text = "Coming soon — this needs cross-server tracking.", TextColor3 = Theme.Color.TextMuted, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 40), Position = UDim2.fromOffset(0, 20), Visible = false })
 	rebuildBoard()
 
 	ClientState.ProfileChanged:Connect(rebuildStats)
