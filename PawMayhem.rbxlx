@@ -2888,6 +2888,26 @@ function ArenaKit.AddTeamTriangleSpawns(center: Vector3, radius: number, teamId:
 	end
 end
 
+-- Readable in-world markers for the same three authoritative spawn positions.
+-- They sit on the island top, so the team start is visually part of the map
+-- instead of looking like an invisible floating respawn volume.
+function ArenaKit.AddTeamSpawnBeacons(center: Vector3, radius: number, teamId: string, parent: Instance)
+	local color = teamId == "Red" and Color3.fromRGB(255, 92, 102) or Color3.fromRGB(72, 174, 255)
+	local ring = radius * 0.35
+	for k = 0, 2 do
+		local ang = math.rad(30 + k * 120)
+		local pos = center + Vector3.new(math.cos(ang) * ring, 1.78, math.sin(ang) * ring)
+		local pad = ArenaKit.NewPart("TeamSpawnPad", Vector3.new(5.2, 0.16, 5.2), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Neon, parent)
+		pad.Shape = Enum.PartType.Cylinder
+		pad.Transparency = 0.48
+		pad.CanCollide = false
+		local core = ArenaKit.NewPart("TeamSpawnCore", Vector3.new(2.4, 0.08, 2.4), CFrame.new(pos + Vector3.new(0, 0.11, 0)) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Glass, parent)
+		core.Shape = Enum.PartType.Cylinder
+		core.Transparency = 0.22
+		core.CanCollide = false
+	end
+end
+
 function ArenaKit.AddPowerPad(pos: Vector3, pads: Folder)
 	local pad = ArenaKit.NewPart("PowerPad", Vector3.new(4, 0.4, 4), CFrame.new(pos + Vector3.new(0, 1.8, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 255, 255), Enum.Material.Neon, pads)
 	pad.Shape = Enum.PartType.Cylinder
@@ -3231,6 +3251,7 @@ function SkyIslands.Build(): Folder
 		ArenaKit.MakeBridge(edgeA, edgeB, arena, PALETTE)
 		if o.team == "Blue" or o.team == "Red" then
 			ArenaKit.AddTeamTriangleSpawns(o.pos, o.r, o.team, spawns)
+			ArenaKit.AddTeamSpawnBeacons(o.pos, o.r, o.team, isl)
 		end
 		if not o.team then
 			ArenaKit.AddPowerPad(o.pos, powerPads)
@@ -3445,6 +3466,7 @@ function Toybox.Build(): Folder
 		ArenaKit.MakeBridge(edgeA, edgeB, arena, PALETTE)
 		if o.team == "Blue" or o.team == "Red" then
 			ArenaKit.AddTeamTriangleSpawns(o.pos, o.r, o.team, spawns)
+			ArenaKit.AddTeamSpawnBeacons(o.pos, o.r, o.team, isl)
 		end
 		if not o.team then
 			ArenaKit.AddPowerPad(o.pos, powerPads)
@@ -3644,6 +3666,7 @@ function Volcano.Build(): Folder
 		ArenaKit.MakeBridge(edgeA, edgeB, arena, PALETTE)
 		if o.team == "Blue" or o.team == "Red" then
 			ArenaKit.AddTeamTriangleSpawns(o.pos, o.r, o.team, spawns)
+			ArenaKit.AddTeamSpawnBeacons(o.pos, o.r, o.team, isl)
 		end
 		if not o.team then
 			ArenaKit.AddPowerPad(o.pos, powerPads)
