@@ -6396,6 +6396,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Progression = require(ReplicatedStorage.Shared.Config.Progression)
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
@@ -6556,27 +6557,102 @@ end
 
 local function buildPlayPanel(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = true }) :: Frame
-	-- Map preview: the lobby points at the same bright Sky Islands landmarks
-	-- that players see once the round starts, so the preview and arena tell one
-	-- visual story instead of showing a generic placeholder.
-	local mapPreview = UIUtil.panel({
-		Parent = root, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -18, 1, -18),
-		Size = UDim2.fromOffset(440, 242), BackgroundColor3 = Color3.fromRGB(9, 43, 73),
-		ClipsDescendants = true, ZIndex = 10,
-	})
-	local art = UIUtil.make("Frame", {
-		Parent = mapPreview, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -58),
-		BackgroundColor3 = Color3.fromRGB(104, 190, 246), BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 11,
-	})
-	UIUtil.corner(Theme.CornerSmall, art)
-	pcall(function()
-		HeroArt.Sky(art)
-		HeroArt.Island(art, { width = 210, position = UDim2.fromScale(0.20, 1.06) })
-		HeroArt.Island(art, { width = 300, position = UDim2.fromScale(0.58, 1.08) })
-		HeroArt.Island(art, { width = 180, position = UDim2.fromScale(0.90, 1.03) })
+	-- The pre-match surface is a real three-card map vote, matching the
+	-- reference flow: choose an arena first, then load into the round.
+	local MAPS = {
+		{ id = "SkyIslands", name = "Sky Islands", subtitle = "Floating Village", accent = Color3.fromRGB(95, 205, 255), kind = "sky" },
+		{ id = "Volcano", name = "Ember Crater", subtitle = "Lava Foundry", accent = Color3.fromRGB(255, 120, 54), kind = "volcano" },
+		{ id = "Toybox", name = "Toybox", subtitle = "Candy Playground", accent = Color3.fromRGB(255, 133, 190), kind = "toy" },
+	}
+	local selectedMapId = "SkyIslands"
+	local cards = {}
+
+	local shell = UIUtil.panel({ Parent = root, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(7, 35, 61), BackgroundTransparency = 0.06, ZIndex = 10 })
+	UIUtil.padding(18, shell)
+	UIUtil.label({ Parent = shell, Text = "CHOOSE YOUR BATTLEFIELD", Font = Theme.Font.Title, TextSize = 26, Size = UDim2.new(1, -260, 0, 32), ZIndex = 11 })
+	UIUtil.label({ Parent = shell, Text = "Pick one of the three arenas before loading into Team Deathmatch.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, -260, 0, 18), ZIndex = 11 })
+	local teamPill = UIUtil.panel({ Parent = shell, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(230, 48), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 11 })
+	UIUtil.label({ Parent = teamPill, Text = "BLUE PAWS     3  v  3     RED CLAWS", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Accent, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 12 })
+
+	local row = UIUtil.make("Frame", { Parent = shell, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 0, 270), BackgroundTransparency = 1, ZIndex = 11 })
+	UIUtil.gridLayout(row, UDim2.fromOffset(220, 262), UDim2.fromOffset(12, 12))
+
+	local function addToyShapes(parent, map)
+		if map.kind == "volcano" then
+			for i = 1, 5 do
+				local glow = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(18 + i * 5, 18 + i * 5), Position = UDim2.fromScale(0.14 + i * 0.17, 0.38 + (i % 2) * 0.06), BackgroundColor3 = Color3.fromRGB(255, 100 + i * 18, 42), BackgroundTransparency = 0.12, BorderSizePixel = 0, ZIndex = 12 })
+				UIUtil.corner(UDim.new(0.5, 0), glow)
+			end
+		elseif map.kind == "toy" then
+			for i = 1, 7 do
+				local block = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(22, 22), Position = UDim2.fromScale(0.08 + (i % 4) * 0.23, 0.34 + math.floor(i / 4) * 0.14), BackgroundColor3 = ({ Color3.fromRGB(255, 117, 156), Color3.fromRGB(113, 204, 255), Color3.fromRGB(255, 218, 93), Color3.fromRGB(180, 142, 255) })[(i % 4) + 1], BorderSizePixel = 0, ZIndex = 12 })
+				UIUtil.corner(UDim.new(0, 5), block)
+			end
+		end
+	end
+
+	local function selectMap(map)
+		selectedMapId = map.id
+		for _, entry in ipairs(cards) do
+			local active = entry.map.id == selectedMapId
+			entry.card.BackgroundColor3 = active and Color3.fromRGB(24, 75, 88) or Theme.Color.Panel
+			entry.stroke.Color = active and entry.map.accent or Theme.Color.Stroke
+			entry.stroke.Thickness = active and 2.5 or 1.5
+			entry.check.Visible = active
+		end
+	end
+
+	for _, map in ipairs(MAPS) do
+		local card = UIUtil.panel({ Parent = row, Size = UDim2.fromOffset(220, 262), BackgroundColor3 = Theme.Color.Panel, ClipsDescendants = true, ZIndex = 11 })
+		local stroke = card:FindFirstChildOfClass("UIStroke") :: UIStroke
+		local preview = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 148), BackgroundColor3 = map.accent, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 12 })
+		UIUtil.corner(Theme.CornerSmall, preview)
+		if map.kind == "sky" then
+			pcall(function()
+				HeroArt.Sky(preview)
+				HeroArt.Island(preview, { width = 170, position = UDim2.fromScale(0.26, 1.12) })
+				HeroArt.Island(preview, { width = 230, position = UDim2.fromScale(0.70, 1.13) })
+			end)
+		elseif map.kind == "volcano" then
+			UIUtil.gradient(Color3.fromRGB(110, 43, 43), Color3.fromRGB(24, 17, 30), 90, preview)
+			addToyShapes(preview, map)
+		else
+			UIUtil.gradient(Color3.fromRGB(113, 206, 255), Color3.fromRGB(236, 137, 202), 90, preview)
+			addToyShapes(preview, map)
+		end
+		local title = UIUtil.label({ Parent = card, Text = map.name, Font = Theme.Font.Heading, TextSize = 16, Position = UDim2.fromOffset(12, 164), Size = UDim2.new(1, -24, 0, 20), ZIndex = 13 })
+		UIUtil.label({ Parent = card, Text = map.subtitle, Font = Theme.Font.Bold, TextSize = 10, TextColor3 = map.accent, Position = UDim2.fromOffset(12, 185), Size = UDim2.new(1, -24, 0, 15), ZIndex = 13 })
+		UIUtil.label({ Parent = card, Text = "TEAM DEATHMATCH  •  6 SPAWNS", TextSize = 9, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(12, 207), Size = UDim2.new(1, -24, 0, 14), ZIndex = 13 })
+		local check = UIUtil.label({ Parent = card, Text = "✓ SELECTED", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Color3.fromRGB(182, 241, 112), Position = UDim2.fromOffset(12, 230), Size = UDim2.new(1, -24, 0, 16), Visible = false, ZIndex = 13 })
+		local hit = UIUtil.button({ Parent = card, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 20 }, function() selectMap(map) end)
+		table.insert(cards, { map = map, card = card, stroke = stroke, check = check, title = title, hit = hit })
+	end
+
+	local selected = UIUtil.panel({ Parent = shell, Position = UDim2.fromOffset(0, 352), Size = UDim2.new(1, -190, 0, 66), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 11 })
+	UIUtil.label({ Parent = selected, Text = "SELECTED ARENA", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 14), ZIndex = 12 })
+	local selectedName = UIUtil.label({ Parent = selected, Text = "SKY ISLANDS  •  FLOATING VILLAGE", Font = Theme.Font.Heading, TextSize = 16, Position = UDim2.fromOffset(14, 27), Size = UDim2.new(1, -28, 0, 22), ZIndex = 12 })
+	playStatus = UIUtil.label({ Parent = selected, Text = "Vote locked when you join the queue.", TextColor3 = Theme.Color.TextDim, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.5, 0, 0, 11), Size = UDim2.new(0.5, -14, 0, 16), ZIndex = 12 })
+	local join = UIUtil.button({ Parent = shell, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Size = UDim2.fromOffset(172, 52), BackgroundColor3 = Theme.Color.Play, Text = "PLAY THIS MAP", TextColor3 = Color3.fromRGB(8, 46, 52), Font = Theme.Font.Title, TextSize = 16, CornerRadius = Theme.CornerSmall, ZIndex = 12 }, function()
+		Remotes.Get("RequestJoinMatch"):FireServer({ mapId = selectedMapId })
+		playStatus.Text = "MAP VOTE LOCKED  •  QUEUED"
 	end)
-	UIUtil.label({ Parent = mapPreview, Text = "SKY ISLANDS", Font = Theme.Font.Heading, TextSize = 16, Position = UDim2.fromOffset(16, 196), Size = UDim2.new(1, -32, 0, 20), ZIndex = 12 })
-	UIUtil.label({ Parent = mapPreview, Text = "TDM  •  FLOATING VILLAGE", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(16, 218), Size = UDim2.new(1, -32, 0, 14), ZIndex = 12 })
+
+	local function updateSelectedName()
+		for _, map in ipairs(MAPS) do
+			if map.id == selectedMapId then
+				selectedName.Text = string.upper(map.name) .. "  •  " .. string.upper(map.subtitle)
+			end
+		end
+	end
+	for _, map in ipairs(MAPS) do
+		if map.id == selectedMapId then selectMap(map) end
+	end
+	local originalSelect = selectMap
+	selectMap = function(map)
+		originalSelect(map)
+		updateSelectedName()
+	end
+	updateSelectedName()
 	return root
 
 	local hero = UIUtil.panel({ Parent = root, Size = UDim2.new(1, 0, 0, 198), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
