@@ -1587,6 +1587,7 @@ local Scoring = GameConfig.Scoring
 local EconomyService = require(script.Parent.EconomyService)
 local PlayerService = require(script.Parent.PlayerService)
 local Runtime = require(script.Parent.Runtime)
+local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 
 local MatchService = {}
 
@@ -1602,7 +1603,35 @@ local state = {
 	TimeLeft = GameConfig.Match.IntermissionSeconds,
 	Scores = { Blue = 0, Red = 0 },
 	Winner = nil :: string?,
+	MapId = "SkyIslands",
 }
+
+local MAP_IDS = { SkyIslands = true, Volcano = true, Toybox = true }
+local mapVotes: { [number]: string } = {}
+
+local function leadingMapId(): string
+	local totals = { SkyIslands = 0, Volcano = 0, Toybox = 0 }
+	for _, mapId in pairs(mapVotes) do
+		if totals[mapId] ~= nil then
+			totals[mapId] += 1
+		end
+	end
+	local winner, high = state.MapId, -1
+	for _, mapId in ipairs({ "SkyIslands", "Volcano", "Toybox" }) do
+		if totals[mapId] > high then
+			winner, high = mapId, totals[mapId]
+		end
+	end
+	return winner
+end
+
+local function buildVotedMap()
+	local mapId = leadingMapId()
+	if not ArenaBuilder.CurrentMap or ArenaBuilder.CurrentMap.Id ~= mapId then
+		ArenaBuilder.BuildMap(mapId)
+	end
+	state.MapId = mapId
+end
 
 -- Build the live scoreboard array sorted by match eliminations.
 local function buildBoard()
@@ -1631,6 +1660,7 @@ local function broadcastState()
 		winner = state.Winner,
 		scoreToWin = GameConfig.Match.ScoreToWin,
 		matchSeconds = GameConfig.Match.MatchSeconds,
+		mapId = state.MapId,
 		board = buildBoard(),
 	})
 end
@@ -1728,11 +1758,15 @@ local function enterIntermission()
 	state.TimeLeft = GameConfig.Match.IntermissionSeconds
 	state.Winner = nil
 	state.Scores = { Blue = 0, Red = 0 }
+	mapVotes = {}
 	PlayerService.MatchActive = false
 	broadcastState()
 end
 
 local function enterCountdown()
+	-- Lock the vote and rebuild while players are still in the lobby, before
+	-- characters and power-up pickups exist for the next match.
+	buildVotedMap()
 	state.Phase = PHASE.Countdown
 	state.TimeLeft = GameConfig.Match.CountdownSeconds
 	-- Reset per-match runtime + spawn everyone.
@@ -1789,6 +1823,20 @@ end
 
 function MatchService.Start()
 	PlayerService.OnElimination = onElimination
+	Remotes.Get("RequestJoinMatch").OnServerEvent:Connect(function(player, payload)
+		local mapId = typeof(payload) == "table" and payload.mapId or nil
+		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then
+			return
+		end
+		if state.Phase ~= PHASE.Intermission then
+			Remotes.Get("Notify"):FireClient(player, { text = "Map voting is closed for this round.", kind = "warning" })
+			return
+		end
+		mapVotes[player.UserId] = mapId
+		state.MapId = leadingMapId()
+		Remotes.Get("Notify"):FireAllClients({ text = player.DisplayName .. " voted for " .. mapId, kind = "info" })
+		broadcastState()
+	end)
 
 	-- Sync new joiners to current state, and drop late joiners into a live match.
 	Players.PlayerAdded:Connect(function(player)
@@ -5461,7 +5509,8 @@ local EMOTE_ICON = {
 }
 
 local grid, tabButtons, activeKind
-local previewFace, previewLabel
+local previewFace, previewLabel, gridTitle
+local summaryChips = {}
 local cards = {}
 
 local function refreshCards()
@@ -5480,11 +5529,28 @@ local function refreshPreview()
 	local p = ClientState.Profile
 	local fur = Cats.FurById[p and p.Loadout.Cat.Fur or Cats.Default.Fur] or Cats.FurById[Cats.Default.Fur]
 	local outfit = Cats.OutfitById[p and p.Loadout.Cat.Outfit or Cats.Default.Outfit] or Cats.OutfitById[Cats.Default.Outfit]
+	local hat = Cats.HatById[p and p.Loadout.Cat.Hat or Cats.Default.Hat] or Cats.HatById[Cats.Default.Hat]
+	local accessory = Cats.AccessoryById[p and p.Loadout.Cat.Accessory or Cats.Default.Accessory] or Cats.AccessoryById[Cats.Default.Accessory]
 	local previewBody = outfit and outfit.Id ~= "None" and outfit.Color or fur.Body
 	previewFace:ClearAllChildren()
 	Icons.Place("CatBody", previewFace, 220, previewBody, fur.Accent)
+	if outfit and outfit.Id ~= "None" then
+		Icons.Place("Shirt", previewFace, 64, outfit.Color, nil, UDim2.fromScale(0.5, 0.60))
+	end
+	if hat and hat.Id ~= "None" then
+		Icons.Place("Hat", previewFace, 58, hat.Color, nil, UDim2.fromScale(0.5, 0.20))
+	end
+	if accessory and accessory.Id ~= "None" then
+		Icons.Place(accessory.Shape == "Glasses" and "Glasses" or "Paw", previewFace, 48, accessory.Color, nil, UDim2.fromScale(0.5, 0.40))
+	end
 	if previewLabel then
 		previewLabel.Text = fur.Name .. "  •  " .. (outfit and outfit.Name or "Classic")
+	end
+	for kind, chip in pairs(summaryChips) do
+		local item = kind == "Outfit" and outfit or (kind == "Hat" and hat or accessory)
+		if item then
+			chip.BackgroundColor3 = item.Color or Theme.Color.PanelLight
+		end
 	end
 end
 
@@ -5503,6 +5569,9 @@ end
 
 local function loadCategory(cat)
 	setActiveTab(cat.kind)
+	if gridTitle then
+		gridTitle.Text = string.upper(cat.label .. " VARIATIONS")
+	end
 	grid:ClearAllChildren()
 	UIUtil.gridLayout(grid, UDim2.fromOffset(110, 116), UDim2.fromOffset(9, 9))
 	cards = {}
@@ -5590,11 +5659,13 @@ function Customize.Build(parent)
 		local chip = UIUtil.make("Frame", { Parent = summary, Size = UDim2.fromOffset(36, 36), BackgroundColor3 = Theme.Color.PanelLight, BorderSizePixel = 0 })
 		UIUtil.corner(Theme.CornerSmall, chip)
 		Icons.Place(cat.icon, chip, 20, Theme.Color.TextDim)
+		summaryChips[catKind] = chip
 	end
 
 	-- Item grid
+	gridTitle = UIUtil.label({ Parent = root, Text = "FUR VARIATIONS", Font = Theme.Font.Heading, TextSize = 14, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(288, 10), Size = UDim2.new(1, -300, 0, 20) })
 	grid = UIUtil.make("ScrollingFrame", {
-		Parent = root, Position = UDim2.fromOffset(288, 12), Size = UDim2.new(1, -300, 1, -24),
+		Parent = root, Position = UDim2.fromOffset(288, 38), Size = UDim2.new(1, -300, 1, -50),
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	})
@@ -6234,9 +6305,26 @@ function Loadout.Build(parent)
 	Icons.Place("Gun", gunSlot, 24, Theme.Color.Accent)
 	UIUtil.label({ Parent = header, Text = "WEAPONS", Font = Theme.Font.Title, TextSize = 22, Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -32, 1, 0) })
 	UIUtil.label({ Parent = header, Text = "Pick your paw-powered playstyle", TextColor3 = Theme.Color.TextMuted, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 1, 0) })
-	local weaponGrid = UIUtil.make("ScrollingFrame", { Parent = board, Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 1, -34), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y })
+	local tabRow = UIUtil.make("Frame", { Parent = board, Position = UDim2.fromOffset(0, 34), Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1 })
+	UIUtil.listLayout(tabRow, 8, Enum.FillDirection.Horizontal)
+	local weaponsTab = UIUtil.button({ Parent = tabRow, Size = UDim2.fromOffset(132, 28), BackgroundColor3 = Theme.Color.Accent, Text = "WEAPONS", TextColor3 = Color3.fromRGB(7, 35, 58), TextSize = 11, CornerRadius = Theme.CornerSmall })
+	local skinsTab = UIUtil.button({ Parent = tabRow, Size = UDim2.fromOffset(132, 28), BackgroundColor3 = Theme.Color.Panel, Text = "WEAPON SKINS", TextSize = 11, CornerRadius = Theme.CornerSmall })
+	local weaponGrid = UIUtil.make("ScrollingFrame", { Parent = board, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 1, -70), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y })
 	UIUtil.gridLayout(weaponGrid, UDim2.fromOffset(136, 206), UDim2.fromOffset(8, 8))
+	local skinGrid = UIUtil.make("ScrollingFrame", { Parent = board, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 1, -70), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Visible = false })
+	UIUtil.gridLayout(skinGrid, UDim2.fromOffset(164, 184), UDim2.fromOffset(10, 10))
+	local function showSkins(on: boolean)
+		weaponGrid.Visible = not on
+		skinGrid.Visible = on
+		weaponsTab.BackgroundColor3 = on and Theme.Color.Panel or Theme.Color.Accent
+		weaponsTab.TextColor3 = on and Theme.Color.Text or Color3.fromRGB(7, 35, 58)
+		skinsTab.BackgroundColor3 = on and Theme.Color.Accent or Theme.Color.Panel
+		skinsTab.TextColor3 = on and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
+	end
+	weaponsTab.MouseButton1Click:Connect(function() showSkins(false) end)
+	skinsTab.MouseButton1Click:Connect(function() showSkins(true) end)
 	local weaponCards = {}
+	local skinCards = {}
 	local statNames = { { key = "Damage", label = "Damage" }, { key = "FireRate", label = "Fire Rate" }, { key = "Knockback", label = "Knockback" }, { key = "Range", label = "Range" }, { key = "Accuracy", label = "Accuracy" } }
 	for _, w in ipairs(Weapons.List) do
 		local tile = UIUtil.button({ Parent = weaponGrid, Size = UDim2.fromOffset(136, 206), BackgroundColor3 = Theme.Color.Panel, Text = "", CornerRadius = Theme.CornerSmall })
@@ -6281,13 +6369,49 @@ function Loadout.Build(parent)
 			end
 		end)
 	end
-	local function refreshWeaponCards()
+	for _, skin in ipairs(Weapons.Skins) do
+		local tile = UIUtil.button({ Parent = skinGrid, Size = UDim2.fromOffset(164, 184), BackgroundColor3 = Theme.Color.Panel, Text = "", CornerRadius = Theme.CornerSmall })
+		local tileStroke = UIUtil.stroke(Theme.Color.Stroke, 1, tile)
+		local preview = UIUtil.make("Frame", { Parent = tile, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 88), BackgroundColor3 = skin.Tint, BorderSizePixel = 0 })
+		UIUtil.corner(Theme.CornerSmall, preview)
+		UIUtil.gradient(skin.Tint:Lerp(Color3.new(1, 1, 1), 0.16), skin.Tint:Lerp(Color3.new(0, 0, 0), 0.26), 90, preview)
+		Icons.Place("Gun", preview, 68, skin.Tint, Color3.fromRGB(255, 255, 255))
+		UIUtil.label({ Parent = tile, Text = skin.Name, Font = Theme.Font.Heading, TextSize = 15, Position = UDim2.fromOffset(10, 106), Size = UDim2.new(1, -20, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd })
+		UIUtil.label({ Parent = tile, Text = "COSMETIC ONLY", Font = Theme.Font.Bold, TextSize = 9, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(10, 128), Size = UDim2.new(1, -20, 0, 13) })
+		local status = UIUtil.label({ Parent = tile, Text = "", Font = Theme.Font.Bold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.fromOffset(10, 151), Size = UDim2.new(1, -20, 0, 17) })
+		local card = { refresh = function(state)
+			tile.BackgroundColor3 = state.equipped and Color3.fromRGB(24, 78, 75) or Theme.Color.Panel
+			tileStroke.Color = state.equipped and Color3.fromRGB(182, 241, 112) or Theme.Color.Stroke
+			tileStroke.Thickness = state.equipped and 2.5 or 1
+			status.Text = state.equipped and "EQUIPPED" or (state.owned and "OWNED" or ((skin.CoinCost or 0) > 0 and tostring(skin.CoinCost) .. " COINS" or "UNLOCK"))
+			status.TextColor3 = state.equipped and Color3.fromRGB(182, 241, 112) or Theme.Color.TextMuted
+		end }
+		table.insert(skinCards, { card = card, id = skin.Id })
+		tile.MouseButton1Click:Connect(function()
+			local result
+			if ClientState.Owns("Skin", skin.Id) then
+				result = ClientActions.Equip("Skin", skin.Id)
+			else
+				result = ClientActions.Purchase("Skin", skin.Id)
+				if result and result.ok then ClientActions.Equip("Skin", skin.Id) end
+			end
+			if result and result.ok then
+				for _, entry in ipairs(skinCards) do
+					entry.card.refresh({ owned = ClientState.Owns("Skin", entry.id), equipped = ClientState.Equipped("Skin") == entry.id })
+				end
+			end
+		end)
+	end
+	local function refreshCatalogCards()
 		for _, entry in ipairs(weaponCards) do
 			entry.card.refresh({ owned = ClientState.Owns("Weapon", entry.id), equipped = ClientState.Equipped("Weapon") == entry.id })
 		end
+		for _, entry in ipairs(skinCards) do
+			entry.card.refresh({ owned = ClientState.Owns("Skin", entry.id), equipped = ClientState.Equipped("Skin") == entry.id })
+		end
 	end
-	refreshWeaponCards()
-	ClientState.ProfileChanged:Connect(refreshWeaponCards)
+	refreshCatalogCards()
+	ClientState.ProfileChanged:Connect(refreshCatalogCards)
 	Loadout.Root = root
 	return root
 
