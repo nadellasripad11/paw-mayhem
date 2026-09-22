@@ -1,0 +1,4 @@
+# Aftman toolchain manager config for PAW MAYHEM
+# Install Aftman from https://github.com/LPGhatguy/aftman then run `aftman install`
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"

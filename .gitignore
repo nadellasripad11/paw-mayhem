@@ -1,0 +1,10 @@
+# Rojo / build artifacts
+*.rbxl
+*.rbxlx.lock
+/build/
+# Intermediate backup snapshots (keep only PawMayhem.rbxlx)
+PawMayhem.before-*.rbxlx
+# Editor
+.vscode/
+.DS_Store
+Thumbs.db
