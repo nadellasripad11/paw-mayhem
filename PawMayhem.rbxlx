@@ -1608,6 +1608,17 @@ local state = {
 
 local MAP_IDS = { SkyIslands = true, Volcano = true, Toybox = true }
 local mapVotes: { [number]: string } = {}
+local queuedPlayers: { [number]: boolean } = {}
+
+local function queuedCount(): number
+	local count = 0
+	for userId in pairs(queuedPlayers) do
+		if Players:GetPlayerByUserId(userId) then
+			count += 1
+		end
+	end
+	return count
+end
 
 local function leadingMapId(): string
 	local totals = { SkyIslands = 0, Volcano = 0, Toybox = 0 }
@@ -1759,6 +1770,7 @@ local function enterIntermission()
 	state.Winner = nil
 	state.Scores = { Blue = 0, Red = 0 }
 	mapVotes = {}
+	queuedPlayers = {}
 	PlayerService.MatchActive = false
 	broadcastState()
 end
@@ -1791,7 +1803,7 @@ local function mainLoop()
 		state.TimeLeft -= 1
 
 		if state.Phase == PHASE.Intermission then
-			if #Players:GetPlayers() >= GameConfig.Match.MinPlayersToStart and state.TimeLeft <= 0 then
+			if queuedCount() >= GameConfig.Match.MinPlayersToStart and state.TimeLeft <= 0 then
 				enterCountdown()
 			elseif state.TimeLeft <= 0 then
 				state.TimeLeft = GameConfig.Match.IntermissionSeconds
@@ -1833,9 +1845,15 @@ function MatchService.Start()
 			return
 		end
 		mapVotes[player.UserId] = mapId
+		queuedPlayers[player.UserId] = true
 		state.MapId = leadingMapId()
 		Remotes.Get("Notify"):FireAllClients({ text = player.DisplayName .. " voted for " .. mapId, kind = "info" })
 		broadcastState()
+		-- Play is an explicit join action. Do not make the player wait for the
+		-- background lobby timer once they have selected a valid map.
+		if queuedCount() >= GameConfig.Match.MinPlayersToStart then
+			enterCountdown()
+		end
 	end)
 
 	-- Sync new joiners to current state, and drop late joiners into a live match.
@@ -1848,6 +1866,9 @@ function MatchService.Start()
 			task.wait(1)
 			PlayerService.Spawn(player)
 		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		queuedPlayers[player.UserId] = nil
 	end)
 
 	enterIntermission()
@@ -2824,6 +2845,24 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		local c = (i % 2 == 0) and palette.Stone or palette.StoneDark
 		local disc = ArenaKit.NewPart("Stone" .. i, Vector3.new(r * 2, 3.2, r * 2), CFrame.new(center.X, y, center.Z) * CFrame.Angles(0, 0, math.rad(90)), c, Enum.Material.Slate, folder)
 		disc.Shape = Enum.PartType.Cylinder
+	end
+
+	-- Break the perfect stacked-disc silhouette with chunky cliff teeth. These
+	-- visual masses hang beneath the playable top and make the floating islands
+	-- read like the reference's hand-built rock islands from a distance.
+	for i = 1, 8 do
+		local angle = math.rad((i - 1) * 45 + 12)
+		local depth = radius * (0.42 + (i % 3) * 0.06)
+		local rock = ArenaKit.NewPart(
+			"CliffRock" .. i,
+			Vector3.new(radius * 0.34, 8 + (i % 3) * 2, radius * 0.28),
+			CFrame.new(center + Vector3.new(math.cos(angle) * depth, -10 - (i % 2) * 2, math.sin(angle) * depth)) * CFrame.Angles(math.rad((i % 2) * 8), angle, math.rad(-12 + (i % 3) * 10)),
+			(i % 2 == 0) and palette.Stone or palette.StoneDark,
+			Enum.Material.Slate,
+			folder
+		)
+		rock.Shape = Enum.PartType.Ball
+		rock.CanCollide = false
 	end
 
 	local floor = ArenaKit.NewPart("Floor", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), palette.Top, topMaterial or Enum.Material.Grass, folder)
