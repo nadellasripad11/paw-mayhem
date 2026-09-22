@@ -64,29 +64,47 @@ local function drawTracer(from: Vector3, to: Vector3, color: Color3)
 	if dist < 0.1 then
 		return
 	end
+	-- Two layered beams make every shot read at a distance: a soft glowing
+	-- silhouette first, then a crisp bright core, like the reference blasters.
+	local glow = Instance.new("Part")
+	glow.Anchored = true
+	glow.CanCollide = false
+	glow.CanQuery = false
+	glow.Material = Enum.Material.Neon
+	glow.Color = color
+	glow.Transparency = 0.5
+	glow.Size = Vector3.new(0.72, 0.72, dist)
+	glow.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -dist / 2)
+	glow.Parent = workspace
+	Debris:AddItem(glow, 0.13)
+
 	local bolt = Instance.new("Part")
 	bolt.Anchored = true
 	bolt.CanCollide = false
 	bolt.CanQuery = false
 	bolt.Material = Enum.Material.Neon
 	bolt.Color = color
-	bolt.Size = Vector3.new(0.3, 0.3, dist)
+	bolt.Size = Vector3.new(0.22, 0.22, dist)
 	bolt.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -dist / 2)
 	bolt.Parent = workspace
 	Debris:AddItem(bolt, 0.12)
 
-	-- impact spark
-	local spark = Instance.new("Part")
-	spark.Shape = Enum.PartType.Ball
-	spark.Anchored = true
-	spark.CanCollide = false
-	spark.CanQuery = false
-	spark.Material = Enum.Material.Neon
-	spark.Color = color
-	spark.Size = Vector3.new(1, 1, 1)
-	spark.Position = to
-	spark.Parent = workspace
-	Debris:AddItem(spark, 0.15)
+	-- A short radial hit burst keeps impacts visible without adding gameplay
+	-- objects or physics load.
+	for i = 1, 5 do
+		local spark = Instance.new("Part")
+		spark.Shape = Enum.PartType.Ball
+		spark.Anchored = true
+		spark.CanCollide = false
+		spark.CanQuery = false
+		spark.Material = Enum.Material.Neon
+		spark.Color = color
+		spark.Size = Vector3.new(0.65, 0.65, 0.65)
+		local angle = (math.pi * 2 / 5) * i
+		spark.Position = to + Vector3.new(math.cos(angle), math.sin(angle * 2) * 0.45, math.sin(angle)) * 0.4
+		spark.Parent = workspace
+		Debris:AddItem(spark, 0.16)
+	end
 end
 
 local function pickupSparkle(pos: Vector3, color: Color3)
@@ -109,6 +127,27 @@ local function pickupSparkle(pos: Vector3, color: Color3)
 		end
 		burst:Destroy()
 	end)
+	for i = 1, 6 do
+		local shard = Instance.new("Part")
+		shard.Shape = Enum.PartType.Ball
+		shard.Anchored = true
+		shard.CanCollide = false
+		shard.CanQuery = false
+		shard.Material = Enum.Material.Neon
+		shard.Color = color
+		shard.Size = Vector3.new(0.45, 0.45, 0.45)
+		shard.Position = pos
+		shard.Parent = workspace
+		local angle = (math.pi * 2 / 6) * i
+		task.spawn(function()
+			for step = 1, 7 do
+				shard.Position += Vector3.new(math.cos(angle) * 0.32, 0.22, math.sin(angle) * 0.32)
+				shard.Transparency = step / 8
+				task.wait(0.025)
+			end
+			shard:Destroy()
+		end)
+	end
 end
 
 function EffectsController.Start()
@@ -138,7 +177,9 @@ function EffectsController.Start()
 	end)
 
 	Remotes.Get("PowerUpTaken").OnClientEvent:Connect(function(data)
-		-- sparkle handled where the orb was; keep simple
+		if data and data.position then
+			pickupSparkle(data.position, data.color or Color3.fromRGB(255, 255, 255))
+		end
 	end)
 
 	Remotes.Get("PowerUpSpawned").OnClientEvent:Connect(function(data)

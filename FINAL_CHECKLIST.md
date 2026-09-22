@@ -11,10 +11,11 @@ Work top to bottom. Boxes you can tick without Studio are marked **[offline]**.
 
 ## Core gameplay
 - [ ] Cats spawn and are controllable (move / jump / sprint).
-- [ ] Every island (hub + 6 outer) has exactly 6 spawn points, hexagon-arranged
-      at half the island's radius — always well inside the grass, never near an
-      edge, always directly above solid collidable ground (verify by spawning
-      repeatedly and confirming you never fall through or land off-island).
+- [ ] Every map has exactly 6 authoritative team spawn points: 3 grounded
+      blue points on the Blue island and 3 grounded red points on the Red
+      island, arranged in triangles inside the grass and directly above solid
+      collidable ground (verify by spawning repeatedly and confirming you never
+      fall through or land off-island).
 - [ ] Third-person camera works on mouse, and aims where the crosshair points.
 - [ ] Firing deals damage server-side; tracers + muzzle flash show.
 - [ ] Knockback scales with accumulated fluff (later hits launch farther).

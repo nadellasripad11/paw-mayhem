@@ -7890,6 +7890,7 @@ return Theme
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(script.Parent.Theme)
 local ClientState = require(script.Parent.Parent.ClientState)

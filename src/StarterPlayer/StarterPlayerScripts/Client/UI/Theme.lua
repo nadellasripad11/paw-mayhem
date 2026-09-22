@@ -6,27 +6,29 @@
 local Theme = {}
 
 Theme.Color = {
-	Bg = Color3.fromRGB(16, 20, 34),
-	Panel = Color3.fromRGB(24, 30, 48),
-	PanelLight = Color3.fromRGB(34, 42, 66),
-	PanelDark = Color3.fromRGB(18, 23, 38),
-	Stroke = Color3.fromRGB(58, 70, 104),
+	-- Deep sky/navy surfaces from the reference UI. Keep these opaque so
+	-- every screen remains legible over the illustrated world backdrop.
+	Bg = Color3.fromRGB(8, 21, 43),
+	Panel = Color3.fromRGB(13, 36, 67),
+	PanelLight = Color3.fromRGB(22, 57, 91),
+	PanelDark = Color3.fromRGB(8, 28, 55),
+	Stroke = Color3.fromRGB(54, 108, 150),
 
-	Text = Color3.fromRGB(240, 244, 255),
-	TextDim = Color3.fromRGB(160, 172, 200),
-	TextMuted = Color3.fromRGB(110, 122, 150),
+	Text = Color3.fromRGB(246, 250, 255),
+	TextDim = Color3.fromRGB(185, 211, 232),
+	TextMuted = Color3.fromRGB(123, 158, 185),
 
-	Accent = Color3.fromRGB(64, 156, 255), -- primary cyan-blue
-	Accent2 = Color3.fromRGB(150, 110, 255), -- purple
-	Play = Color3.fromRGB(96, 210, 120), -- green CTA
-	PlayDark = Color3.fromRGB(70, 175, 96),
-	Coin = Color3.fromRGB(255, 205, 90),
-	Gem = Color3.fromRGB(180, 120, 255),
-	Danger = Color3.fromRGB(255, 90, 90),
-	Blue = Color3.fromRGB(64, 132, 255),
-	Red = Color3.fromRGB(255, 82, 82),
-	Success = Color3.fromRGB(96, 210, 120),
-	Warn = Color3.fromRGB(255, 180, 70),
+	Accent = Color3.fromRGB(35, 190, 255), -- electric cyan
+	Accent2 = Color3.fromRGB(171, 91, 255), -- blaster purple
+	Play = Color3.fromRGB(108, 225, 104), -- green CTA
+	PlayDark = Color3.fromRGB(51, 158, 91),
+	Coin = Color3.fromRGB(255, 207, 72),
+	Gem = Color3.fromRGB(224, 96, 255),
+	Danger = Color3.fromRGB(255, 89, 111),
+	Blue = Color3.fromRGB(22, 145, 255),
+	Red = Color3.fromRGB(255, 78, 91),
+	Success = Color3.fromRGB(108, 225, 104),
+	Warn = Color3.fromRGB(255, 186, 67),
 }
 
 -- Rarity colors for weapon/skin cards.
@@ -47,8 +49,8 @@ Theme.Font = {
 	Number = Enum.Font.GothamBlack,
 }
 
-Theme.Corner = UDim.new(0, 12)
-Theme.CornerSmall = UDim.new(0, 8)
-Theme.CornerBig = UDim.new(0, 18)
+Theme.Corner = UDim.new(0, 14)
+Theme.CornerSmall = UDim.new(0, 9)
+Theme.CornerBig = UDim.new(0, 22)
 
 return Theme

@@ -100,7 +100,13 @@ local function spawnPickup()
 				conn:Disconnect()
 			end
 			grant(player, def.Id)
-			Remotes.Get("PowerUpTaken"):FireAllClients({ id = id, playerName = player.DisplayName, powerId = def.Id })
+			Remotes.Get("PowerUpTaken"):FireAllClients({
+				id = id,
+				playerName = player.DisplayName,
+				powerId = def.Id,
+				position = orb.Position,
+				color = def.Color,
+			})
 			activePickups[id] = nil
 			orb:Destroy()
 		end

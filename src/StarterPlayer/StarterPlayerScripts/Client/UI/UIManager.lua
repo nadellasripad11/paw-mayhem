@@ -5,6 +5,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Theme = require(script.Parent.Theme)
 local ClientState = require(script.Parent.Parent.ClientState)
@@ -20,6 +21,30 @@ local UIManager = {}
 local player = Players.LocalPlayer
 local lastPhase = nil
 local alive = false
+local transitionFrame: Frame? = nil
+
+local function playTransition()
+	if not transitionFrame then return end
+	transitionFrame.BackgroundTransparency = 0.02
+	TweenService:Create(transitionFrame, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+	}):Play()
+end
+
+local function buildTransitionLayer()
+	local fadeGui = Instance.new("ScreenGui")
+	fadeGui.Name = "PawTransition"
+	fadeGui.IgnoreGuiInset = true
+	fadeGui.ResetOnSpawn = false
+	fadeGui.DisplayOrder = 100
+	fadeGui.Parent = player:WaitForChild("PlayerGui")
+	transitionFrame = Instance.new("Frame")
+	transitionFrame.Size = UDim2.fromScale(1, 1)
+	transitionFrame.BackgroundColor3 = Theme.Color.Bg
+	transitionFrame.BackgroundTransparency = 1
+	transitionFrame.BorderSizePixel = 0
+	transitionFrame.Parent = fadeGui
+end
 
 local function enableGameplay(on: boolean)
 	CameraController.SetEnabled(on)
@@ -52,6 +77,7 @@ local function onPhase(m)
 		return
 	end
 	lastPhase = phase
+	playTransition()
 
 	if phase == "Intermission" then
 		MainMenu.SetVisible(true)
@@ -83,6 +109,7 @@ function UIManager.Start()
 	MainMenu.Build()
 	HUD.Build()
 	Results.Build()
+	buildTransitionLayer()
 
 	ClientState.MatchChanged:Connect(onPhase)
 

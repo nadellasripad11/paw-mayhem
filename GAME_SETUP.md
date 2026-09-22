@@ -81,8 +81,10 @@ live** — no manual re-import.
 ## 5. Run the game
 
 - Press **Play** (F5) in Studio.
-- You spawn into the **lobby menu**. The match auto-starts after the
-  intermission countdown (default 12s; `MinPlayersToStart = 1` so solo works).
+- You spawn into the **Catto Pew Pew** landing screen. Click **Play**, choose
+  Sky Islands, Volcano, or Toybox, then click **Play This Map** to start the
+  countdown and enter the arena. The match no longer jumps into the arena
+  before the player makes that choice.
 - When the match begins you spawn as a cat. **Left-click to fire**, **Shift to
   sprint**, **Space to jump**, **Shift-lock style mouse** aims the camera.
 - Knock a bot/other player off an island to score. First team to 40 (default) or

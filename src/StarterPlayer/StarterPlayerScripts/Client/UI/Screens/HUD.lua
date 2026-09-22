@@ -84,36 +84,43 @@ end
 
 -- ── top center: scores + timer ──────────────────────────────────────────────
 local function buildTopBar(parent, topInset)
-	local bar = UIUtil.panel({
+	local bar = UIUtil.make("Frame", {
 		Parent = parent,
 		AnchorPoint = Vector2.new(0.5, 0),
 		Position = UDim2.new(0.5, 0, 0, topInset + 12),
-		Size = UDim2.fromOffset(320, 54),
-		BackgroundColor3 = Theme.Color.PanelDark,
+		Size = UDim2.fromOffset(330, 58),
+		BackgroundTransparency = 1,
+	})
+	local blueTile = UIUtil.panel({
+		Parent = bar, Size = UDim2.fromOffset(90, 56),
+		BackgroundColor3 = Color3.fromRGB(24, 119, 225),
 	})
 	local blue = UIUtil.label({
-		Parent = bar, Text = "0", Font = Theme.Font.Number, TextSize = 26,
-		TextColor3 = Theme.Color.Blue, TextXAlignment = Enum.TextXAlignment.Center,
+		Parent = blueTile, Text = "0", Font = Theme.Font.Number, TextSize = 30,
+		TextColor3 = Theme.Color.Text, TextXAlignment = Enum.TextXAlignment.Center,
 		Size = UDim2.new(0, 80, 1, 0), Position = UDim2.fromScale(0, 0),
 	})
-	local mid = UIUtil.make("Frame", {
-		Parent = bar, BackgroundTransparency = 1,
-		Size = UDim2.new(0, 160, 1, 0), Position = UDim2.new(0.5, -80, 0, 0),
+	local mid = UIUtil.panel({
+		Parent = bar, BackgroundColor3 = Theme.Color.PanelDark,
+		Size = UDim2.fromOffset(150, 56), Position = UDim2.new(0.5, -75, 0, 0),
 	})
 	local timer = UIUtil.label({
 		Parent = mid, Text = "3:00", Font = Theme.Font.Heading, TextSize = 22,
-		TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 4),
+		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 4),
 	})
 	UIUtil.label({
-		Parent = mid, Text = "TEAM DEATHMATCH", Font = Theme.Font.Bold, TextSize = 11,
+		Parent = mid, Text = "TDM", Font = Theme.Font.Bold, TextSize = 11,
 		TextColor3 = Theme.Color.TextMuted, TextXAlignment = Enum.TextXAlignment.Center,
 		Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 32),
 	})
+	local redTile = UIUtil.panel({
+		Parent = bar, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.fromOffset(90, 56), BackgroundColor3 = Color3.fromRGB(236, 64, 76),
+	})
 	local red = UIUtil.label({
-		Parent = bar, Text = "0", Font = Theme.Font.Number, TextSize = 26,
-		TextColor3 = Theme.Color.Red, TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.new(0, 80, 1, 0), Position = UDim2.new(1, -80, 0, 0),
+		Parent = redTile, Text = "0", Font = Theme.Font.Number, TextSize = 30,
+		TextColor3 = Theme.Color.Text, TextXAlignment = Enum.TextXAlignment.Center,
+		Size = UDim2.fromScale(1, 1),
 	})
 	refs.blueScore, refs.redScore, refs.timer = blue, red, timer
 end
@@ -208,11 +215,15 @@ local function buildBottomLeft(parent)
 		Parent = parent,
 		AnchorPoint = Vector2.new(0, 1),
 		Position = UDim2.new(0, 12, 1, -12),
-		Size = UDim2.fromOffset(260, 60),
+		Size = UDim2.fromOffset(326, 68),
 		BackgroundTransparency = 1,
 	})
+	local portrait = UIUtil.panel({ Parent = wrap, Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(58, 58), BackgroundColor3 = Theme.Color.PanelDark })
+	local portraitSlot = UIUtil.make("Frame", { Parent = portrait, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
+	Icons.Place("CatFace", portraitSlot, 48, Color3.fromRGB(245, 245, 245), Color3.fromRGB(255, 184, 198))
+	UIUtil.label({ Parent = wrap, Text = "CAT HEALTH", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(70, 2), Size = UDim2.fromOffset(200, 16) })
 	local track = UIUtil.make("Frame", {
-		Parent = wrap, Position = UDim2.fromOffset(0, 28), Size = UDim2.fromOffset(200, 20),
+		Parent = wrap, Position = UDim2.fromOffset(70, 25), Size = UDim2.fromOffset(220, 22),
 		BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0,
 	})
 	UIUtil.corner(UDim.new(1, 0), track)
@@ -223,7 +234,7 @@ local function buildBottomLeft(parent)
 	local hpText = UIUtil.label({ Parent = track, Text = "100", Font = Theme.Font.Number, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 2 })
 
 	local power = UIUtil.panel({
-		Parent = wrap, Position = UDim2.fromOffset(210, 20), Size = UDim2.fromOffset(40, 40),
+		Parent = wrap, Position = UDim2.fromOffset(286, 12), Size = UDim2.fromOffset(40, 40),
 		BackgroundColor3 = Theme.Color.PanelDark, Visible = false,
 	})
 	local powerIconSlot = UIUtil.make("Frame", { Parent = power, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
@@ -237,16 +248,46 @@ local function buildBottomRight(parent)
 		Parent = parent,
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -12, 1, -12),
-		Size = UDim2.fromOffset(200, 56),
+		Size = UDim2.fromOffset(184, 62),
 		BackgroundColor3 = Theme.Color.PanelDark,
 	})
 	UIUtil.padding(8, wrap)
-	local name = UIUtil.label({ Parent = wrap, Text = "Paw Blaster", Font = Theme.Font.Heading, TextSize = 16, Size = UDim2.new(1, -40, 0, 20) })
-	UIUtil.label({ Parent = wrap, Text = "UNLIMITED AMMO", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim, Size = UDim2.new(1, -40, 0, 16), Position = UDim2.fromOffset(0, 22) })
-	local icon = UIUtil.make("Frame", { Parent = wrap, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(34, 34), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
+	local name = UIUtil.label({ Parent = wrap, Text = "Paw Blaster", Font = Theme.Font.Heading, TextSize = 15, Size = UDim2.new(1, -58, 0, 20) })
+	UIUtil.label({ Parent = wrap, Text = "16  ∞", Font = Theme.Font.Number, TextSize = 25, TextColor3 = Theme.Color.Text, Size = UDim2.new(1, -58, 0, 26), Position = UDim2.fromOffset(0, 23) })
+	local icon = UIUtil.make("Frame", { Parent = wrap, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
 	UIUtil.corner(Theme.CornerSmall, icon)
 	local iconSlot = UIUtil.make("Frame", { Parent = icon, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
 	refs.weaponName, refs.weaponIcon, refs.weaponIconSlot = name, icon, iconSlot
+end
+
+-- ── bottom center: contextual action slots ──────────────────────────────────
+-- These are intentionally visual-only affordances: the existing movement and
+-- combat controllers retain authority, while this gives their controls the
+-- same instantly-readable presentation as the reference fight screen.
+local function buildAbilityBar(parent)
+	local wrap = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12),
+		Size = UDim2.fromOffset(238, 70), BackgroundTransparency = 1,
+	})
+	local function actionSlot(x: number, key: string, title: string, color: Color3, iconName: string)
+		local slot = UIUtil.panel({ Parent = wrap, Position = UDim2.fromOffset(x, 8), Size = UDim2.fromOffset(62, 62), BackgroundColor3 = Theme.Color.PanelDark })
+		local icon = UIUtil.make("Frame", { Parent = slot, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.14), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = color, BorderSizePixel = 0 })
+		UIUtil.corner(UDim.new(0.28, 0), icon)
+		Icons.Place(iconName, icon, 17, Theme.Color.Text)
+		UIUtil.label({ Parent = slot, Text = title, Font = Theme.Font.Bold, TextSize = 9, TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 39), Size = UDim2.new(1, 0, 0, 13) })
+		local keyTile = UIUtil.make("TextLabel", { Parent = slot, Text = key, Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Text, Position = UDim2.fromOffset(43, 4), Size = UDim2.fromOffset(14, 14), BackgroundColor3 = Theme.Color.Panel, BorderSizePixel = 0 })
+		UIUtil.corner(UDim.new(0.28, 0), keyTile)
+	end
+	actionSlot(0, "Q", "DASH", Theme.Color.Accent2, "Bolt")
+	local weaponSlot = UIUtil.panel({ Parent = wrap, Position = UDim2.fromOffset(78, 0), Size = UDim2.fromOffset(76, 70), BackgroundColor3 = Color3.fromRGB(73, 36, 114) })
+	UIUtil.stroke(Theme.Color.Gem, 2, weaponSlot)
+	local weaponPreview = UIUtil.make("Frame", { Parent = weaponSlot, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.10), Size = UDim2.fromOffset(38, 38), BackgroundColor3 = Theme.Color.Gem, BorderSizePixel = 0 })
+	UIUtil.corner(UDim.new(0.28, 0), weaponPreview)
+	local weaponPreviewSlot = UIUtil.make("Frame", { Parent = weaponPreview, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
+	Icons.Place("Gun", weaponPreviewSlot, 23, Theme.Color.Text)
+	UIUtil.label({ Parent = weaponSlot, Text = "PRIMARY", Font = Theme.Font.Bold, TextSize = 9, TextColor3 = Theme.Color.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 0, 13) })
+	actionSlot(176, "E", "SPRINT", Theme.Color.Warn, "Burst")
+	refs.weaponAbility, refs.weaponAbilitySlot = weaponPreview, weaponPreviewSlot
 end
 
 -- ── center banners ───────────────────────────────────────────────────────────
@@ -355,6 +396,13 @@ local function updateWeapon()
 				refs.weaponIconSlot:ClearAllChildren()
 				Icons.Place("Gun", refs.weaponIconSlot, 22, w.TrailColor, w.MuzzleColor)
 			end
+			if refs.weaponAbility then
+				refs.weaponAbility.BackgroundColor3 = skin.Tint
+			end
+			if refs.weaponAbilitySlot then
+				refs.weaponAbilitySlot:ClearAllChildren()
+				Icons.Place("Gun", refs.weaponAbilitySlot, 23, w.TrailColor, w.MuzzleColor)
+			end
 		end
 	end
 end
@@ -377,6 +425,7 @@ function HUD.Build()
 	buildScoreboard(gui, topInset)
 	buildBottomLeft(gui)
 	buildBottomRight(gui)
+	buildAbilityBar(gui)
 	buildBanners(gui)
 	buildMobile(gui)
 

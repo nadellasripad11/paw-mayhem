@@ -51,6 +51,41 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		disc.Shape = Enum.PartType.Cylinder
 	end
 
+	-- Break the perfect stacked-disc silhouette with chunky cliff teeth. These
+	-- visual masses hang beneath the playable top and make the floating islands
+	-- read like the reference's hand-built rock islands from a distance.
+	for i = 1, 8 do
+		local angle = math.rad((i - 1) * 45 + 12)
+		local depth = radius * (0.42 + (i % 3) * 0.06)
+		local rock = ArenaKit.NewPart(
+			"CliffRock" .. i,
+			Vector3.new(radius * 0.34, 8 + (i % 3) * 2, radius * 0.28),
+			CFrame.new(center + Vector3.new(math.cos(angle) * depth, -10 - (i % 2) * 2, math.sin(angle) * depth)) * CFrame.Angles(math.rad((i % 2) * 8), angle, math.rad(-12 + (i % 3) * 10)),
+			(i % 2 == 0) and palette.Stone or palette.StoneDark,
+			Enum.Material.Slate,
+			folder
+		)
+		rock.Shape = Enum.PartType.Ball
+		rock.CanCollide = false
+	end
+
+	-- Large crown outcrops give each island a readable rim and keep the top
+	-- from looking like a flat round platform when viewed from the arena.
+	for i = 1, 7 do
+		local angle = math.rad((i - 1) * 51 + 20)
+		local edge = radius * (0.72 + (i % 2) * 0.06)
+		local mound = ArenaKit.NewPart(
+			"CrownOutcrop" .. i,
+			Vector3.new(radius * (0.24 + (i % 3) * 0.03), 2.2 + (i % 2) * 1.4, radius * (0.2 + (i % 2) * 0.04)),
+			CFrame.new(center + Vector3.new(math.cos(angle) * edge, 2.15 + (i % 2) * 0.4, math.sin(angle) * edge)) * CFrame.Angles(0, angle, math.rad(-8 + (i % 3) * 8)),
+			(i % 2 == 0) and palette.Top or palette.TopDark,
+			topMaterial or Enum.Material.Grass,
+			folder
+		)
+		mound.Shape = Enum.PartType.Ball
+		mound.CanCollide = false
+	end
+
 	local floor = ArenaKit.NewPart("Floor", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), palette.Top, topMaterial or Enum.Material.Grass, folder)
 	floor.Shape = Enum.PartType.Cylinder
 	floor.Transparency = 1
@@ -99,6 +134,37 @@ function ArenaKit.AddHexSpawns(center: Vector3, radius: number, teamId: string?,
 		local ang = math.rad(k * 60)
 		local offset = Vector3.new(math.cos(ang) * r, 3, math.sin(ang) * r)
 		ArenaKit.AddSpawn(center + offset, teamId, spawns)
+	end
+end
+
+-- Competitive team layout: three grounded points on each team island. The
+-- marker is only a fraction above the transparent Floor's top surface, so
+-- the character root settles onto the island instead of spawning in midair.
+function ArenaKit.AddTeamTriangleSpawns(center: Vector3, radius: number, teamId: string, spawns: Folder)
+	local ring = radius * 0.35
+	for k = 0, 2 do
+		local ang = math.rad(30 + k * 120)
+		ArenaKit.AddSpawn(center + Vector3.new(math.cos(ang) * ring, 2.25, math.sin(ang) * ring), teamId, spawns)
+	end
+end
+
+-- Readable in-world markers for the same three authoritative spawn positions.
+-- They sit on the island top, so the team start is visually part of the map
+-- instead of looking like an invisible floating respawn volume.
+function ArenaKit.AddTeamSpawnBeacons(center: Vector3, radius: number, teamId: string, parent: Instance)
+	local color = teamId == "Red" and Color3.fromRGB(255, 92, 102) or Color3.fromRGB(72, 174, 255)
+	local ring = radius * 0.35
+	for k = 0, 2 do
+		local ang = math.rad(30 + k * 120)
+		local pos = center + Vector3.new(math.cos(ang) * ring, 1.78, math.sin(ang) * ring)
+		local pad = ArenaKit.NewPart("TeamSpawnPad", Vector3.new(5.2, 0.16, 5.2), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Neon, parent)
+		pad.Shape = Enum.PartType.Cylinder
+		pad.Transparency = 0.48
+		pad.CanCollide = false
+		local core = ArenaKit.NewPart("TeamSpawnCore", Vector3.new(2.4, 0.08, 2.4), CFrame.new(pos + Vector3.new(0, 0.11, 0)) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Glass, parent)
+		core.Shape = Enum.PartType.Cylinder
+		core.Transparency = 0.22
+		core.CanCollide = false
 	end
 end
 
@@ -178,18 +244,21 @@ end
 -- inherits that same safety guarantee and the same tested team balance,
 -- instead of re-deriving island placement (and re-risking a bad one) per map.
 ArenaKit.StandardLayout = {
-	Center = { pos = Vector3.new(0, 0, 0), r = 34 },
+	-- Reference-inspired vertical arena: a broad center island, elevated side
+	-- islands, and two team ledges that create the same layered skyline.
+	Center = { pos = Vector3.new(0, 0, 0), r = 32 },
 	Outer = {
-		{ pos = Vector3.new(0, 6, -70), r = 22, team = "Blue" },
-		{ pos = Vector3.new(0, 6, 70), r = 22, team = "Red" },
-		{ pos = Vector3.new(-70, 4, 0), r = 20, team = nil },
-		{ pos = Vector3.new(70, 4, 0), r = 20, team = nil },
-		{ pos = Vector3.new(-52, 10, -52), r = 16, team = nil },
-		{ pos = Vector3.new(52, 10, 52), r = 16, team = nil },
+		{ pos = Vector3.new(0, 8, -76), r = 24, team = "Blue" },
+		{ pos = Vector3.new(0, 8, 76), r = 24, team = "Red" },
+		{ pos = Vector3.new(-72, 10, -12), r = 23, team = nil },
+		{ pos = Vector3.new(72, 14, 12), r = 23, team = nil },
+		{ pos = Vector3.new(-56, 22, -58), r = 18, team = nil },
+		{ pos = Vector3.new(56, 26, 58), r = 18, team = nil },
 	},
 	Satellites = {
-		{ pos = Vector3.new(30, 18, 30), r = 8 },
-		{ pos = Vector3.new(-30, 22, -30), r = 7 },
+		{ pos = Vector3.new(30, 30, 34), r = 9 },
+		{ pos = Vector3.new(-30, 34, -34), r = 8 },
+		{ pos = Vector3.new(0, 38, 0), r = 7 },
 	},
 }
 

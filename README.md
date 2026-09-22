@@ -30,7 +30,7 @@ you need rojo. the easiest way is the vs code extension or [aftman](https://gith
 rojo serve
 ```
 
-then open roblox studio, connect the rojo plugin, and hit play. the match starts automatically. for knockback testing you need two studio clients — see [TESTING.md](TESTING.md).
+then open roblox studio, connect the rojo plugin, and hit play. you will land on the catto pew pew home screen; choose play, select one of the three maps, and press play this map to enter the countdown and arena. for knockback testing you need two studio clients — see [TESTING.md](TESTING.md).
 
 full setup walkthrough is in [GAME_SETUP.md](GAME_SETUP.md).
 

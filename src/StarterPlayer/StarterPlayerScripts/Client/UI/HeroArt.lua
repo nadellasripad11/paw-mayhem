@@ -38,7 +38,7 @@ end
 -- ── Sky: gradient + sun glow + three drifting cloud layers ──────────────────
 function HeroArt.Sky(parent: Instance)
 	local sky = frame(parent, UDim2.fromScale(1, 1), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(120, 175, 245), 0, Vector2.new(0.5, 0.5))
-	grad(sky, Color3.fromRGB(150, 200, 255), Color3.fromRGB(30, 45, 85), 90)
+	grad(sky, Color3.fromRGB(116, 202, 255), Color3.fromRGB(52, 133, 213), 90)
 	sky.ZIndex = 1
 
 	local sun = frame(sky, UDim2.fromOffset(220, 220), UDim2.fromScale(0.78, 0.12), Color3.fromRGB(255, 244, 200), 0.5)

@@ -118,6 +118,78 @@ local function addAccessory(root: BasePart, acc)
 	end
 end
 
+-- Small front-facing fur markings keep the catalog variants visually distinct
+-- in-world without adding textures or external assets.
+local function addFurMarkings(root: BasePart, fur)
+	if not fur or fur.Pattern == "Solid" then
+		return
+	end
+	local marking = fur.Marking or fur.Accent
+	if fur.Pattern == "Tiger" then
+		for i = -1, 1 do
+			local stripe = part("TigerStripe", Vector3.new(0.16, 0.55, 0.06), marking)
+			stripe.Parent = root
+			weld(root, stripe, CFrame.new(i * 0.32, 1.88, -0.88) * CFrame.Angles(0, 0, math.rad(i * 12)))
+		end
+		for i = -1, 1 do
+			local stripe = part("TigerBodyStripe", Vector3.new(0.18, 0.42, 0.05), marking)
+			stripe.Parent = root
+			weld(root, stripe, CFrame.new(i * 0.48, 0.28, -0.77) * CFrame.Angles(0, 0, math.rad(i * 18)))
+		end
+	elseif fur.Pattern == "Calico" then
+		local patch = part("CalicoPatch", Vector3.new(0.46, 0.42, 0.08), marking, Enum.PartType.Ball)
+		patch.Parent = root
+		weld(root, patch, CFrame.new(0.34, 1.92, -0.82))
+		local patch2 = part("CalicoBodyPatch", Vector3.new(0.52, 0.62, 0.08), marking, Enum.PartType.Ball)
+		patch2.Parent = root
+		weld(root, patch2, CFrame.new(-0.42, 0.25, -0.72))
+	end
+end
+
+local function addOutfitDetails(root: BasePart, outfit)
+	if not outfit or outfit.Id == "None" then
+		return
+	end
+	local id = outfit.Id
+	if id == "Hoodie" then
+		local hood = part("Hood", Vector3.new(1.72, 0.7, 1.55), outfit.Color, Enum.PartType.Ball)
+		hood.Parent = root
+		weld(root, hood, CFrame.new(0, 1.15, 0.18))
+	elseif id == "Streetwear" then
+		local jacket = part("StreetwearJacket", Vector3.new(1.78, 1.05, 1.42), outfit.Color, Enum.PartType.Ball)
+		jacket.Parent = root
+		weld(root, jacket, CFrame.new(0, 0.15, 0))
+		local zipper = part("StreetwearZipper", Vector3.new(0.08, 0.95, 0.08), Color3.fromRGB(220, 235, 245))
+		zipper.Parent = root
+		weld(root, zipper, CFrame.new(0, 0.18, -0.73))
+	elseif id == "Robot" then
+		local chest = part("RobotChest", Vector3.new(1.7, 1.35, 1.35), outfit.Color, Enum.PartType.Ball)
+		chest.Parent = root
+		weld(root, chest, CFrame.new(0, 0.12, 0))
+		local core = part("RobotCore", Vector3.new(0.42, 0.42, 0.12), Color3.fromRGB(35, 210, 255), Enum.PartType.Ball)
+		core.Parent = root
+		weld(root, core, CFrame.new(0, 0.18, -0.72))
+	elseif id == "Ninja" then
+		local sash = part("NinjaSash", Vector3.new(1.9, 0.18, 1.55), Color3.fromRGB(165, 40, 60))
+		sash.Parent = root
+		weld(root, sash, CFrame.new(0, 0.45, 0))
+	elseif id == "Royal" then
+		local cape = part("RoyalCape", Vector3.new(1.75, 1.85, 0.28), outfit.Color)
+		cape.Parent = root
+		weld(root, cape, CFrame.new(0, 0.25, 0.72))
+		local sash = part("RoyalSash", Vector3.new(0.18, 1.25, 0.1), Color3.fromRGB(255, 210, 80))
+		sash.Parent = root
+		weld(root, sash, CFrame.new(0, 0.22, -0.73))
+	elseif id == "Space" then
+		local suit = part("SpaceSuit", Vector3.new(1.82, 1.45, 1.45), outfit.Color, Enum.PartType.Ball)
+		suit.Parent = root
+		weld(root, suit, CFrame.new(0, 0.12, 0))
+		local lifePack = part("SpacePack", Vector3.new(1.15, 1.2, 0.38), Color3.fromRGB(120, 150, 190))
+		lifePack.Parent = root
+		weld(root, lifePack, CFrame.new(0, 0.45, 0.82))
+	end
+end
+
 -- Build and return the fully assembled cat Model (not yet parented).
 function CatBuilder.Build(custom: any?, displayName: string?): Model
 	local fur, outfit, hat, acc = resolve(custom)
@@ -160,6 +232,7 @@ function CatBuilder.Build(custom: any?, displayName: string?): Model
 	local nose = part("Nose", Vector3.new(0.24, 0.18, 0.18), Color3.fromRGB(255, 150, 170), Enum.PartType.Ball)
 	nose.Parent = model
 	weld(root, nose, CFrame.new(0, 1.42, -1.0))
+	addFurMarkings(root, fur)
 
 	-- Eyes (big and cute)
 	for i = -1, 1, 2 do
@@ -212,6 +285,7 @@ function CatBuilder.Build(custom: any?, displayName: string?): Model
 	tip.Parent = model
 	weld(root, tip, CFrame.new(0, 1.7, 1.65) * CFrame.Angles(math.rad(-70), 0, 0))
 
+	addOutfitDetails(root, outfit)
 	addHat(root, head, hat)
 	addAccessory(root, acc)
 

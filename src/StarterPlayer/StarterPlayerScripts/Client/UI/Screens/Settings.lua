@@ -15,7 +15,8 @@ local Settings = {}
 local function sliderRow(parent, label, value, onChange)
 	local row = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40) })
 	UIUtil.label({ Parent = row, Text = label, TextSize = 15, Size = UDim2.new(0, 200, 1, 0) })
-	local track = UIUtil.make("Frame", { Parent = row, Position = UDim2.new(0, 210, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -220, 0, 8), BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0 })
+	local valueLabel = UIUtil.label({ Parent = row, Text = string.format("%d%%", math.floor(value * 100 + 0.5)), Font = Theme.Font.Number, TextSize = 11, TextColor3 = Theme.Color.Accent, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(1, -62, 0, 0), Size = UDim2.fromOffset(62, 40) })
+	local track = UIUtil.make("Frame", { Parent = row, Position = UDim2.new(0, 210, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -280, 0, 8), BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), track)
 	local fill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(value, 1), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), fill)
@@ -32,6 +33,7 @@ local function sliderRow(parent, label, value, onChange)
 			local rel = math.clamp((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
 			fill.Size = UDim2.fromScale(rel, 1)
 			knob.Position = UDim2.fromScale(rel, 0.5)
+			valueLabel.Text = string.format("%d%%", math.floor(rel * 100 + 0.5))
 			onChange(rel)
 		end
 	end)
@@ -41,12 +43,15 @@ local function toggleRow(parent, label, value, onChange)
 	local row = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40) })
 	UIUtil.label({ Parent = row, Text = label, TextSize = 15, Size = UDim2.new(0, 200, 1, 0) })
 	local sw = UIUtil.button({ Parent = row, Position = UDim2.new(0, 210, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(52, 26), BackgroundColor3 = value and Theme.Color.Success or Theme.Color.PanelDark, CornerRadius = UDim.new(1, 0), Text = "" })
+	local stateLabel = UIUtil.label({ Parent = row, Text = value and "ON" or "OFF", Font = Theme.Font.Number, TextSize = 11, TextColor3 = value and Theme.Color.Success or Theme.Color.TextMuted, Position = UDim2.fromOffset(274, 0), Size = UDim2.fromOffset(48, 40) })
 	local knob = UIUtil.make("Frame", { Parent = sw, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(value and 0.75 or 0.25, 0.5), Size = UDim2.fromOffset(20, 20), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), knob)
 	local state = value
-	sw.MouseButton1Click:Connect(function()
+		sw.MouseButton1Click:Connect(function()
 		state = not state
 		sw.BackgroundColor3 = state and Theme.Color.Success or Theme.Color.PanelDark
+		stateLabel.Text = state and "ON" or "OFF"
+		stateLabel.TextColor3 = state and Theme.Color.Success or Theme.Color.TextMuted
 		UIUtil.tween(knob, 0.12, { Position = UDim2.fromScale(state and 0.75 or 0.25, 0.5) })
 		onChange(state)
 	end)

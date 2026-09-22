@@ -15,7 +15,10 @@ local ArenaBuilder = {}
 ArenaBuilder.CurrentMap = nil :: any
 
 function ArenaBuilder.Build(): Folder
-	local map = MapRegistry.Random()
+	-- The flagship match map is the bright Sky Islands arena from the
+	-- reference. Keep the other maps available for future rotation, but make
+	-- the shipped experience consistently land in this arena.
+	local map = MapRegistry.GetById("SkyIslands") or MapRegistry.Random()
 	ArenaBuilder.CurrentMap = map
 	print(string.format("[PAW MAYHEM] Building map: %s", map.Name))
 	return map.Build()

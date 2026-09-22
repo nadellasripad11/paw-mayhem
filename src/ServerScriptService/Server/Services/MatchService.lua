@@ -6,6 +6,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
@@ -15,6 +16,7 @@ local Scoring = GameConfig.Scoring
 local EconomyService = require(script.Parent.EconomyService)
 local PlayerService = require(script.Parent.PlayerService)
 local Runtime = require(script.Parent.Runtime)
+local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 
 local MatchService = {}
 
@@ -30,7 +32,46 @@ local state = {
 	TimeLeft = GameConfig.Match.IntermissionSeconds,
 	Scores = { Blue = 0, Red = 0 },
 	Winner = nil :: string?,
+	MapId = "SkyIslands",
 }
+
+local MAP_IDS = { SkyIslands = true, Volcano = true, Toybox = true }
+local mapVotes: { [number]: string } = {}
+local queuedPlayers: { [number]: boolean } = {}
+
+local function queuedCount(): number
+	local count = 0
+	for userId in pairs(queuedPlayers) do
+		if Players:GetPlayerByUserId(userId) then
+			count += 1
+		end
+	end
+	return count
+end
+
+local function leadingMapId(): string
+	local totals = { SkyIslands = 0, Volcano = 0, Toybox = 0 }
+	for _, mapId in pairs(mapVotes) do
+		if totals[mapId] ~= nil then
+			totals[mapId] += 1
+		end
+	end
+	local winner, high = state.MapId, -1
+	for _, mapId in ipairs({ "SkyIslands", "Volcano", "Toybox" }) do
+		if totals[mapId] > high then
+			winner, high = mapId, totals[mapId]
+		end
+	end
+	return winner
+end
+
+local function buildVotedMap()
+	local mapId = leadingMapId()
+	if not ArenaBuilder.CurrentMap or ArenaBuilder.CurrentMap.Id ~= mapId then
+		ArenaBuilder.BuildMap(mapId)
+	end
+	state.MapId = mapId
+end
 
 -- Build the live scoreboard array sorted by match eliminations.
 local function buildBoard()
@@ -59,6 +100,7 @@ local function broadcastState()
 		winner = state.Winner,
 		scoreToWin = GameConfig.Match.ScoreToWin,
 		matchSeconds = GameConfig.Match.MatchSeconds,
+		mapId = state.MapId,
 		board = buildBoard(),
 	})
 end
@@ -156,11 +198,16 @@ local function enterIntermission()
 	state.TimeLeft = GameConfig.Match.IntermissionSeconds
 	state.Winner = nil
 	state.Scores = { Blue = 0, Red = 0 }
+	mapVotes = {}
+	queuedPlayers = {}
 	PlayerService.MatchActive = false
 	broadcastState()
 end
 
 local function enterCountdown()
+	-- Lock the vote and rebuild while players are still in the lobby, before
+	-- characters and power-up pickups exist for the next match.
+	buildVotedMap()
 	state.Phase = PHASE.Countdown
 	state.TimeLeft = GameConfig.Match.CountdownSeconds
 	-- Reset per-match runtime + spawn everyone.
@@ -185,7 +232,7 @@ local function mainLoop()
 		state.TimeLeft -= 1
 
 		if state.Phase == PHASE.Intermission then
-			if #Players:GetPlayers() >= GameConfig.Match.MinPlayersToStart and state.TimeLeft <= 0 then
+			if queuedCount() >= GameConfig.Match.MinPlayersToStart and state.TimeLeft <= 0 then
 				enterCountdown()
 			elseif state.TimeLeft <= 0 then
 				state.TimeLeft = GameConfig.Match.IntermissionSeconds
@@ -217,6 +264,26 @@ end
 
 function MatchService.Start()
 	PlayerService.OnElimination = onElimination
+	Remotes.Get("RequestJoinMatch").OnServerEvent:Connect(function(player, payload)
+		local mapId = typeof(payload) == "table" and payload.mapId or nil
+		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then
+			return
+		end
+		if state.Phase ~= PHASE.Intermission then
+			Remotes.Get("Notify"):FireClient(player, { text = "Map voting is closed for this round.", kind = "warning" })
+			return
+		end
+		mapVotes[player.UserId] = mapId
+		queuedPlayers[player.UserId] = true
+		state.MapId = leadingMapId()
+		Remotes.Get("Notify"):FireAllClients({ text = player.DisplayName .. " voted for " .. mapId, kind = "info" })
+		broadcastState()
+		-- Play is an explicit join action. Do not make the player wait for the
+		-- background lobby timer once they have selected a valid map.
+		if queuedCount() >= GameConfig.Match.MinPlayersToStart then
+			enterCountdown()
+		end
+	end)
 
 	-- Sync new joiners to current state, and drop late joiners into a live match.
 	Players.PlayerAdded:Connect(function(player)
@@ -228,6 +295,9 @@ function MatchService.Start()
 			task.wait(1)
 			PlayerService.Spawn(player)
 		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		queuedPlayers[player.UserId] = nil
 	end)
 
 	enterIntermission()

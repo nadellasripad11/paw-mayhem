@@ -13,7 +13,7 @@ local ClientState = require(script.Parent.Parent.Parent.ClientState)
 
 local Results = {}
 local player = Players.LocalPlayer
-local gui, titleLabel, scoreLabel, subLabel, iconSlot, confettiLayer
+local gui, titleLabel, scoreLabel, subLabel, statLabel, iconSlot, confettiLayer
 
 local CONFETTI_COLORS = {
 	Color3.fromRGB(255, 205, 90), Color3.fromRGB(96, 210, 120),
@@ -70,6 +70,14 @@ function Results.Show(match)
 	end
 	scoreLabel.Text = string.format("%d  -  %d", match.scores.Blue or 0, match.scores.Red or 0)
 	subLabel.Text = winner and ((winner == "Blue" and "Blue Paws" or "Red Claws") .. " win!") or ""
+	local myStats = nil
+	for _, entry in ipairs(match.board or {}) do
+		if entry.Name == player.Name then
+			myStats = entry
+			break
+		end
+	end
+	statLabel.Text = myStats and string.format("YOUR ROUND  •  %d ELIMS  •  %d SCORE", myStats.Elims or 0, myStats.Score or 0) or "YOUR ROUND COMPLETE"
 	gui.Enabled = true
 	if won then
 		burstConfetti()
@@ -88,15 +96,19 @@ function Results.Build()
 		IgnoreGuiInset = true, ResetOnSpawn = false, DisplayOrder = 20, Enabled = false,
 	}) :: ScreenGui
 
-	local dim = UIUtil.make("Frame", { Parent = gui, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 10, 20), BackgroundTransparency = 0.35, BorderSizePixel = 0 })
-	local card = UIUtil.panel({ Parent = dim, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(420, 360), BackgroundColor3 = Theme.Color.Panel, ClipsDescendants = true })
+	local dim = UIUtil.make("Frame", { Parent = gui, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(4, 15, 30), BackgroundTransparency = 0.22, BorderSizePixel = 0 })
+	local card = UIUtil.panel({ Parent = dim, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(456, 382), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
+	UIUtil.gradient(Color3.fromRGB(22, 74, 110), Theme.Color.PanelDark, 90, card)
 	confettiLayer = UIUtil.make("Frame", { Parent = card, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5 })
 	UIUtil.padding(20, card)
 	iconSlot = UIUtil.make("Frame", { Parent = card, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.fromOffset(56, 56), BackgroundTransparency = 1, ZIndex = 6 })
 	titleLabel = UIUtil.label({ Parent = card, Text = "VICTORY!", Font = Theme.Font.Title, TextSize = 46, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 60), Position = UDim2.fromOffset(0, 68), ZIndex = 6 })
-	scoreLabel = UIUtil.label({ Parent = card, Text = "0 - 0", Font = Theme.Font.Number, TextSize = 40, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 138), ZIndex = 6 })
+	scoreLabel = UIUtil.label({ Parent = card, Text = "0 - 0", Font = Theme.Font.Number, TextSize = 42, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 138), ZIndex = 6 })
 	subLabel = UIUtil.label({ Parent = card, Text = "", TextColor3 = Theme.Color.TextDim, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 194), ZIndex = 6 })
-	UIUtil.label({ Parent = card, Text = "Returning to lobby…", TextColor3 = Theme.Color.TextMuted, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -40), ZIndex = 6 })
+	statLabel = UIUtil.label({ Parent = card, Text = "YOUR ROUND COMPLETE", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 218), ZIndex = 6 })
+	local resultTag = UIUtil.panel({ Parent = card, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 236), Size = UDim2.fromOffset(250, 34), BackgroundColor3 = Color3.fromRGB(8, 42, 76), ZIndex = 6 })
+	UIUtil.label({ Parent = resultTag, Text = "MATCH COMPLETE  •  RESULTS SAVED", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 7 })
+	UIUtil.label({ Parent = card, Text = "Returning to lobby…", TextColor3 = Theme.Color.TextMuted, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -38), ZIndex = 6 })
 
 	return gui
 end

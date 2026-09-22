@@ -63,7 +63,9 @@ local function pickSpawn(teamId: string?): CFrame
 		return CFrame.new(0, 30, 0)
 	end
 	local chosen = candidates[math.random(1, #candidates)]
-	return chosen.CFrame + Vector3.new(0, 4, 0)
+	-- Spawn just above the marker so the root lands on the island surface
+	-- instead of visibly dropping in from several studs overhead.
+	return chosen.CFrame + Vector3.new(0, 1.25, 0)
 end
 
 -- Assign the player to the smaller team.
