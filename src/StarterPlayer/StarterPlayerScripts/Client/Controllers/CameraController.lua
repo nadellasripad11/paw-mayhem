@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local LobbyScene = require(script.Parent.Parent.Lobby.LobbyScene)
 
 local CameraController = {}
 
@@ -25,6 +26,7 @@ local lobbyView = false
 local touchRotating = false
 local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
+local parallax = Vector2.zero
 
 -- Add a camera shake impulse (respects the CameraShake setting).
 function CameraController.AddShake(amount: number)
@@ -97,10 +99,18 @@ end
 local function step(dt: number)
 	if lobbyView then
 		camera.CameraType = Enum.CameraType.Scriptable
-		camera.FieldOfView = 58
-		local base = CFrame.lookAt(Vector3.new(-86, 58, 126), Vector3.new(0, 14, 0))
-		local drift = math.sin(os.clock() * 0.22) * 1.4
-		camera.CFrame = base * CFrame.new(drift, math.sin(os.clock() * 0.18) * 0.55, 0)
+		camera.FieldOfView = LobbyScene.FieldOfView
+		local t = os.clock()
+		local vp = camera.ViewportSize
+		local mouse = UserInputService:GetMouseLocation()
+		local target = Vector2.zero
+		if vp.X > 0 and vp.Y > 0 then
+			target = Vector2.new(math.clamp(mouse.X / vp.X - 0.5, -0.5, 0.5), math.clamp(mouse.Y / vp.Y - 0.5, -0.5, 0.5))
+		end
+		parallax = parallax:Lerp(target, math.clamp(dt * 3, 0, 1))
+		camera.CFrame = LobbyScene.GetCameraCFrame()
+			* CFrame.new(math.sin(t * 0.23) * 0.18 + parallax.X * 0.7, math.sin(t * 0.19) * 0.1 - parallax.Y * 0.35, 0)
+			* CFrame.Angles(parallax.Y * 0.006, -parallax.X * 0.01, 0)
 		return
 	end
 	if not enabled then
@@ -195,10 +205,14 @@ end
 
 function CameraController.SetLobbyView(on: boolean)
 	lobbyView = on
+	local ok, err = pcall(LobbyScene.SetActive, on)
+	if not ok then
+		warn("[CATTO] Lobby scene toggle failed: " .. tostring(err))
+	end
 	if on then
 		enabled = false
 		camera.CameraType = Enum.CameraType.Scriptable
-		camera.FieldOfView = 58
+		camera.FieldOfView = LobbyScene.FieldOfView
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
 	else

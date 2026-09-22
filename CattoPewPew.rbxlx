@@ -20,19 +20,255 @@
       </Color3>
     </Properties>
   </Item>
-  <Item class="ReplicatedStorage" referent="1">
+  <Item class="ReplicatedFirst" referent="1">
+    <Properties>
+      <string name="Name">ReplicatedFirst</string>
+    </Properties>
+    <Item class="LocalScript" referent="2">
+      <Properties>
+        <string name="Name">LoadingScreen</string>
+        <string name="Source"><![CDATA[-- LoadingScreen: replaces Roblox's default join screen with the Catto Pew Pew
+-- logo over a sky gradient and a loading bar, then fades away once the client
+-- has built the 3D home screen (UIManager sets the CattoLobbyReady attribute).
+
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+ReplicatedFirst:RemoveDefaultLoadingScreen()
+
+local player = Players.LocalPlayer
+local NAVY = Color3.fromRGB(28, 40, 84)
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "CattoLoading"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 1000
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local root = Instance.new("CanvasGroup")
+root.Size = UDim2.fromScale(1, 1)
+root.BackgroundColor3 = Color3.new(1, 1, 1)
+root.BorderSizePixel = 0
+root.Parent = gui
+local sky = Instance.new("UIGradient")
+sky.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(96, 176, 255)),
+	ColorSequenceKeypoint.new(0.6, Color3.fromRGB(160, 214, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 238, 255)),
+})
+sky.Rotation = 90
+sky.Parent = root
+
+local function roundCorner(inst: Instance, radius: UDim)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = radius
+	c.Parent = inst
+end
+
+local function stroke(inst: Instance, color: Color3, thickness: number, contextual: boolean)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness
+	s.LineJoinMode = Enum.LineJoinMode.Round
+	s.ApplyStrokeMode = contextual and Enum.ApplyStrokeMode.Contextual or Enum.ApplyStrokeMode.Border
+	s.Parent = inst
+end
+
+-- soft cloud puffs
+for i, spec in ipairs({ { 0.12, 0.78, 260 }, { 0.3, 0.86, 200 }, { 0.72, 0.8, 300 }, { 0.9, 0.9, 220 }, { 0.55, 0.95, 280 } }) do
+	local puff = Instance.new("Frame")
+	puff.AnchorPoint = Vector2.new(0.5, 0.5)
+	puff.Position = UDim2.fromScale(spec[1], spec[2])
+	puff.Size = UDim2.fromOffset(spec[3], spec[3] * 0.45)
+	puff.BackgroundColor3 = Color3.new(1, 1, 1)
+	puff.BackgroundTransparency = 0.15 + i * 0.04
+	puff.BorderSizePixel = 0
+	puff.Parent = root
+	roundCorner(puff, UDim.new(1, 0))
+end
+
+local logo = Instance.new("Frame")
+logo.AnchorPoint = Vector2.new(0.5, 0.5)
+logo.Position = UDim2.fromScale(0.5, 0.42)
+logo.Size = UDim2.fromOffset(360, 190)
+logo.BackgroundTransparency = 1
+logo.Parent = root
+local scale = Instance.new("UIScale")
+scale.Parent = logo
+
+for _, ex in ipairs({ 104, 298 }) do
+	local ear = Instance.new("Frame")
+	ear.AnchorPoint = Vector2.new(0.5, 0.5)
+	ear.Position = UDim2.fromOffset(ex, 30)
+	ear.Size = UDim2.fromOffset(34, 34)
+	ear.Rotation = 45
+	ear.BackgroundColor3 = Color3.new(1, 1, 1)
+	ear.BorderSizePixel = 0
+	ear.Parent = logo
+	roundCorner(ear, UDim.new(0, 7))
+	stroke(ear, NAVY, 4, false)
+end
+
+local function word(text: string, font: Enum.Font, size: number, y: number, rot: number, strokeColor: Color3, gold: boolean)
+	for pass = 1, 2 do
+		local l = Instance.new("TextLabel")
+		l.BackgroundTransparency = 1
+		l.Text = text
+		l.Font = font
+		l.TextSize = size
+		l.TextColor3 = pass == 1 and strokeColor or Color3.new(1, 1, 1)
+		l.AnchorPoint = Vector2.new(0.5, 0)
+		l.Position = UDim2.new(0.5, 0, 0, y + (pass == 1 and 7 or 0))
+		l.Size = UDim2.fromOffset(360, size + 10)
+		l.Rotation = rot
+		l.ZIndex = pass + 1
+		l.Parent = logo
+		stroke(l, strokeColor, size > 80 and 6 or 3.5, true)
+		if pass == 2 and gold then
+			local g = Instance.new("UIGradient")
+			g.Color = ColorSequence.new(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 166, 30))
+			g.Rotation = 90
+			g.Parent = l
+		end
+	end
+end
+word("CATTO", Enum.Font.FredokaOne, 100, 22, 0, NAVY, false)
+word("PEW PEW!", Enum.Font.Bangers, 62, 112, -5, Color3.fromRGB(70, 42, 26), true)
+
+local barBack = Instance.new("Frame")
+barBack.AnchorPoint = Vector2.new(0.5, 0.5)
+barBack.Position = UDim2.fromScale(0.5, 0.7)
+barBack.Size = UDim2.fromOffset(340, 20)
+barBack.BackgroundColor3 = NAVY
+barBack.BackgroundTransparency = 0.35
+barBack.BorderSizePixel = 0
+barBack.Parent = root
+roundCorner(barBack, UDim.new(1, 0))
+stroke(barBack, Color3.new(1, 1, 1), 2, false)
+local fill = Instance.new("Frame")
+fill.Size = UDim2.fromScale(0.04, 1)
+fill.BackgroundColor3 = Color3.new(1, 1, 1)
+fill.BorderSizePixel = 0
+fill.Parent = barBack
+roundCorner(fill, UDim.new(1, 0))
+local fillGrad = Instance.new("UIGradient")
+fillGrad.Color = ColorSequence.new(Color3.fromRGB(150, 236, 90), Color3.fromRGB(60, 176, 56))
+fillGrad.Rotation = 90
+fillGrad.Parent = fill
+
+local status = Instance.new("TextLabel")
+status.AnchorPoint = Vector2.new(0.5, 0)
+status.Position = UDim2.new(0.5, 0, 0.7, 20)
+status.Size = UDim2.fromOffset(400, 30)
+status.BackgroundTransparency = 1
+status.Font = Enum.Font.FredokaOne
+status.TextSize = 20
+status.TextColor3 = Color3.new(1, 1, 1)
+status.Text = "Loading..."
+status.Parent = root
+stroke(status, NAVY, 2, true)
+
+local tip = Instance.new("TextLabel")
+tip.AnchorPoint = Vector2.new(0.5, 1)
+tip.Position = UDim2.new(0.5, 0, 1, -28)
+tip.Size = UDim2.new(0.8, 0, 0, 24)
+tip.BackgroundTransparency = 1
+tip.Font = Enum.Font.GothamBold
+tip.TextSize = 15
+tip.TextColor3 = NAVY
+tip.Text = "Tip: the more hits a cat takes, the farther your next shot launches it!"
+tip.TextWrapped = true
+tip.Parent = root
+
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local function fit()
+	local cam = workspace.CurrentCamera
+	if cam then
+		scale.Scale = math.clamp(cam.ViewportSize.Y / 640, 0.7, 1.6)
+	end
+end
+fit()
+
+-- In Studio, surface the first client script error right on this screen so a
+-- broken build never just hangs on "Loading...".
+local isStudio = game:GetService("RunService"):IsStudio()
+local firstError: string? = nil
+local errorLabel = Instance.new("TextLabel")
+errorLabel.AnchorPoint = Vector2.new(0.5, 1)
+errorLabel.Position = UDim2.new(0.5, 0, 1, -60)
+errorLabel.Size = UDim2.new(0.9, 0, 0, 90)
+errorLabel.BackgroundColor3 = Color3.fromRGB(60, 12, 20)
+errorLabel.BackgroundTransparency = 0.15
+errorLabel.Font = Enum.Font.Code
+errorLabel.TextSize = 14
+errorLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+errorLabel.TextWrapped = true
+errorLabel.TextXAlignment = Enum.TextXAlignment.Left
+errorLabel.Visible = false
+errorLabel.Parent = root
+roundCorner(errorLabel, UDim.new(0, 8))
+game:GetService("ScriptContext").Error:Connect(function(message, trace)
+	if firstError or not isStudio then
+		return
+	end
+	firstError = message
+	errorLabel.Text = "  Client error (Studio only):\n  " .. message .. "\n  " .. (string.split(trace or "", "\n")[1] or "")
+	errorLabel.Visible = true
+end)
+
+local started = os.clock()
+local shown = 0.04
+local dots = 0
+while true do
+	local ready = game:IsLoaded() and player:GetAttribute("CattoLobbyReady") == true
+	local elapsed = os.clock() - started
+	if ready and elapsed > 1.6 then
+		break
+	end
+	if elapsed > 15 then
+		if firstError then
+			status.Text = "Home screen failed to start — error below"
+			return
+		end
+		break
+	end
+	local goal = game:IsLoaded() and 0.9 or 0.6
+	shown += (goal - shown) * 0.06
+	fill.Size = UDim2.fromScale(shown, 1)
+	dots = (dots + 1) % 24
+	status.Text = "Loading" .. string.rep(".", math.floor(dots / 6) + 1)
+	logo.Rotation = math.sin(elapsed * 2) * 1.5
+	fit()
+	task.wait(1 / 30)
+end
+
+status.Text = "Let's go!"
+TweenService:Create(fill, TweenInfo.new(0.25), { Size = UDim2.fromScale(1, 1) }):Play()
+task.wait(0.35)
+local fade = TweenService:Create(root, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { GroupTransparency = 1 })
+fade:Play()
+fade.Completed:Wait()
+gui:Destroy()
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ReplicatedStorage" referent="3">
     <Properties>
       <string name="Name">ReplicatedStorage</string>
     </Properties>
-    <Item class="Folder" referent="2">
+    <Item class="Folder" referent="4">
       <Properties>
         <string name="Name">Shared</string>
       </Properties>
-      <Item class="Folder" referent="3">
+      <Item class="Folder" referent="5">
         <Properties>
           <string name="Name">Character</string>
         </Properties>
-        <Item class="ModuleScript" referent="4">
+        <Item class="ModuleScript" referent="6">
           <Properties>
             <string name="Name">CatBuilder</string>
             <string name="Source"><![CDATA[--!strict
@@ -359,7 +595,7 @@ return CatBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="5">
+        <Item class="ModuleScript" referent="7">
           <Properties>
             <string name="Name">Knockback</string>
             <string name="Source"><![CDATA[--!strict
@@ -423,11 +659,11 @@ return Knockback
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="6">
+      <Item class="Folder" referent="8">
         <Properties>
           <string name="Name">Config</string>
         </Properties>
-        <Item class="ModuleScript" referent="7">
+        <Item class="ModuleScript" referent="9">
           <Properties>
             <string name="Name">Cats</string>
             <string name="Source"><![CDATA[--!strict
@@ -521,7 +757,7 @@ return Cats
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="8">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">GameConfig</string>
             <string name="Source"><![CDATA[--!strict
@@ -531,7 +767,7 @@ return Cats
 
 local GameConfig = {}
 
-GameConfig.GameName = "PAW MAYHEM"
+GameConfig.GameName = "CATTO PEW PEW"
 
 -- Match flow -----------------------------------------------------------------
 GameConfig.Match = {
@@ -610,7 +846,7 @@ return GameConfig
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="9">
+        <Item class="ModuleScript" referent="11">
           <Properties>
             <string name="Name">Progression</string>
             <string name="Source"><![CDATA[--!strict
@@ -685,7 +921,7 @@ return Progression
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="10">
+        <Item class="ModuleScript" referent="12">
           <Properties>
             <string name="Name">Weapons</string>
             <string name="Source"><![CDATA[--!strict
@@ -819,11 +1055,11 @@ return Weapons
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="11">
+      <Item class="Folder" referent="13">
         <Properties>
           <string name="Name">Net</string>
         </Properties>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="14">
           <Properties>
             <string name="Name">Remotes</string>
             <string name="Source"><![CDATA[--!strict
@@ -932,11 +1168,11 @@ return Remotes
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="13">
+      <Item class="Folder" referent="15">
         <Properties>
           <string name="Name">Util</string>
         </Properties>
-        <Item class="ModuleScript" referent="14">
+        <Item class="ModuleScript" referent="16">
           <Properties>
             <string name="Name">RateLimiter</string>
             <string name="Source"><![CDATA[--!strict
@@ -979,7 +1215,7 @@ return RateLimiter
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="15">
+        <Item class="ModuleScript" referent="17">
           <Properties>
             <string name="Name">Signal</string>
             <string name="Source"><![CDATA[--!strict
@@ -1032,7 +1268,7 @@ return Signal
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="16">
+        <Item class="ModuleScript" referent="18">
           <Properties>
             <string name="Name">Trove</string>
             <string name="Source"><![CDATA[--!strict
@@ -1090,11 +1326,11 @@ return Trove
       </Item>
     </Item>
   </Item>
-  <Item class="ServerScriptService" referent="17">
+  <Item class="ServerScriptService" referent="19">
     <Properties>
       <string name="Name">ServerScriptService</string>
     </Properties>
-    <Item class="Script" referent="18">
+    <Item class="Script" referent="20">
       <Properties>
         <string name="Name">Server</string>
         <token name="RunContext">0</token>
@@ -1150,11 +1386,11 @@ end
 main()
 ]]></string>
       </Properties>
-      <Item class="Folder" referent="19">
+      <Item class="Folder" referent="21">
         <Properties>
           <string name="Name">Services</string>
         </Properties>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="22">
           <Properties>
             <string name="Name">DataService</string>
             <string name="Source"><![CDATA[--!strict
@@ -1336,7 +1572,7 @@ return DataService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="21">
+        <Item class="ModuleScript" referent="23">
           <Properties>
             <string name="Name">EconomyService</string>
             <string name="Source"><![CDATA[--!strict
@@ -1567,7 +1803,7 @@ return EconomyService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="22">
+        <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">MatchService</string>
             <string name="Source"><![CDATA[--!strict
@@ -1895,7 +2131,7 @@ return MatchService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="23">
+        <Item class="ModuleScript" referent="25">
           <Properties>
             <string name="Name">PlayerService</string>
             <string name="Source"><![CDATA[--!strict
@@ -2177,7 +2413,7 @@ return PlayerService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="24">
+        <Item class="ModuleScript" referent="26">
           <Properties>
             <string name="Name">PowerUpService</string>
             <string name="Source"><![CDATA[--!strict
@@ -2318,7 +2554,7 @@ return PowerUpService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="25">
+        <Item class="ModuleScript" referent="27">
           <Properties>
             <string name="Name">QuestService</string>
             <string name="Source"><![CDATA[--!strict
@@ -2383,7 +2619,7 @@ return QuestService
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="26">
+        <Item class="ModuleScript" referent="28">
           <Properties>
             <string name="Name">Runtime</string>
             <string name="Source"><![CDATA[--!strict
@@ -2460,7 +2696,7 @@ return Runtime
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="27">
+        <Item class="ModuleScript" referent="29">
           <Properties>
             <string name="Name">WeaponService</string>
             <string name="Source"><![CDATA[--!strict
@@ -2767,11 +3003,11 @@ return WeaponService
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="28">
+      <Item class="Folder" referent="30">
         <Properties>
           <string name="Name">World</string>
         </Properties>
-        <Item class="ModuleScript" referent="29">
+        <Item class="ModuleScript" referent="31">
           <Properties>
             <string name="Name">ArenaBuilder</string>
             <string name="Source"><![CDATA[--!strict
@@ -2813,7 +3049,7 @@ return ArenaBuilder
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="30">
+        <Item class="ModuleScript" referent="32">
           <Properties>
             <string name="Name">ArenaKit</string>
             <string name="Source"><![CDATA[--!strict
@@ -3187,7 +3423,7 @@ return ArenaKit
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="31">
+        <Item class="ModuleScript" referent="33">
           <Properties>
             <string name="Name">MapRegistry</string>
             <string name="Source"><![CDATA[--!strict
@@ -3219,11 +3455,11 @@ return MapRegistry
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="32">
+        <Item class="Folder" referent="34">
           <Properties>
             <string name="Name">Maps</string>
           </Properties>
-          <Item class="ModuleScript" referent="33">
+          <Item class="ModuleScript" referent="35">
             <Properties>
               <string name="Name">SkyIslands</string>
               <string name="Source"><![CDATA[--!strict
@@ -3512,7 +3748,7 @@ return SkyIslands
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="34">
+          <Item class="ModuleScript" referent="36">
             <Properties>
               <string name="Name">Toybox</string>
               <string name="Source"><![CDATA[--!strict
@@ -3792,7 +4028,7 @@ return Toybox
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="35">
+          <Item class="ModuleScript" referent="37">
             <Properties>
               <string name="Name">Volcano</string>
               <string name="Source"><![CDATA[--!strict
@@ -4063,22 +4299,22 @@ return Volcano
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="36">
+  <Item class="SoundService" referent="38">
     <Properties>
       <string name="Name">SoundService</string>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="37">
+  <Item class="StarterPlayer" referent="39">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <bool name="CharacterUseJumpPower">false</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="38">
+    <Item class="StarterPlayerScripts" referent="40">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="LocalScript" referent="39">
+      <Item class="LocalScript" referent="41">
         <Properties>
           <string name="Name">Client</string>
           <string name="Source"><![CDATA[--!strict
@@ -4133,7 +4369,7 @@ end
 main()
 ]]></string>
         </Properties>
-        <Item class="ModuleScript" referent="40">
+        <Item class="ModuleScript" referent="42">
           <Properties>
             <string name="Name">ClientActions</string>
             <string name="Source"><![CDATA[--!strict
@@ -4188,7 +4424,7 @@ return ClientActions
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="41">
+        <Item class="ModuleScript" referent="43">
           <Properties>
             <string name="Name">ClientState</string>
             <string name="Source"><![CDATA[--!strict
@@ -4265,11 +4501,11 @@ return ClientState
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="42">
+        <Item class="Folder" referent="44">
           <Properties>
             <string name="Name">Controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="43">
+          <Item class="ModuleScript" referent="45">
             <Properties>
               <string name="Name">CameraController</string>
               <string name="Source"><![CDATA[--!strict
@@ -4286,6 +4522,7 @@ local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local LobbyScene = require(script.Parent.Parent.Lobby.LobbyScene)
 
 local CameraController = {}
 
@@ -4299,6 +4536,7 @@ local lobbyView = false
 local touchRotating = false
 local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
+local parallax = Vector2.zero
 
 -- Add a camera shake impulse (respects the CameraShake setting).
 function CameraController.AddShake(amount: number)
@@ -4371,10 +4609,18 @@ end
 local function step(dt: number)
 	if lobbyView then
 		camera.CameraType = Enum.CameraType.Scriptable
-		camera.FieldOfView = 58
-		local base = CFrame.lookAt(Vector3.new(-86, 58, 126), Vector3.new(0, 14, 0))
-		local drift = math.sin(os.clock() * 0.22) * 1.4
-		camera.CFrame = base * CFrame.new(drift, math.sin(os.clock() * 0.18) * 0.55, 0)
+		camera.FieldOfView = LobbyScene.FieldOfView
+		local t = os.clock()
+		local vp = camera.ViewportSize
+		local mouse = UserInputService:GetMouseLocation()
+		local target = Vector2.zero
+		if vp.X > 0 and vp.Y > 0 then
+			target = Vector2.new(math.clamp(mouse.X / vp.X - 0.5, -0.5, 0.5), math.clamp(mouse.Y / vp.Y - 0.5, -0.5, 0.5))
+		end
+		parallax = parallax:Lerp(target, math.clamp(dt * 3, 0, 1))
+		camera.CFrame = LobbyScene.GetCameraCFrame()
+			* CFrame.new(math.sin(t * 0.23) * 0.18 + parallax.X * 0.7, math.sin(t * 0.19) * 0.1 - parallax.Y * 0.35, 0)
+			* CFrame.Angles(parallax.Y * 0.006, -parallax.X * 0.01, 0)
 		return
 	end
 	if not enabled then
@@ -4469,10 +4715,14 @@ end
 
 function CameraController.SetLobbyView(on: boolean)
 	lobbyView = on
+	local ok, err = pcall(LobbyScene.SetActive, on)
+	if not ok then
+		warn("[CATTO] Lobby scene toggle failed: " .. tostring(err))
+	end
 	if on then
 		enabled = false
 		camera.CameraType = Enum.CameraType.Scriptable
-		camera.FieldOfView = 58
+		camera.FieldOfView = LobbyScene.FieldOfView
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
 	else
@@ -4498,7 +4748,7 @@ return CameraController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="44">
+          <Item class="ModuleScript" referent="46">
             <Properties>
               <string name="Name">CombatController</string>
               <string name="Source"><![CDATA[--!strict
@@ -4647,7 +4897,7 @@ return CombatController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="45">
+          <Item class="ModuleScript" referent="47">
             <Properties>
               <string name="Name">EffectsController</string>
               <string name="Source"><![CDATA[--!strict
@@ -4845,7 +5095,7 @@ return EffectsController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="46">
+          <Item class="ModuleScript" referent="48">
             <Properties>
               <string name="Name">EmoteController</string>
               <string name="Source"><![CDATA[--!strict
@@ -4935,7 +5185,7 @@ return EmoteController
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="47">
+          <Item class="ModuleScript" referent="49">
             <Properties>
               <string name="Name">MovementController</string>
               <string name="Source"><![CDATA[--!strict
@@ -5014,11 +5264,1039 @@ return MovementController
             </Properties>
           </Item>
         </Item>
-        <Item class="Folder" referent="48">
+        <Item class="Folder" referent="50">
+          <Properties>
+            <string name="Name">Lobby</string>
+          </Properties>
+          <Item class="ModuleScript" referent="51">
+            <Properties>
+              <string name="Name">LobbyScene</string>
+              <string name="Source"><![CDATA[-- LobbyScene: the real 3D world behind the home screen. Built locally on each
+-- client (never replicated) far away from the arena, so the menu camera looks at
+-- an actual lit scene: the Catto mascot holding a glowing blaster on a mossy
+-- ledge, floating islands with windmills, houses and waterfalls, clouds,
+-- flowers and fences. Everything is procedural Parts — no Toolbox models.
+
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local LobbyScene = {}
+LobbyScene.FieldOfView = 50
+
+local ORIGIN = Vector3.new(0, 260, -2600)
+local SCENE = CFrame.new(ORIGIN)
+-- Scene space: camera looks down -Z, +X is screen right, +Z is toward camera.
+local CAMERA_POS = Vector3.new(0, 9, 27.5)
+local CAMERA_LOOK = Vector3.new(1, 7.4, 0)
+
+local folder: Folder? = nil
+local built = false
+local active = false
+local rng = Random.new(1422)
+local animators: { (number) -> () } = {}
+local postEffects: { Instance } = {}
+local cloudsInstance: Instance? = nil
+local ownAtmosphere: Atmosphere? = nil
+local saved: { [string]: any }? = nil
+local savedAtmo: { [string]: any }? = nil
+local renderConn: RBXScriptConnection? = nil
+local lightingConns: { RBXScriptConnection } = {}
+
+local LIGHTING = {
+	ClockTime = 14.2,
+	Brightness = 3,
+	Ambient = Color3.fromRGB(122, 132, 158),
+	OutdoorAmbient = Color3.fromRGB(168, 178, 204),
+	EnvironmentDiffuseScale = 1,
+	EnvironmentSpecularScale = 0.8,
+	ExposureCompensation = 0.1,
+	ShadowSoftness = 0.35,
+	FogEnd = 100000,
+	GlobalShadows = true,
+}
+
+local ATMOSPHERE = {
+	Density = 0.3,
+	Offset = 0.25,
+	Color = Color3.fromRGB(199, 228, 255),
+	Decay = Color3.fromRGB(120, 170, 228),
+	Glare = 0.35,
+	Haze = 1.2,
+}
+
+-- Palette
+local GRASS_TOP = Color3.fromRGB(116, 198, 76)
+local GRASS_DARK = Color3.fromRGB(82, 162, 62)
+local GRASS_BLADES = { Color3.fromRGB(96, 184, 70), Color3.fromRGB(128, 206, 84), Color3.fromRGB(74, 150, 58) }
+local LEAVES = { Color3.fromRGB(92, 176, 72), Color3.fromRGB(112, 194, 82), Color3.fromRGB(74, 152, 64) }
+local ROCK = { Color3.fromRGB(176, 146, 118), Color3.fromRGB(154, 124, 101), Color3.fromRGB(132, 108, 92), Color3.fromRGB(190, 164, 134) }
+local TRUNK = Color3.fromRGB(122, 86, 60)
+local WOOD = Color3.fromRGB(150, 104, 70)
+local WOOD_LIGHT = Color3.fromRGB(176, 128, 86)
+local WOOD_DARK = Color3.fromRGB(96, 64, 44)
+local PLASTER = Color3.fromRGB(240, 224, 196)
+local ROOF = Color3.fromRGB(190, 96, 62)
+local ROOF_DARK = Color3.fromRGB(128, 76, 56)
+local SAIL = Color3.fromRGB(246, 238, 220)
+local STEM = Color3.fromRGB(86, 164, 70)
+local YELLOW = Color3.fromRGB(255, 212, 76)
+local WHITE = Color3.new(1, 1, 1)
+
+local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
+local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
+
+-- ── primitive helpers ────────────────────────────────────────────────────────
+local function W(x: number, y: number, z: number): CFrame
+	return SCENE * CFrame.new(x, y, z)
+end
+
+local function newPart(className: string, parent: Instance, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
+	local p = Instance.new(className) :: BasePart
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanTouch = false
+	p.CanQuery = false
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
+local function block(parent: Instance, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
+	return newPart("Part", parent, size, cf, color, material)
+end
+
+-- Ellipsoid (a Ball part is forced uniform; a Sphere mesh stretches to Size).
+local function ell(parent: Instance, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
+	local p = newPart("Part", parent, size, cf, color, material)
+	local mesh = Instance.new("SpecialMesh")
+	mesh.MeshType = Enum.MeshType.Sphere
+	mesh.Parent = p
+	return p
+end
+
+-- Cylinder whose axis runs along cf's X axis.
+local function cyl(parent: Instance, length: number, dia: number, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
+	local p = newPart("Part", parent, Vector3.new(length, dia, dia), cf, color, material)
+	p.Shape = Enum.PartType.Cylinder
+	return p
+end
+
+local function vcyl(parent: Instance, height: number, dia: number, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
+	return cyl(parent, height, dia, cf * CFrame.Angles(0, 0, math.pi / 2), color, material)
+end
+
+local function wedge(parent: Instance, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
+	return newPart("WedgePart", parent, size, cf, color, material)
+end
+
+-- Cylinder spanning two world points.
+local function limb(parent: Instance, a: Vector3, b: Vector3, dia: number, color: Color3, material: Enum.Material?): BasePart
+	local cf = CFrame.lookAt((a + b) / 2, b) * CFrame.Angles(0, math.pi / 2, 0)
+	return cyl(parent, (b - a).Magnitude, dia, cf, color, material)
+end
+
+-- Isosceles triangle prism (apex up) from two mirrored wedges. `cf` sits at the
+-- middle of the base edge; the triangle lies in cf's XY plane.
+local function triangle(parent: Instance, cf: CFrame, halfWidth: number, height: number, thickness: number, color: Color3, material: Enum.Material?): { BasePart }
+	local size = Vector3.new(thickness, height, halfWidth)
+	local a = wedge(parent, size, cf * CFrame.new(-halfWidth / 2, height / 2, 0) * CFrame.Angles(0, math.rad(90), 0), color, material)
+	local b = wedge(parent, size, cf * CFrame.new(halfWidth / 2, height / 2, 0) * CFrame.Angles(0, math.rad(-90), 0), color, material)
+	return { a, b }
+end
+
+-- Gable roof: ridge runs along cf's Z axis, `cf` at the roof's center.
+local function gable(parent: Instance, cf: CFrame, width: number, height: number, depth: number, color: Color3)
+	triangle(parent, cf * CFrame.new(0, -height / 2, 0), width / 2, height, depth, color, Enum.Material.SmoothPlastic)
+end
+
+local function light(parent: Instance, color: Color3, brightness: number, range: number): PointLight
+	local l = Instance.new("PointLight")
+	l.Color = color
+	l.Brightness = brightness
+	l.Range = range
+	l.Shadows = false
+	l.Parent = parent
+	return l
+end
+
+local function noShadows(model: Instance)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.CastShadow = false
+		end
+	end
+end
+
+-- ── decorations ──────────────────────────────────────────────────────────────
+local function tree(parent: Instance, x: number, y: number, z: number, s: number)
+	vcyl(parent, 3.2 * s, 0.75 * s, W(x, y + 1.6 * s, z), TRUNK, Enum.Material.Wood)
+	ell(parent, Vector3.new(4.2, 3.6, 4.2) * s, W(x, y + 4.3 * s, z), LEAVES[1])
+	ell(parent, Vector3.new(3.0, 2.6, 3.0) * s, W(x - 1.3 * s, y + 3.6 * s, z + 0.6 * s), LEAVES[2])
+	ell(parent, Vector3.new(3.0, 2.8, 3.0) * s, W(x + 1.2 * s, y + 3.8 * s, z - 0.4 * s), LEAVES[3])
+	ell(parent, Vector3.new(2.6, 2.2, 2.6) * s, W(x + 0.2 * s, y + 5.9 * s, z + 0.2 * s), LEAVES[2])
+end
+
+local function bush(parent: Instance, x: number, y: number, z: number, s: number)
+	ell(parent, Vector3.new(3.4, 2.4, 3.0) * s, W(x, y + 0.9 * s, z), LEAVES[1])
+	ell(parent, Vector3.new(2.4, 1.9, 2.2) * s, W(x - 1.4 * s, y + 0.7 * s, z + 0.4 * s), LEAVES[3])
+	ell(parent, Vector3.new(2.2, 1.8, 2.0) * s, W(x + 1.5 * s, y + 0.7 * s, z + 0.2 * s), LEAVES[2])
+end
+
+local function house(parent: Instance, x: number, y: number, z: number, s: number, yaw: number)
+	local b = W(x, y, z) * CFrame.Angles(0, yaw, 0)
+	block(parent, Vector3.new(4, 3.2, 3.6) * s, b * CFrame.new(0, 1.6 * s, 0), PLASTER)
+	for _, dx in ipairs({ -1, 1 }) do
+		block(parent, Vector3.new(0.35, 3.3, 0.35) * s, b * CFrame.new(dx * 2 * s, 1.65 * s, 1.8 * s), WOOD_DARK, Enum.Material.Wood)
+		block(parent, Vector3.new(0.35, 3.3, 0.35) * s, b * CFrame.new(dx * 2 * s, 1.65 * s, -1.8 * s), WOOD_DARK, Enum.Material.Wood)
+	end
+	block(parent, Vector3.new(4.2, 0.35, 0.35) * s, b * CFrame.new(0, 3.15 * s, 1.8 * s), WOOD_DARK, Enum.Material.Wood)
+	gable(parent, b * CFrame.new(0, 3.2 * s + 1.1 * s, 0), 5 * s, 2.2 * s, 4.4 * s, ROOF)
+	block(parent, Vector3.new(1, 1.7, 0.2) * s, b * CFrame.new(0.7 * s, 0.85 * s, 1.82 * s), WOOD_DARK, Enum.Material.Wood)
+	block(parent, Vector3.new(0.9, 0.8, 0.2) * s, b * CFrame.new(-1.0 * s, 1.95 * s, 1.82 * s), Color3.fromRGB(255, 222, 150))
+	block(parent, Vector3.new(0.6, 1.4, 0.6) * s, b * CFrame.new(1.2 * s, 4.6 * s, -0.8 * s), Color3.fromRGB(170, 150, 140), Enum.Material.Brick)
+end
+
+-- A lookout hut on stilts like the one on the reference's right island.
+local function hut(parent: Instance, x: number, y: number, z: number, s: number, yaw: number)
+	local b = W(x, y, z) * CFrame.Angles(0, yaw, 0)
+	for _, dx in ipairs({ -1, 1 }) do
+		for _, dz in ipairs({ -1, 1 }) do
+			block(parent, Vector3.new(0.4, 3, 0.4) * s, b * CFrame.new(dx * 1.8 * s, 1.5 * s, dz * 1.6 * s), WOOD_DARK, Enum.Material.Wood)
+		end
+	end
+	block(parent, Vector3.new(4.4, 0.4, 4) * s, b * CFrame.new(0, 3.1 * s, 0), WOOD_LIGHT, Enum.Material.WoodPlanks)
+	block(parent, Vector3.new(3.6, 2.4, 3.2) * s, b * CFrame.new(0, 4.5 * s, 0), WOOD, Enum.Material.WoodPlanks)
+	block(parent, Vector3.new(1.2, 0.9, 0.2) * s, b * CFrame.new(0, 4.7 * s, 1.62 * s), Color3.fromRGB(255, 222, 150))
+	gable(parent, b * CFrame.new(0, 5.7 * s + 1.1 * s, 0), 5 * s, 2.2 * s, 4.4 * s, ROOF_DARK)
+	block(parent, Vector3.new(4.6, 0.25, 0.25) * s, b * CFrame.new(0, 3.9 * s, 2 * s), WOOD_LIGHT, Enum.Material.Wood)
+end
+
+type Windmill = { hub: CFrame, parts: { BasePart }, rel: { CFrame }, speed: number, island: any }
+
+local function windmill(parent: Instance, x: number, y: number, z: number, s: number, yaw: number): Windmill
+	local b = W(x, y, z) * CFrame.Angles(0, yaw, 0)
+	block(parent, Vector3.new(3.6, 3, 3.6) * s, b * CFrame.new(0, 1.5 * s, 0), Color3.fromRGB(206, 196, 180), Enum.Material.Slate)
+	block(parent, Vector3.new(3.0, 3, 3.0) * s, b * CFrame.new(0, 4.5 * s, 0), WOOD_LIGHT, Enum.Material.WoodPlanks)
+	block(parent, Vector3.new(2.6, 2.2, 2.6) * s, b * CFrame.new(0, 7.1 * s, 0), WOOD, Enum.Material.WoodPlanks)
+	gable(parent, b * CFrame.new(0, 8.2 * s + 0.9 * s, 0), 3.4 * s, 1.8 * s, 3.2 * s, ROOF_DARK)
+	block(parent, Vector3.new(0.9, 1.5, 0.2) * s, b * CFrame.new(0, 0.75 * s, 1.82 * s), WOOD_DARK, Enum.Material.Wood)
+	block(parent, Vector3.new(0.7, 0.7, 0.2) * s, b * CFrame.new(0, 4.6 * s, 1.52 * s), Color3.fromRGB(255, 222, 150))
+	local hub = b * CFrame.new(0, 7.2 * s, 1.55 * s)
+	cyl(parent, 0.9 * s, 0.9 * s, hub * CFrame.Angles(0, math.pi / 2, 0), WOOD_DARK, Enum.Material.Wood)
+	local parts, rel = {}, {}
+	for i = 0, 3 do
+		local spin = CFrame.Angles(0, 0, i * math.pi / 2)
+		local armRel = spin * CFrame.new(0, 2.5 * s, 0.55 * s)
+		local sailRel = spin * CFrame.new(0.72 * s, 2.9 * s, 0.5 * s)
+		table.insert(parts, block(parent, Vector3.new(0.28, 4.6, 0.22) * s, hub * armRel, WOOD_DARK, Enum.Material.Wood))
+		table.insert(rel, armRel)
+		table.insert(parts, block(parent, Vector3.new(1.35, 3.6, 0.1) * s, hub * sailRel, SAIL, Enum.Material.Fabric))
+		table.insert(rel, sailRel)
+	end
+	for _, p in ipairs(parts) do
+		p:SetAttribute("Spin", true)
+	end
+	return { hub = hub, parts = parts, rel = rel, speed = rng:NextNumber(0.55, 0.9), island = nil }
+end
+
+local function flower(parent: Instance, x: number, y: number, z: number, s: number, petal: Color3, center: Color3?)
+	local stemH = 1.8 * s
+	vcyl(parent, stemH, 0.16 * s, W(x, y + stemH / 2, z), STEM)
+	ell(parent, Vector3.new(0.9, 0.18, 0.45) * s, W(x + 0.35 * s, y + stemH * 0.4, z) * CFrame.Angles(0, 0, math.rad(25)), STEM)
+	ell(parent, Vector3.new(0.9, 0.18, 0.45) * s, W(x - 0.35 * s, y + stemH * 0.3, z) * CFrame.Angles(0, 0, math.rad(-25)), STEM)
+	local head = W(x, y + stemH, z) * CFrame.Angles(math.rad(50), 0, 0)
+	for i = 0, 4 do
+		local a = i * (2 * math.pi / 5)
+		ell(parent, Vector3.new(0.95, 0.2, 0.62) * s, head * CFrame.Angles(0, a, 0) * CFrame.new(0.5 * s, 0, 0), petal)
+	end
+	ell(parent, Vector3.new(0.5, 0.3, 0.5) * s, head * CFrame.new(0, 0.08 * s, 0), center or YELLOW)
+end
+
+local function tuft(parent: Instance, x: number, y: number, z: number, s: number)
+	for _ = 1, 4 do
+		local h = rng:NextNumber(0.9, 1.7) * s
+		block(parent, Vector3.new(0.22 * s, h, 0.08 * s),
+			W(x + rng:NextNumber(-0.35, 0.35) * s, y + h / 2 - 0.05, z + rng:NextNumber(-0.3, 0.3) * s)
+				* CFrame.Angles(rng:NextNumber(-0.25, 0.25), rng:NextNumber(0, math.pi), rng:NextNumber(-0.35, 0.35)),
+			GRASS_BLADES[rng:NextInteger(1, #GRASS_BLADES)])
+	end
+end
+
+local function fence(parent: Instance, a: Vector3, b: Vector3, posts: number, s: number)
+	local prev: Vector3? = nil
+	for i = 0, posts - 1 do
+		local p = a:Lerp(b, i / (posts - 1))
+		block(parent, Vector3.new(0.7, 3.4, 0.7) * s, W(p.X, p.Y + 1.7 * s, p.Z), WOOD, Enum.Material.Wood)
+		gable(parent, W(p.X, p.Y + 3.4 * s + 0.25 * s, p.Z), 0.72 * s, 0.5 * s, 0.72 * s, WOOD)
+		if prev then
+			for _, hy in ipairs({ 1.2, 2.5 }) do
+				local p1 = W(prev.X, prev.Y + hy * s, prev.Z).Position
+				local p2 = W(p.X, p.Y + hy * s, p.Z).Position
+				block(parent, Vector3.new(0.22 * s, 0.45 * s, (p2 - p1).Magnitude + 0.4), CFrame.lookAt((p1 + p2) / 2, p2), WOOD_LIGHT, Enum.Material.Wood)
+			end
+		end
+		prev = p
+	end
+end
+
+local function cloud(parent: Instance, x: number, y: number, z: number, s: number)
+	for i = 1, 6 do
+		local p = ell(parent,
+			Vector3.new(rng:NextNumber(6, 10), rng:NextNumber(3.5, 5.5), rng:NextNumber(5, 8)) * s,
+			W(x + (i - 3.5) * 3 * s + rng:NextNumber(-1, 1) * s, y + rng:NextNumber(-0.8, 1.2) * s, z + rng:NextNumber(-1.5, 1.5) * s),
+			WHITE)
+		p.CastShadow = false
+	end
+end
+
+local function waterfall(parent: Instance, x: number, yTop: number, z: number, h: number, w: number)
+	local main = block(parent, Vector3.new(w, h, 0.5), W(x, yTop - h / 2, z), Color3.fromRGB(140, 205, 250), Enum.Material.Glass)
+	main.Transparency = 0.2
+	main.CastShadow = false
+	local core = block(parent, Vector3.new(w * 0.55, h, 0.55), W(x - w * 0.1, yTop - h / 2, z + 0.05), Color3.fromRGB(218, 242, 255))
+	core.Transparency = 0.35
+	core.CastShadow = false
+	local lip = ell(parent, Vector3.new(w * 1.15, 0.9, 1.3), W(x, yTop, z), Color3.fromRGB(232, 248, 255))
+	lip.CastShadow = false
+
+	local top = block(parent, Vector3.new(w, 0.2, 0.2), W(x, yTop, z + 0.4), WHITE)
+	top.Transparency = 1
+	local fall = Instance.new("ParticleEmitter")
+	fall.Texture = SMOKE
+	fall.EmissionDirection = Enum.NormalId.Bottom
+	fall.Speed = NumberRange.new(14, 18)
+	fall.Lifetime = NumberRange.new(h / 17, h / 15)
+	fall.Size = NumberSequence.new(w * 0.22, w * 0.32)
+	fall.Squash = NumberSequence.new(-1.2)
+	fall.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.55), NumberSequenceKeypoint.new(1, 1) })
+	fall.Color = ColorSequence.new(WHITE)
+	fall.LightEmission = 0.25
+	fall.Rate = 6 * w
+	fall.SpreadAngle = Vector2.new(4, 4)
+	fall.Parent = top
+
+	local base = block(parent, Vector3.new(w, 0.5, 0.5), W(x, yTop - h, z + 0.4), WHITE)
+	base.Transparency = 1
+	local mist = Instance.new("ParticleEmitter")
+	mist.Texture = SMOKE
+	mist.EmissionDirection = Enum.NormalId.Top
+	mist.Speed = NumberRange.new(1, 3)
+	mist.Lifetime = NumberRange.new(1.6, 2.6)
+	mist.Size = NumberSequence.new(w * 0.7, w * 1.6)
+	mist.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+	mist.Color = ColorSequence.new(WHITE)
+	mist.LightEmission = 0.3
+	mist.Rate = 5
+	mist.SpreadAngle = Vector2.new(70, 70)
+	mist.Parent = base
+end
+
+type Island = { model: Model, phase: number, amp: number }
+
+local function island(parent: Instance, name: string, x: number, y: number, z: number, r: number, depth: number, bob: number?): Island
+	local m = Instance.new("Model")
+	m.Name = name
+	m.Parent = parent
+	vcyl(m, 1.4, r * 2, W(x, y, z), GRASS_TOP, Enum.Material.Grass)
+	local rimCount = math.clamp(math.floor(r * 1.1), 6, 18)
+	for k = 1, rimCount do
+		local a = (k / rimCount) * math.pi * 2
+		ell(m, Vector3.new(r * 0.45, 1.6, r * 0.35), W(x + math.cos(a) * r * 0.9, y - 0.35, z + math.sin(a) * r * 0.9) * CFrame.Angles(0, -a, 0), GRASS_DARK, Enum.Material.Grass)
+	end
+	local layers = math.clamp(math.floor(depth / 4), 3, 6)
+	local lh = depth / layers
+	local top = y - 0.7
+	for i = 1, layers do
+		local t = (i - 1) / layers
+		local lr = r * (1 - t * 0.78)
+		local cy = top - lh * (i - 0.5)
+		vcyl(m, lh, lr * 1.75, W(x, cy, z), ROCK[(i % #ROCK) + 1], Enum.Material.Slate)
+		local n = math.clamp(math.floor(lr * 0.9), 4, 12)
+		for k = 1, n do
+			local a = (k / n) * math.pi * 2 + rng:NextNumber(-0.25, 0.25)
+			local bw = math.max(1.2, lr * rng:NextNumber(0.45, 0.7))
+			block(m, Vector3.new(bw, lh * rng:NextNumber(0.95, 1.3), bw * 0.8),
+				W(x + math.cos(a) * lr * 0.74, cy + rng:NextNumber(-0.2, 0.2) * lh, z + math.sin(a) * lr * 0.74)
+					* CFrame.Angles(0, -a + math.pi / 2 + rng:NextNumber(-0.25, 0.25), 0),
+				ROCK[rng:NextInteger(1, #ROCK)], Enum.Material.Slate)
+		end
+	end
+	ell(m, Vector3.new(r * 0.55, depth * 0.3, r * 0.55), W(x, top - depth - depth * 0.08, z), ROCK[3], Enum.Material.Slate)
+	for _ = 1, math.floor(r * 0.5) do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local len = rng:NextNumber(1.5, math.max(2, depth * 0.3))
+		block(m, Vector3.new(0.35, len, 0.35), W(x + math.cos(a) * r * 0.97, y - 0.8 - len / 2, z + math.sin(a) * r * 0.97), GRASS_DARK, Enum.Material.Grass)
+	end
+	return { model = m, phase = rng:NextNumber(0, math.pi * 2), amp = bob or 0 }
+end
+
+-- ── the Catto mascot ─────────────────────────────────────────────────────────
+local function buildHeroCat(parent: Instance, root: CFrame)
+	local model = Instance.new("Model")
+	model.Name = "CattoMascot"
+	model.Parent = parent
+
+	local FUR = Color3.fromRGB(255, 236, 222)
+	local FUR_LIGHT = Color3.fromRGB(255, 248, 242)
+	local PINK = Color3.fromRGB(255, 172, 184)
+	local NOSE = Color3.fromRGB(244, 126, 148)
+	local JACKET = Color3.fromRGB(50, 54, 92)
+	local JACKET_DARK = Color3.fromRGB(34, 37, 66)
+	local LEATHER = Color3.fromRGB(132, 88, 56)
+	local LEATHER_DARK = Color3.fromRGB(98, 64, 42)
+	local EYE = Color3.fromRGB(26, 18, 28)
+	local IRIS = Color3.fromRGB(86, 58, 104)
+	local SHELL = Color3.fromRGB(236, 236, 250)
+	local PURPLE = Color3.fromRGB(136, 78, 245)
+	local PURPLE_L = Color3.fromRGB(168, 112, 255)
+	local GUN_DARK = Color3.fromRGB(46, 50, 92)
+	local CYAN = Color3.fromRGB(80, 232, 255)
+	local MUZZLE = Color3.fromRGB(205, 120, 255)
+
+	local entries = {}
+	local function add(p: BasePart, group: string): BasePart
+		table.insert(entries, { part = p, rel = root:ToObjectSpace(p.CFrame), group = group })
+		return p
+	end
+	local function R(x: number, y: number, z: number): CFrame
+		return root * CFrame.new(x, y, z)
+	end
+
+	-- feet (planted) + legs
+	for _, s in ipairs({ -1, 1 }) do
+		add(ell(model, Vector3.new(2.3, 1.5, 2.9), R(s * 1.35, 0.75, 0.6), FUR), "feet")
+		add(ell(model, Vector3.new(1.5, 0.7, 1.0), R(s * 1.35, 0.5, 1.85), FUR_LIGHT), "feet")
+		add(ell(model, Vector3.new(2.2, 2.8, 2.3), R(s * 1.2, 2.0, 0.1), FUR), "body")
+	end
+
+	-- hoodie jacket over a fluffy chest
+	add(ell(model, Vector3.new(5.1, 3.2, 4.3), R(0, 3.1, 0), JACKET), "body")
+	add(ell(model, Vector3.new(5.4, 5.0, 4.5), R(0, 4.7, 0), JACKET), "body")
+	add(ell(model, Vector3.new(2.3, 3.8, 1.3), R(0, 4.9, 1.72), FUR_LIGHT), "body")
+	for _, s in ipairs({ -1, 1 }) do
+		add(block(model, Vector3.new(0.4, 3.9, 0.3), R(s * 1.2, 4.8, 2.02) * CFrame.Angles(math.rad(-8), 0, math.rad(6 * s)), JACKET_DARK), "body")
+		add(block(model, Vector3.new(1.3, 1.0, 0.3), R(s * 1.75, 3.2, 1.62) * CFrame.Angles(0, math.rad(38 * s), 0), JACKET_DARK), "body")
+	end
+	add(ell(model, Vector3.new(4.6, 2.3, 3.0), R(0, 6.9, -1.5), JACKET), "body")
+	add(ell(model, Vector3.new(4.8, 1.3, 4.0), R(0, 6.85, 0.1), JACKET_DARK), "body")
+	add(block(model, Vector3.new(0.55, 0.75, 0.12), R(0.35, 4.2, 2.33), Color3.fromRGB(205, 210, 220), Enum.Material.Metal), "body")
+
+	-- satchel + strap
+	local bagCF = R(-2.7, 2.9, 1.0) * CFrame.Angles(0, math.rad(-40), 0)
+	add(block(model, Vector3.new(1.8, 2.0, 0.8), bagCF, LEATHER, Enum.Material.Leather), "body")
+	add(block(model, Vector3.new(1.85, 0.85, 0.86), bagCF * CFrame.new(0, 0.6, 0.02), LEATHER_DARK, Enum.Material.Leather), "body")
+	add(block(model, Vector3.new(0.3, 0.3, 0.1), bagCF * CFrame.new(0, 0.2, 0.47), Color3.fromRGB(230, 190, 90), Enum.Material.Metal), "body")
+	local strapA, strapB, strapC = R(-2.4, 3.5, 1.3).Position, R(0, 5.1, 2.4).Position, R(2.2, 6.6, 1.2).Position
+	add(limb(model, strapA, strapB, 0.38, LEATHER, Enum.Material.Leather), "body")
+	add(limb(model, strapB, strapC, 0.38, LEATHER, Enum.Material.Leather), "body")
+
+	-- tail curling up behind the right hip
+	local tailPts = { Vector3.new(1.9, 2.3, -1.7), Vector3.new(2.9, 2.7, -2.0), Vector3.new(3.7, 3.6, -2.0), Vector3.new(4.1, 4.8, -1.8), Vector3.new(4.0, 6.0, -1.5), Vector3.new(3.6, 6.9, -1.2) }
+	for i, pt in ipairs(tailPts) do
+		local d = 1.5 - (i - 1) * 0.07
+		add(ell(model, Vector3.new(d, d, d), R(pt.X, pt.Y, pt.Z), i == #tailPts and FUR_LIGHT or FUR), "tail")
+		if i > 1 then
+			local prev = tailPts[i - 1]
+			add(limb(model, R(prev.X, prev.Y, prev.Z).Position, R(pt.X, pt.Y, pt.Z).Position, d * 0.92, FUR), "tail")
+		end
+	end
+
+	-- futuristic blaster (gun-local: +X forward, +Y up, +Z toward camera)
+	local gunPos = Vector3.new(1.5, 4.55, 3.55)
+	local gunDir = Vector3.new(6.8, 0.55, 0.9).Unit
+	local gunLocal = CFrame.lookAt(gunPos, gunPos + gunDir) * CFrame.Angles(0, math.pi / 2, 0)
+	local gunCF = root * gunLocal
+	local function G(x: number, y: number, z: number): CFrame
+		return gunCF * CFrame.new(x, y, z)
+	end
+	add(block(model, Vector3.new(4.4, 1.45, 1.5), G(0, 0, 0), SHELL), "body")
+	add(block(model, Vector3.new(3.8, 0.55, 1.35), G(-0.1, 0.95, 0), PURPLE), "body")
+	add(block(model, Vector3.new(2.8, 0.8, 0.2), G(-0.5, -0.1, 0.8), PURPLE_L), "body")
+	local tube = add(cyl(model, 3.1, 0.95, G(0.35, 0.25, 0.62), CYAN, Enum.Material.Neon), "body")
+	tube.Transparency = 0.05
+	light(tube, CYAN, 2.2, 8)
+	for _, dx in ipairs({ -1.25, 1.95 }) do
+		add(cyl(model, 0.3, 1.15, G(dx, 0.25, 0.62), GUN_DARK), "body")
+	end
+	add(cyl(model, 1.7, 1.25, G(2.95, 0.15, 0), PURPLE), "body")
+	add(cyl(model, 0.35, 1.5, G(3.55, 0.15, 0), GUN_DARK), "body")
+	local muzzle = add(ell(model, Vector3.new(1.15, 1.15, 1.15), G(3.95, 0.15, 0), MUZZLE, Enum.Material.Neon), "body")
+	local muzzleLight = light(muzzle, MUZZLE, 3.5, 11)
+	local halo = add(ell(model, Vector3.new(2.1, 2.1, 2.1), G(3.95, 0.15, 0), MUZZLE, Enum.Material.Neon), "body")
+	halo.Transparency = 0.72
+	halo.CastShadow = false
+	local sparkle = Instance.new("ParticleEmitter")
+	sparkle.Texture = SPARKLES
+	sparkle.Color = ColorSequence.new(Color3.fromRGB(230, 180, 255))
+	sparkle.LightEmission = 1
+	sparkle.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 0) })
+	sparkle.Lifetime = NumberRange.new(0.5, 0.9)
+	sparkle.Speed = NumberRange.new(0.6, 1.4)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Rate = 7
+	sparkle.Parent = muzzle
+	add(block(model, Vector3.new(1.35, 1.65, 1.45), G(-2.6, -0.05, 0), GUN_DARK), "body")
+	add(block(model, Vector3.new(0.85, 1.8, 0.95), G(-1.55, -1.35, 0) * CFrame.Angles(0, 0, math.rad(-14)), GUN_DARK), "body")
+	add(block(model, Vector3.new(0.9, 1.0, 0.85), G(1.3, -1.0, 0), GUN_DARK), "body")
+	add(block(model, Vector3.new(0.9, 0.5, 0.4), G(-0.6, 1.42, 0), GUN_DARK), "body")
+	add(ell(model, Vector3.new(0.34, 0.34, 0.34), G(-0.18, 1.42, 0), CYAN, Enum.Material.Neon), "body")
+
+	-- arms wrapping the blaster
+	local rootInv = root:Inverse()
+	local hands = {
+		{ shoulder = Vector3.new(-2.45, 5.7, 0.3), elbow = Vector3.new(-2.9, 4.3, 1.9), hand = (rootInv * G(-1.5, -0.75, 1.0)).Position },
+		{ shoulder = Vector3.new(2.45, 5.7, 0.3), elbow = Vector3.new(3.3, 4.6, 2.0), hand = (rootInv * G(1.35, -0.55, 1.0)).Position },
+	}
+	for _, arm in ipairs(hands) do
+		local sh, el, ha = R(arm.shoulder.X, arm.shoulder.Y, arm.shoulder.Z).Position, R(arm.elbow.X, arm.elbow.Y, arm.elbow.Z).Position, R(arm.hand.X, arm.hand.Y, arm.hand.Z).Position
+		add(ell(model, Vector3.new(2.0, 2.0, 2.0), CFrame.new(sh), JACKET), "body")
+		add(limb(model, sh, el, 1.7, JACKET), "body")
+		add(ell(model, Vector3.new(1.75, 1.75, 1.75), CFrame.new(el), JACKET), "body")
+		add(limb(model, el, ha, 1.6, JACKET), "body")
+		local cuffAt = el:Lerp(ha, 0.82)
+		add(cyl(model, 0.45, 1.8, CFrame.lookAt(cuffAt, ha) * CFrame.Angles(0, math.pi / 2, 0), JACKET_DARK), "body")
+		add(ell(model, Vector3.new(1.55, 1.4, 1.6), CFrame.new(ha), FUR), "body")
+	end
+
+	-- head
+	add(ell(model, Vector3.new(8.3, 7.1, 7.0), R(0, 10.2, 0.2), FUR), "head")
+	for _, s in ipairs({ -1, 1 }) do
+		add(ell(model, Vector3.new(3.1, 2.5, 3.0), R(s * 3.45, 8.85, 0.8), FUR), "head")
+	end
+	add(ell(model, Vector3.new(1.0, 1.7, 0.9), R(-0.35, 13.75, 0.9) * CFrame.Angles(0, 0, math.rad(18)), FUR), "head")
+	add(ell(model, Vector3.new(0.8, 1.3, 0.8), R(0.35, 13.65, 1.0) * CFrame.Angles(0, 0, math.rad(-14)), FUR), "head")
+	add(ell(model, Vector3.new(2.8, 1.8, 1.4), R(0, 8.95, 3.25), FUR_LIGHT), "head")
+	add(ell(model, Vector3.new(0.6, 0.42, 0.4), R(0, 9.45, 3.98), NOSE), "head")
+	for _, s in ipairs({ -1, 1 }) do
+		add(block(model, Vector3.new(0.5, 0.12, 0.1), R(s * 0.22, 8.85, 3.97) * CFrame.Angles(0, 0, math.rad(-30 * s)), Color3.fromRGB(80, 44, 56)), "head")
+		local blush = add(ell(model, Vector3.new(1.3, 0.6, 0.3), R(s * 2.75, 9.35, 2.85) * CFrame.Angles(0, math.rad(35 * s), 0), Color3.fromRGB(255, 160, 172)), "head")
+		blush.Transparency = 0.3
+	end
+
+	local eyes = {}
+	for _, s in ipairs({ -1, 1 }) do
+		local cf = R(s * 1.75, 10.3, 3.26) * CFrame.Angles(0, math.rad(22 * s), 0)
+		local outer = add(ell(model, Vector3.new(1.95, 2.35, 0.9), cf, EYE), "head")
+		local iris = add(ell(model, Vector3.new(1.45, 1.75, 0.35), cf * CFrame.new(0, -0.22, 0.33), IRIS), "head")
+		local pupil = add(ell(model, Vector3.new(0.85, 1.05, 0.3), cf * CFrame.new(0, -0.12, 0.4), EYE), "head")
+		local shine = add(ell(model, Vector3.new(0.72, 0.72, 0.2), cf * CFrame.new(-0.38, 0.5, 0.45), WHITE, Enum.Material.Neon), "head")
+		local shine2 = add(ell(model, Vector3.new(0.34, 0.34, 0.15), cf * CFrame.new(0.42, -0.55, 0.45), WHITE, Enum.Material.Neon), "head")
+		table.insert(eyes, { outer = outer, size = outer.Size, hide = { iris, pupil, shine, shine2 } })
+	end
+
+	for _, s in ipairs({ -1, 1 }) do
+		local base = R(s * 2.2, 12.3, 0.1) * CFrame.Angles(0, 0, math.rad(-22 * s))
+		for _, p in ipairs(triangle(model, base, 1.8, 4.6, 1.3, FUR)) do
+			add(p, "head")
+		end
+		for _, p in ipairs(triangle(model, base * CFrame.new(0, 0.5, 0.67), 1.15, 3.0, 0.3, PINK)) do
+			add(p, "head")
+		end
+	end
+
+	local parts, rels, groups = {}, {}, {}
+	for i, e in ipairs(entries) do
+		parts[i] = e.part
+		rels[i] = e.rel
+		groups[i] = e.group
+	end
+	local neck = CFrame.new(0, 7.2, 0.2)
+	local neckInv = neck:Inverse()
+	local tailPivot = CFrame.new(1.9, 2.3, -1.7)
+	local tailInv = tailPivot:Inverse()
+	local cfs = table.create(#parts)
+	local nextBlink = os.clock() + 2.5
+	local blinkUntil = 0
+
+	local function setEyesClosed(closed: boolean)
+		for _, e in ipairs(eyes) do
+			e.outer.Size = closed and Vector3.new(e.size.X, 0.28, e.size.Z) or e.size
+			for _, p in ipairs(e.hide) do
+				p.Transparency = closed and 1 or 0
+			end
+		end
+	end
+
+	table.insert(animators, function(t: number)
+		local breathe = math.sin(t * 2.1) * 0.1
+		local body = CFrame.new(0, breathe, 0)
+		local head = body * neck * CFrame.Angles(math.sin(t * 0.8) * 0.025, math.sin(t * 0.55) * 0.04, math.sin(t * 0.9 + 1) * 0.05) * neckInv
+		local tail = CFrame.new(0, breathe * 0.5, 0) * tailPivot * CFrame.Angles(0, math.sin(t * 1.4) * 0.25, math.sin(t * 1.7) * 0.12) * tailInv
+		local pick = { head = head, tail = tail, feet = CFrame.identity }
+		for i = 1, #parts do
+			local g = groups[i]
+			local m = pick[g] or body
+			cfs[i] = root * m * rels[i]
+		end
+		Workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+
+		if blinkUntil == 0 and t >= nextBlink then
+			blinkUntil = t + 0.13
+			setEyesClosed(true)
+		elseif blinkUntil > 0 and t >= blinkUntil then
+			blinkUntil = 0
+			nextBlink = t + rng:NextNumber(2.2, 5)
+			setEyesClosed(false)
+		end
+		local pulse = math.sin(t * 4)
+		muzzleLight.Brightness = 3.5 + pulse * 0.9
+		halo.Transparency = 0.72 + pulse * 0.08
+	end)
+end
+
+-- ── world layout ─────────────────────────────────────────────────────────────
+local function buildForeground(parent: Instance)
+	local fg = Instance.new("Model")
+	fg.Name = "Foreground"
+	fg.Parent = parent
+
+	block(fg, Vector3.new(110, 6, 34), W(0, -5.5, 3), GRASS_TOP, Enum.Material.Grass)
+	for i = -10, 10 do
+		local x = i * 5.2 + rng:NextNumber(-1, 1)
+		block(fg, Vector3.new(rng:NextNumber(5, 7), rng:NextNumber(5, 8), rng:NextNumber(4, 6)),
+			W(x, -7 + rng:NextNumber(-1, 0.5), -14 + rng:NextNumber(-0.5, 0.5)) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0),
+			ROCK[rng:NextInteger(1, #ROCK)], Enum.Material.Slate)
+		ell(fg, Vector3.new(rng:NextNumber(5, 8), 2, rng:NextNumber(3, 5)), W(x, -2.7, -13.2), GRASS_DARK, Enum.Material.Grass)
+	end
+	for _ = 1, 12 do
+		local x = rng:NextNumber(-34, 34)
+		if math.abs(x - 4) > 7 then
+			bush(fg, x, -2.6, rng:NextNumber(-12.5, -10.5), rng:NextNumber(1.0, 1.6))
+		end
+	end
+
+	-- mossy rock ledge the mascot stands on (top of grass cap = y -1.0)
+	local ledge = {
+		{ Vector3.new(4.6, 3.2, 4.4), Vector3.new(1.6, -2.8, 1.0), 12 },
+		{ Vector3.new(5.0, 3.6, 4.6), Vector3.new(6.4, -3.0, 0.4), -18 },
+		{ Vector3.new(4.2, 3.0, 4.0), Vector3.new(3.8, -2.7, 3.4), 30 },
+		{ Vector3.new(4.4, 3.2, 4.2), Vector3.new(4.2, -2.8, -2.6), -8 },
+		{ Vector3.new(3.2, 2.4, 3.0), Vector3.new(8.9, -2.8, 2.4), 22 },
+		{ Vector3.new(3.0, 2.2, 2.8), Vector3.new(-0.6, -2.9, 2.6), -26 },
+	}
+	for i, r in ipairs(ledge) do
+		block(fg, r[1], W(r[2].X, r[2].Y, r[2].Z) * CFrame.Angles(0, math.rad(r[3]), 0), ROCK[(i % #ROCK) + 1], Enum.Material.Slate)
+	end
+	vcyl(fg, 1.1, 10.5, W(4, -1.55, 0.4), GRASS_TOP, Enum.Material.Grass)
+	for k = 1, 9 do
+		local a = (k / 9) * math.pi * 2
+		ell(fg, Vector3.new(2.8, 0.9, 2.2), W(4 + math.cos(a) * 5, -1.35, 0.4 + math.sin(a) * 5) * CFrame.Angles(0, -a, 0), GRASS_DARK, Enum.Material.Grass)
+	end
+
+	-- flowers (pink cluster bottom-left, whites, oranges bottom-right)
+	local PINK = Color3.fromRGB(255, 122, 184)
+	local PINK2 = Color3.fromRGB(255, 160, 205)
+	flower(fg, -5.0, -2.5, 4.5, 1.7, PINK)
+	flower(fg, -2.6, -2.5, 5.2, 1.4, PINK2)
+	flower(fg, -7.4, -2.5, 3.2, 1.3, PINK)
+	flower(fg, -3.8, -2.5, 2.2, 1.1, PINK2)
+	flower(fg, 0.2, -2.5, 4.6, 0.9, WHITE)
+	flower(fg, -9.6, -2.5, 5.0, 0.9, WHITE)
+	flower(fg, 8.2, -1.0, 2.0, 0.7, WHITE)
+	flower(fg, 1.2, -1.0, 3.6, 0.6, Color3.fromRGB(255, 236, 120))
+	flower(fg, 13.5, -2.5, 3.5, 1.4, Color3.fromRGB(255, 150, 60))
+	flower(fg, 16.0, -2.5, 2.0, 1.2, Color3.fromRGB(255, 176, 70))
+	flower(fg, -11.0, -2.5, 2.0, 0.9, Color3.fromRGB(190, 140, 255))
+	flower(fg, 11.0, -2.5, 5.0, 0.8, WHITE)
+
+	for _ = 1, 44 do
+		local x = rng:NextNumber(-32, 32)
+		local z = rng:NextNumber(-10, 6)
+		local nearLedge = (Vector2.new(x - 4, z - 0.4)).Magnitude < 6.5
+		if not nearLedge then
+			tuft(fg, x, -2.5, z, rng:NextNumber(0.9, 1.5))
+		end
+	end
+
+	tree(fg, -19, -2.5, -5, 2.4)
+	tree(fg, -27, -2.5, -9, 2.0)
+	bush(fg, -13, -2.5, -1, 1.6)
+	bush(fg, 19, -2.5, -8, 1.5)
+	fence(fg, Vector3.new(-18, -2.5, -9), Vector3.new(-7, -2.5, -11), 4, 1)
+	fence(fg, Vector3.new(10.5, -2.5, 4.5), Vector3.new(21, -2.5, -3), 4, 1.15)
+end
+
+local function buildIslands(parent: Instance): ({ Island }, { Windmill })
+	local isles: { Island } = {}
+	local mills: { Windmill } = {}
+	local function mill(isl: Island, x: number, y: number, z: number, s: number, yaw: number)
+		local w = windmill(isl.model, x, y, z, s, yaw)
+		w.island = isl
+		table.insert(mills, w)
+	end
+
+	-- A: big island right, behind the mascot
+	local a = island(parent, "IslandRight", 34, 11, -46, 13, 24, 0.45)
+	table.insert(isles, a)
+	mill(a, 33, 11.7, -50, 1.7, -0.3)
+	hut(a.model, 42, 11.7, -40, 1.3, 0.4)
+	tree(a.model, 26, 11.7, -41, 1.2)
+	tree(a.model, 40, 11.7, -54, 1.3)
+	bush(a.model, 29, 11.7, -37, 1.0)
+	fence(a.model, Vector3.new(24, 11.7, -37.5), Vector3.new(35, 11.7, -35), 4, 0.8)
+	waterfall(a.model, 30, 11.2, -33.6, 30, 3.5)
+	waterfall(a.model, 41, 11.2, -36.4, 22, 2.2)
+
+	-- B: high island top-center with the tall windmill and houses
+	local b = island(parent, "IslandTop", -6, 30, -86, 10, 19, 0.5)
+	table.insert(isles, b)
+	mill(b, -5, 30.7, -88, 1.5, 0.2)
+	house(b.model, -11, 30.7, -83, 1.1, -0.3)
+	house(b.model, 1, 30.7, -81, 0.9, 0.5)
+	tree(b.model, -12, 30.7, -90, 1.0)
+	tree(b.model, 3, 30.7, -90, 1.1)
+	waterfall(b.model, 1, 30.2, -79, 26, 2.8)
+
+	-- D: left island behind the logo
+	local d = island(parent, "IslandLeft", -40, 20, -78, 12, 20, 0.4)
+	table.insert(isles, d)
+	tree(d.model, -44, 20.7, -80, 1.4)
+	tree(d.model, -36, 20.7, -84, 1.2)
+	tree(d.model, -47, 20.7, -72, 1.1)
+	house(d.model, -35, 20.7, -73, 1.0, 0.2)
+	waterfall(d.model, -32, 20.2, -69.5, 22, 2.4)
+
+	-- small floaters
+	local c1 = island(parent, "Floater1", -15, 16, -70, 4, 8, 0.6)
+	tree(c1.model, -15, 16.7, -70, 0.8)
+	local c2 = island(parent, "Floater2", -26, 8, -62, 3, 6, 0.7)
+	bush(c2.model, -26, 8.7, -62, 0.6)
+	local c3 = island(parent, "Floater3", 9, 20, -110, 4.5, 9, 0.5)
+	mill(c3, 9, 20.7, -111, 0.7, 0.1)
+	local c4 = island(parent, "Floater4", 22, -4, -64, 4, 8, 0.6)
+	tree(c4.model, 22, -3.3, -64, 0.8)
+	for _, isl in ipairs({ c1, c2, c3, c4 }) do
+		table.insert(isles, isl)
+	end
+
+	-- far islands (static, hazed by the atmosphere)
+	local far = {
+		{ -14, 0, -150, 10, 16, true, true },
+		{ -40, -6, -175, 8, 13, true, false },
+		{ 6, -10, -190, 7, 11, false, false },
+		{ 40, 6, -200, 11, 18, true, true },
+		{ 70, 22, -170, 9, 14, false, false },
+		{ -80, 12, -210, 10, 15, true, false },
+		{ -60, 34, -140, 6, 10, false, false },
+		{ 95, -4, -240, 12, 18, true, true },
+		{ -120, -2, -260, 14, 20, false, true },
+		{ 20, 40, -260, 8, 12, false, false },
+	}
+	for i, f in ipairs(far) do
+		local x, y, z, r, depth, hasMill, hasHouse = f[1], f[2], f[3], f[4], f[5], f[6], f[7]
+		local isl = island(parent, "FarIsland" .. i, x, y, z, r, depth, 0)
+		if hasMill then
+			mill(isl, x + r * 0.2, y + 0.7, z - r * 0.2, r * 0.16, rng:NextNumber(-0.4, 0.4))
+		end
+		if hasHouse then
+			house(isl.model, x - r * 0.4, y + 0.7, z + r * 0.2, r * 0.11, rng:NextNumber(-0.5, 0.5))
+		end
+		tree(isl.model, x - r * 0.1, y + 0.7, z + r * 0.45, r * 0.1)
+		tree(isl.model, x + r * 0.5, y + 0.7, z + r * 0.3, r * 0.09)
+		noShadows(isl.model)
+	end
+	return isles, mills
+end
+
+local function buildClouds(parent: Instance)
+	local m = Instance.new("Model")
+	m.Name = "Clouds"
+	m.Parent = parent
+	for i = 1, 14 do
+		cloud(m, -260 + i * 38 + rng:NextNumber(-10, 10), rng:NextNumber(-42, -26), -300 + rng:NextNumber(-40, 40), 3.5)
+	end
+	cloud(m, -30, -18, -110, 2.2)
+	cloud(m, 40, -20, -120, 2.5)
+	cloud(m, 0, -25, -160, 2.8)
+	cloud(m, -20, 60, -170, 3)
+	cloud(m, 60, 62, -200, 3.5)
+	cloud(m, -90, 55, -190, 3)
+	cloud(m, 130, 40, -260, 4)
+	cloud(m, -150, 70, -280, 4)
+end
+
+-- ── animation wiring ─────────────────────────────────────────────────────────
+local function islandOffset(isl: Island?, t: number): Vector3
+	if not isl or isl.amp == 0 then
+		return Vector3.zero
+	end
+	return Vector3.new(0, math.sin(t * 0.45 + isl.phase) * isl.amp, 0)
+end
+
+local function wireAnimation(isles: { Island }, mills: { Windmill })
+	for _, isl in ipairs(isles) do
+		if isl.amp > 0 then
+			local parts, base = {}, {}
+			for _, d in ipairs(isl.model:GetDescendants()) do
+				if d:IsA("BasePart") and not d:GetAttribute("Spin") then
+					table.insert(parts, d)
+					table.insert(base, d.CFrame)
+				end
+			end
+			local cfs = table.create(#parts)
+			table.insert(animators, function(t: number)
+				local off = islandOffset(isl, t)
+				for i = 1, #parts do
+					cfs[i] = base[i] + off
+				end
+				Workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+			end)
+		end
+	end
+	for _, w in ipairs(mills) do
+		local cfs = table.create(#w.parts)
+		table.insert(animators, function(t: number)
+			local hub = w.hub + islandOffset(w.island, t)
+			local spin = CFrame.Angles(0, 0, -t * w.speed)
+			for i = 1, #w.parts do
+				cfs[i] = hub * spin * w.rel[i]
+			end
+			Workspace:BulkMoveTo(w.parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+		end)
+	end
+end
+
+-- ── lighting / post effects ──────────────────────────────────────────────────
+local function same(a: any, b: any): boolean
+	if typeof(a) == "number" and typeof(b) == "number" then
+		return math.abs(a - b) < 1e-3
+	elseif typeof(a) == "Color3" and typeof(b) == "Color3" then
+		return math.abs(a.R - b.R) < 0.004 and math.abs(a.G - b.G) < 0.004 and math.abs(a.B - b.B) < 0.004
+	end
+	return a == b
+end
+
+-- Point the whole scene so the sun sits behind the camera's upper-left, lighting
+-- the mascot's face like the key art.
+local function orientToSun()
+	local ok, sun = pcall(function()
+		local prev = Lighting.ClockTime
+		Lighting.ClockTime = LIGHTING.ClockTime
+		local dir = Lighting:GetSunDirection()
+		Lighting.ClockTime = prev
+		return dir
+	end)
+	if not ok or typeof(sun) ~= "Vector3" then
+		return
+	end
+	local h = Vector3.new(sun.X, 0, sun.Z)
+	if h.Magnitude < 0.05 then
+		return
+	end
+	h = h.Unit
+	local want = Vector3.new(-0.57, 0, 0.82)
+	local theta = math.atan2(h.X, h.Z) - math.atan2(want.X, want.Z)
+	SCENE = CFrame.new(ORIGIN) * CFrame.Angles(0, theta, 0)
+end
+
+local function overrideAtmosphere(atmo: Atmosphere)
+	if atmo ~= ownAtmosphere and (not savedAtmo or savedAtmo.inst ~= atmo) then
+		local s: { [string]: any } = { inst = atmo }
+		for k in pairs(ATMOSPHERE) do
+			s[k] = (atmo :: any)[k]
+		end
+		savedAtmo = s
+	end
+	for k, v in pairs(ATMOSPHERE) do
+		if not same((atmo :: any)[k], v) then
+			(atmo :: any)[k] = v
+		end
+	end
+end
+
+local function applyLighting()
+	local s: { [string]: any } = {}
+	for k in pairs(LIGHTING) do
+		s[k] = (Lighting :: any)[k]
+	end
+	saved = s
+	for k, v in pairs(LIGHTING) do
+		pcall(function()
+			(Lighting :: any)[k] = v
+		end)
+	end
+	local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+	if not atmo then
+		ownAtmosphere = Instance.new("Atmosphere")
+		atmo = ownAtmosphere
+		atmo.Parent = Lighting
+	end
+	overrideAtmosphere(atmo :: Atmosphere)
+
+	-- The server may retune lighting when it builds a map while we're in the
+	-- menu: remember its new value for later, then keep the menu look.
+	table.insert(lightingConns, Lighting.Changed:Connect(function(prop)
+		local want = LIGHTING[prop]
+		if want == nil or not saved then
+			return
+		end
+		local now = (Lighting :: any)[prop]
+		if not same(now, want) then
+			saved[prop] = now
+			pcall(function()
+				(Lighting :: any)[prop] = want
+			end)
+		end
+	end))
+	table.insert(lightingConns, Lighting.ChildAdded:Connect(function(child)
+		if child:IsA("Atmosphere") and child ~= ownAtmosphere then
+			if ownAtmosphere then
+				ownAtmosphere:Destroy()
+				ownAtmosphere = nil
+			end
+			task.defer(overrideAtmosphere, child)
+		end
+	end))
+end
+
+local function restoreLighting()
+	for _, c in ipairs(lightingConns) do
+		c:Disconnect()
+	end
+	table.clear(lightingConns)
+	if saved then
+		for k, v in pairs(saved) do
+			pcall(function()
+				(Lighting :: any)[k] = v
+			end)
+		end
+	end
+	saved = nil
+	if savedAtmo and savedAtmo.inst.Parent then
+		for k, v in pairs(savedAtmo) do
+			if k ~= "inst" then
+				(savedAtmo.inst :: any)[k] = v
+			end
+		end
+	end
+	savedAtmo = nil
+	if ownAtmosphere then
+		ownAtmosphere:Destroy()
+		ownAtmosphere = nil
+	end
+end
+
+local function buildPostEffects()
+	local cam = Workspace.CurrentCamera
+	local dof = Instance.new("DepthOfFieldEffect")
+	dof.FarIntensity = 0.32
+	dof.NearIntensity = 0.12
+	dof.FocusDistance = 27
+	dof.InFocusRadius = 11
+	local bloom = Instance.new("BloomEffect")
+	bloom.Intensity = 0.45
+	bloom.Size = 26
+	bloom.Threshold = 1.45
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Saturation = 0.22
+	cc.Contrast = 0.08
+	cc.Brightness = 0.02
+	cc.TintColor = Color3.fromRGB(255, 251, 244)
+	local rays = Instance.new("SunRaysEffect")
+	rays.Intensity = 0.05
+	rays.Spread = 0.7
+	for _, e in ipairs({ dof, bloom, cc, rays } :: { any }) do
+		e.Name = "CattoLobby" .. e.ClassName
+		e.Enabled = false
+		e.Parent = cam
+		table.insert(postEffects, e)
+	end
+	if not Workspace.Terrain:FindFirstChildOfClass("Clouds") then
+		local c = Instance.new("Clouds")
+		c.Cover = 0.55
+		c.Density = 0.6
+		c.Color = WHITE
+		cloudsInstance = c
+	end
+end
+
+-- ── public API ───────────────────────────────────────────────────────────────
+function LobbyScene.Build()
+	if built then
+		return
+	end
+	built = true
+	orientToSun()
+	local f = Instance.new("Folder")
+	f.Name = "CattoLobbyScene"
+	folder = f
+
+	local function section(name: string, fn: () -> ())
+		local ok, err = pcall(fn)
+		if not ok then
+			warn("[CATTO] Lobby scene section '" .. name .. "' failed (skipped): " .. tostring(err))
+		end
+	end
+	section("foreground", function()
+		buildForeground(f)
+	end)
+	section("mascot", function()
+		buildHeroCat(f, W(4, -1.0, 0) * CFrame.Angles(0, math.rad(-8), 0))
+	end)
+	section("islands", function()
+		local isles, mills = buildIslands(f)
+		wireAnimation(isles, mills)
+	end)
+	section("clouds", function()
+		buildClouds(f)
+	end)
+	section("effects", buildPostEffects)
+end
+
+function LobbyScene.GetCameraCFrame(): CFrame
+	return SCENE * CFrame.lookAt(CAMERA_POS, CAMERA_LOOK)
+end
+
+function LobbyScene.SetActive(on: boolean)
+	if on == active then
+		return
+	end
+	if on and not built then
+		LobbyScene.Build()
+	end
+	active = on
+	if folder then
+		folder.Parent = on and Workspace or nil
+	end
+	for _, e in ipairs(postEffects) do
+		(e :: any).Enabled = on
+	end
+	if cloudsInstance then
+		cloudsInstance.Parent = on and Workspace.Terrain or nil
+	end
+	if on then
+		applyLighting()
+		renderConn = RunService.RenderStepped:Connect(function()
+			local t = os.clock()
+			for _, fn in ipairs(animators) do
+				fn(t)
+			end
+		end)
+	else
+		if renderConn then
+			renderConn:Disconnect()
+			renderConn = nil
+		end
+		restoreLighting()
+	end
+end
+
+return LobbyScene
+]]></string>
+            </Properties>
+          </Item>
+        </Item>
+        <Item class="Folder" referent="52">
           <Properties>
             <string name="Name">UI</string>
           </Properties>
-          <Item class="ModuleScript" referent="49">
+          <Item class="ModuleScript" referent="53">
             <Properties>
               <string name="Name">HeroArt</string>
               <string name="Source"><![CDATA[--!strict
@@ -5314,7 +6592,7 @@ return HeroArt
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="50">
+          <Item class="ModuleScript" referent="54">
             <Properties>
               <string name="Name">Icons</string>
               <string name="Source"><![CDATA[--!strict
@@ -5857,8 +7135,56 @@ function Icons.SitDown(size: number, color: Color3): Frame
 	return f
 end
 
+-- ── Shopping bag with a little cat face (Shop nav) ───────────────────────────
+function Icons.Bag(size: number, color: Color3): Frame
+	local f = base(size)
+	local body = chip(f, size * 0.66, size * 0.56, color, 0.2)
+	pos(body, size * 0.5, size * 0.62)
+	for _, dx in ipairs({ -0.14, 0.14 }) do
+		local side = chip(f, size * 0.08, size * 0.24, color, 0.5)
+		pos(side, size * 0.5 + dx * size, size * 0.28)
+	end
+	local top = chip(f, size * 0.36, size * 0.08, color, 0.5)
+	pos(top, size * 0.5, size * 0.17)
+	local dark = Color3.fromRGB(20, 26, 36)
+	for _, dx in ipairs({ -0.11, 0.11 }) do
+		local eye = circle(f, size * 0.09, dark)
+		pos(eye, size * 0.5 + dx * size, size * 0.58)
+	end
+	local mouth = chip(f, size * 0.12, size * 0.05, dark, 0.5)
+	pos(mouth, size * 0.5, size * 0.7)
+	return f
+end
+
+-- ── Winners' podium (Leaderboard nav) ───────────────────────────────────────
+function Icons.Podium(size: number, color: Color3): Frame
+	local f = base(size)
+	local mid = chip(f, size * 0.28, size * 0.5, color, 0.12)
+	pos(mid, size * 0.5, size * 0.66)
+	local left = chip(f, size * 0.25, size * 0.32, color, 0.12)
+	pos(left, size * 0.22, size * 0.75)
+	local right = chip(f, size * 0.25, size * 0.24, color, 0.12)
+	pos(right, size * 0.78, size * 0.79)
+	local star = chip(f, size * 0.16, size * 0.16, color, 0.2)
+	pos(star, size * 0.5, size * 0.24, 45)
+	return f
+end
+
+-- ── Plus (buy more gems) ─────────────────────────────────────────────────────
+function Icons.Plus(size: number, color: Color3): Frame
+	local f = base(size)
+	local h = chip(f, size * 0.64, size * 0.18, color, 0.5)
+	pos(h, size * 0.5, size * 0.5)
+	local v = chip(f, size * 0.18, size * 0.64, color, 0.5)
+	pos(v, size * 0.5, size * 0.5)
+	return f
+end
+
 -- Registry so callers can pass a string key (used by itemCard/Icons.Draw).
 Icons.Registry = {
+	Bag = Icons.Bag,
+	Podium = Icons.Podium,
+	Plus = Icons.Plus,
 	Gun = Icons.Gun,
 	GunHeavy = Icons.GunHeavy,
 	GunFast = Icons.GunFast,
@@ -5930,11 +7256,11 @@ return Icons
 ]]></string>
             </Properties>
           </Item>
-          <Item class="Folder" referent="51">
+          <Item class="Folder" referent="55">
             <Properties>
               <string name="Name">Screens</string>
             </Properties>
-            <Item class="ModuleScript" referent="52">
+            <Item class="ModuleScript" referent="56">
               <Properties>
                 <string name="Name">Customize</string>
                 <string name="Source"><![CDATA[--!strict
@@ -6143,7 +7469,7 @@ return Customize
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="53">
+            <Item class="ModuleScript" referent="57">
               <Properties>
                 <string name="Name">HUD</string>
                 <string name="Source"><![CDATA[--!strict
@@ -6625,7 +7951,7 @@ return HUD
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="54">
+            <Item class="ModuleScript" referent="58">
               <Properties>
                 <string name="Name">Leaderboard</string>
                 <string name="Source"><![CDATA[--!strict
@@ -6768,7 +8094,7 @@ return Leaderboard
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="55">
+            <Item class="ModuleScript" referent="59">
               <Properties>
                 <string name="Name">Loadout</string>
                 <string name="Source"><![CDATA[--!strict
@@ -6780,34 +8106,11 @@ local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
-local HeroArt = require(script.Parent.Parent.HeroArt)
 local Icons = require(script.Parent.Parent.Icons)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
 
 local Loadout = {}
-local cards = {}
-local statSetters = {}
-local selectedName
-
-local function refreshCards()
-	for id, card in pairs(cards) do
-		card.refresh({
-			owned = ClientState.Owns(card._kind, id),
-			equipped = ClientState.Equipped(card._kind) == id,
-		})
-	end
-end
-
-local function showStats(weapon)
-	if not weapon then return end
-	selectedName.Text = weapon.Name .. "  •  " .. weapon.Rarity
-	statSetters.Damage.set(weapon.Bars.Damage)
-	statSetters.FireRate.set(weapon.Bars.FireRate)
-	statSetters.Knockback.set(weapon.Bars.Knockback)
-	statSetters.Range.set(weapon.Bars.Range)
-	statSetters.Accuracy.set(weapon.Bars.Accuracy)
-end
 
 function Loadout.Build(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false })
@@ -6930,107 +8233,25 @@ function Loadout.Build(parent)
 	ClientState.ProfileChanged:Connect(refreshCatalogCards)
 	Loadout.Root = root
 	return root
-
-	HeroArt.Watermark(root)
-
-	-- Left: stat panel
-	local statPanel = UIUtil.panel({ Parent = root, Size = UDim2.new(0, 300, 1, 0), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.padding(16, statPanel)
-	selectedName = UIUtil.label({ Parent = statPanel, Text = "Select a weapon", Font = Theme.Font.Heading, TextSize = 20, Size = UDim2.new(1, 0, 0, 24) })
-	local holder = UIUtil.make("Frame", { Parent = statPanel, BackgroundTransparency = 1, Position = UDim2.fromOffset(0, 44), Size = UDim2.new(1, 0, 0, 140) })
-	UIUtil.listLayout(holder, 8)
-	statSetters.Damage = UIUtil.statBar(holder, "Damage", 0, Theme.Color.Danger)
-	statSetters.FireRate = UIUtil.statBar(holder, "Fire Rate", 0, Theme.Color.Warn)
-	statSetters.Knockback = UIUtil.statBar(holder, "Knockback", 0, Theme.Color.Accent2)
-	statSetters.Range = UIUtil.statBar(holder, "Range", 0, Theme.Color.Accent)
-	statSetters.Accuracy = UIUtil.statBar(holder, "Accuracy", 0, Theme.Color.Success)
-	UIUtil.label({ Parent = statPanel, Text = "Skins are cosmetic only — never pay-to-win.", TextColor3 = Theme.Color.TextMuted, TextSize = 11, Position = UDim2.new(0, 0, 1, -18), Size = UDim2.new(1, 0, 0, 16) })
-
-	-- Right: weapon grid + skins
-	local right = UIUtil.make("Frame", { Parent = root, BackgroundTransparency = 1, Position = UDim2.fromOffset(316, 0), Size = UDim2.new(1, -316, 1, 0) })
-	local weaponsHeader = UIUtil.make("Frame", { Parent = right, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1 })
-	local gunHeaderSlot = UIUtil.make("Frame", { Parent = weaponsHeader, Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1 })
-	Icons.Place("Gun", gunHeaderSlot, 16, Theme.Color.TextDim)
-	UIUtil.label({ Parent = weaponsHeader, Text = "WEAPONS", Font = Theme.Font.Heading, TextSize = 14, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(22, 0), Size = UDim2.new(1, -22, 1, 0) })
-	local grid = UIUtil.make("ScrollingFrame", {
-		Parent = right, Position = UDim2.fromOffset(0, 22), Size = UDim2.new(1, 0, 0.6, -22),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	})
-	UIUtil.gridLayout(grid, UDim2.fromOffset(120, 130), UDim2.fromOffset(10, 10))
-
-	for _, w in ipairs(Weapons.List) do
-		local card = UIUtil.itemCard(grid, {
-			title = w.Name, rarity = w.Rarity, cost = w.CoinCost,
-			owned = ClientState.Owns("Weapon", w.Id), equipped = ClientState.Equipped("Weapon") == w.Id,
-			accent = w.TrailColor, icon = w.Icon or "Gun", iconAccent = w.MuzzleColor,
-		}, function(action)
-			if action == "equip" then
-				local res = ClientActions.Equip("Weapon", w.Id)
-				if res.ok then refreshCards() end
-			else
-				local res = ClientActions.Purchase("Weapon", w.Id)
-				if res.ok then
-					ClientActions.Equip("Weapon", w.Id)
-					refreshCards()
-				end
-			end
-			showStats(w)
-		end)
-		card._kind = "Weapon"
-		card.button.MouseEnter:Connect(function() showStats(w) end)
-		cards[w.Id] = card
-	end
-
-	UIUtil.label({ Parent = right, Text = "WEAPON SKINS", Font = Theme.Font.Heading, TextSize = 14, TextColor3 = Theme.Color.TextDim, Position = UDim2.new(0, 0, 0.6, 6), Size = UDim2.new(1, 0, 0, 18) })
-	local skinGrid = UIUtil.make("ScrollingFrame", {
-		Parent = right, Position = UDim2.new(0, 0, 0.6, 28), Size = UDim2.new(1, 0, 0.4, -28),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	})
-	UIUtil.gridLayout(skinGrid, UDim2.fromOffset(110, 120), UDim2.fromOffset(10, 10))
-	for _, s in ipairs(Weapons.Skins) do
-		local card = UIUtil.itemCard(skinGrid, {
-			title = s.Name, subtitle = "Skin", cost = s.CoinCost,
-			owned = ClientState.Owns("Skin", s.Id), equipped = ClientState.Equipped("Skin") == s.Id,
-			accent = s.Tint, icon = "Gun", iconAccent = s.Tint:Lerp(Color3.new(1, 1, 1), 0.45),
-		}, function(action)
-			if action == "equip" then
-				if ClientActions.Equip("Skin", s.Id).ok then refreshCards() end
-			else
-				if ClientActions.Purchase("Skin", s.Id).ok then
-					ClientActions.Equip("Skin", s.Id)
-					refreshCards()
-				end
-			end
-		end)
-		card._kind = "Skin"
-		cards[s.Id] = card
-	end
-
-	ClientState.ProfileChanged:Connect(refreshCards)
-	if ClientState.Profile then
-		showStats(Weapons.Get(ClientState.Profile.Loadout.Weapon))
-	end
-
-	Loadout.Root = root
-	return root
 end
 
 return Loadout
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="56">
+            <Item class="ModuleScript" referent="60">
               <Properties>
                 <string name="Name">MainMenu</string>
                 <string name="Source"><![CDATA[--!strict
--- MainMenu: the lobby shell (mirrors reference 1). Left nav switches panels in
--- the content area. Top-right shows coins/gems; bottom-left shows the cat
--- portrait + level bar. "Play" shows match status, a map preview, and a
--- power-up legend.
+-- MainMenu: the Catto Pew Pew home screen. The background is the real 3D
+-- LobbyScene (mascot + floating islands) seen through the menu camera; this
+-- overlay adds the logo, the left nav, coins/gems top-right and the level pill
+-- bottom-left. Nav buttons open panels in the content area; clicking the open
+-- one again returns to the clean home screen.
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
@@ -7055,34 +8276,64 @@ local MainMenu = {}
 local player = Players.LocalPlayer
 
 local gui, content, panels, coinLabel, gemLabel, levelLabel, levelFill, xpLabel, playStatus, avatarSlot
+local panelBackdrop: Frame? = nil
 local navButtons = {}
 local currentPanel
 
 local NAV = {
-	{ id = "Play", label = "Play", icon = "Play", color = Theme.Color.Play },
+	{ id = "Play", label = "Play", icon = "Play" },
 	{ id = "Loadout", label = "Loadout", icon = "Gun" },
-	{ id = "Shop", label = "Shop", icon = "Cart" },
-	{ id = "Customize", label = "Customize", icon = "Paw" },
-	{ id = "Leaderboard", label = "Leaderboard", icon = "Trophy" },
-	{ id = "Quests", label = "Quests", icon = "Check" },
+	{ id = "Shop", label = "Shop", icon = "Bag" },
+	{ id = "Customize", label = "Customize", icon = "CatFace" },
+	{ id = "Leaderboard", label = "Leaderboard", icon = "Podium" },
 	{ id = "Settings", label = "Settings", icon = "Gear" },
 }
 
-local function switchTo(id)
+local NAV_BG = Color3.fromRGB(16, 22, 30)
+local NAV_BG_T = 0.32
+local LOGO_NAVY = Color3.fromRGB(28, 40, 84)
+
+-- Opening the tab that's already open closes it (back to the home screen).
+local function switchTo(id: string?)
+	if id ~= nil and id == currentPanel then
+		id = nil
+	end
 	for pid, root in pairs(panels) do
 		if root then
 			root.Visible = (pid == id)
 		end
 	end
-	for pid, button in pairs(navButtons) do
-		local active = pid == id
-		button.BackgroundColor3 = active and Theme.Color.Accent or Theme.Color.PanelLight
-		local label = button:FindFirstChild("NavLabel")
-		if label then
-			label.TextColor3 = active and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
+	if panelBackdrop then
+		panelBackdrop.Visible = id ~= nil
+	end
+	for pid, entry in pairs(navButtons) do
+		local on = pid == id
+		if pid ~= "Play" then
+			entry.button.BackgroundColor3 = on and Theme.Color.Accent or NAV_BG
+			entry.button.BackgroundTransparency = on and 0.1 or NAV_BG_T
 		end
+		entry.stroke.Transparency = on and 0.05 or entry.baseStroke
 	end
 	currentPanel = id
+end
+
+local function textStroke(label: Instance, color: Color3, thickness: number): UIStroke
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness
+	s.LineJoinMode = Enum.LineJoinMode.Round
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	s.Parent = label
+	return s
+end
+
+local function commas(n: number): string
+	local s = tostring(math.floor(n))
+	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	if out:sub(1, 1) == "," then
+		out = out:sub(2)
+	end
+	return out
 end
 
 -- Builds a panel with a name for error reporting, wrapped in pcall so a bug in
@@ -7093,6 +8344,12 @@ local function safeBuild(name: string, parent: Instance, builder: (Instance) -> 
 		return result :: Frame
 	end
 	warn(string.format("[PAW MAYHEM] UI panel '%s' failed to build: %s", name, tostring(result)))
+	-- Hide any orphaned frames the failed builder may have parented before crashing.
+	for _, child in ipairs(parent:GetChildren()) do
+		if child:IsA("GuiObject") then
+			(child :: GuiObject).Visible = false
+		end
+	end
 	local fallback = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
 	local card = UIUtil.panel({ Parent = fallback, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(420, 140), BackgroundColor3 = Theme.Color.PanelDark })
 	UIUtil.label({ Parent = card, Text = name .. " needs a fresh lobby load.\nChoose Play to continue.", TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), TextColor3 = Theme.Color.TextMuted, TextWrapped = true })
@@ -7196,7 +8453,7 @@ local function buildPowerUpStrip(parent)
 end
 
 local function buildPlayPanel(parent)
-	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = true }) :: Frame
+	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
 	-- The pre-match surface is a real three-card map vote, matching the
 	-- reference flow: choose an arena first, then load into the round.
 	local MAPS = {
@@ -7297,84 +8554,19 @@ local function buildPlayPanel(parent)
 	end
 	updateSelectedName()
 	return root
-
-	local hero = UIUtil.panel({ Parent = root, Size = UDim2.new(1, 0, 0, 198), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
-	UIUtil.gradient(Color3.fromRGB(19, 74, 116), Theme.Color.PanelDark, 0, hero)
-	UIUtil.label({ Parent = hero, Text = "WELCOME TO THE ARENA", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(22, 18), Size = UDim2.new(1, -44, 0, 18) })
-	UIUtil.label({ Parent = hero, Text = "TEAM DEATHMATCH", Font = Theme.Font.Title, TextSize = 30, Position = UDim2.fromOffset(20, 38), Size = UDim2.new(1, -250, 0, 42) })
-	UIUtil.label({ Parent = hero, Text = "Blast cats off the floating islands. First team to " .. GameConfig.Match.ScoreToWin .. " wins.", TextColor3 = Theme.Color.TextDim, TextSize = 13, TextWrapped = true, Position = UDim2.fromOffset(22, 82), Size = UDim2.new(0.58, 0, 0, 36) })
-	local modeBadge = UIUtil.panel({ Parent = hero, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -22, 0, 18), Size = UDim2.fromOffset(174, 68), BackgroundColor3 = Color3.fromRGB(8, 42, 76) })
-	UIUtil.label({ Parent = modeBadge, Text = "LIVE MODE", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 16) })
-	playStatus = UIUtil.label({ Parent = modeBadge, Text = "WAITING…", Font = Theme.Font.Number, TextSize = 16, Position = UDim2.fromOffset(14, 28), Size = UDim2.new(1, -28, 0, 24) })
-	local playBtn = UIUtil.button({ Parent = hero, Position = UDim2.fromOffset(22, 134), Size = UDim2.fromOffset(218, 46), BackgroundColor3 = Theme.Color.Play, Text = "", TextSize = 20, Font = Theme.Font.Title, CornerRadius = Theme.CornerSmall })
-	Icons.Place("Play", playBtn, 16, Color3.new(1, 1, 1), nil, UDim2.new(0, 20, 0.5, 0))
-	UIUtil.label({ Parent = playBtn, Text = "PLAY NOW", Font = Theme.Font.Title, TextSize = 20, TextColor3 = Color3.fromRGB(8, 46, 52), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(20, 0) })
-	playBtn.MouseButton1Click:Connect(function()
-		playStatus.Text = "YOU’RE IN QUEUE"
-	end)
-
-	local lowerRow = UIUtil.make("Frame", { Parent = root, Position = UDim2.fromOffset(0, 212), Size = UDim2.new(1, 0, 0, 188), BackgroundTransparency = 1 })
-	local mapCard = UIUtil.panel({ Parent = lowerRow, Size = UDim2.fromOffset(226, 188), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
-	local preview = UIUtil.make("Frame", { Parent = mapCard, Position = UDim2.fromOffset(10, 10), Size = UDim2.new(1, -20, 0, 112), BackgroundColor3 = Color3.fromRGB(88, 168, 235), BorderSizePixel = 0, ClipsDescendants = true })
-	UIUtil.corner(Theme.CornerSmall, preview)
-	UIUtil.gradient(Color3.fromRGB(155, 225, 255), Color3.fromRGB(44, 110, 185), 90, preview)
-	pcall(function() HeroArt.Island(preview, { width = 250, position = UDim2.fromScale(0.5, 1.16) }) end)
-	UIUtil.label({ Parent = mapCard, Text = "CURRENT MAP", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(12, 130), Size = UDim2.new(1, -24, 0, 15) })
-	local mapNameLabel = UIUtil.label({ Parent = mapCard, Text = "LOADING MAP…", Font = Theme.Font.Heading, TextSize = 15, Position = UDim2.fromOffset(12, 147), Size = UDim2.new(1, -24, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd })
-	local function applyMapName()
-		local arena = workspace:FindFirstChild("Arena")
-		local name = arena and arena:GetAttribute("MapName")
-		mapNameLabel.Text = name and string.upper(name) or "SKY ISLANDS"
-	end
-	task.spawn(function()
-		local arena = workspace:WaitForChild("Arena", 15)
-		applyMapName()
-		if arena then arena:GetAttributeChangedSignal("MapName"):Connect(applyMapName) end
-	end)
-
-	local detail = UIUtil.panel({ Parent = lowerRow, Position = UDim2.fromOffset(238, 0), Size = UDim2.new(1, -238, 0, 188), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.label({ Parent = detail, Text = "MATCH BRIEF", Font = Theme.Font.Heading, TextSize = 13, Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 18) })
-	local stats = UIUtil.make("Frame", { Parent = detail, Position = UDim2.fromOffset(16, 44), Size = UDim2.new(1, -32, 0, 54), BackgroundTransparency = 1 })
-	UIUtil.listLayout(stats, 10, Enum.FillDirection.Horizontal)
-	local function statChip(label, value, color)
-		local c = UIUtil.panel({ Parent = stats, Size = UDim2.fromOffset(106, 54), BackgroundColor3 = Theme.Color.Panel })
-		UIUtil.label({ Parent = c, Text = label, Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(10, 7), Size = UDim2.new(1, -20, 0, 14) })
-		UIUtil.label({ Parent = c, Text = value, Font = Theme.Font.Number, TextSize = 18, TextColor3 = color, Position = UDim2.fromOffset(10, 22), Size = UDim2.new(1, -20, 0, 24) })
-	end
-	statChip("ROUND TIME", string.format("%d:%02d", math.floor(GameConfig.Match.MatchSeconds / 60), GameConfig.Match.MatchSeconds % 60), Theme.Color.Accent)
-	statChip("TEAMS", "2", Theme.Color.Gem)
-	statChip("TO WIN", tostring(GameConfig.Match.ScoreToWin), Theme.Color.Coin)
-	UIUtil.label({ Parent = detail, Text = "POWER-UPS", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(16, 111), Size = UDim2.new(1, -32, 0, 14) })
-	local powerRow = UIUtil.make("Frame", { Parent = detail, Position = UDim2.fromOffset(16, 130), Size = UDim2.new(1, -32, 0, 40), BackgroundTransparency = 1 })
-	UIUtil.listLayout(powerRow, 8, Enum.FillDirection.Horizontal)
-	local iconFor = { RapidFire = "Bolt", MegaKnockback = "Burst", Shield = "Shield", SpeedBoost = "Bolt", MultiShot = "MultiShot" }
-	for _, power in ipairs(Progression.PowerUps) do
-		local chip = UIUtil.panel({ Parent = powerRow, Size = UDim2.fromOffset(108, 34), BackgroundColor3 = power.Color })
-		Icons.Place(iconFor[power.Id] or "Sparkle", chip, 18, Color3.new(1, 1, 1), nil, UDim2.new(0, 8, 0.5, 0))
-		UIUtil.label({ Parent = chip, Text = power.Name, Font = Theme.Font.Bold, TextSize = 10, Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -36, 1, 0), TextTruncate = Enum.TextTruncate.AtEnd })
-	end
-
-	local effectsRow = UIUtil.make("Frame", { Parent = root, Position = UDim2.fromOffset(0, 412), Size = UDim2.new(1, 0, 0, 90), BackgroundTransparency = 1 })
-	local effectsCard = UIUtil.panel({ Parent = effectsRow, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.label({ Parent = effectsCard, Text = "YOUR LOADOUT IS READY", Font = Theme.Font.Heading, TextSize = 13, Position = UDim2.fromOffset(16, 14), Size = UDim2.new(0.5, 0, 0, 18) })
-	UIUtil.label({ Parent = effectsCard, Text = "Tune your cat, blaster and cosmetics before the next drop.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Position = UDim2.fromOffset(16, 38), Size = UDim2.new(0.62, 0, 0, 20) })
-	local quick = UIUtil.button({ Parent = effectsCard, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(154, 38), BackgroundColor3 = Theme.Color.PanelLight, Text = "OPEN LOADOUT", TextSize = 12, Font = Theme.Font.Bold, CornerRadius = Theme.CornerSmall })
-	quick.MouseButton1Click:Connect(function() switchTo("Loadout") end)
-
-	return root
 end
 
--- ── currency chips + portrait ────────────────────────────────────────────────
+-- ── currency chips + level pill ──────────────────────────────────────────────
 local function refreshCurrency()
 	local p = ClientState.Profile
 	if not p then
 		return
 	end
-	coinLabel.Text = tostring(p.Coins)
-	gemLabel.Text = tostring(p.Gems)
+	coinLabel.Text = commas(p.Coins or 0)
+	gemLabel.Text = commas(p.Gems or 0)
 	levelLabel.Text = "Lv. " .. tostring(p.Level or 1)
 	local frac = (p.LevelNeed and p.LevelNeed > 0) and (p.LevelXP / p.LevelNeed) or 0
-	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0, 1), 1)
+	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0.04, 1), 1)
 	if xpLabel then
 		xpLabel.Text = string.format("%d / %d XP", p.LevelXP or 0, p.LevelNeed or 0)
 	end
@@ -7407,6 +8599,129 @@ function MainMenu.SetVisible(on: boolean)
 	end
 end
 
+-- ── logo: chunky white CATTO with cat ears + gold "PEW PEW!" ─────────────────
+local function buildLogo(parent: Instance): Frame
+	local g = UIUtil.make("Frame", { Parent = parent, Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(340, 176), ZIndex = 10 }) :: Frame
+
+	for _, ex in ipairs({ 92, 286 }) do
+		local ear = UIUtil.make("Frame", {
+			Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(ex, 30),
+			Size = UDim2.fromOffset(34, 34), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 10,
+		})
+		UIUtil.corner(UDim.new(0, 7), ear)
+		UIUtil.stroke(LOGO_NAVY, 4, ear)
+		local inner = UIUtil.make("Frame", {
+			Parent = ear, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.4, 0.4),
+			Size = UDim2.fromScale(0.44, 0.44), BackgroundColor3 = Color3.fromRGB(255, 176, 192), BorderSizePixel = 0, ZIndex = 10,
+		})
+		UIUtil.corner(UDim.new(0, 4), inner)
+	end
+	-- little sparkle dashes beside the right ear
+	for i, spec in ipairs({ { 318, 16, 30 }, { 330, 34, 70 }, { 304, 4, -10 } }) do
+		local dash = UIUtil.make("Frame", {
+			Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(spec[1], spec[2]),
+			Size = UDim2.fromOffset(4, i == 2 and 9 or 11), Rotation = spec[3], BackgroundColor3 = LOGO_NAVY, BorderSizePixel = 0, ZIndex = 10,
+		})
+		UIUtil.corner(UDim.new(1, 0), dash)
+	end
+
+	local function word(text: string, font: Enum.Font, size: number, x: number, y: number, rot: number, strokeColor: Color3, strokeT: number, gold: boolean)
+		local shadow = UIUtil.label({
+			Parent = g, Text = text, Font = font, TextSize = size, TextColor3 = strokeColor,
+			Position = UDim2.fromOffset(x, y + 7), Size = UDim2.fromOffset(336, size + 10), Rotation = rot, ZIndex = 11,
+		})
+		textStroke(shadow, strokeColor, strokeT)
+		local main = UIUtil.label({
+			Parent = g, Text = text, Font = font, TextSize = size, TextColor3 = Color3.new(1, 1, 1),
+			Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(336, size + 10), Rotation = rot, ZIndex = 12,
+		})
+		textStroke(main, strokeColor, strokeT)
+		if gold then
+			local grad = Instance.new("UIGradient")
+			grad.Color = ColorSequence.new(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 166, 30))
+			grad.Rotation = 90
+			grad.Parent = main
+		end
+	end
+	word("CATTO", Enum.Font.FredokaOne, 100, 0, 22, 0, LOGO_NAVY, 6, false)
+	word("PEW PEW!", Enum.Font.Bangers, 62, 52, 112, -5, Color3.fromRGB(70, 42, 26), 3.5, true)
+	return g
+end
+
+-- ── left nav buttons (green Play + dark glass buttons) ───────────────────────
+local function navButton(parent: Instance, item, order: number)
+	local isPlay = item.id == "Play"
+	local b = Instance.new("TextButton")
+	b.Name = item.id
+	b.AutoButtonColor = false
+	b.Text = ""
+	b.Size = UDim2.new(1, 0, 0, isPlay and 50 or 44)
+	b.LayoutOrder = order
+	b.BorderSizePixel = 0
+	b.ZIndex = 11
+	b.BackgroundColor3 = isPlay and Color3.new(1, 1, 1) or NAV_BG
+	b.BackgroundTransparency = isPlay and 0 or NAV_BG_T
+	b.Parent = parent
+	UIUtil.corner(UDim.new(0, 10), b)
+	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = isPlay and Color3.fromRGB(198, 255, 150) or Color3.new(1, 1, 1)
+	stroke.Thickness = isPlay and 2 or 1
+	stroke.Transparency = isPlay and 0.15 or 0.82
+	stroke.Parent = b
+	if isPlay then
+		UIUtil.gradient(Color3.fromRGB(132, 228, 76), Color3.fromRGB(54, 170, 50), 90, b)
+		local gloss = UIUtil.make("Frame", {
+			Parent = b, Position = UDim2.fromOffset(5, 3), Size = UDim2.new(1, -10, 0.42, 0),
+			BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 11,
+		})
+		UIUtil.corner(UDim.new(0, 8), gloss)
+	end
+
+	local slot = UIUtil.make("Frame", {
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 30, 0.5, 0),
+		Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, ZIndex = 12,
+	})
+	local white = Color3.new(1, 1, 1)
+	if item.icon == "Gear" then
+		Icons.Place("Gear", slot, 24, white, NAV_BG)
+	else
+		Icons.Place(item.icon, slot, isPlay and 24 or 26, white, white)
+	end
+
+	local label = UIUtil.label({
+		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = isPlay and 25 or 19,
+		TextColor3 = white, Position = UDim2.fromOffset(isPlay and 60 or 58, 0), Size = UDim2.new(1, -64, 1, 0), ZIndex = 12,
+	})
+	if isPlay then
+		textStroke(label, Color3.fromRGB(36, 112, 34), 1.5)
+	end
+
+	local pop = Instance.new("UIScale")
+	pop.Parent = b
+	b.MouseEnter:Connect(function()
+		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.04 }):Play()
+	end)
+	b.MouseLeave:Connect(function()
+		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
+	end)
+	b.MouseButton1Click:Connect(function()
+		switchTo(item.id)
+	end)
+	navButtons[item.id] = { button = b, stroke = stroke, baseStroke = stroke.Transparency }
+end
+
+local function glassPill(props): Frame
+	local f = UIUtil.make("Frame", props) :: Frame
+	f.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
+	f.BackgroundTransparency = 0.25
+	f.BorderSizePixel = 0
+	UIUtil.corner(UDim.new(0, 12), f)
+	local s = UIUtil.stroke(Color3.new(1, 1, 1), 1, f)
+	s.Transparency = 0.84
+	return f
+end
+
 function MainMenu.Build()
 	gui = UIUtil.make("ScreenGui", {
 		Name = "PawMainMenu", Parent = player:WaitForChild("PlayerGui"),
@@ -7414,86 +8729,122 @@ function MainMenu.Build()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	}) :: ScreenGui
 
-	local topInset = UIUtil.topInset()
-
-	-- Hero background scene: sky, a big floating island with a windmill/trees/
-	-- waterfall, and a fully-posed cat holding a blaster (reference 1's
-	-- composition, built entirely from Frames — see HeroArt.lua). A dim overlay
-	-- keeps foreground text readable on top of it.
-	-- Every HeroArt call is pcall-guarded: if the decorative scene ever throws,
-	-- the menu must still render (nav/title/panels are what actually matter).
-	local sceneLayer = UIUtil.make("Frame", { Parent = gui, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0 })
-	local sceneOk, sceneErr = pcall(function()
-		HeroArt.Sky(sceneLayer)
-		HeroArt.Island(sceneLayer, { width = 980, position = UDim2.fromScale(0.5, 1.04) })
-		HeroArt.HeroCat(sceneLayer, {
-			size = 360,
-			fur = Color3.fromRGB(255, 232, 211),
-			accent = Color3.fromRGB(255, 194, 191),
-			gunColor = Color3.fromRGB(140, 90, 255),
-			gunAccent = Color3.fromRGB(95, 210, 255),
-			position = UDim2.fromScale(0.72, 1.0),
-		})
-	end)
-	if not sceneOk then
-		warn("[PAW MAYHEM] Hero scene failed (non-fatal, skipped): " .. tostring(sceneErr))
-		-- Fall back to a flat gradient so the menu still looks intentional.
-		UIUtil.gradient(Color3.fromRGB(30, 40, 70), Color3.fromRGB(14, 18, 32), 90, sceneLayer)
-		sceneLayer.BackgroundTransparency = 0
-		sceneLayer.BackgroundColor3 = Theme.Color.Bg
+	-- Every corner group is designed at 1x and scaled with the screen height.
+	local function scaled(props): (Frame, UIScale)
+		local f = UIUtil.make("Frame", props) :: Frame
+		f.BackgroundTransparency = 1
+		local sc = Instance.new("UIScale")
+		sc.Parent = f
+		return f, sc
 	end
-	local dim = UIUtil.make("Frame", { Parent = gui, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 10, 20), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 1 })
 
-	-- Title (top left) — offset below Roblox's own topbar so nothing overlaps.
-	local title = UIUtil.label({ Parent = gui, Text = "CATTO", Font = Theme.Font.Title, TextSize = 70, Position = UDim2.fromOffset(46, topInset + 22), Size = UDim2.fromOffset(360, 78), ZIndex = 10, TextStrokeTransparency = 0.45 })
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	UIUtil.label({ Parent = gui, Text = "PEW PEW!", Font = Theme.Font.Title, TextColor3 = Theme.Color.Coin, TextSize = 32, Position = UDim2.fromOffset(84, topInset + 92), Size = UDim2.fromOffset(270, 42), ZIndex = 10, TextStrokeTransparency = 0.5 })
-
-	-- Currency (top right)
-	local curr = UIUtil.make("Frame", { Parent = gui, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -20, 0, topInset + 12), Size = UDim2.fromOffset(260, 40), BackgroundTransparency = 1, ZIndex = 10 })
-	UIUtil.listLayout(curr, 10, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
-	local function chip(iconName, color)
-		local c = UIUtil.panel({ Parent = curr, Size = UDim2.fromOffset(120, 40), BackgroundColor3 = Theme.Color.PanelDark })
-		local iconSlot = UIUtil.make("Frame", { Parent = c, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1 })
-		Icons.Place(iconName, iconSlot, 24, color)
-		local l = UIUtil.label({ Parent = c, Text = "0", Font = Theme.Font.Number, TextSize = 18, Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0) })
-		return l
-	end
-	coinLabel = chip("Coin", Theme.Color.Coin)
-	gemLabel = chip("Gem", Theme.Color.Gem)
+	-- Logo (top left)
+	local logoGroup, logoScale = scaled({ Parent = gui, Name = "LogoGroup", Size = UDim2.fromOffset(340, 176), ZIndex = 10 })
+	buildLogo(logoGroup)
 
 	-- Left nav
-	local nav = UIUtil.make("Frame", { Parent = gui, Position = UDim2.fromOffset(44, topInset + 190), Size = UDim2.fromOffset(200, 380), BackgroundTransparency = 1, ZIndex = 10 })
-	UIUtil.listLayout(nav, 8)
+	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", Size = UDim2.fromOffset(190, 330), ZIndex = 10 })
+	UIUtil.listLayout(navGroup, 7)
 	for i, item in ipairs(NAV) do
-		local btn = UIUtil.button({
-			Parent = nav, Size = UDim2.new(1, 0, 0, 42), LayoutOrder = i,
-			BackgroundColor3 = Theme.Color.PanelLight,
-			Text = "", TextSize = 16, Font = Theme.Font.Bold, ZIndex = 11,
-		}, function()
-			switchTo(item.id)
-		end)
-		navButtons[item.id] = btn
-		local iconSlot = UIUtil.make("Frame", { Parent = btn, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromOffset(12, 21), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 12 })
-		Icons.Place(item.icon, iconSlot, 20, Theme.Color.Text)
-		local navLabel = UIUtil.label({ Parent = btn, Name = "NavLabel", Text = item.label, Font = Theme.Font.Bold, TextSize = 16, TextColor3 = Theme.Color.Text, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -50, 1, 0), ZIndex = 12 })
+		navButton(navGroup, item, i)
 	end
 
-	-- Cat portrait + level (bottom left)
-	local portrait = UIUtil.panel({ Parent = gui, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -20), Size = UDim2.fromOffset(240, 78), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 10 })
-	UIUtil.padding(8, portrait)
-	avatarSlot = UIUtil.make("Frame", { Parent = portrait, Size = UDim2.fromOffset(44, 44), BackgroundColor3 = Theme.Color.PanelLight, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(0.5, 0), avatarSlot)
-	Icons.Place("CatFace", avatarSlot, 40, Theme.Color.Coin)
-	levelLabel = UIUtil.label({ Parent = portrait, Text = "Lv. 1", Font = Theme.Font.Bold, TextSize = 14, Position = UDim2.fromOffset(52, 4), Size = UDim2.new(1, -56, 0, 18) })
-	local lvTrack = UIUtil.make("Frame", { Parent = portrait, Position = UDim2.fromOffset(52, 26), Size = UDim2.new(1, -60, 0, 12), BackgroundColor3 = Theme.Color.PanelLight, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(1, 0), lvTrack)
-	levelFill = UIUtil.make("Frame", { Parent = lvTrack, Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(1, 0), levelFill)
-	xpLabel = UIUtil.label({ Parent = portrait, Text = "0 / 0 XP", TextColor3 = Theme.Color.TextMuted, TextSize = 10, Position = UDim2.fromOffset(52, 42), Size = UDim2.new(1, -60, 0, 14) })
+	-- Coins + gems (top right)
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(250, 40), ZIndex = 10 })
+	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
+	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
+	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
+	Icons.Place("Coin", coinSlot, 30, Color3.fromRGB(255, 196, 46))
+	coinLabel = UIUtil.label({ Parent = coinChip, Text = "0", Font = Theme.Font.Title, TextSize = 21, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -48, 1, 0), ZIndex = 11 })
+	local gemChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(126, 40), LayoutOrder = 2, ZIndex = 10 })
+	local gemSlot = UIUtil.make("Frame", { Parent = gemChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, ZIndex = 11 })
+	Icons.Place("Gem", gemSlot, 30, Color3.fromRGB(206, 92, 255))
+	gemLabel = UIUtil.label({ Parent = gemChip, Text = "0", Font = Theme.Font.Title, TextSize = 21, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -84, 1, 0), ZIndex = 11 })
+	local plus = Instance.new("TextButton")
+	plus.Text = ""
+	plus.AutoButtonColor = false
+	plus.AnchorPoint = Vector2.new(1, 0.5)
+	plus.Position = UDim2.new(1, -4, 0.5, 0)
+	plus.Size = UDim2.fromOffset(32, 32)
+	plus.BackgroundColor3 = Color3.new(1, 1, 1)
+	plus.BackgroundTransparency = 0.82
+	plus.BorderSizePixel = 0
+	plus.ZIndex = 11
+	plus.Parent = gemChip
+	UIUtil.corner(UDim.new(0, 9), plus)
+	Icons.Place("Plus", plus, 18, Color3.new(1, 1, 1))
+	plus.MouseButton1Click:Connect(function()
+		if currentPanel ~= "Shop" then
+			switchTo("Shop")
+		end
+	end)
 
-	-- Content area (right of nav)
-	content = UIUtil.make("Frame", { Parent = gui, Position = UDim2.fromOffset(260, topInset + 96), Size = UDim2.new(1, -284, 1, -(topInset + 156)), BackgroundTransparency = 1, ZIndex = 10 })
+	-- Level pill (bottom left)
+	local lvlGroup, lvlScale = scaled({ Parent = gui, Name = "LevelGroup", AnchorPoint = Vector2.new(0, 1), Size = UDim2.fromOffset(232, 58), ZIndex = 10 })
+	local pill = glassPill({ Parent = lvlGroup, Size = UDim2.fromScale(1, 1), ZIndex = 10 })
+	local avatarRing = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Color3.fromRGB(255, 244, 236), BorderSizePixel = 0, ZIndex = 11 })
+	UIUtil.corner(UDim.new(0.5, 0), avatarRing)
+	UIUtil.stroke(Color3.new(1, 1, 1), 2, avatarRing)
+	avatarSlot = UIUtil.make("Frame", { Parent = avatarRing, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 })
+	Icons.Place("CatFace", avatarSlot, 40, Color3.fromRGB(255, 236, 222), Color3.fromRGB(255, 248, 242))
+	levelLabel = UIUtil.label({ Parent = pill, Text = "Lv. 1", Font = Theme.Font.Title, TextSize = 19, Position = UDim2.fromOffset(62, 7), Size = UDim2.fromOffset(150, 20), ZIndex = 11 })
+	local track = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(62, 33), Size = UDim2.fromOffset(158, 13), BackgroundColor3 = Color3.fromRGB(8, 12, 20), BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 11 })
+	UIUtil.corner(UDim.new(1, 0), track)
+	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 12 })
+	UIUtil.corner(UDim.new(1, 0), levelFill)
+	UIUtil.gradient(Color3.fromRGB(110, 222, 255), Color3.fromRGB(46, 140, 255), 0, levelFill)
+	xpLabel = nil
+
+	-- Content area (opens to the right of the nav) with a dark glass backdrop.
+	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Theme.Color.Bg, BackgroundTransparency = 0.08, BorderSizePixel = 0, Visible = false, ZIndex = 9 }) :: Frame
+	UIUtil.corner(UDim.new(0, 18), backdrop)
+	local bs = UIUtil.stroke(Theme.Color.Stroke, 1.5, backdrop)
+	bs.Transparency = 0.3
+	local close = Instance.new("TextButton")
+	close.Name = "Close"
+	close.Text = "X"
+	close.Font = Theme.Font.Title
+	close.TextSize = 18
+	close.TextColor3 = Color3.new(1, 1, 1)
+	close.AutoButtonColor = true
+	close.AnchorPoint = Vector2.new(0.5, 0.5)
+	close.Position = UDim2.new(1, -4, 0, 4)
+	close.Size = UDim2.fromOffset(34, 34)
+	close.BackgroundColor3 = Theme.Color.Danger
+	close.BorderSizePixel = 0
+	close.ZIndex = 20
+	close.Parent = backdrop
+	UIUtil.corner(UDim.new(0.5, 0), close)
+	close.MouseButton1Click:Connect(function()
+		switchTo(nil)
+	end)
+	panelBackdrop = backdrop
+	content = UIUtil.make("Frame", { Parent = gui, Name = "Content", BackgroundTransparency = 1, ZIndex = 10 })
+
+	local camera = Workspace.CurrentCamera
+	local function relayout()
+		local vp = camera.ViewportSize
+		local s = math.clamp(vp.Y / 640, 0.72, 1.75)
+		local inset = UIUtil.topInset()
+		local logoY = math.max(inset - 10 * s, 4)
+		logoScale.Scale = s
+		logoGroup.Position = UDim2.fromOffset(22 * s, logoY)
+		navScale.Scale = s
+		navGroup.Position = UDim2.fromOffset(42 * s, logoY + 168 * s)
+		currScale.Scale = s
+		currGroup.Position = UDim2.new(1, -16 * s, 0, 12 * s)
+		lvlScale.Scale = s
+		lvlGroup.Position = UDim2.new(0, 22 * s, 1, -16 * s)
+
+		local left = (42 + 190) * s + 30
+		local top = math.max(inset, 58 * s) + 18
+		content.Position = UDim2.fromOffset(left, top)
+		content.Size = UDim2.new(1, -(left + 30), 1, -(top + 24))
+		backdrop.Position = UDim2.fromOffset(left - 14, top - 14)
+		backdrop.Size = UDim2.new(1, -(left + 30) + 28, 1, -(top + 24) + 28)
+	end
+	relayout()
+	camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
 
 	-- Build every panel defensively: a crash in one never blanks the others.
 	panels = {}
@@ -7504,20 +8855,9 @@ function MainMenu.Build()
 	panels.Leaderboard = safeBuild("Leaderboard", content, Leaderboard.Build)
 	panels.Quests = safeBuild("Quests", content, Quests.Build)
 	panels.Settings = safeBuild("Settings", content, Settings.Build)
-	-- Start on the finished Catto landing/loading screen. The arena vote panel
-	-- stays hidden until the player explicitly presses Play, so launch never
-	-- feels like it skipped straight into a match setup screen.
 	for _, root in pairs(panels) do
 		if root then
 			root.Visible = false
-		end
-	end
-	for pid, button in pairs(navButtons) do
-		local isPlay = pid == "Play"
-		button.BackgroundColor3 = isPlay and Theme.Color.Play or Theme.Color.PanelLight
-		local label = button:FindFirstChild("NavLabel")
-		if label then
-			label.TextColor3 = isPlay and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
 		end
 	end
 	currentPanel = nil
@@ -7535,7 +8875,7 @@ return MainMenu
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="57">
+            <Item class="ModuleScript" referent="61">
               <Properties>
                 <string name="Name">Quests</string>
                 <string name="Source"><![CDATA[--!strict
@@ -7611,7 +8951,7 @@ return Quests
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="58">
+            <Item class="ModuleScript" referent="62">
               <Properties>
                 <string name="Name">Results</string>
                 <string name="Source"><![CDATA[--!strict
@@ -7743,7 +9083,7 @@ return Results
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="59">
+            <Item class="ModuleScript" referent="63">
               <Properties>
                 <string name="Name">Settings</string>
                 <string name="Source"><![CDATA[--!strict
@@ -7844,7 +9184,7 @@ return Settings
 ]]></string>
               </Properties>
             </Item>
-            <Item class="ModuleScript" referent="60">
+            <Item class="ModuleScript" referent="64">
               <Properties>
                 <string name="Name">Shop</string>
                 <string name="Source"><![CDATA[--!strict
@@ -7946,7 +9286,7 @@ return Shop
               </Properties>
             </Item>
           </Item>
-          <Item class="ModuleScript" referent="61">
+          <Item class="ModuleScript" referent="65">
             <Properties>
               <string name="Name">Theme</string>
               <string name="Source"><![CDATA[--!strict
@@ -8008,7 +9348,7 @@ return Theme
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="62">
+          <Item class="ModuleScript" referent="66">
             <Properties>
               <string name="Name">UIManager</string>
               <string name="Source"><![CDATA[--!strict
@@ -8031,6 +9371,7 @@ local Results = require(script.Parent.Screens.Results)
 
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
 local CombatController = require(script.Parent.Parent.Controllers.CombatController)
+local LobbyScene = require(script.Parent.Parent.Lobby.LobbyScene)
 
 local UIManager = {}
 local player = Players.LocalPlayer
@@ -8197,6 +9538,10 @@ local function onPhase(m)
 end
 
 function UIManager.Start()
+	local sceneOk, sceneErr = pcall(LobbyScene.Build)
+	if not sceneOk then
+		warn("[CATTO] Lobby scene failed to build: " .. tostring(sceneErr))
+	end
 	local menuOk, menuErr = pcall(MainMenu.Build)
 	if not menuOk then
 		warn("[PAW MAYHEM] Main menu failed to build; using launch fallback: " .. tostring(menuErr))
@@ -8228,13 +9573,16 @@ function UIManager.Start()
 
 	-- apply current state on start
 	onPhase(ClientState.Match)
+
+	-- Tells the ReplicatedFirst loading screen the home screen is ready.
+	player:SetAttribute("CattoLobbyReady", true)
 end
 
 return UIManager
 ]]></string>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="63">
+          <Item class="ModuleScript" referent="67">
             <Properties>
               <string name="Name">UIUtil</string>
               <string name="Source"><![CDATA[--!strict
@@ -8534,7 +9882,7 @@ return UIUtil
       </Item>
     </Item>
   </Item>
-  <Item class="Workspace" referent="64">
+  <Item class="Workspace" referent="68">
     <Properties>
       <string name="Name">Workspace</string>
       <bool name="FilteringEnabled">true</bool>

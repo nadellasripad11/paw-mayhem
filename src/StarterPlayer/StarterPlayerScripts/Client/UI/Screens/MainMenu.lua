@@ -1,10 +1,13 @@
 --!strict
--- MainMenu: the lobby shell (mirrors reference 1). Left nav switches panels in
--- the content area. Top-right shows coins/gems; bottom-left shows the cat
--- portrait + level bar. "Play" shows match status, a map preview, and a
--- power-up legend.
+-- MainMenu: the Catto Pew Pew home screen. The background is the real 3D
+-- LobbyScene (mascot + floating islands) seen through the menu camera; this
+-- overlay adds the logo, the left nav, coins/gems top-right and the level pill
+-- bottom-left. Nav buttons open panels in the content area; clicking the open
+-- one again returns to the clean home screen.
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
@@ -29,34 +32,64 @@ local MainMenu = {}
 local player = Players.LocalPlayer
 
 local gui, content, panels, coinLabel, gemLabel, levelLabel, levelFill, xpLabel, playStatus, avatarSlot
+local panelBackdrop: Frame? = nil
 local navButtons = {}
 local currentPanel
 
 local NAV = {
-	{ id = "Play", label = "Play", icon = "Play", color = Theme.Color.Play },
+	{ id = "Play", label = "Play", icon = "Play" },
 	{ id = "Loadout", label = "Loadout", icon = "Gun" },
-	{ id = "Shop", label = "Shop", icon = "Cart" },
-	{ id = "Customize", label = "Customize", icon = "Paw" },
-	{ id = "Leaderboard", label = "Leaderboard", icon = "Trophy" },
-	{ id = "Quests", label = "Quests", icon = "Check" },
+	{ id = "Shop", label = "Shop", icon = "Bag" },
+	{ id = "Customize", label = "Customize", icon = "CatFace" },
+	{ id = "Leaderboard", label = "Leaderboard", icon = "Podium" },
 	{ id = "Settings", label = "Settings", icon = "Gear" },
 }
 
-local function switchTo(id)
+local NAV_BG = Color3.fromRGB(16, 22, 30)
+local NAV_BG_T = 0.32
+local LOGO_NAVY = Color3.fromRGB(28, 40, 84)
+
+-- Opening the tab that's already open closes it (back to the home screen).
+local function switchTo(id: string?)
+	if id ~= nil and id == currentPanel then
+		id = nil
+	end
 	for pid, root in pairs(panels) do
 		if root then
 			root.Visible = (pid == id)
 		end
 	end
-	for pid, button in pairs(navButtons) do
-		local active = pid == id
-		button.BackgroundColor3 = active and Theme.Color.Accent or Theme.Color.PanelLight
-		local label = button:FindFirstChild("NavLabel")
-		if label then
-			label.TextColor3 = active and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
+	if panelBackdrop then
+		panelBackdrop.Visible = id ~= nil
+	end
+	for pid, entry in pairs(navButtons) do
+		local on = pid == id
+		if pid ~= "Play" then
+			entry.button.BackgroundColor3 = on and Theme.Color.Accent or NAV_BG
+			entry.button.BackgroundTransparency = on and 0.1 or NAV_BG_T
 		end
+		entry.stroke.Transparency = on and 0.05 or entry.baseStroke
 	end
 	currentPanel = id
+end
+
+local function textStroke(label: Instance, color: Color3, thickness: number): UIStroke
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness
+	s.LineJoinMode = Enum.LineJoinMode.Round
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+	s.Parent = label
+	return s
+end
+
+local function commas(n: number): string
+	local s = tostring(math.floor(n))
+	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+	if out:sub(1, 1) == "," then
+		out = out:sub(2)
+	end
+	return out
 end
 
 -- Builds a panel with a name for error reporting, wrapped in pcall so a bug in
@@ -67,6 +100,12 @@ local function safeBuild(name: string, parent: Instance, builder: (Instance) -> 
 		return result :: Frame
 	end
 	warn(string.format("[PAW MAYHEM] UI panel '%s' failed to build: %s", name, tostring(result)))
+	-- Hide any orphaned frames the failed builder may have parented before crashing.
+	for _, child in ipairs(parent:GetChildren()) do
+		if child:IsA("GuiObject") then
+			(child :: GuiObject).Visible = false
+		end
+	end
 	local fallback = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
 	local card = UIUtil.panel({ Parent = fallback, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(420, 140), BackgroundColor3 = Theme.Color.PanelDark })
 	UIUtil.label({ Parent = card, Text = name .. " needs a fresh lobby load.\nChoose Play to continue.", TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), TextColor3 = Theme.Color.TextMuted, TextWrapped = true })
@@ -170,7 +209,7 @@ local function buildPowerUpStrip(parent)
 end
 
 local function buildPlayPanel(parent)
-	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = true }) :: Frame
+	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
 	-- The pre-match surface is a real three-card map vote, matching the
 	-- reference flow: choose an arena first, then load into the round.
 	local MAPS = {
@@ -271,84 +310,19 @@ local function buildPlayPanel(parent)
 	end
 	updateSelectedName()
 	return root
-
-	local hero = UIUtil.panel({ Parent = root, Size = UDim2.new(1, 0, 0, 198), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
-	UIUtil.gradient(Color3.fromRGB(19, 74, 116), Theme.Color.PanelDark, 0, hero)
-	UIUtil.label({ Parent = hero, Text = "WELCOME TO THE ARENA", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(22, 18), Size = UDim2.new(1, -44, 0, 18) })
-	UIUtil.label({ Parent = hero, Text = "TEAM DEATHMATCH", Font = Theme.Font.Title, TextSize = 30, Position = UDim2.fromOffset(20, 38), Size = UDim2.new(1, -250, 0, 42) })
-	UIUtil.label({ Parent = hero, Text = "Blast cats off the floating islands. First team to " .. GameConfig.Match.ScoreToWin .. " wins.", TextColor3 = Theme.Color.TextDim, TextSize = 13, TextWrapped = true, Position = UDim2.fromOffset(22, 82), Size = UDim2.new(0.58, 0, 0, 36) })
-	local modeBadge = UIUtil.panel({ Parent = hero, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -22, 0, 18), Size = UDim2.fromOffset(174, 68), BackgroundColor3 = Color3.fromRGB(8, 42, 76) })
-	UIUtil.label({ Parent = modeBadge, Text = "LIVE MODE", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 16) })
-	playStatus = UIUtil.label({ Parent = modeBadge, Text = "WAITING…", Font = Theme.Font.Number, TextSize = 16, Position = UDim2.fromOffset(14, 28), Size = UDim2.new(1, -28, 0, 24) })
-	local playBtn = UIUtil.button({ Parent = hero, Position = UDim2.fromOffset(22, 134), Size = UDim2.fromOffset(218, 46), BackgroundColor3 = Theme.Color.Play, Text = "", TextSize = 20, Font = Theme.Font.Title, CornerRadius = Theme.CornerSmall })
-	Icons.Place("Play", playBtn, 16, Color3.new(1, 1, 1), nil, UDim2.new(0, 20, 0.5, 0))
-	UIUtil.label({ Parent = playBtn, Text = "PLAY NOW", Font = Theme.Font.Title, TextSize = 20, TextColor3 = Color3.fromRGB(8, 46, 52), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(20, 0) })
-	playBtn.MouseButton1Click:Connect(function()
-		playStatus.Text = "YOU’RE IN QUEUE"
-	end)
-
-	local lowerRow = UIUtil.make("Frame", { Parent = root, Position = UDim2.fromOffset(0, 212), Size = UDim2.new(1, 0, 0, 188), BackgroundTransparency = 1 })
-	local mapCard = UIUtil.panel({ Parent = lowerRow, Size = UDim2.fromOffset(226, 188), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
-	local preview = UIUtil.make("Frame", { Parent = mapCard, Position = UDim2.fromOffset(10, 10), Size = UDim2.new(1, -20, 0, 112), BackgroundColor3 = Color3.fromRGB(88, 168, 235), BorderSizePixel = 0, ClipsDescendants = true })
-	UIUtil.corner(Theme.CornerSmall, preview)
-	UIUtil.gradient(Color3.fromRGB(155, 225, 255), Color3.fromRGB(44, 110, 185), 90, preview)
-	pcall(function() HeroArt.Island(preview, { width = 250, position = UDim2.fromScale(0.5, 1.16) }) end)
-	UIUtil.label({ Parent = mapCard, Text = "CURRENT MAP", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Accent, Position = UDim2.fromOffset(12, 130), Size = UDim2.new(1, -24, 0, 15) })
-	local mapNameLabel = UIUtil.label({ Parent = mapCard, Text = "LOADING MAP…", Font = Theme.Font.Heading, TextSize = 15, Position = UDim2.fromOffset(12, 147), Size = UDim2.new(1, -24, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd })
-	local function applyMapName()
-		local arena = workspace:FindFirstChild("Arena")
-		local name = arena and arena:GetAttribute("MapName")
-		mapNameLabel.Text = name and string.upper(name) or "SKY ISLANDS"
-	end
-	task.spawn(function()
-		local arena = workspace:WaitForChild("Arena", 15)
-		applyMapName()
-		if arena then arena:GetAttributeChangedSignal("MapName"):Connect(applyMapName) end
-	end)
-
-	local detail = UIUtil.panel({ Parent = lowerRow, Position = UDim2.fromOffset(238, 0), Size = UDim2.new(1, -238, 0, 188), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.label({ Parent = detail, Text = "MATCH BRIEF", Font = Theme.Font.Heading, TextSize = 13, Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 18) })
-	local stats = UIUtil.make("Frame", { Parent = detail, Position = UDim2.fromOffset(16, 44), Size = UDim2.new(1, -32, 0, 54), BackgroundTransparency = 1 })
-	UIUtil.listLayout(stats, 10, Enum.FillDirection.Horizontal)
-	local function statChip(label, value, color)
-		local c = UIUtil.panel({ Parent = stats, Size = UDim2.fromOffset(106, 54), BackgroundColor3 = Theme.Color.Panel })
-		UIUtil.label({ Parent = c, Text = label, Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(10, 7), Size = UDim2.new(1, -20, 0, 14) })
-		UIUtil.label({ Parent = c, Text = value, Font = Theme.Font.Number, TextSize = 18, TextColor3 = color, Position = UDim2.fromOffset(10, 22), Size = UDim2.new(1, -20, 0, 24) })
-	end
-	statChip("ROUND TIME", string.format("%d:%02d", math.floor(GameConfig.Match.MatchSeconds / 60), GameConfig.Match.MatchSeconds % 60), Theme.Color.Accent)
-	statChip("TEAMS", "2", Theme.Color.Gem)
-	statChip("TO WIN", tostring(GameConfig.Match.ScoreToWin), Theme.Color.Coin)
-	UIUtil.label({ Parent = detail, Text = "POWER-UPS", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(16, 111), Size = UDim2.new(1, -32, 0, 14) })
-	local powerRow = UIUtil.make("Frame", { Parent = detail, Position = UDim2.fromOffset(16, 130), Size = UDim2.new(1, -32, 0, 40), BackgroundTransparency = 1 })
-	UIUtil.listLayout(powerRow, 8, Enum.FillDirection.Horizontal)
-	local iconFor = { RapidFire = "Bolt", MegaKnockback = "Burst", Shield = "Shield", SpeedBoost = "Bolt", MultiShot = "MultiShot" }
-	for _, power in ipairs(Progression.PowerUps) do
-		local chip = UIUtil.panel({ Parent = powerRow, Size = UDim2.fromOffset(108, 34), BackgroundColor3 = power.Color })
-		Icons.Place(iconFor[power.Id] or "Sparkle", chip, 18, Color3.new(1, 1, 1), nil, UDim2.new(0, 8, 0.5, 0))
-		UIUtil.label({ Parent = chip, Text = power.Name, Font = Theme.Font.Bold, TextSize = 10, Position = UDim2.fromOffset(32, 0), Size = UDim2.new(1, -36, 1, 0), TextTruncate = Enum.TextTruncate.AtEnd })
-	end
-
-	local effectsRow = UIUtil.make("Frame", { Parent = root, Position = UDim2.fromOffset(0, 412), Size = UDim2.new(1, 0, 0, 90), BackgroundTransparency = 1 })
-	local effectsCard = UIUtil.panel({ Parent = effectsRow, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.label({ Parent = effectsCard, Text = "YOUR LOADOUT IS READY", Font = Theme.Font.Heading, TextSize = 13, Position = UDim2.fromOffset(16, 14), Size = UDim2.new(0.5, 0, 0, 18) })
-	UIUtil.label({ Parent = effectsCard, Text = "Tune your cat, blaster and cosmetics before the next drop.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Position = UDim2.fromOffset(16, 38), Size = UDim2.new(0.62, 0, 0, 20) })
-	local quick = UIUtil.button({ Parent = effectsCard, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0), Size = UDim2.fromOffset(154, 38), BackgroundColor3 = Theme.Color.PanelLight, Text = "OPEN LOADOUT", TextSize = 12, Font = Theme.Font.Bold, CornerRadius = Theme.CornerSmall })
-	quick.MouseButton1Click:Connect(function() switchTo("Loadout") end)
-
-	return root
 end
 
--- ── currency chips + portrait ────────────────────────────────────────────────
+-- ── currency chips + level pill ──────────────────────────────────────────────
 local function refreshCurrency()
 	local p = ClientState.Profile
 	if not p then
 		return
 	end
-	coinLabel.Text = tostring(p.Coins)
-	gemLabel.Text = tostring(p.Gems)
+	coinLabel.Text = commas(p.Coins or 0)
+	gemLabel.Text = commas(p.Gems or 0)
 	levelLabel.Text = "Lv. " .. tostring(p.Level or 1)
 	local frac = (p.LevelNeed and p.LevelNeed > 0) and (p.LevelXP / p.LevelNeed) or 0
-	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0, 1), 1)
+	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0.04, 1), 1)
 	if xpLabel then
 		xpLabel.Text = string.format("%d / %d XP", p.LevelXP or 0, p.LevelNeed or 0)
 	end
@@ -381,6 +355,129 @@ function MainMenu.SetVisible(on: boolean)
 	end
 end
 
+-- ── logo: chunky white CATTO with cat ears + gold "PEW PEW!" ─────────────────
+local function buildLogo(parent: Instance): Frame
+	local g = UIUtil.make("Frame", { Parent = parent, Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(340, 176), ZIndex = 10 }) :: Frame
+
+	for _, ex in ipairs({ 92, 286 }) do
+		local ear = UIUtil.make("Frame", {
+			Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(ex, 30),
+			Size = UDim2.fromOffset(34, 34), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 10,
+		})
+		UIUtil.corner(UDim.new(0, 7), ear)
+		UIUtil.stroke(LOGO_NAVY, 4, ear)
+		local inner = UIUtil.make("Frame", {
+			Parent = ear, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.4, 0.4),
+			Size = UDim2.fromScale(0.44, 0.44), BackgroundColor3 = Color3.fromRGB(255, 176, 192), BorderSizePixel = 0, ZIndex = 10,
+		})
+		UIUtil.corner(UDim.new(0, 4), inner)
+	end
+	-- little sparkle dashes beside the right ear
+	for i, spec in ipairs({ { 318, 16, 30 }, { 330, 34, 70 }, { 304, 4, -10 } }) do
+		local dash = UIUtil.make("Frame", {
+			Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(spec[1], spec[2]),
+			Size = UDim2.fromOffset(4, i == 2 and 9 or 11), Rotation = spec[3], BackgroundColor3 = LOGO_NAVY, BorderSizePixel = 0, ZIndex = 10,
+		})
+		UIUtil.corner(UDim.new(1, 0), dash)
+	end
+
+	local function word(text: string, font: Enum.Font, size: number, x: number, y: number, rot: number, strokeColor: Color3, strokeT: number, gold: boolean)
+		local shadow = UIUtil.label({
+			Parent = g, Text = text, Font = font, TextSize = size, TextColor3 = strokeColor,
+			Position = UDim2.fromOffset(x, y + 7), Size = UDim2.fromOffset(336, size + 10), Rotation = rot, ZIndex = 11,
+		})
+		textStroke(shadow, strokeColor, strokeT)
+		local main = UIUtil.label({
+			Parent = g, Text = text, Font = font, TextSize = size, TextColor3 = Color3.new(1, 1, 1),
+			Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(336, size + 10), Rotation = rot, ZIndex = 12,
+		})
+		textStroke(main, strokeColor, strokeT)
+		if gold then
+			local grad = Instance.new("UIGradient")
+			grad.Color = ColorSequence.new(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 166, 30))
+			grad.Rotation = 90
+			grad.Parent = main
+		end
+	end
+	word("CATTO", Enum.Font.FredokaOne, 100, 0, 22, 0, LOGO_NAVY, 6, false)
+	word("PEW PEW!", Enum.Font.Bangers, 62, 52, 112, -5, Color3.fromRGB(70, 42, 26), 3.5, true)
+	return g
+end
+
+-- ── left nav buttons (green Play + dark glass buttons) ───────────────────────
+local function navButton(parent: Instance, item, order: number)
+	local isPlay = item.id == "Play"
+	local b = Instance.new("TextButton")
+	b.Name = item.id
+	b.AutoButtonColor = false
+	b.Text = ""
+	b.Size = UDim2.new(1, 0, 0, isPlay and 50 or 44)
+	b.LayoutOrder = order
+	b.BorderSizePixel = 0
+	b.ZIndex = 11
+	b.BackgroundColor3 = isPlay and Color3.new(1, 1, 1) or NAV_BG
+	b.BackgroundTransparency = isPlay and 0 or NAV_BG_T
+	b.Parent = parent
+	UIUtil.corner(UDim.new(0, 10), b)
+	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = isPlay and Color3.fromRGB(198, 255, 150) or Color3.new(1, 1, 1)
+	stroke.Thickness = isPlay and 2 or 1
+	stroke.Transparency = isPlay and 0.15 or 0.82
+	stroke.Parent = b
+	if isPlay then
+		UIUtil.gradient(Color3.fromRGB(132, 228, 76), Color3.fromRGB(54, 170, 50), 90, b)
+		local gloss = UIUtil.make("Frame", {
+			Parent = b, Position = UDim2.fromOffset(5, 3), Size = UDim2.new(1, -10, 0.42, 0),
+			BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 11,
+		})
+		UIUtil.corner(UDim.new(0, 8), gloss)
+	end
+
+	local slot = UIUtil.make("Frame", {
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 30, 0.5, 0),
+		Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, ZIndex = 12,
+	})
+	local white = Color3.new(1, 1, 1)
+	if item.icon == "Gear" then
+		Icons.Place("Gear", slot, 24, white, NAV_BG)
+	else
+		Icons.Place(item.icon, slot, isPlay and 24 or 26, white, white)
+	end
+
+	local label = UIUtil.label({
+		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = isPlay and 25 or 19,
+		TextColor3 = white, Position = UDim2.fromOffset(isPlay and 60 or 58, 0), Size = UDim2.new(1, -64, 1, 0), ZIndex = 12,
+	})
+	if isPlay then
+		textStroke(label, Color3.fromRGB(36, 112, 34), 1.5)
+	end
+
+	local pop = Instance.new("UIScale")
+	pop.Parent = b
+	b.MouseEnter:Connect(function()
+		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.04 }):Play()
+	end)
+	b.MouseLeave:Connect(function()
+		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
+	end)
+	b.MouseButton1Click:Connect(function()
+		switchTo(item.id)
+	end)
+	navButtons[item.id] = { button = b, stroke = stroke, baseStroke = stroke.Transparency }
+end
+
+local function glassPill(props): Frame
+	local f = UIUtil.make("Frame", props) :: Frame
+	f.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
+	f.BackgroundTransparency = 0.25
+	f.BorderSizePixel = 0
+	UIUtil.corner(UDim.new(0, 12), f)
+	local s = UIUtil.stroke(Color3.new(1, 1, 1), 1, f)
+	s.Transparency = 0.84
+	return f
+end
+
 function MainMenu.Build()
 	gui = UIUtil.make("ScreenGui", {
 		Name = "PawMainMenu", Parent = player:WaitForChild("PlayerGui"),
@@ -388,86 +485,122 @@ function MainMenu.Build()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	}) :: ScreenGui
 
-	local topInset = UIUtil.topInset()
-
-	-- Hero background scene: sky, a big floating island with a windmill/trees/
-	-- waterfall, and a fully-posed cat holding a blaster (reference 1's
-	-- composition, built entirely from Frames — see HeroArt.lua). A dim overlay
-	-- keeps foreground text readable on top of it.
-	-- Every HeroArt call is pcall-guarded: if the decorative scene ever throws,
-	-- the menu must still render (nav/title/panels are what actually matter).
-	local sceneLayer = UIUtil.make("Frame", { Parent = gui, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0 })
-	local sceneOk, sceneErr = pcall(function()
-		HeroArt.Sky(sceneLayer)
-		HeroArt.Island(sceneLayer, { width = 980, position = UDim2.fromScale(0.5, 1.04) })
-		HeroArt.HeroCat(sceneLayer, {
-			size = 360,
-			fur = Color3.fromRGB(255, 232, 211),
-			accent = Color3.fromRGB(255, 194, 191),
-			gunColor = Color3.fromRGB(140, 90, 255),
-			gunAccent = Color3.fromRGB(95, 210, 255),
-			position = UDim2.fromScale(0.72, 1.0),
-		})
-	end)
-	if not sceneOk then
-		warn("[PAW MAYHEM] Hero scene failed (non-fatal, skipped): " .. tostring(sceneErr))
-		-- Fall back to a flat gradient so the menu still looks intentional.
-		UIUtil.gradient(Color3.fromRGB(30, 40, 70), Color3.fromRGB(14, 18, 32), 90, sceneLayer)
-		sceneLayer.BackgroundTransparency = 0
-		sceneLayer.BackgroundColor3 = Theme.Color.Bg
+	-- Every corner group is designed at 1x and scaled with the screen height.
+	local function scaled(props): (Frame, UIScale)
+		local f = UIUtil.make("Frame", props) :: Frame
+		f.BackgroundTransparency = 1
+		local sc = Instance.new("UIScale")
+		sc.Parent = f
+		return f, sc
 	end
-	local dim = UIUtil.make("Frame", { Parent = gui, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 10, 20), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 1 })
 
-	-- Title (top left) — offset below Roblox's own topbar so nothing overlaps.
-	local title = UIUtil.label({ Parent = gui, Text = "CATTO", Font = Theme.Font.Title, TextSize = 70, Position = UDim2.fromOffset(46, topInset + 22), Size = UDim2.fromOffset(360, 78), ZIndex = 10, TextStrokeTransparency = 0.45 })
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	UIUtil.label({ Parent = gui, Text = "PEW PEW!", Font = Theme.Font.Title, TextColor3 = Theme.Color.Coin, TextSize = 32, Position = UDim2.fromOffset(84, topInset + 92), Size = UDim2.fromOffset(270, 42), ZIndex = 10, TextStrokeTransparency = 0.5 })
-
-	-- Currency (top right)
-	local curr = UIUtil.make("Frame", { Parent = gui, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -20, 0, topInset + 12), Size = UDim2.fromOffset(260, 40), BackgroundTransparency = 1, ZIndex = 10 })
-	UIUtil.listLayout(curr, 10, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
-	local function chip(iconName, color)
-		local c = UIUtil.panel({ Parent = curr, Size = UDim2.fromOffset(120, 40), BackgroundColor3 = Theme.Color.PanelDark })
-		local iconSlot = UIUtil.make("Frame", { Parent = c, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1 })
-		Icons.Place(iconName, iconSlot, 24, color)
-		local l = UIUtil.label({ Parent = c, Text = "0", Font = Theme.Font.Number, TextSize = 18, Position = UDim2.fromOffset(40, 0), Size = UDim2.new(1, -48, 1, 0) })
-		return l
-	end
-	coinLabel = chip("Coin", Theme.Color.Coin)
-	gemLabel = chip("Gem", Theme.Color.Gem)
+	-- Logo (top left)
+	local logoGroup, logoScale = scaled({ Parent = gui, Name = "LogoGroup", Size = UDim2.fromOffset(340, 176), ZIndex = 10 })
+	buildLogo(logoGroup)
 
 	-- Left nav
-	local nav = UIUtil.make("Frame", { Parent = gui, Position = UDim2.fromOffset(44, topInset + 190), Size = UDim2.fromOffset(200, 380), BackgroundTransparency = 1, ZIndex = 10 })
-	UIUtil.listLayout(nav, 8)
+	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", Size = UDim2.fromOffset(190, 330), ZIndex = 10 })
+	UIUtil.listLayout(navGroup, 7)
 	for i, item in ipairs(NAV) do
-		local btn = UIUtil.button({
-			Parent = nav, Size = UDim2.new(1, 0, 0, 42), LayoutOrder = i,
-			BackgroundColor3 = Theme.Color.PanelLight,
-			Text = "", TextSize = 16, Font = Theme.Font.Bold, ZIndex = 11,
-		}, function()
-			switchTo(item.id)
-		end)
-		navButtons[item.id] = btn
-		local iconSlot = UIUtil.make("Frame", { Parent = btn, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromOffset(12, 21), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 12 })
-		Icons.Place(item.icon, iconSlot, 20, Theme.Color.Text)
-		local navLabel = UIUtil.label({ Parent = btn, Name = "NavLabel", Text = item.label, Font = Theme.Font.Bold, TextSize = 16, TextColor3 = Theme.Color.Text, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -50, 1, 0), ZIndex = 12 })
+		navButton(navGroup, item, i)
 	end
 
-	-- Cat portrait + level (bottom left)
-	local portrait = UIUtil.panel({ Parent = gui, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 24, 1, -20), Size = UDim2.fromOffset(240, 78), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 10 })
-	UIUtil.padding(8, portrait)
-	avatarSlot = UIUtil.make("Frame", { Parent = portrait, Size = UDim2.fromOffset(44, 44), BackgroundColor3 = Theme.Color.PanelLight, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(0.5, 0), avatarSlot)
-	Icons.Place("CatFace", avatarSlot, 40, Theme.Color.Coin)
-	levelLabel = UIUtil.label({ Parent = portrait, Text = "Lv. 1", Font = Theme.Font.Bold, TextSize = 14, Position = UDim2.fromOffset(52, 4), Size = UDim2.new(1, -56, 0, 18) })
-	local lvTrack = UIUtil.make("Frame", { Parent = portrait, Position = UDim2.fromOffset(52, 26), Size = UDim2.new(1, -60, 0, 12), BackgroundColor3 = Theme.Color.PanelLight, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(1, 0), lvTrack)
-	levelFill = UIUtil.make("Frame", { Parent = lvTrack, Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(1, 0), levelFill)
-	xpLabel = UIUtil.label({ Parent = portrait, Text = "0 / 0 XP", TextColor3 = Theme.Color.TextMuted, TextSize = 10, Position = UDim2.fromOffset(52, 42), Size = UDim2.new(1, -60, 0, 14) })
+	-- Coins + gems (top right)
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(250, 40), ZIndex = 10 })
+	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
+	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
+	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
+	Icons.Place("Coin", coinSlot, 30, Color3.fromRGB(255, 196, 46))
+	coinLabel = UIUtil.label({ Parent = coinChip, Text = "0", Font = Theme.Font.Title, TextSize = 21, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -48, 1, 0), ZIndex = 11 })
+	local gemChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(126, 40), LayoutOrder = 2, ZIndex = 10 })
+	local gemSlot = UIUtil.make("Frame", { Parent = gemChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, ZIndex = 11 })
+	Icons.Place("Gem", gemSlot, 30, Color3.fromRGB(206, 92, 255))
+	gemLabel = UIUtil.label({ Parent = gemChip, Text = "0", Font = Theme.Font.Title, TextSize = 21, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -84, 1, 0), ZIndex = 11 })
+	local plus = Instance.new("TextButton")
+	plus.Text = ""
+	plus.AutoButtonColor = false
+	plus.AnchorPoint = Vector2.new(1, 0.5)
+	plus.Position = UDim2.new(1, -4, 0.5, 0)
+	plus.Size = UDim2.fromOffset(32, 32)
+	plus.BackgroundColor3 = Color3.new(1, 1, 1)
+	plus.BackgroundTransparency = 0.82
+	plus.BorderSizePixel = 0
+	plus.ZIndex = 11
+	plus.Parent = gemChip
+	UIUtil.corner(UDim.new(0, 9), plus)
+	Icons.Place("Plus", plus, 18, Color3.new(1, 1, 1))
+	plus.MouseButton1Click:Connect(function()
+		if currentPanel ~= "Shop" then
+			switchTo("Shop")
+		end
+	end)
 
-	-- Content area (right of nav)
-	content = UIUtil.make("Frame", { Parent = gui, Position = UDim2.fromOffset(260, topInset + 96), Size = UDim2.new(1, -284, 1, -(topInset + 156)), BackgroundTransparency = 1, ZIndex = 10 })
+	-- Level pill (bottom left)
+	local lvlGroup, lvlScale = scaled({ Parent = gui, Name = "LevelGroup", AnchorPoint = Vector2.new(0, 1), Size = UDim2.fromOffset(232, 58), ZIndex = 10 })
+	local pill = glassPill({ Parent = lvlGroup, Size = UDim2.fromScale(1, 1), ZIndex = 10 })
+	local avatarRing = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Color3.fromRGB(255, 244, 236), BorderSizePixel = 0, ZIndex = 11 })
+	UIUtil.corner(UDim.new(0.5, 0), avatarRing)
+	UIUtil.stroke(Color3.new(1, 1, 1), 2, avatarRing)
+	avatarSlot = UIUtil.make("Frame", { Parent = avatarRing, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 })
+	Icons.Place("CatFace", avatarSlot, 40, Color3.fromRGB(255, 236, 222), Color3.fromRGB(255, 248, 242))
+	levelLabel = UIUtil.label({ Parent = pill, Text = "Lv. 1", Font = Theme.Font.Title, TextSize = 19, Position = UDim2.fromOffset(62, 7), Size = UDim2.fromOffset(150, 20), ZIndex = 11 })
+	local track = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(62, 33), Size = UDim2.fromOffset(158, 13), BackgroundColor3 = Color3.fromRGB(8, 12, 20), BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 11 })
+	UIUtil.corner(UDim.new(1, 0), track)
+	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 12 })
+	UIUtil.corner(UDim.new(1, 0), levelFill)
+	UIUtil.gradient(Color3.fromRGB(110, 222, 255), Color3.fromRGB(46, 140, 255), 0, levelFill)
+	xpLabel = nil
+
+	-- Content area (opens to the right of the nav) with a dark glass backdrop.
+	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Theme.Color.Bg, BackgroundTransparency = 0.08, BorderSizePixel = 0, Visible = false, ZIndex = 9 }) :: Frame
+	UIUtil.corner(UDim.new(0, 18), backdrop)
+	local bs = UIUtil.stroke(Theme.Color.Stroke, 1.5, backdrop)
+	bs.Transparency = 0.3
+	local close = Instance.new("TextButton")
+	close.Name = "Close"
+	close.Text = "X"
+	close.Font = Theme.Font.Title
+	close.TextSize = 18
+	close.TextColor3 = Color3.new(1, 1, 1)
+	close.AutoButtonColor = true
+	close.AnchorPoint = Vector2.new(0.5, 0.5)
+	close.Position = UDim2.new(1, -4, 0, 4)
+	close.Size = UDim2.fromOffset(34, 34)
+	close.BackgroundColor3 = Theme.Color.Danger
+	close.BorderSizePixel = 0
+	close.ZIndex = 20
+	close.Parent = backdrop
+	UIUtil.corner(UDim.new(0.5, 0), close)
+	close.MouseButton1Click:Connect(function()
+		switchTo(nil)
+	end)
+	panelBackdrop = backdrop
+	content = UIUtil.make("Frame", { Parent = gui, Name = "Content", BackgroundTransparency = 1, ZIndex = 10 })
+
+	local camera = Workspace.CurrentCamera
+	local function relayout()
+		local vp = camera.ViewportSize
+		local s = math.clamp(vp.Y / 640, 0.72, 1.75)
+		local inset = UIUtil.topInset()
+		local logoY = math.max(inset - 10 * s, 4)
+		logoScale.Scale = s
+		logoGroup.Position = UDim2.fromOffset(22 * s, logoY)
+		navScale.Scale = s
+		navGroup.Position = UDim2.fromOffset(42 * s, logoY + 168 * s)
+		currScale.Scale = s
+		currGroup.Position = UDim2.new(1, -16 * s, 0, 12 * s)
+		lvlScale.Scale = s
+		lvlGroup.Position = UDim2.new(0, 22 * s, 1, -16 * s)
+
+		local left = (42 + 190) * s + 30
+		local top = math.max(inset, 58 * s) + 18
+		content.Position = UDim2.fromOffset(left, top)
+		content.Size = UDim2.new(1, -(left + 30), 1, -(top + 24))
+		backdrop.Position = UDim2.fromOffset(left - 14, top - 14)
+		backdrop.Size = UDim2.new(1, -(left + 30) + 28, 1, -(top + 24) + 28)
+	end
+	relayout()
+	camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
 
 	-- Build every panel defensively: a crash in one never blanks the others.
 	panels = {}
@@ -478,20 +611,9 @@ function MainMenu.Build()
 	panels.Leaderboard = safeBuild("Leaderboard", content, Leaderboard.Build)
 	panels.Quests = safeBuild("Quests", content, Quests.Build)
 	panels.Settings = safeBuild("Settings", content, Settings.Build)
-	-- Start on the finished Catto landing/loading screen. The arena vote panel
-	-- stays hidden until the player explicitly presses Play, so launch never
-	-- feels like it skipped straight into a match setup screen.
 	for _, root in pairs(panels) do
 		if root then
 			root.Visible = false
-		end
-	end
-	for pid, button in pairs(navButtons) do
-		local isPlay = pid == "Play"
-		button.BackgroundColor3 = isPlay and Theme.Color.Play or Theme.Color.PanelLight
-		local label = button:FindFirstChild("NavLabel")
-		if label then
-			label.TextColor3 = isPlay and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
 		end
 	end
 	currentPanel = nil

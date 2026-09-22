@@ -67,6 +67,24 @@ for (const f of files) {
     console.log(`? ${path.relative(process.cwd(), f)}: unbalanced blocks (depth ${depth})`);
     hadError = true;
   }
+  // Luau refuses to compile any statement after `return` in the same block,
+  // which kills the whole script (and every script that requires it).
+  const lines = s.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!/^return\b/.test(line) || /\bfunction\b/.test(line)) continue;
+    const opens = (line.match(/[({[]/g) || []).length;
+    const closes = (line.match(/[)}\]]/g) || []).length;
+    if (opens !== closes || /(,|\.\.|[-+*/%^=<>~]|\band|\bor|\bnot)$/.test(line)) continue;
+    let j = i + 1;
+    while (j < lines.length && lines[j].trim() === "") j++;
+    if (j >= lines.length) continue;
+    const next = lines[j].trim();
+    if (!/^(end|else|elseif|until)\b/.test(next) && !/^[)}\]]/.test(next)) {
+      console.log(`? ${path.relative(process.cwd(), f)}:${j + 1}: unreachable code after 'return' (Luau compile error)`);
+      hadError = true;
+    }
+  }
   if (!ret) {
     // scripts (.server/.client) don't need return; modules do.
     if (!f.endsWith(".server.lua") && !f.endsWith(".client.lua")) {

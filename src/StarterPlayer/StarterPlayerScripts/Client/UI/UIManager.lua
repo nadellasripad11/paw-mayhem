@@ -18,6 +18,7 @@ local Results = require(script.Parent.Screens.Results)
 
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
 local CombatController = require(script.Parent.Parent.Controllers.CombatController)
+local LobbyScene = require(script.Parent.Parent.Lobby.LobbyScene)
 
 local UIManager = {}
 local player = Players.LocalPlayer
@@ -184,6 +185,10 @@ local function onPhase(m)
 end
 
 function UIManager.Start()
+	local sceneOk, sceneErr = pcall(LobbyScene.Build)
+	if not sceneOk then
+		warn("[CATTO] Lobby scene failed to build: " .. tostring(sceneErr))
+	end
 	local menuOk, menuErr = pcall(MainMenu.Build)
 	if not menuOk then
 		warn("[PAW MAYHEM] Main menu failed to build; using launch fallback: " .. tostring(menuErr))
@@ -215,6 +220,9 @@ function UIManager.Start()
 
 	-- apply current state on start
 	onPhase(ClientState.Match)
+
+	-- Tells the ReplicatedFirst loading screen the home screen is ready.
+	player:SetAttribute("CattoLobbyReady", true)
 end
 
 return UIManager

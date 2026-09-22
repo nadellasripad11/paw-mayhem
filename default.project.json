@@ -1,7 +1,12 @@
 {
-  "name": "PawMayhem",
+  "name": "CattoPewPew",
   "tree": {
     "$className": "DataModel",
+
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst",
+      "$path": "src/ReplicatedFirst"
+    },
 
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",

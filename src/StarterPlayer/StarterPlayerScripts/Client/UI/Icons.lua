@@ -538,8 +538,56 @@ function Icons.SitDown(size: number, color: Color3): Frame
 	return f
 end
 
+-- ── Shopping bag with a little cat face (Shop nav) ───────────────────────────
+function Icons.Bag(size: number, color: Color3): Frame
+	local f = base(size)
+	local body = chip(f, size * 0.66, size * 0.56, color, 0.2)
+	pos(body, size * 0.5, size * 0.62)
+	for _, dx in ipairs({ -0.14, 0.14 }) do
+		local side = chip(f, size * 0.08, size * 0.24, color, 0.5)
+		pos(side, size * 0.5 + dx * size, size * 0.28)
+	end
+	local top = chip(f, size * 0.36, size * 0.08, color, 0.5)
+	pos(top, size * 0.5, size * 0.17)
+	local dark = Color3.fromRGB(20, 26, 36)
+	for _, dx in ipairs({ -0.11, 0.11 }) do
+		local eye = circle(f, size * 0.09, dark)
+		pos(eye, size * 0.5 + dx * size, size * 0.58)
+	end
+	local mouth = chip(f, size * 0.12, size * 0.05, dark, 0.5)
+	pos(mouth, size * 0.5, size * 0.7)
+	return f
+end
+
+-- ── Winners' podium (Leaderboard nav) ───────────────────────────────────────
+function Icons.Podium(size: number, color: Color3): Frame
+	local f = base(size)
+	local mid = chip(f, size * 0.28, size * 0.5, color, 0.12)
+	pos(mid, size * 0.5, size * 0.66)
+	local left = chip(f, size * 0.25, size * 0.32, color, 0.12)
+	pos(left, size * 0.22, size * 0.75)
+	local right = chip(f, size * 0.25, size * 0.24, color, 0.12)
+	pos(right, size * 0.78, size * 0.79)
+	local star = chip(f, size * 0.16, size * 0.16, color, 0.2)
+	pos(star, size * 0.5, size * 0.24, 45)
+	return f
+end
+
+-- ── Plus (buy more gems) ─────────────────────────────────────────────────────
+function Icons.Plus(size: number, color: Color3): Frame
+	local f = base(size)
+	local h = chip(f, size * 0.64, size * 0.18, color, 0.5)
+	pos(h, size * 0.5, size * 0.5)
+	local v = chip(f, size * 0.18, size * 0.64, color, 0.5)
+	pos(v, size * 0.5, size * 0.5)
+	return f
+end
+
 -- Registry so callers can pass a string key (used by itemCard/Icons.Draw).
 Icons.Registry = {
+	Bag = Icons.Bag,
+	Podium = Icons.Podium,
+	Plus = Icons.Plus,
 	Gun = Icons.Gun,
 	GunHeavy = Icons.GunHeavy,
 	GunFast = Icons.GunFast,
