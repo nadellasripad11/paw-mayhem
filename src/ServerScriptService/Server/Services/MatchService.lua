@@ -241,13 +241,19 @@ local function mainLoop()
 				broadcastState()
 			end
 		elseif state.Phase == PHASE.Countdown then
-			if state.TimeLeft <= 0 then
+			if queuedCount() < GameConfig.Match.MinPlayersToStart then
+				-- Everyone who queued left before the drop; cancel cleanly and
+				-- return the remaining clients to the landing screen.
+				enterIntermission()
+			elseif state.TimeLeft <= 0 then
 				enterPlaying()
 			else
 				broadcastState()
 			end
 		elseif state.Phase == PHASE.Playing then
-			if state.TimeLeft <= 0 then
+			if #Players:GetPlayers() == 0 then
+				enterIntermission()
+			elseif state.TimeLeft <= 0 then
 				MatchService.EndMatch(nil)
 			else
 				broadcastState()
