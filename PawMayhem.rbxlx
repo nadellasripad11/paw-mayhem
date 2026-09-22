@@ -7092,7 +7092,23 @@ function MainMenu.Build()
 	panels.Leaderboard = safeBuild("Leaderboard", content, Leaderboard.Build)
 	panels.Quests = safeBuild("Quests", content, Quests.Build)
 	panels.Settings = safeBuild("Settings", content, Settings.Build)
-	switchTo("Play")
+	-- Start on the finished Catto landing/loading screen. The arena vote panel
+	-- stays hidden until the player explicitly presses Play, so launch never
+	-- feels like it skipped straight into a match setup screen.
+	for _, root in pairs(panels) do
+		if root then
+			root.Visible = false
+		end
+	end
+	for pid, button in pairs(navButtons) do
+		local isPlay = pid == "Play"
+		button.BackgroundColor3 = isPlay and Theme.Color.Play or Theme.Color.PanelLight
+		local label = button:FindFirstChild("NavLabel")
+		if label then
+			label.TextColor3 = isPlay and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
+		end
+	end
+	currentPanel = nil
 
 	ClientState.ProfileChanged:Connect(refreshCurrency)
 	ClientState.MatchChanged:Connect(refreshPlayStatus)
