@@ -2865,6 +2865,23 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		rock.CanCollide = false
 	end
 
+	-- Large crown outcrops give each island a readable rim and keep the top
+	-- from looking like a flat round platform when viewed from the arena.
+	for i = 1, 7 do
+		local angle = math.rad((i - 1) * 51 + 20)
+		local edge = radius * (0.72 + (i % 2) * 0.06)
+		local mound = ArenaKit.NewPart(
+			"CrownOutcrop" .. i,
+			Vector3.new(radius * (0.24 + (i % 3) * 0.03), 2.2 + (i % 2) * 1.4, radius * (0.2 + (i % 2) * 0.04)),
+			CFrame.new(center + Vector3.new(math.cos(angle) * edge, 2.15 + (i % 2) * 0.4, math.sin(angle) * edge)) * CFrame.Angles(0, angle, math.rad(-8 + (i % 3) * 8)),
+			(i % 2 == 0) and palette.Top or palette.TopDark,
+			topMaterial or Enum.Material.Grass,
+			folder
+		)
+		mound.Shape = Enum.PartType.Ball
+		mound.CanCollide = false
+	end
+
 	local floor = ArenaKit.NewPart("Floor", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), palette.Top, topMaterial or Enum.Material.Grass, folder)
 	floor.Shape = Enum.PartType.Cylinder
 	floor.Transparency = 1
