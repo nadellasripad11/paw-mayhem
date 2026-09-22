@@ -4470,8 +4470,13 @@ local function muzzlePosition(): Vector3
 	if not root then
 		return Vector3.new()
 	end
-	-- muzzle sits in front + slightly up
-	return root.Position + root.CFrame.LookVector * 1.5 + Vector3.new(0, 0.8, 0)
+	-- The custom camera can look independently from the Humanoid's current
+	-- facing direction. Place the visual muzzle on the camera's horizontal aim
+	-- so the local flash, server origin validation, and crosshair all agree.
+	local _, aim = CameraController.GetAimRay()
+	local flatAim = Vector3.new(aim.X, 0, aim.Z)
+	local facing = flatAim.Magnitude > 0.01 and flatAim.Unit or root.CFrame.LookVector
+	return root.Position + facing * 1.5 + Vector3.new(0, 0.8, 0)
 end
 
 local function tryFire()
