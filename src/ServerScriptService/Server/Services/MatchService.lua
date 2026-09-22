@@ -17,6 +17,7 @@ local EconomyService = require(script.Parent.EconomyService)
 local PlayerService = require(script.Parent.PlayerService)
 local Runtime = require(script.Parent.Runtime)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
+local BotService = require(script.Parent.BotService)
 
 local MatchService = {}
 
@@ -167,6 +168,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 	if state.Phase ~= PHASE.Playing then
 		return
 	end
+	BotService.DespawnAll()
 	state.Winner = winnerTeam
 	-- Determine winner if not provided (highest score).
 	if not state.Winner then
@@ -194,6 +196,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 end
 
 local function enterIntermission()
+	BotService.DespawnAll()
 	state.Phase = PHASE.Intermission
 	state.TimeLeft = GameConfig.Match.IntermissionSeconds
 	state.Winner = nil
@@ -222,6 +225,7 @@ local function enterPlaying()
 	state.TimeLeft = GameConfig.Match.MatchSeconds
 	PlayerService.MatchActive = true
 	PlayerService.SpawnAll()
+	BotService.SpawnBots(#Players:GetPlayers())
 	broadcastState()
 end
 
@@ -270,6 +274,26 @@ end
 
 function MatchService.Start()
 	PlayerService.OnElimination = onElimination
+
+	-- Award a team point when a bot is eliminated (mirrors onElimination for players).
+	BotService.OnBotEliminated = function(killer: Player, botTeam: string)
+		local kState = Runtime.Get(killer)
+		local kTeam = kState and kState.Team
+		if kTeam and state.Scores[kTeam] ~= nil then
+			state.Scores[kTeam] += 1
+		end
+		broadcastScore()
+		if state.Phase == PHASE.Playing then
+			for teamId, sc in pairs(state.Scores) do
+				if sc >= GameConfig.Match.ScoreToWin then
+					MatchService.EndMatch(teamId)
+					break
+				end
+			end
+		end
+	end
+
+	BotService.Start()
 	Remotes.Get("RequestJoinMatch").OnServerEvent:Connect(function(player, payload)
 		local mapId = typeof(payload) == "table" and payload.mapId or nil
 		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then

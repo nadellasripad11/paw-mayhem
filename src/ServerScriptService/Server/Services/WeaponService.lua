@@ -24,6 +24,9 @@ local Runtime = require(script.Parent.Runtime)
 
 local WeaponService = {}
 
+-- Set by BotService so raycasts that hit bot models route damage there.
+WeaponService.OnBotHit = nil :: ((shooter: Player, hitModel: Model, weapon: any, dir: Vector3) -> ())?
+
 -- Per-player: last fire time per weapon, for server-side fire-rate gating.
 local lastFire: { [Player]: number } = {}
 -- Global spam guard: generous cap independent of weapon fire rate.
@@ -113,6 +116,8 @@ local function firePellet(player: Player, weapon, origin: Vector3, dir: Vector3,
 		local victim = hitModel and Players:GetPlayerFromCharacter(hitModel)
 		if victim and victim ~= player then
 			WeaponService.ResolveHit(player, victim, weapon, dir, knockMult)
+		elseif hitModel and hitModel:GetAttribute("IsBot") and WeaponService.OnBotHit then
+			WeaponService.OnBotHit(player, hitModel, weapon, dir)
 		end
 	end
 

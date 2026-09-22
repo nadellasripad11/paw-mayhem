@@ -35,7 +35,7 @@ function UIUtil.make(className: string, props: { [string]: any }?, children: { I
 	local inst = Instance.new(className)
 	if props then
 		for k, v in pairs(props) do
-			if k ~= "Parent" then
+			if k ~= "Parent" and k ~= "CornerRadius" then
 				(inst :: any)[k] = v
 			end
 		end
