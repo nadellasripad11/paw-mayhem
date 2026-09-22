@@ -2830,6 +2830,23 @@ function ArenaKit.NewPart(name: string, size: Vector3, cframe: CFrame, color: Co
 	return p
 end
 
+-- Faceted cliff faces break up the round underside without relying on mesh
+-- assets. The wedge points down/out from the island, giving every arena the
+-- chunky hand-built silhouette in the reference art.
+function ArenaKit.NewWedge(name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?, parent: Instance): WedgePart
+	local p = Instance.new("WedgePart")
+	p.Name = name
+	p.Size = size
+	p.CFrame = cframe
+	p.Color = color
+	p.Material = material or Enum.Material.SmoothPlastic
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Parent = parent
+	return p
+end
+
 -- Standard grass/rock-topped floating island with a tapered stone underside
 -- and a thin invisible collision Floor (matches the original Sky Islands
 -- shape, generalized to any palette/top material).
@@ -2870,6 +2887,23 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		)
 		rock.Shape = Enum.PartType.Ball
 		rock.CanCollide = false
+	end
+
+	-- Large triangular cliff faces sit between the rounded teeth. Their lower
+	-- points make the underside taper naturally when the arena is viewed from
+	-- below, while the non-collidable geometry keeps combat unchanged.
+	for i = 1, 10 do
+		local angle = math.rad((i - 1) * 36 + 7)
+		local depth = radius * (0.38 + (i % 2) * 0.08)
+		local wedge = ArenaKit.NewWedge(
+			"CliffWedge" .. i,
+			Vector3.new(radius * (0.26 + (i % 3) * 0.03), 9 + (i % 3) * 1.8, radius * 0.34),
+			CFrame.new(center + Vector3.new(math.cos(angle) * depth, -8 - (i % 3) * 2.4, math.sin(angle) * depth)) * CFrame.Angles(0, angle, 0),
+			(i % 2 == 0) and palette.StoneDark or palette.Stone,
+			Enum.Material.Slate,
+			folder
+		)
+		wedge.CanCollide = false
 	end
 
 	-- Large crown outcrops give each island a readable rim and keep the top
