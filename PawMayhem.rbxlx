@@ -1578,6 +1578,7 @@ return EconomyService
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
@@ -7490,7 +7491,7 @@ local ClientState = require(script.Parent.Parent.Parent.ClientState)
 
 local Results = {}
 local player = Players.LocalPlayer
-local gui, titleLabel, scoreLabel, subLabel, iconSlot, confettiLayer
+local gui, titleLabel, scoreLabel, subLabel, statLabel, iconSlot, confettiLayer
 
 local CONFETTI_COLORS = {
 	Color3.fromRGB(255, 205, 90), Color3.fromRGB(96, 210, 120),
@@ -7547,6 +7548,14 @@ function Results.Show(match)
 	end
 	scoreLabel.Text = string.format("%d  -  %d", match.scores.Blue or 0, match.scores.Red or 0)
 	subLabel.Text = winner and ((winner == "Blue" and "Blue Paws" or "Red Claws") .. " win!") or ""
+	local myStats = nil
+	for _, entry in ipairs(match.board or {}) do
+		if entry.Name == player.Name then
+			myStats = entry
+			break
+		end
+	end
+	statLabel.Text = myStats and string.format("YOUR ROUND  •  %d ELIMS  •  %d SCORE", myStats.Elims or 0, myStats.Score or 0) or "YOUR ROUND COMPLETE"
 	gui.Enabled = true
 	if won then
 		burstConfetti()
@@ -7574,6 +7583,7 @@ function Results.Build()
 	titleLabel = UIUtil.label({ Parent = card, Text = "VICTORY!", Font = Theme.Font.Title, TextSize = 46, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 60), Position = UDim2.fromOffset(0, 68), ZIndex = 6 })
 	scoreLabel = UIUtil.label({ Parent = card, Text = "0 - 0", Font = Theme.Font.Number, TextSize = 42, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 50), Position = UDim2.fromOffset(0, 138), ZIndex = 6 })
 	subLabel = UIUtil.label({ Parent = card, Text = "", TextColor3 = Theme.Color.TextDim, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 194), ZIndex = 6 })
+	statLabel = UIUtil.label({ Parent = card, Text = "YOUR ROUND COMPLETE", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 218), ZIndex = 6 })
 	local resultTag = UIUtil.panel({ Parent = card, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 236), Size = UDim2.fromOffset(250, 34), BackgroundColor3 = Color3.fromRGB(8, 42, 76), ZIndex = 6 })
 	UIUtil.label({ Parent = resultTag, Text = "MATCH COMPLETE  •  RESULTS SAVED", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 7 })
 	UIUtil.label({ Parent = card, Text = "Returning to lobby…", TextColor3 = Theme.Color.TextMuted, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -38), ZIndex = 6 })
@@ -7605,7 +7615,8 @@ local Settings = {}
 local function sliderRow(parent, label, value, onChange)
 	local row = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40) })
 	UIUtil.label({ Parent = row, Text = label, TextSize = 15, Size = UDim2.new(0, 200, 1, 0) })
-	local track = UIUtil.make("Frame", { Parent = row, Position = UDim2.new(0, 210, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -220, 0, 8), BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0 })
+	local valueLabel = UIUtil.label({ Parent = row, Text = string.format("%d%%", math.floor(value * 100 + 0.5)), Font = Theme.Font.Number, TextSize = 11, TextColor3 = Theme.Color.Accent, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(1, -62, 0, 0), Size = UDim2.fromOffset(62, 40) })
+	local track = UIUtil.make("Frame", { Parent = row, Position = UDim2.new(0, 210, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.new(1, -280, 0, 8), BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), track)
 	local fill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(value, 1), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), fill)
@@ -7622,6 +7633,7 @@ local function sliderRow(parent, label, value, onChange)
 			local rel = math.clamp((i.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
 			fill.Size = UDim2.fromScale(rel, 1)
 			knob.Position = UDim2.fromScale(rel, 0.5)
+			valueLabel.Text = string.format("%d%%", math.floor(rel * 100 + 0.5))
 			onChange(rel)
 		end
 	end)
@@ -7631,12 +7643,15 @@ local function toggleRow(parent, label, value, onChange)
 	local row = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40) })
 	UIUtil.label({ Parent = row, Text = label, TextSize = 15, Size = UDim2.new(0, 200, 1, 0) })
 	local sw = UIUtil.button({ Parent = row, Position = UDim2.new(0, 210, 0.5, 0), AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(52, 26), BackgroundColor3 = value and Theme.Color.Success or Theme.Color.PanelDark, CornerRadius = UDim.new(1, 0), Text = "" })
+	local stateLabel = UIUtil.label({ Parent = row, Text = value and "ON" or "OFF", Font = Theme.Font.Number, TextSize = 11, TextColor3 = value and Theme.Color.Success or Theme.Color.TextMuted, Position = UDim2.fromOffset(274, 0), Size = UDim2.fromOffset(48, 40) })
 	local knob = UIUtil.make("Frame", { Parent = sw, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(value and 0.75 or 0.25, 0.5), Size = UDim2.fromOffset(20, 20), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), knob)
 	local state = value
-	sw.MouseButton1Click:Connect(function()
+		sw.MouseButton1Click:Connect(function()
 		state = not state
 		sw.BackgroundColor3 = state and Theme.Color.Success or Theme.Color.PanelDark
+		stateLabel.Text = state and "ON" or "OFF"
+		stateLabel.TextColor3 = state and Theme.Color.Success or Theme.Color.TextMuted
 		UIUtil.tween(knob, 0.12, { Position = UDim2.fromScale(state and 0.75 or 0.25, 0.5) })
 		onChange(state)
 	end)
@@ -7870,6 +7885,30 @@ local UIManager = {}
 local player = Players.LocalPlayer
 local lastPhase = nil
 local alive = false
+local transitionFrame: Frame? = nil
+
+local function playTransition()
+	if not transitionFrame then return end
+	transitionFrame.BackgroundTransparency = 0.02
+	TweenService:Create(transitionFrame, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 1,
+	}):Play()
+end
+
+local function buildTransitionLayer()
+	local fadeGui = Instance.new("ScreenGui")
+	fadeGui.Name = "PawTransition"
+	fadeGui.IgnoreGuiInset = true
+	fadeGui.ResetOnSpawn = false
+	fadeGui.DisplayOrder = 100
+	fadeGui.Parent = player:WaitForChild("PlayerGui")
+	transitionFrame = Instance.new("Frame")
+	transitionFrame.Size = UDim2.fromScale(1, 1)
+	transitionFrame.BackgroundColor3 = Theme.Color.Bg
+	transitionFrame.BackgroundTransparency = 1
+	transitionFrame.BorderSizePixel = 0
+	transitionFrame.Parent = fadeGui
+end
 
 local function enableGameplay(on: boolean)
 	CameraController.SetEnabled(on)
@@ -7902,6 +7941,7 @@ local function onPhase(m)
 		return
 	end
 	lastPhase = phase
+	playTransition()
 
 	if phase == "Intermission" then
 		MainMenu.SetVisible(true)
@@ -7933,6 +7973,7 @@ function UIManager.Start()
 	MainMenu.Build()
 	HUD.Build()
 	Results.Build()
+	buildTransitionLayer()
 
 	ClientState.MatchChanged:Connect(onPhase)
 
