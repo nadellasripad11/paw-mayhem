@@ -61,8 +61,8 @@ local function buildFallbackLanding()
 		BackgroundColor3 = Theme.Color.PanelDark,
 	})
 	UIUtil.padding(28, card)
-	UIUtil.label({ Parent = card, Text = "CATTO", Font = Theme.Font.Title, TextSize = 68, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 82), TextStrokeTransparency = 0.55 })
-	UIUtil.label({ Parent = card, Text = "PEW PEW!", Font = Theme.Font.Title, TextSize = 34, TextColor3 = Theme.Color.Coin, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 76), Size = UDim2.new(1, 0, 0, 42) })
+	UIUtil.label({ Parent = card, Text = "PAW", Font = Theme.Font.Title, TextSize = 68, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 82), TextStrokeTransparency = 0.55 })
+	UIUtil.label({ Parent = card, Text = "MAYHEM", Font = Theme.Font.Title, TextSize = 34, TextColor3 = Theme.Color.Coin, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 76), Size = UDim2.new(1, 0, 0, 42) })
 	UIUtil.label({ Parent = card, Text = "Choose an arena to start the match", TextColor3 = Theme.Color.TextDim, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 126), Size = UDim2.new(1, 0, 0, 24) })
 
 	local status = UIUtil.label({ Parent = card, Text = "MAP SELECT", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 160), Size = UDim2.new(1, 0, 0, 20) })
@@ -187,7 +187,7 @@ end
 function UIManager.Start()
 	local sceneOk, sceneErr = pcall(LobbyScene.Build)
 	if not sceneOk then
-		warn("[CATTO] Lobby scene failed to build: " .. tostring(sceneErr))
+		warn("[PAW MAYHEM] Lobby scene failed to build: " .. tostring(sceneErr))
 	end
 	local menuOk, menuErr = pcall(MainMenu.Build)
 	if not menuOk then

@@ -5,7 +5,7 @@
 
 local GameConfig = {}
 
-GameConfig.GameName = "CATTO PEW PEW"
+GameConfig.GameName = "PAW MAYHEM"
 
 -- Match flow -----------------------------------------------------------------
 GameConfig.Match = {

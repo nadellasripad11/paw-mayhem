@@ -1,4 +1,4 @@
--- LoadingScreen: replaces Roblox's default join screen with the Catto Pew Pew
+-- LoadingScreen: replaces Roblox's default join screen with the Paw Mayhem
 -- logo over a sky gradient and a loading bar, then fades away once the client
 -- has built the 3D home screen (UIManager sets the CattoLobbyReady attribute).
 
@@ -105,8 +105,8 @@ local function word(text: string, font: Enum.Font, size: number, y: number, rot:
 		end
 	end
 end
-word("CATTO", Enum.Font.FredokaOne, 100, 22, 0, NAVY, false)
-word("PEW PEW!", Enum.Font.Bangers, 62, 112, -5, Color3.fromRGB(70, 42, 26), true)
+word("PAW", Enum.Font.FredokaOne, 100, 22, 0, NAVY, false)
+word("MAYHEM", Enum.Font.Bangers, 62, 112, -5, Color3.fromRGB(70, 42, 26), true)
 
 local barBack = Instance.new("Frame")
 barBack.AnchorPoint = Vector2.new(0.5, 0.5)

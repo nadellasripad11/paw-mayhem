@@ -207,7 +207,7 @@ function CameraController.SetLobbyView(on: boolean)
 	lobbyView = on
 	local ok, err = pcall(LobbyScene.SetActive, on)
 	if not ok then
-		warn("[CATTO] Lobby scene toggle failed: " .. tostring(err))
+		warn("[PAW MAYHEM] Lobby scene toggle failed: " .. tostring(err))
 	end
 	if on then
 		enabled = false

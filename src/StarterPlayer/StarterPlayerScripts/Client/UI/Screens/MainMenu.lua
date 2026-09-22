@@ -1,5 +1,5 @@
 --!strict
--- MainMenu: the Catto Pew Pew home screen. The background is the real 3D
+-- MainMenu: the Paw Mayhem home screen. The background is the real 3D
 -- LobbyScene (mascot + floating islands) seen through the menu camera; this
 -- overlay adds the logo, the left nav, coins/gems top-right and the level pill
 -- bottom-left. Nav buttons open panels in the content area; clicking the open
@@ -355,7 +355,7 @@ function MainMenu.SetVisible(on: boolean)
 	end
 end
 
--- ── logo: chunky white CATTO with cat ears + gold "PEW PEW!" ─────────────────
+-- ── logo: chunky white PAW with cat ears + gold "MAYHEM" ────────────────────
 local function buildLogo(parent: Instance): Frame
 	local g = UIUtil.make("Frame", { Parent = parent, Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(340, 176), ZIndex = 10 }) :: Frame
 
@@ -399,8 +399,8 @@ local function buildLogo(parent: Instance): Frame
 			grad.Parent = main
 		end
 	end
-	word("CATTO", Enum.Font.FredokaOne, 100, 0, 22, 0, LOGO_NAVY, 6, false)
-	word("PEW PEW!", Enum.Font.Bangers, 62, 52, 112, -5, Color3.fromRGB(70, 42, 26), 3.5, true)
+	word("PAW", Enum.Font.FredokaOne, 100, 0, 22, 0, LOGO_NAVY, 6, false)
+	word("MAYHEM", Enum.Font.Bangers, 62, 52, 112, -5, Color3.fromRGB(70, 42, 26), 3.5, true)
 	return g
 end
 
