@@ -120,8 +120,7 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		mound.CanCollide = false
 	end
 
-	local floor = ArenaKit.NewPart("Floor", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center + Vector3.new(0, 1.6, 0)) * CFrame.Angles(0, 0, math.rad(90)), palette.Top, topMaterial or Enum.Material.Grass, folder)
-	floor.Shape = Enum.PartType.Cylinder
+	local floor = ArenaKit.NewPart("Floor", Vector3.new(radius * 2, 1, radius * 2), CFrame.new(center + Vector3.new(0, 1.6, 0)), palette.Top, topMaterial or Enum.Material.Grass, folder)
 	floor.Transparency = 1
 
 	return folder
