@@ -269,6 +269,19 @@ function MatchService.Start()
 		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then
 			return
 		end
+		-- A late joiner must still opt in from the landing screen. Once they
+		-- press Play, put them into the current round without forcing every
+		-- existing player through a new countdown.
+		if state.Phase == PHASE.Playing then
+			queuedPlayers[player.UserId] = true
+			mapVotes[player.UserId] = state.MapId
+			Runtime.ResetMatch(player)
+			PlayerService.AssignTeam(player)
+			PlayerService.Spawn(player)
+			Remotes.Get("Notify"):FireClient(player, { text = "Dropping into the current match!", kind = "success" })
+			broadcastState()
+			return
+		end
 		if state.Phase ~= PHASE.Intermission then
 			Remotes.Get("Notify"):FireClient(player, { text = "Map voting is closed for this round.", kind = "warning" })
 			return
@@ -289,12 +302,8 @@ function MatchService.Start()
 	Players.PlayerAdded:Connect(function(player)
 		task.wait(1)
 		broadcastState()
-		if state.Phase == PHASE.Playing then
-			Runtime.ResetMatch(player)
-			PlayerService.AssignTeam(player)
-			task.wait(1)
-			PlayerService.Spawn(player)
-		end
+		-- Do not auto-spawn late joiners. They must use the same landing-screen
+		-- Play action as everyone else so the launch flow is never skipped.
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		queuedPlayers[player.UserId] = nil

@@ -369,7 +369,7 @@ local function refreshPlayStatus(m)
 	elseif m.phase == "Countdown" then
 		playStatus.Text = "Get ready! " .. (m.timeLeft or 0)
 	elseif m.phase == "Playing" then
-		playStatus.Text = "Match in progress — jump in!"
+		playStatus.Text = "Match in progress — press Play to join!"
 	elseif m.phase == "Results" then
 		playStatus.Text = "Match over — results…"
 	end

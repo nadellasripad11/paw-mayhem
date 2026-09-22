@@ -116,6 +116,9 @@ local function onCharacter(char)
 	-- wait a beat for parts to settle
 	task.wait(0.2)
 	if ClientState.Match.phase == "Playing" then
+		MainMenu.SetVisible(false)
+		HUD.SetVisible(true)
+		Results.Hide()
 		enableGameplay(true)
 	end
 	local hum = char:FindFirstChildOfClass("Humanoid")
@@ -155,13 +158,21 @@ local function onPhase(m)
 		HUD.ShowBig("GET READY", Theme.Color.Warn)
 		enableGameplay(false)
 	elseif phase == "Playing" then
-		MainMenu.SetVisible(false)
-		if fallbackGui then fallbackGui.Enabled = false end
-		HUD.SetVisible(true)
-		Results.Hide()
-		HUD.HideBig()
 		if alive then
+			MainMenu.SetVisible(false)
+			if fallbackGui then fallbackGui.Enabled = false end
+			HUD.SetVisible(true)
+			Results.Hide()
+			HUD.HideBig()
 			enableGameplay(true)
+		else
+			-- The server intentionally waits for the player's Play click when
+			-- they join a live round. Keep the landing/map picker visible.
+			MainMenu.SetVisible(true)
+			if fallbackGui then fallbackGui.Enabled = true end
+			HUD.SetVisible(false)
+			Results.Hide()
+			enableGameplay(false)
 		end
 	elseif phase == "Results" then
 		if fallbackGui then fallbackGui.Enabled = false end

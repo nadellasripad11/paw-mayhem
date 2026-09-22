@@ -1841,6 +1841,19 @@ function MatchService.Start()
 		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then
 			return
 		end
+		-- A late joiner must still opt in from the landing screen. Once they
+		-- press Play, put them into the current round without forcing every
+		-- existing player through a new countdown.
+		if state.Phase == PHASE.Playing then
+			queuedPlayers[player.UserId] = true
+			mapVotes[player.UserId] = state.MapId
+			Runtime.ResetMatch(player)
+			PlayerService.AssignTeam(player)
+			PlayerService.Spawn(player)
+			Remotes.Get("Notify"):FireClient(player, { text = "Dropping into the current match!", kind = "success" })
+			broadcastState()
+			return
+		end
 		if state.Phase ~= PHASE.Intermission then
 			Remotes.Get("Notify"):FireClient(player, { text = "Map voting is closed for this round.", kind = "warning" })
 			return
@@ -1861,12 +1874,8 @@ function MatchService.Start()
 	Players.PlayerAdded:Connect(function(player)
 		task.wait(1)
 		broadcastState()
-		if state.Phase == PHASE.Playing then
-			Runtime.ResetMatch(player)
-			PlayerService.AssignTeam(player)
-			task.wait(1)
-			PlayerService.Spawn(player)
-		end
+		-- Do not auto-spawn late joiners. They must use the same landing-screen
+		-- Play action as everyone else so the launch flow is never skipped.
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		queuedPlayers[player.UserId] = nil
@@ -7311,7 +7320,7 @@ local function refreshPlayStatus(m)
 	elseif m.phase == "Countdown" then
 		playStatus.Text = "Get ready! " .. (m.timeLeft or 0)
 	elseif m.phase == "Playing" then
-		playStatus.Text = "Match in progress — jump in!"
+		playStatus.Text = "Match in progress — press Play to join!"
 	elseif m.phase == "Results" then
 		playStatus.Text = "Match over — results…"
 	end
@@ -8045,6 +8054,9 @@ local function onCharacter(char)
 	-- wait a beat for parts to settle
 	task.wait(0.2)
 	if ClientState.Match.phase == "Playing" then
+		MainMenu.SetVisible(false)
+		HUD.SetVisible(true)
+		Results.Hide()
 		enableGameplay(true)
 	end
 	local hum = char:FindFirstChildOfClass("Humanoid")
@@ -8084,13 +8096,21 @@ local function onPhase(m)
 		HUD.ShowBig("GET READY", Theme.Color.Warn)
 		enableGameplay(false)
 	elseif phase == "Playing" then
-		MainMenu.SetVisible(false)
-		if fallbackGui then fallbackGui.Enabled = false end
-		HUD.SetVisible(true)
-		Results.Hide()
-		HUD.HideBig()
 		if alive then
+			MainMenu.SetVisible(false)
+			if fallbackGui then fallbackGui.Enabled = false end
+			HUD.SetVisible(true)
+			Results.Hide()
+			HUD.HideBig()
 			enableGameplay(true)
+		else
+			-- The server intentionally waits for the player's Play click when
+			-- they join a live round. Keep the landing/map picker visible.
+			MainMenu.SetVisible(true)
+			if fallbackGui then fallbackGui.Enabled = true end
+			HUD.SetVisible(false)
+			Results.Hide()
+			enableGameplay(false)
 		end
 	elseif phase == "Results" then
 		if fallbackGui then fallbackGui.Enabled = false end
