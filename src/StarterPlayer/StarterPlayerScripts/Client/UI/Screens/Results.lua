@@ -13,7 +13,7 @@ local ClientState = require(script.Parent.Parent.Parent.ClientState)
 
 local Results = {}
 local player = Players.LocalPlayer
-local gui, titleLabel, scoreLabel, subLabel, statLabel, iconSlot, confettiLayer
+local gui, titleLabel, scoreLabel, subLabel, statLabel, returnLabel, iconSlot, confettiLayer
 
 local CONFETTI_COLORS = {
 	Color3.fromRGB(255, 205, 90), Color3.fromRGB(96, 210, 120),
@@ -78,11 +78,21 @@ function Results.Show(match)
 		end
 	end
 	statLabel.Text = myStats and string.format("YOUR ROUND  •  %d ELIMS  •  %d SCORE", myStats.Elims or 0, myStats.Score or 0) or "YOUR ROUND COMPLETE"
+	Results.Update(match)
 	gui.Enabled = true
 	if won then
 		burstConfetti()
 	elseif confettiLayer then
 		confettiLayer:ClearAllChildren()
+	end
+end
+
+-- Results state is broadcast once per second while the server counts back to
+-- the lobby. Keep the handoff text truthful instead of leaving a static
+-- message on screen for the whole results window.
+function Results.Update(match)
+	if returnLabel then
+		returnLabel.Text = string.format("Returning to lobby in %ds", math.max(0, match.timeLeft or 0))
 	end
 end
 
@@ -108,7 +118,7 @@ function Results.Build()
 	statLabel = UIUtil.label({ Parent = card, Text = "YOUR ROUND COMPLETE", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 18), Position = UDim2.fromOffset(0, 218), ZIndex = 6 })
 	local resultTag = UIUtil.panel({ Parent = card, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 236), Size = UDim2.fromOffset(250, 34), BackgroundColor3 = Color3.fromRGB(8, 42, 76), ZIndex = 6 })
 	UIUtil.label({ Parent = resultTag, Text = "MATCH COMPLETE  •  RESULTS SAVED", Font = Theme.Font.Bold, TextColor3 = Theme.Color.Accent, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 7 })
-	UIUtil.label({ Parent = card, Text = "Returning to lobby…", TextColor3 = Theme.Color.TextMuted, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -38), ZIndex = 6 })
+	returnLabel = UIUtil.label({ Parent = card, Text = "Returning to lobby in 10s", TextColor3 = Theme.Color.TextMuted, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 20), Position = UDim2.new(0, 0, 1, -38), ZIndex = 6 })
 
 	return gui
 end

@@ -133,6 +133,8 @@ local function onPhase(m)
 		-- still update sub-states (e.g. countdown numbers handled by screens)
 		if phase == "Countdown" then
 			HUD.ShowBig(tostring(m.timeLeft or 0), Theme.Color.Text)
+		elseif phase == "Results" then
+			Results.Update(m)
 		end
 		return
 	end
