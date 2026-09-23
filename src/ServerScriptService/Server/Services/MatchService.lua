@@ -336,11 +336,6 @@ function MatchService.Start()
 		state.MapId = leadingMapId()
 		Remotes.Get("Notify"):FireAllClients({ text = player.DisplayName .. " voted for " .. mapId, kind = "info" })
 		broadcastState()
-		-- Play is an explicit join action. Do not make the player wait for the
-		-- background lobby timer once they have selected a valid map.
-		if queuedCount() >= GameConfig.Match.MinPlayersToStart then
-			enterCountdown()
-		end
 	end)
 
 	-- Sync new joiners to current state, and drop late joiners into a live match.

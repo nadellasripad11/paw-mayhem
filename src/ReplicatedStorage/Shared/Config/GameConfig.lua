@@ -10,7 +10,7 @@ GameConfig.GameName = "PAW MAYHEM"
 -- Match flow -----------------------------------------------------------------
 GameConfig.Match = {
 	MinPlayersToStart = 1, -- allow solo testing in Studio
-	IntermissionSeconds = 12,
+	IntermissionSeconds = 20,
 	CountdownSeconds = 3,
 	MatchSeconds = 180, -- 3:00 like the reference HUD
 	ResultsSeconds = 10,
