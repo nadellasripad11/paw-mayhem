@@ -23,12 +23,15 @@ local EventService = require(Services.EventService)
 local MonetizationService = require(Services.MonetizationService)
 local LeaderboardService = require(Services.LeaderboardService)
 local ArenaBuilder = require(World.ArenaBuilder)
+local MapPreviews = require(World.MapPreviews)
 
 local function main()
 	-- 1. Create all remotes up front.
 	Remotes.InitServer()
 
-	-- 2. Build the arena so spawns/pads exist before players spawn.
+	-- 2. Snapshot every map for the map picker, then build the real arena so
+	--    spawns/pads exist before players spawn.
+	MapPreviews.Build()
 	ArenaBuilder.Build()
 
 	-- 3. Start services that must be ready before profiles load.

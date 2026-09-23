@@ -106,6 +106,12 @@ local function toyArt(art: Instance)
 end
 
 local ART = { SkyIslands = skyArt, Volcano = volcanoArt, Toybox = toyArt }
+-- Backdrop colour behind each map's 3D preview.
+local PREVIEW_SKY = {
+	SkyIslands = Color3.fromRGB(140, 200, 255),
+	Volcano = Color3.fromRGB(86, 34, 44),
+	Toybox = Color3.fromRGB(196, 214, 255),
+}
 
 -- ── state ────────────────────────────────────────────────────────────────────
 local function refreshCards()
@@ -199,8 +205,38 @@ local function buildCard(parent: Instance, map, index: number)
 	if not ok then
 		warn("[PAW MAYHEM] Map art failed for " .. map.id .. ": " .. tostring(err))
 	end
+	-- Swap the drawing for the real map in 3D once its snapshot arrives
+	-- (the server saves one per map at startup).
+	task.spawn(function()
+		local folder = ReplicatedStorage:WaitForChild("MapPreviews", 30)
+		local src = folder and folder:WaitForChild(map.id, 10)
+		if not src then
+			return
+		end
+		local vf = Instance.new("ViewportFrame")
+		vf.Position = art.Position
+		vf.Size = art.Size
+		vf.BackgroundColor3 = PREVIEW_SKY[map.id] or map.accent
+		vf.Ambient = Color3.fromRGB(190, 190, 200)
+		vf.LightColor = Color3.fromRGB(255, 245, 230)
+		vf.LightDirection = Vector3.new(-0.4, -1, -0.3)
+		vf.ZIndex = 2
+		vf.Parent = card
+		UIUtil.corner(UDim.new(0, 12), vf)
+		local model = src:Clone()
+		model.Parent = vf
+		local cf, size = model:GetBoundingBox()
+		local cam = Instance.new("Camera")
+		cam.FieldOfView = 40
+		local dist = math.max(size.X, size.Z) * 0.5 / math.tan(math.rad(20)) * 0.9
+		cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(dist * 0.55, dist * 0.5, dist * 0.62), cf.Position)
+		cam.Parent = vf
+		vf.CurrentCamera = cam
+		art.Visible = false
+	end)
 
 	local votePill = box(card, UDim2.fromOffset(92, 28), UDim2.new(1, -18, 0, 18), Color3.fromRGB(10, 18, 34), 0.5, Vector2.new(1, 0))
+	votePill.ZIndex = 20
 	votePill.BackgroundTransparency = 0.2
 	local votes = UIUtil.label({
 		Parent = votePill, Text = "0 VOTES", Font = Theme.Font.Bold, TextSize = 13,
@@ -208,6 +244,7 @@ local function buildCard(parent: Instance, map, index: number)
 	})
 
 	local badge = box(card, UDim2.fromOffset(122, 30), UDim2.new(0, 18, 0, ART_H - 30), map.accent, 0.5)
+	badge.ZIndex = 20
 	local check = UIUtil.make("Frame", { Parent = badge, Size = UDim2.fromOffset(22, 22), Position = UDim2.fromOffset(8, 4), BackgroundTransparency = 1 })
 	Icons.Place("Check", check, 16, Color3.fromRGB(10, 22, 40))
 	UIUtil.label({
