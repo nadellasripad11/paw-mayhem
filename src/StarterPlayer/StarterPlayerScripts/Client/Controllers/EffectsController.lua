@@ -210,6 +210,69 @@ local function burst(pos: Vector3, color: Color3)
 	pickupSparkle(pos, color)
 end
 
+-- Gold coins tumbling down around the camera (Coin Rain purchase).
+local function coinRain()
+	local cam = workspace.CurrentCamera.CFrame.Position
+	for i = 1, 45 do
+		task.delay(i * 0.05, function()
+			local coin = Instance.new("Part")
+			coin.Shape = Enum.PartType.Cylinder
+			coin.Size = Vector3.new(0.25, 1.4, 1.4)
+			coin.Color = Color3.fromRGB(255, 206, 60)
+			coin.Material = Enum.Material.Neon
+			coin.Anchored = true
+			coin.CanCollide = false
+			coin.CanQuery = false
+			coin.CanTouch = false
+			coin.CastShadow = false
+			local start = cam + Vector3.new((math.random() - 0.5) * 50, 18 + math.random() * 10, (math.random() - 0.5) * 50)
+			coin.CFrame = CFrame.new(start)
+			coin.Parent = workspace
+			local t = TweenService:Create(coin, TweenInfo.new(1.6, Enum.EasingStyle.Linear), {
+				CFrame = CFrame.new(start - Vector3.new(0, 34, 0)) * CFrame.Angles(math.random() * 12, math.random() * 12, 0),
+			})
+			t.Completed:Connect(function()
+				coin:Destroy()
+			end)
+			t:Play()
+		end)
+	end
+end
+
+-- Multi-coloured confetti burst (Trail Pack eliminations).
+local function confetti(pos: Vector3)
+	local anchor = Instance.new("Part")
+	anchor.Size = Vector3.one * 0.2
+	anchor.Transparency = 1
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.CFrame = CFrame.new(pos + Vector3.new(0, 1.5, 0))
+	anchor.Parent = workspace
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 120)),
+		ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 220, 80)),
+		ColorSequenceKeypoint.new(0.66, Color3.fromRGB(90, 220, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(170, 110, 255)),
+	})
+	e.LightEmission = 0.7
+	e.Size = NumberSequence.new(0.6, 0.2)
+	e.Lifetime = NumberRange.new(0.9, 1.6)
+	e.Speed = NumberRange.new(14, 26)
+	e.SpreadAngle = Vector2.new(70, 70)
+	e.Acceleration = Vector3.new(0, -25, 0)
+	e.RotSpeed = NumberRange.new(-300, 300)
+	e.Rate = 0
+	e.Parent = anchor
+	e:Emit(70)
+	task.delay(2, function()
+		anchor:Destroy()
+	end)
+end
+
 function EffectsController.Start()
 	Remotes.Get("PlayEffect").OnClientEvent:Connect(function(data)
 		if type(data) ~= "table" then
@@ -219,6 +282,10 @@ function EffectsController.Start()
 			drawTracer(data.from, data.to, data.color or Color3.fromRGB(180, 120, 255))
 		elseif data.kind == "Burst" and typeof(data.position) == "Vector3" then
 			burst(data.position, data.color or Color3.fromRGB(255, 204, 64))
+		elseif data.kind == "CoinRain" then
+			coinRain()
+		elseif data.kind == "Confetti" and typeof(data.position) == "Vector3" then
+			confetti(data.position)
 		end
 	end)
 

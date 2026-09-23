@@ -62,7 +62,10 @@ local function attach(model: Model)
 	pct.Font = Enum.Font.FredokaOne
 	pct.TextScaled = true
 	pct.TextStrokeTransparency = 0.25
+	pct.RichText = true
 	pct.Parent = gui
+
+	local owner = Players:GetPlayerFromCharacter(model)
 
 	local streak = Instance.new("TextLabel")
 	streak.BackgroundTransparency = 1
@@ -81,6 +84,9 @@ local function attach(model: Model)
 		local fluff = model:GetAttribute("Fluff")
 		local f = typeof(fluff) == "number" and fluff or 0
 		pct.Text = tostring(math.floor(f)) .. "%"
+		if owner and owner:GetAttribute("VIP") then
+			pct.Text = '<font color="#FFD34A">VIP</font> ' .. pct.Text
+		end
 		pct.TextColor3 = CatOverheads.FluffColor(f)
 		pct.Size = UDim2.new(1, 0, 0, 24 + math.clamp(f / 180, 0, 1) * 12)
 
@@ -108,6 +114,9 @@ local function attach(model: Model)
 	end
 	model:GetAttributeChangedSignal("Fluff"):Connect(refresh)
 	model:GetAttributeChangedSignal("Streak"):Connect(refresh)
+	if owner then
+		owner:GetAttributeChangedSignal("VIP"):Connect(refresh)
+	end
 	refresh()
 end
 

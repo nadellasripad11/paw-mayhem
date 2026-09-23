@@ -62,6 +62,8 @@ local function defaultProfile()
 				Emote = Cats.Default.Emote,
 			},
 		},
+		Receipts = {}, -- Robux purchase ids already granted (duplicate-safe)
+		StarterPackBought = false,
 		Quests = {
 			Day = 0, -- os.time() day-number the quests were rolled for
 			Active = {}, -- { {Id, Metric, Target, Progress, Claimed} }

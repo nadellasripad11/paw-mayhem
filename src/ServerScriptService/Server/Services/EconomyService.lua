@@ -10,6 +10,7 @@ local Remotes = require(Shared.Net.Remotes)
 local Progression = require(Shared.Config.Progression)
 local Weapons = require(Shared.Config.Weapons)
 local Cats = require(Shared.Config.Cats)
+local Monetization = require(Shared.Config.Monetization)
 
 local DataService = require(script.Parent.DataService)
 
@@ -57,6 +58,7 @@ function EconomyService.Push(player: Player)
 		Unlocks = profile.Unlocks,
 		Loadout = profile.Loadout,
 		Quests = profile.Quests,
+		StarterPackBought = profile.StarterPackBought,
 	})
 end
 
@@ -77,12 +79,45 @@ function EconomyService.AddXP(player: Player, amount: number)
 	end
 end
 
-function EconomyService.AddCoins(player: Player, amount: number)
+-- Coin rewards are multiplied by owned passes (VIP, 2x Coins); purchases and
+-- refunds pass `raw = true` so they're never multiplied.
+function EconomyService.AddCoins(player: Player, amount: number, raw: boolean?)
 	local profile = DataService.Get(player)
 	if not profile then
 		return
 	end
+	if amount > 0 and not raw then
+		for pass, mult in pairs(Monetization.CoinMult) do
+			if player:GetAttribute(pass) == true then
+				amount *= mult
+			end
+		end
+		amount = math.floor(amount + 0.5)
+	end
 	profile.Coins = math.max(0, profile.Coins + amount)
+end
+
+function EconomyService.AddGems(player: Player, amount: number)
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	profile.Gems = math.max(0, (profile.Gems or 0) + amount)
+end
+
+-- Give an item outright (Robux unlocks, pass rewards). Returns true if new.
+function EconomyService.Grant(player: Player, kind: string, id: string): boolean
+	local profile = DataService.Get(player)
+	local item, cat = findItem(kind, id)
+	if not profile or not item or not cat then
+		return false
+	end
+	local unlocks = profile.Unlocks[cat.unlockKey]
+	if unlocks[id] then
+		return false
+	end
+	unlocks[id] = true
+	return true
 end
 
 -- Track a stat and advance any matching quest metrics.
@@ -122,7 +157,8 @@ function EconomyService.AdvanceQuests(player: Player, metric: string, amount: nu
 	end
 end
 
--- Purchase an item with coins. Returns {ok, reason}.
+-- Purchase an item with coins, or gems for gem-priced items. Pass-only items
+-- come from their Game Pass. Returns {ok, reason}.
 function EconomyService.Purchase(player: Player, kind: string, id: string)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -136,11 +172,21 @@ function EconomyService.Purchase(player: Player, kind: string, id: string)
 	if unlocks[id] then
 		return { ok = false, reason = "already owned" }
 	end
-	local cost = item.CoinCost or 0
-	if profile.Coins < cost then
-		return { ok = false, reason = "not enough coins" }
+	if item.PassOnly then
+		return { ok = false, reason = "pass only" }
 	end
-	profile.Coins -= cost
+	if item.GemCost then
+		if (profile.Gems or 0) < item.GemCost then
+			return { ok = false, reason = "not enough gems" }
+		end
+		profile.Gems -= item.GemCost
+	else
+		local cost = item.CoinCost or 0
+		if profile.Coins < cost then
+			return { ok = false, reason = "not enough coins" }
+		end
+		profile.Coins -= cost
+	end
 	unlocks[id] = true
 	EconomyService.Push(player)
 	return { ok = true }

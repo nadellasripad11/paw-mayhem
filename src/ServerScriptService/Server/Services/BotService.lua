@@ -314,6 +314,9 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 			EconomyService.AddCoins(killer, GameConfig.Scoring.EliminationCoins)
 			EconomyService.AddStat(killer, "Eliminations", 1)
 			EconomyService.Push(killer)
+			if killer:GetAttribute("TrailPack") then
+				Remotes.Get("PlayEffect"):FireAllClients({ kind = "Confetti", position = root.Position })
+			end
 			if BotService.OnBotEliminated then
 				BotService.OnBotEliminated(killer, teamId)
 			end

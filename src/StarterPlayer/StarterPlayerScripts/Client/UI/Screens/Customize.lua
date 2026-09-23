@@ -14,6 +14,7 @@ local Icons = require(script.Parent.Parent.Icons)
 local CatView = require(script.Parent.Parent.CatView)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
+local Monetize = require(script.Parent.Parent.Parent.Monetize)
 
 local Customize = {}
 
@@ -69,14 +70,11 @@ local function framingFor(kind: string, item): string
 	return "Bust"
 end
 
-local function buyOrEquip(kind: string, id: string)
-	if ClientState.Owns(kind, id) then
-		ClientActions.Equip(kind, id)
-	else
-		local result = ClientActions.Purchase(kind, id)
-		if result and result.ok then
-			ClientActions.Equip(kind, id)
-		end
+local function buyOrEquip(kind: string, item)
+	if ClientState.Owns(kind, item.Id) then
+		ClientActions.Equip(kind, item.Id)
+	elseif Monetize.Buy(kind, item.Id, item) then
+		ClientActions.Equip(kind, item.Id)
 	end
 end
 
@@ -93,13 +91,18 @@ local function refreshTiles()
 		local cost = t.item.CoinCost or 0
 		local locked = not owned and (t.item.UnlockLevel or 0) > level
 		t.pill.Visible = not owned
-		t.coin.Visible = not owned and not locked and cost > 0
+		local gems = t.item.GemCost or 0
+		local pass = t.item.PassOnly ~= nil
+		t.coin.Visible = not owned and not locked and not pass and gems == 0 and cost > 0
+		t.gem.Visible = not owned and not locked and not pass and gems > 0
 		if locked then
 			t.pillText.Text = "LV " .. tostring(t.item.UnlockLevel)
 			t.pillText.TextColor3 = Theme.Color.TextDim
+		elseif pass then
+			t.pillText.Text, t.pillText.TextColor3 = Monetize.PriceTag(t.item)
 		else
-			t.pillText.Text = cost > 0 and tostring(cost) or "FREE"
-			t.pillText.TextColor3 = Theme.Color.Coin
+			t.pillText.Text = gems > 0 and tostring(gems) or (cost > 0 and tostring(cost) or "FREE")
+			t.pillText.TextColor3 = gems > 0 and Theme.Color.Gem or Theme.Color.Coin
 		end
 	end
 end
@@ -161,6 +164,8 @@ local function buildTile(cat, item, order: number)
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	local coin = UIUtil.make("Frame", { Parent = pill, Size = UDim2.fromOffset(12, 12), BackgroundTransparency = 1, LayoutOrder = 1 })
 	Icons.Place("Coin", coin, 12, Theme.Color.Coin)
+	local gem = UIUtil.make("Frame", { Parent = pill, Size = UDim2.fromOffset(12, 12), BackgroundTransparency = 1, LayoutOrder = 1, Visible = false })
+	Icons.Place("Gem", gem, 12, Theme.Color.Gem)
 	local pillText = UIUtil.label({
 		Parent = pill, Text = "", Font = Theme.Font.Bold, TextSize = 10,
 		AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 12), LayoutOrder = 2,
@@ -173,9 +178,9 @@ local function buildTile(cat, item, order: number)
 	end)
 	tile.MouseLeave:Connect(refreshTiles)
 	tile.MouseButton1Click:Connect(function()
-		buyOrEquip(cat.kind, item.Id)
+		buyOrEquip(cat.kind, item)
 	end)
-	table.insert(tiles, { kind = cat.kind, item = item, stroke = stroke, check = check, pill = pill, coin = coin, pillText = pillText })
+	table.insert(tiles, { kind = cat.kind, item = item, stroke = stroke, check = check, pill = pill, coin = coin, gem = gem, pillText = pillText })
 end
 
 local function loadCategory(cat)

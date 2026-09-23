@@ -14,6 +14,8 @@ local Icons = require(script.Parent.Parent.Icons)
 local GunView = require(script.Parent.Parent.GunView)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
+local Monetize = require(script.Parent.Parent.Parent.Monetize)
+local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
 
 local Loadout = {}
 
@@ -98,6 +100,8 @@ local function cardShell(parent: Instance, stageH: number, weaponId: string, ski
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	local coinSlot = UIUtil.make("Frame", { Parent = pill, Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, LayoutOrder = 1 })
 	Icons.Place("Coin", coinSlot, 14, Theme.Color.Coin)
+	local gemSlot = UIUtil.make("Frame", { Parent = pill, Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, LayoutOrder = 1, Visible = false })
+	Icons.Place("Gem", gemSlot, 14, Theme.Color.Gem)
 	local pillText = UIUtil.label({
 		Parent = pill, Text = "", Font = Theme.Font.Bold, TextSize = 11,
 		AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 14), LayoutOrder = 2,
@@ -118,11 +122,14 @@ local function cardShell(parent: Instance, stageH: number, weaponId: string, ski
 		paintStroke()
 	end)
 
-	local function setStatus(owned: boolean, equipped: boolean, cost: number)
+	local function setStatus(owned: boolean, equipped: boolean, def: any, robuxKey: string?)
 		isEquipped = equipped
 		paintStroke()
 		card.BackgroundColor3 = equipped and Color3.fromRGB(20, 52, 62) or CARD_BG
-		coinSlot.Visible = not owned and cost > 0
+		local cost = def.CoinCost or 0
+		local gems = def.GemCost or 0
+		coinSlot.Visible = not owned and not def.PassOnly and gems == 0 and cost > 0
+		gemSlot.Visible = not owned and not def.PassOnly and gems > 0
 		if equipped then
 			pillText.Text = "EQUIPPED"
 			pillText.TextColor3 = EQUIP_GREEN
@@ -130,8 +137,20 @@ local function cardShell(parent: Instance, stageH: number, weaponId: string, ski
 			pillText.Text = "OWNED"
 			pillText.TextColor3 = Theme.Color.TextDim
 		else
-			pillText.Text = cost > 0 and tostring(cost) or "FREE"
-			pillText.TextColor3 = Theme.Color.Coin
+			local price, color = Monetize.PriceTag(def)
+			if def.PassOnly then
+				pillText.Text = price
+			elseif gems > 0 or cost > 0 then
+				pillText.Text = tostring(gems > 0 and gems or cost)
+			else
+				pillText.Text = "FREE"
+			end
+			local product = robuxKey and Monetization.Products[robuxKey]
+			if product then
+				-- Short on coins/gems? Tapping the card offers the Robux unlock.
+				pillText.Text ..= "  or R$" .. tostring(product.Price)
+			end
+			pillText.TextColor3 = color
 		end
 	end
 
@@ -142,8 +161,8 @@ local function buyOrEquip(kind: string, id: string)
 	if ClientState.Owns(kind, id) then
 		ClientActions.Equip(kind, id)
 	else
-		local result = ClientActions.Purchase(kind, id)
-		if result and result.ok then
+		local def = kind == "Weapon" and Weapons.Get(id) or Weapons.GetSkin(id)
+		if Monetize.Buy(kind, id, def) then
 			ClientActions.Equip(kind, id)
 		end
 	end
@@ -229,7 +248,7 @@ function Loadout.Build(parent)
 		card.MouseButton1Click:Connect(function()
 			buyOrEquip("Weapon", w.Id)
 		end)
-		table.insert(weaponCards, { id = w.Id, cost = w.CoinCost or 0, setStatus = setStatus })
+		table.insert(weaponCards, { id = w.Id, def = w, robux = Monetize.UnlockKey("Weapon", w.Id), setStatus = setStatus })
 	end
 
 	-- Skin cards ------------------------------------------------------------
@@ -243,15 +262,15 @@ function Loadout.Build(parent)
 		card.MouseButton1Click:Connect(function()
 			buyOrEquip("Skin", skin.Id)
 		end)
-		table.insert(skinCards, { id = skin.Id, cost = skin.CoinCost or 0, setStatus = setStatus, setGun = setGun })
+		table.insert(skinCards, { id = skin.Id, def = skin, setStatus = setStatus, setGun = setGun })
 	end
 
 	local function refresh()
 		for _, e in ipairs(weaponCards) do
-			e.setStatus(ClientState.Owns("Weapon", e.id), ClientState.Equipped("Weapon") == e.id, e.cost)
+			e.setStatus(ClientState.Owns("Weapon", e.id), ClientState.Equipped("Weapon") == e.id, e.def, e.robux)
 		end
 		for _, e in ipairs(skinCards) do
-			e.setStatus(ClientState.Owns("Skin", e.id), ClientState.Equipped("Skin") == e.id, e.cost)
+			e.setStatus(ClientState.Owns("Skin", e.id), ClientState.Equipped("Skin") == e.id, e.def)
 		end
 		-- Skin previews always show the gun you have equipped.
 		local weaponId = equippedWeapon()

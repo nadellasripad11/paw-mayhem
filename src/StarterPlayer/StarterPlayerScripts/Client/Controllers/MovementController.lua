@@ -191,7 +191,19 @@ function MovementController.Dash()
 	trail.Attachment0 = a0
 	trail.Attachment1 = a1
 	trail.Lifetime = 0.25
-	trail.Color = ColorSequence.new(Color3.fromRGB(150, 230, 255))
+	if player:GetAttribute("TrailPack") then
+		-- Trail Pack: rainbow dash trail.
+		trail.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 90)),
+			ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 200, 60)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 230, 120)),
+			ColorSequenceKeypoint.new(0.75, Color3.fromRGB(80, 170, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(190, 110, 255)),
+		})
+		trail.Lifetime = 0.45
+	else
+		trail.Color = ColorSequence.new(Color3.fromRGB(150, 230, 255))
+	end
 	trail.Transparency = NumberSequence.new(0.3, 1)
 	trail.LightEmission = 0.6
 	trail.Parent = root

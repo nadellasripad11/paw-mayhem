@@ -20,6 +20,8 @@ Cats.Fur = {
 	{ Id = "Purple", Name = "Purple", Desc = "Mystic", Pattern = "Solid", Body = c(170, 130, 230), Accent = c(140, 100, 210), UnlockLevel = 5, CoinCost = 600 },
 	{ Id = "Calico", Name = "Calico", Desc = "Trendy", Pattern = "Calico", Marking = c(120, 80, 60), Body = c(235, 180, 130), Accent = c(255, 245, 225), UnlockLevel = 7, CoinCost = 800 },
 	{ Id = "Tiger", Name = "Tiger", Desc = "Wild", Pattern = "Tiger", Marking = c(60, 45, 40), Body = c(240, 150, 60), Accent = c(255, 205, 120), UnlockLevel = 10, CoinCost = 1200 },
+	{ Id = "Galaxy", Name = "Galaxy", Desc = "Gem exclusive", Pattern = "Solid", Body = c(76, 58, 150), Accent = c(236, 150, 230), Eye = c(110, 240, 255), UnlockLevel = 0, CoinCost = 0, GemCost = 200 },
+	{ Id = "RoyalGold", Name = "Royal Gold", Desc = "VIP", Pattern = "Solid", Body = c(250, 200, 70), Accent = c(255, 244, 210), Eye = c(70, 150, 255), UnlockLevel = 0, CoinCost = 0, PassOnly = "VIP" },
 }
 
 -- Outfits (torso/limb overlay color + tag).
@@ -40,6 +42,7 @@ Cats.Hats = {
 	{ Id = "Beanie", Name = "Beanie", Shape = "Beanie", Color = c(210, 90, 90), UnlockLevel = 1, CoinCost = 250 },
 	{ Id = "Crown", Name = "Crown", Shape = "Crown", Color = c(255, 205, 90), UnlockLevel = 12, CoinCost = 2000 },
 	{ Id = "Space", Name = "Space Helmet", Shape = "Helmet", Color = c(200, 230, 255), UnlockLevel = 15, CoinCost = 2500 },
+	{ Id = "DiamondCrown", Name = "Diamond Crown", Shape = "Crown", Color = c(140, 230, 255), UnlockLevel = 0, CoinCost = 0, GemCost = 300 },
 }
 
 -- Accessories (face/back items).
@@ -60,6 +63,8 @@ Cats.Emotes = {
 	{ Id = "Sleep", Name = "Sleep", UnlockLevel = 4, CoinCost = 300 },
 	{ Id = "Spin", Name = "Spin", UnlockLevel = 5, CoinCost = 300 },
 	{ Id = "Fall", Name = "Fall", UnlockLevel = 6, CoinCost = 300 },
+	{ Id = "Dance", Name = "Dance", UnlockLevel = 0, CoinCost = 0, PassOnly = "EmotePack" },
+	{ Id = "Flex", Name = "Flex", UnlockLevel = 0, CoinCost = 0, PassOnly = "EmotePack" },
 }
 
 Cats.Default = {

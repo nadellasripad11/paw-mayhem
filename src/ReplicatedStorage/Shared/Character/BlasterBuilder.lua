@@ -27,6 +27,8 @@ BlasterBuilder.WeaponPalettes = {
 	VoidCannon = { Body = c(72, 40, 112), Accent = c(140, 80, 232), Dark = c(26, 20, 38), Glow = c(206, 116, 255), Trim = c(112, 92, 142) },
 	BubbleBlaster = { Body = c(246, 246, 255), Accent = c(255, 140, 210), Dark = c(92, 82, 122), Glow = c(150, 230, 255), Trim = c(172, 222, 255) },
 	GoldenPurr = { Body = c(255, 198, 58), Accent = c(255, 238, 166), Dark = c(122, 72, 22), Glow = c(255, 246, 176), Trim = c(232, 60, 82) },
+	CometClaw = { Body = c(240, 246, 255), Accent = c(110, 200, 255), Dark = c(34, 44, 78), Glow = c(150, 236, 255), Trim = c(255, 226, 120) },
+	PurrfectStorm = { Body = c(96, 58, 170), Accent = c(210, 150, 255), Dark = c(28, 22, 46), Glow = c(190, 240, 255), Trim = c(255, 230, 110) },
 }
 
 BlasterBuilder.SkinPalettes = {
@@ -37,6 +39,9 @@ BlasterBuilder.SkinPalettes = {
 	Neon = { Body = c(40, 44, 72), Accent = c(60, 240, 255), Dark = c(20, 20, 34), Glow = c(255, 80, 222), Trim = c(60, 240, 255) },
 	Candy = { Body = c(255, 160, 212), Accent = c(255, 255, 255), Dark = c(204, 92, 152), Glow = c(150, 232, 255), Trim = c(255, 230, 122) },
 	Void = { Body = c(46, 26, 82), Accent = c(130, 70, 222), Dark = c(16, 12, 26), Glow = c(192, 102, 255), Trim = c(92, 70, 132) },
+	Aurora = { Body = c(40, 70, 110), Accent = c(90, 230, 200), Dark = c(18, 28, 48), Glow = c(170, 120, 255), Trim = c(120, 255, 210) },
+	Molten = { Body = c(36, 30, 34), Accent = c(255, 110, 40), Dark = c(20, 16, 18), Glow = c(255, 180, 60), Trim = c(255, 80, 30) },
+	VIPGold = { Body = c(255, 206, 60), Accent = c(30, 26, 36), Dark = c(24, 20, 28), Glow = c(255, 240, 160), Trim = c(255, 255, 255) },
 }
 
 local V = Vector3.new
@@ -287,6 +292,59 @@ function BlasterBuilder.Build(weaponId: string, skinId: string?, base: CFrame?, 
 		grip(V(-0.85, -0.95, 0), pal.Accent)
 		trigger(V(-0.3, -0.66, 0))
 		paw(-0.75, 0.22, 0.47, pal.Accent, 1)
+	end
+
+	builders.CometClaw = function()
+		box(V(3.0, 0.8, 0.72), V(0, 0, 0), pal.Body)
+		cyl(3.0, 0.72, V(0, 0.4, 0), pal.Body)
+		cyl(2.2, 0.38, V(2.6, 0.2, 0), pal.Dark, METAL)
+		for i = 0, 1 do
+			cyl(0.14, 0.62, V(2.0 + i * 0.8, 0.2, 0), pal.Accent, NEON)
+		end
+		ball(0.7, V(3.85, 0.2, 0), pal.Glow, NEON)
+		for _, a in ipairs({ 0, 45, 90, 135 }) do
+			box(V(1.1, 0.1, 0.1), V(3.85, 0.2, 0), pal.Trim, NEON, CFrame.Angles(a == 90 and math.rad(90) or 0, 0, math.rad(a)))
+		end
+		for k, s in ipairs({ { 0.9, 0.35 }, { 0.6, 0.6 }, { 0.35, 0.8 } }) do
+			box(V(s[1], 0.12, 0.08), V(-1.6 - k * 0.25, 0.55 + k * 0.12, 0), pal.Accent, NEON, CFrame.Angles(0, 0, math.rad(20 + k * 8)))
+		end
+		cyl(1.4, 0.4, V(0.1, 0.9, 0), pal.Dark)
+		cyl(0.06, 0.34, V(0.82, 0.9, 0), pal.Glow, NEON)
+		box(V(2.2, 0.1, 0.06), V(0.1, -0.1, 0.37), pal.Accent, NEON)
+		grip(V(-0.7, -0.85, 0), pal.Dark)
+		trigger(V(-0.15, -0.56, 0))
+		paw(-0.9, 0.18, 0.37, pal.Trim, 0.8)
+	end
+
+	builders.PurrfectStorm = function()
+		box(V(2.6, 1.0, 0.85), V(0, 0, 0), pal.Body)
+		cyl(2.6, 0.85, V(0, 0.5, 0), pal.Body)
+		for _, y in ipairs({ 0.36, -0.04 }) do
+			cyl(1.8, 0.28, V(2.1, y, 0), pal.Dark, METAL)
+			cyl(0.05, 0.2, V(3.02, y, 0), pal.Glow, NEON)
+		end
+		for i = 0, 3 do
+			cyl(0.1, 0.9, V(1.4 + i * 0.42, 0.16, 0), i % 2 == 0 and pal.Glow or pal.Accent, NEON)
+		end
+		for _, z in ipairs({ -0.22, 0.22 }) do
+			local ear = Instance.new("WedgePart")
+			ear.Anchored = true
+			ear.CanCollide = false
+			ear.CanQuery = false
+			ear.CanTouch = false
+			ear.CastShadow = false
+			ear.Size = V(0.14, 0.42, 0.3) * s
+			ear.Color = pal.Accent
+			ear.Material = Enum.Material.SmoothPlastic
+			ear.CFrame = origin * CFrame.new(V(-0.2, 1.08, z) * s) * CFrame.Angles(0, math.rad(90), 0)
+			ear.Parent = model
+		end
+		box(V(0.4, 0.5, 0.3), V(-0.6, 1.2, 0), pal.Trim, NEON, CFrame.Angles(0, 0, math.rad(35)))
+		box(V(1.8, 0.1, 0.06), V(0.1, -0.12, 0.44), pal.Glow, NEON)
+		box(V(0.55, 0.95, 0.76), V(-1.45, 0.05, 0), pal.Accent)
+		grip(V(-0.75, -0.9, 0), pal.Dark)
+		trigger(V(-0.2, -0.6, 0))
+		paw(0.2, 0.2, 0.44, pal.Trim, 0.9)
 	end
 
 	local build = builders[weaponId] or builders.PawBlaster

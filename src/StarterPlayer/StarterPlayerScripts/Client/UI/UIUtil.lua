@@ -261,8 +261,8 @@ function UIUtil.itemCard(parent: Instance, opts: any, onAction: (action: string)
 			btn.Text = "EQUIP"
 			btn.BackgroundColor3 = Theme.Color.Accent
 		else
-			btn.Text = (opts.cost and opts.cost > 0) and (tostring(opts.cost) .. " COINS") or "UNLOCK"
-			btn.BackgroundColor3 = Theme.Color.Coin
+			btn.Text = opts.priceText or ((opts.cost and opts.cost > 0) and (tostring(opts.cost) .. " COINS") or "UNLOCK")
+			btn.BackgroundColor3 = opts.priceColor or Theme.Color.Coin
 			btn.TextColor3 = Color3.fromRGB(40, 30, 10)
 		end
 	end

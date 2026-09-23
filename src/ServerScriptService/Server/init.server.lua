@@ -20,6 +20,7 @@ local PlayerService = require(Services.PlayerService)
 local MatchService = require(Services.MatchService)
 local DropService = require(Services.DropService)
 local EventService = require(Services.EventService)
+local MonetizationService = require(Services.MonetizationService)
 local ArenaBuilder = require(World.ArenaBuilder)
 
 local function main()
@@ -38,6 +39,7 @@ local function main()
 	MatchService.Start()
 	DropService.Start()
 	EventService.Start()
+	MonetizationService.Start()
 
 	-- 4. Push profile to client + ensure daily quests on load.
 	DataService.ProfileLoaded:Connect(function(player)

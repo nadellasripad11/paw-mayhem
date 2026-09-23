@@ -184,6 +184,10 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 
 	if killer and killer ~= victim then
 		addStreak(killer)
+		local vRoot = victim.Character and victim.Character.PrimaryPart
+		if killer:GetAttribute("TrailPack") and vRoot then
+			Remotes.Get("PlayEffect"):FireAllClients({ kind = "Confetti", position = vRoot.Position })
+		end
 		local kState = Runtime.Ensure(killer)
 		kState.MatchElims += 1
 		kState.MatchScore += 1

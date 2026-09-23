@@ -17,6 +17,7 @@ local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local Icons = require(script.Parent.Parent.Icons)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
+local Monetize = require(script.Parent.Parent.Parent.Monetize)
 
 local Loadout = require(script.Parent.Loadout)
 local Shop = require(script.Parent.Shop)
@@ -311,7 +312,7 @@ function MainMenu.Build()
 	end
 
 	-- Coins + gems (top right)
-	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(250, 40), ZIndex = 10 })
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(340, 40), ZIndex = 10 })
 	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
 	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
@@ -337,6 +338,63 @@ function MainMenu.Build()
 	plus.MouseButton1Click:Connect(function()
 		if currentPanel ~= "Shop" then
 			switchTo("Shop")
+		end
+	end)
+
+	-- Gold VIP button (hidden once owned).
+	local vip = Instance.new("TextButton")
+	vip.Name = "VIP"
+	vip.Text = "VIP"
+	vip.Font = Theme.Font.Title
+	vip.TextSize = 20
+	vip.TextColor3 = Color3.fromRGB(70, 40, 0)
+	vip.AutoButtonColor = true
+	vip.Size = UDim2.fromOffset(70, 40)
+	vip.LayoutOrder = 0
+	vip.BackgroundColor3 = Color3.new(1, 1, 1)
+	vip.BorderSizePixel = 0
+	vip.ZIndex = 10
+	vip.Parent = currGroup
+	UIUtil.corner(UDim.new(0, 12), vip)
+	UIUtil.gradient(Color3.fromRGB(255, 226, 110), Color3.fromRGB(240, 160, 30), 90, vip)
+	UIUtil.stroke(Color3.fromRGB(255, 245, 190), 1.5, vip)
+	vip.MouseButton1Click:Connect(function()
+		Monetize.PromptPass("VIP")
+	end)
+	local function refreshVip()
+		vip.Visible = not Monetize.OwnsPass("VIP")
+	end
+	player:GetAttributeChangedSignal("VIP"):Connect(refreshVip)
+	refreshVip()
+
+	-- Toast (bottom centre) for purchase messages while in the menu.
+	local toast = UIUtil.label({
+		Parent = gui, Name = "Toast", Text = "", Font = Theme.Font.Title, TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 0.15, BackgroundColor3 = Color3.fromRGB(20, 26, 40), Visible = false, ZIndex = 30,
+	})
+	UIUtil.corner(UDim.new(0, 12), toast)
+	local toastPad = Instance.new("UIPadding")
+	toastPad.PaddingLeft = UDim.new(0, 18)
+	toastPad.PaddingRight = UDim.new(0, 18)
+	toastPad.Parent = toast
+	local toastToken = 0
+	local function showToast(text: string)
+		toastToken += 1
+		local token = toastToken
+		toast.Text = text
+		toast.Visible = true
+		task.delay(2.5, function()
+			if token == toastToken then
+				toast.Visible = false
+			end
+		end)
+	end
+	Monetize.OnUnavailable = showToast
+	Remotes.Get("Notify").OnClientEvent:Connect(function(data)
+		if gui.Enabled and typeof(data) == "table" and data.text then
+			showToast(tostring(data.text))
 		end
 	end)
 
