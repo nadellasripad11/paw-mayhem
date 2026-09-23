@@ -16,6 +16,7 @@
 local CollectionService = game:GetService("CollectionService")
 
 local Cats = require(script.Parent.Parent.Config.Cats)
+local BlasterBuilder = require(script.Parent.BlasterBuilder)
 local GameConfig = require(script.Parent.Parent.Config.GameConfig)
 
 local CatBuilder = {}
@@ -319,14 +320,42 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 end
 
 -- ── limbs ────────────────────────────────────────────────────────────────────
-local function buildArm(root: BasePart, i: number, sleeve: Color3, cuff: Color3?, fur)
+-- Armed cats hold both arms forward around the blaster (the gun is welded to
+-- the right hand); unarmed arms hang at the sides.
+local function buildArm(root: BasePart, i: number, sleeve: Color3, cuff: Color3?, fur, armed: boolean): BasePart
 	local arm = oval("Arm", V(0.38, 0.72, 0.38), sleeve)
-	joint(i < 0 and "PawShoulderL" or "PawShoulderR", root, arm, CFrame.new(0.66 * i, 0.36, -0.02) * CFrame.Angles(0, 0, math.rad(10 * i)), CFrame.new(0, -0.34, 0))
+	local pivot = armed
+		and CFrame.new(0.62 * i, 0.36, -0.02) * CFrame.Angles(0, math.rad(30 * i), 0) * CFrame.Angles(math.rad(72), 0, 0)
+		or CFrame.new(0.66 * i, 0.36, -0.02) * CFrame.Angles(0, 0, math.rad(10 * i))
+	joint(i < 0 and "PawShoulderL" or "PawShoulderR", root, arm, pivot, CFrame.new(0, -0.34, 0))
 	if cuff then
 		weld(arm, part("Cuff", V(0.1, 0.42, 0.42), cuff, Enum.PartType.Cylinder), CFrame.new(0, -0.27, 0) * ROT_Z90)
 	end
-	weld(arm, oval("Hand", V(0.36, 0.34, 0.38), fur.Body), CFrame.new(0, -0.42, -0.04))
+	local hand = oval("Hand", V(0.36, 0.34, 0.38), fur.Body)
+	weld(arm, hand, CFrame.new(0, -0.42, -0.04))
 	weld(arm, oval("PawPad", V(0.16, 0.12, 0.06), PINK), CFrame.new(0, -0.45, -0.23))
+	return hand
+end
+
+local GUN_SCALE = 0.36
+
+local function attachBlaster(model: Model, root: BasePart, hand: BasePart, weapon)
+	local gunCF = root.CFrame * CFrame.fromMatrix(V(0.08, 0.16, -0.95), V(0, 0, -1), V(0, 1, 0))
+	local gun = BlasterBuilder.Build(weapon.Id, weapon.Skin, gunCF, GUN_SCALE)
+	gun.Name = "Blaster"
+	for _, p in ipairs(gun:GetChildren()) do
+		if p:IsA("BasePart") then
+			p.Anchored = false
+			p.Massless = true
+			local w = Instance.new("Weld")
+			w.Part0 = hand
+			w.Part1 = p
+			w.C0 = hand.CFrame:ToObjectSpace(p.CFrame)
+			w.Parent = p
+		end
+	end
+	gun.Parent = model
+	model:SetAttribute("Armed", true)
 end
 
 local function buildLeg(root: BasePart, i: number, shorts: Color3?, fur)
@@ -363,7 +392,8 @@ local function buildTail(root: BasePart, fur)
 end
 
 -- Build and return the fully assembled cat Model (not yet parented).
-function CatBuilder.Build(custom: any?, displayName: string?): Model
+-- `weapon` ({ Id, Skin }) puts that blaster in the cat's hands.
+function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Model
 	local fur, outfit, hat, acc = resolve(custom)
 	local top, chest, shorts, cuff = outfitColors(outfit, fur)
 
@@ -386,8 +416,13 @@ function CatBuilder.Build(custom: any?, displayName: string?): Model
 	weld(root, oval("Chest", V(0.78, 0.9, 0.34), chest), CFrame.new(0, -0.02, -0.43))
 	weld(root, oval("Hips", V(1.5, 0.72, 1.12), shorts or fur.Body), CFrame.new(0, -0.55, 0.02))
 
+	local armed = weapon ~= nil and typeof(weapon.Id) == "string"
+	local rightHand: BasePart? = nil
 	for i = -1, 1, 2 do
-		buildArm(root, i, top, cuff, fur)
+		local hand = buildArm(root, i, top, cuff, fur, armed)
+		if i == 1 then
+			rightHand = hand
+		end
 		buildLeg(root, i, shorts, fur)
 	end
 	buildTail(root, fur)
@@ -397,6 +432,9 @@ function CatBuilder.Build(custom: any?, displayName: string?): Model
 	end
 	if acc then
 		addBackItem(root, acc)
+	end
+	if armed and rightHand then
+		attachBlaster(model, root, rightHand, weapon)
 	end
 
 	local humanoid = Instance.new("Humanoid")
@@ -437,6 +475,7 @@ type PoseRig = {
 	open: { BasePart },
 	shut: { BasePart },
 	closed: boolean,
+	armed: boolean,
 }
 local rigCache: { [Model]: PoseRig } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -445,7 +484,7 @@ local function rigFor(model: Model): PoseRig
 	if rig then
 		return rig
 	end
-	local r: PoseRig = { joints = {}, open = {}, shut = {}, closed = false }
+	local r: PoseRig = { joints = {}, open = {}, shut = {}, closed = false, armed = model:GetAttribute("Armed") == true }
 	for _, name in ipairs(JOINTS) do
 		local m = model:FindFirstChild(name, true)
 		if m and m:IsA("Motor6D") then
@@ -496,8 +535,15 @@ function CatBuilder.Pose(model: Model, t: number, move: number)
 	end
 	set("PawHipL", CFrame.Angles(swing, 0, 0))
 	set("PawHipR", CFrame.Angles(-swing, 0, 0))
-	set("PawShoulderL", CFrame.Angles(-swing * 0.8, 0, -(0.05 + breathe * 0.04) * idle))
-	set("PawShoulderR", CFrame.Angles(swing * 0.8, 0, (0.05 + breathe * 0.04) * idle))
+	if rig.armed then
+		-- Arms stay on the blaster: a small breathing / step bob only.
+		local aim = CFrame.Angles(breathe * 0.02 + math.abs(math.cos(phase)) * 0.05 * walk, 0, 0)
+		set("PawShoulderL", aim)
+		set("PawShoulderR", aim)
+	else
+		set("PawShoulderL", CFrame.Angles(-swing * 0.8, 0, -(0.05 + breathe * 0.04) * idle))
+		set("PawShoulderR", CFrame.Angles(swing * 0.8, 0, (0.05 + breathe * 0.04) * idle))
+	end
 	set("PawNeck", CFrame.Angles(breathe * 0.025 + math.abs(math.cos(phase)) * 0.05 * walk, math.sin(t * 0.7) * 0.08 * idle, math.sin(t * 0.9) * 0.05 * idle))
 	set("PawTail", CFrame.Angles(math.sin(t * 1.6) * 0.1, math.sin(t * 2.4 + phase * walk * 0.5) * (0.3 + 0.2 * walk), 0))
 end

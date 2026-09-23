@@ -550,6 +550,22 @@ function ArenaKit.ApplyAtmosphere(opts: any)
 		Lighting.FogEnd = opts.FogEnd
 	end
 	Lighting.Brightness = opts.Brightness or 2
+
+	-- A Sky created here keeps Roblox's built-in skybox textures but can hide
+	-- the sun and moon (the Volcano's smoky dusk shouldn't show a moon).
+	local sky = Lighting:FindFirstChild("ArenaSky")
+	if opts.HideCelestial then
+		if not sky then
+			sky = Instance.new("Sky")
+			sky.Name = "ArenaSky"
+			sky.Parent = Lighting
+		end
+		local s = sky :: Sky
+		s.CelestialBodiesShown = false
+		s.StarCount = 0
+	elseif sky then
+		sky:Destroy()
+	end
 end
 
 -- Puffy cloud clusters in a band around the arena (sea of clouds / smoke).

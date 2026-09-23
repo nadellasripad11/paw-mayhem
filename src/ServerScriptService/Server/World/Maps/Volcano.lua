@@ -6,6 +6,7 @@
 -- industrial bridges. Point-symmetric so Blue and Red play the same map.
 
 local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
 local ArenaKit = require(script.Parent.Parent.ArenaKit)
 
 local Volcano = { Id = "Volcano", Name = "Volcano" }
@@ -127,6 +128,48 @@ local function smokeEmitter(parent: BasePart, rate: number, size0: number, size1
 	e.Parent = parent
 	return e
 end
+
+-- Glowing sparks drifting up out of the lava.
+local function emberEmitter(parent: BasePart, rate: number, speed: number, spread: number)
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(255, 214, 110), Color3.fromRGB(255, 90, 30))
+	e.LightEmission = 1
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 0) })
+	e.Lifetime = NumberRange.new(2.5, 5)
+	e.Rate = rate
+	e.Speed = NumberRange.new(speed * 0.5, speed)
+	e.SpreadAngle = Vector2.new(spread, spread)
+	e.Acceleration = Vector3.new(0, 1.5, 0)
+	e.RotSpeed = NumberRange.new(-90, 90)
+	e.EmissionDirection = Enum.NormalId.Top
+	e.Parent = parent
+	return e
+end
+
+-- Invisible anchor for emitters / bubble vents.
+local function marker(name: string, pos: Vector3, parent: Instance): BasePart
+	local p = NP(name, Vector3.new(1, 1, 1), CFrame.new(pos), LAVA, Enum.Material.SmoothPlastic, parent)
+	p.Transparency = 1
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	return p
+end
+
+-- Cooled lava crust: dark red-brown rock that the CrackedLava material laces
+-- with glowing fissures.
+local function crustShade(): Color3
+	return Color3.fromRGB(rng:NextInteger(64, 98), rng:NextInteger(34, 48), rng:NextInteger(30, 40))
+end
+
+-- Tags the client LavaFX controller animates.
+local function hot(p: BasePart): BasePart
+	CollectionService:AddTag(p, "LavaHot")
+	return p
+end
+
+local FALL_SPOTS: { Vector3 } = {}
 
 -- ── Surface detail ───────────────────────────────────────────────────────────
 
@@ -469,7 +512,7 @@ local function makeMountain(c: any, parent: Instance)
 			deco(NP("RiverBed", Vector3.new(5.2, 2.6, len + 0.6), CFrame.lookAt(mid - out * 1.3, pb - out * 1.3) * CFrame.new(0, -0.8, 0), BASALT, Enum.Material.Basalt, f))
 			local glow = glowPart(NP("RiverGlow", Vector3.new(5, 0.5, len + 0.8), CFrame.lookAt(mid, pb) * CFrame.new(0, -0.15, 0), LAVA_DARK, Enum.Material.Neon, f))
 			glow.Transparency = 0.25
-			local river = glowPart(NP("River", Vector3.new(3.2, 0.7, len + 0.6), CFrame.lookAt(mid, pb), LAVA, Enum.Material.Neon, f))
+			local river = hot(glowPart(NP("River", Vector3.new(3.2, 0.7, len + 0.6), CFrame.lookAt(mid, pb), LAVA, Enum.Material.Neon, f)))
 			if j % 2 == 1 then
 				light(river, LAVA, 20, 1.2)
 			end
@@ -484,23 +527,75 @@ local function makeLavaRun(isle: any, angle: number, fromR: number, parent: Inst
 	local lip = ArenaKit.Polar(isle, angle, isle.r + 0.2)
 	local len = (lip - from).Magnitude
 	local cf = CFrame.lookAt((from + lip) / 2, lip)
-	deco(NP("ChannelBank", Vector3.new(6.4, 0.26, len), cf * CFrame.new(0, 0.1, 0), BASALT, Enum.Material.Basalt, parent))
-	glowPart(NP("Channel", Vector3.new(3.6, 0.3, len), cf * CFrame.new(0, 0.16, 0), LAVA, Enum.Material.Neon, parent))
+	deco(NP("ChannelBank", Vector3.new(6.4, 0.26, len), cf * CFrame.new(0, 0.1, 0), crustShade(), Enum.Material.CrackedLava, parent))
+	hot(glowPart(NP("Channel", Vector3.new(3.6, 0.3, len), cf * CFrame.new(0, 0.16, 0), LAVA, Enum.Material.Neon, parent)))
 	for k = 1, math.floor(len / 5) do
 		for _, x in ipairs({ -3.4, 3.4 }) do
 			local p = (cf * CFrame.new(x + rng:NextNumber(-0.3, 0.3), 0.4, -len / 2 + k * 5)).Position
 			deco(NP("BankRock", Vector3.new(1.3, rng:NextNumber(0.6, 1.2), 1.5), CFrame.new(p) * CFrame.Angles(0, rng:NextNumber(0, 6), 0.2), rockShade(), Enum.Material.Basalt, parent))
 		end
 	end
+	-- Lavafall: molten core, jagged crusted edges, a flowing surface and a
+	-- splash pool where it meets the sea.
 	local height = isle.surf - LAVA_SEA_Y
 	local edge = lip + out * 0.9
 	local top = edge - Vector3.new(0, height / 2 - 0.3, 0)
-	local sheet = glowPart(NP("Lavafall", Vector3.new(4.4, height, 1.4), CFrame.lookAt(top, top + out), LAVA, Enum.Material.Neon, parent))
-	sheet.Transparency = 0.05
-	local halo = glowPart(NP("LavafallGlow", Vector3.new(7.5, height, 3), CFrame.lookAt(top + out * 0.6, top + out * 1.6), LAVA_DARK, Enum.Material.Neon, parent))
-	halo.Transparency = 0.72
-	local crest = glowPart(NP("LavaCrest", Vector3.new(5, 1.2, 2), CFrame.lookAt(edge + Vector3.new(0, 0.15, 0), edge + Vector3.new(0, 0.15, 0) + out), LAVA_GLOW, Enum.Material.Neon, parent))
+	local fallCF = CFrame.lookAt(top, top + out)
+	local sheet = hot(glowPart(NP("Lavafall", Vector3.new(3.8, height, 1.2), fallCF, LAVA, Enum.Material.Neon, parent)))
+	local halo = glowPart(NP("LavafallGlow", Vector3.new(7, height, 3), fallCF * CFrame.new(0, 0, -0.6), LAVA_DARK, Enum.Material.Neon, parent))
+	halo.Transparency = 0.75
+	for _, x in ipairs({ -2.3, 2.3 }) do
+		local y = 0
+		while y < height - 0.5 do
+			local seg = math.min(rng:NextNumber(7, 15), height - y)
+			local chunk = deco(NP("FallCrust", Vector3.new(rng:NextNumber(0.9, 1.5), seg + 0.4, rng:NextNumber(1.5, 2.1)),
+				fallCF * CFrame.new(x + rng:NextNumber(-0.25, 0.25), height / 2 - y - seg / 2, rng:NextNumber(-0.2, 0.2)) * CFrame.Angles(0, 0, rng:NextNumber(-0.05, 0.05)),
+				crustShade(), Enum.Material.CrackedLava, parent))
+			chunk.CastShadow = false
+			y += seg
+		end
+	end
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, height / 2 - 0.4, -0.75)
+	a0.Parent = sheet
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, -height / 2 + 1, -0.75)
+	a1.Parent = sheet
+	for k, spec in ipairs({ { 4.6, 1.4, 12, 0.1 }, { 3.2, 2.3, 7, 0.35 } }) do
+		local flow = Instance.new("Beam")
+		flow.Name = "LavaFlow" .. k
+		flow.Attachment0 = a0
+		flow.Attachment1 = a1
+		flow.Texture = "rbxasset://textures/particles/fire_main.dds"
+		flow.TextureMode = Enum.TextureMode.Wrap
+		flow.TextureLength = spec[3]
+		flow.TextureSpeed = spec[2]
+		flow.Width0 = spec[1]
+		flow.Width1 = spec[1] * 1.15
+		flow.FaceCamera = true
+		flow.LightEmission = 1
+		flow.LightInfluence = 0
+		flow.Color = ColorSequence.new(LAVA_GLOW, LAVA)
+		flow.Transparency = NumberSequence.new(spec[4])
+		flow.Parent = sheet
+	end
+	local crest = hot(glowPart(NP("LavaCrest", Vector3.new(5, 1.2, 2), CFrame.lookAt(edge + Vector3.new(0, 0.15, 0), edge + Vector3.new(0, 0.15, 0) + out), LAVA_GLOW, Enum.Material.Neon, parent)))
 	light(crest, LAVA_GLOW, 22, 1.5)
+
+	local foot = Vector3.new(edge.X, LAVA_SEA_Y + 0.25, edge.Z)
+	table.insert(FALL_SPOTS, foot)
+	hot(glowPart(DISC("FallPool", 18, 0.5, foot, LAVA_GLOW, Enum.Material.Neon, parent)))
+	for k = 1, 7 do
+		local a = k / 7 * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
+		local p = foot + Vector3.new(math.cos(a) * 10, 0.4, math.sin(a) * 10)
+		deco(NP("PoolRock", Vector3.new(rng:NextNumber(3, 6), rng:NextNumber(1, 2.2), rng:NextNumber(3, 5)), CFrame.new(p) * CFrame.Angles(0, rng:NextNumber(0, 6), 0), crustShade(), Enum.Material.CrackedLava, parent))
+	end
+	local splash = marker("LavaSplash", foot + Vector3.new(0, 1, 0), parent)
+	smokeEmitter(splash, 3, 6, 24, 8, 9)
+	emberEmitter(splash, 12, 16, 40)
+	splash:SetAttribute("Radius", 7)
+	splash:SetAttribute("SurfaceY", foot.Y + 0.3)
+	CollectionService:AddTag(splash, "LavaVent")
 end
 
 -- ── Connections ──────────────────────────────────────────────────────────────
@@ -590,6 +685,7 @@ end
 
 function Volcano.Build(): Folder
 	local arena, spawns, powerPads = ArenaKit.SetupFolders(Workspace, Volcano.Name)
+	table.clear(FALL_SPOTS)
 
 	local I: { [string]: any } = {}
 	for key, spec in pairs(LAYOUT) do
@@ -747,10 +843,22 @@ function Volcano.Build(): Folder
 		local dist = rng:NextNumber(230, 330)
 		local h = rng:NextNumber(70, 140)
 		local w = rng:NextNumber(14, 26)
-		local p = Vector3.new(math.cos(a) * dist, LAVA_SEA_Y + h / 2 - 2, math.sin(a) * dist)
-		deco(NP("SeaSpire", Vector3.new(w, h, w * 0.8), CFrame.new(p) * CFrame.Angles(rng:NextNumber(-0.08, 0.08), rng:NextNumber(0, 6), rng:NextNumber(-0.08, 0.08)), rockShade(), Enum.Material.Basalt, scenery))
-		deco(NP("SeaSpireTop", Vector3.new(w * 0.6, h * 0.25, w * 0.5), CFrame.new(p + Vector3.new(rng:NextNumber(-2, 2), h * 0.55, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6), 0.12), rockShade(), Enum.Material.Basalt, scenery))
-		glowPart(NP("SeaSpireSeam", Vector3.new(0.8, h * 0.5, 0.5), CFrame.new(p + Vector3.new(0, -h * 0.1, -w * 0.4)), LAVA, Enum.Material.Neon, scenery))
+		-- Jagged stacked spire: a crusted, still-glowing base and tapering
+		-- basalt above, sitting in a ring of hot lava.
+		local base = Vector3.new(math.cos(a) * dist, LAVA_SEA_Y - 2, math.sin(a) * dist)
+		local y, ww = base.Y, w
+		for k, frac in ipairs({ 0.42, 0.34, 0.24 }) do
+			local hk = h * frac
+			local cf = CFrame.new(base.X + rng:NextNumber(-1.5, 1.5), y + hk / 2, base.Z + rng:NextNumber(-1.5, 1.5))
+				* CFrame.Angles(rng:NextNumber(-0.08, 0.08), rng:NextNumber(0, 6), rng:NextNumber(-0.08, 0.08))
+			deco(NP("SeaSpire", Vector3.new(ww, hk, ww * 0.8), cf, k == 1 and crustShade() or rockShade(), k == 1 and Enum.Material.CrackedLava or Enum.Material.Basalt, scenery))
+			if k == 2 then
+				glowPart(NP("SeaSpireSeam", Vector3.new(0.7, hk * 0.8, 0.4), cf * CFrame.new(ww * 0.2, 0, -ww * 0.41), LAVA, Enum.Material.Neon, scenery))
+			end
+			y += hk * 0.92
+			ww *= rng:NextNumber(0.62, 0.78)
+		end
+		hot(glowPart(DISC("SpireGlow", w * 1.9, 0.4, Vector3.new(base.X, LAVA_SEA_Y + 0.2, base.Z), LAVA_GLOW, Enum.Material.Neon, scenery)))
 	end
 	for i = 1, 26 do
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -767,23 +875,77 @@ function Volcano.Build(): Folder
 		end
 	end
 
-	-- Lava sea far below with dark crust plates.
-	glowPart(DISC("LavaSea", 1400, 2, Vector3.new(0, LAVA_SEA_Y - 1, 0), Color3.fromRGB(255, 92, 24), Enum.Material.Neon, scenery))
-	for _ = 1, 70 do
+	-- Lava sea: a molten glow underneath, brighter hot patches, and drifting
+	-- plates of cooled crust (CrackedLava) with glowing lava showing between.
+	-- LavaFX (client) drifts the crust, pulses the hot spots and pops bubbles.
+	glowPart(DISC("LavaSea", 1400, 2, Vector3.new(0, LAVA_SEA_Y - 1, 0), Color3.fromRGB(255, 96, 22), Enum.Material.Neon, scenery))
+	for _ = 1, 40 do
 		local a = rng:NextNumber(0, math.pi * 2)
-		local d = rng:NextNumber(0, 520)
-		deco(DISC("Crust", rng:NextNumber(18, 60), 0.8, Vector3.new(math.cos(a) * d, LAVA_SEA_Y + 0.2, math.sin(a) * d), BASALT:Lerp(Color3.fromRGB(30, 24, 30), rng:NextNumber()), Enum.Material.Basalt, scenery))
+		local d = rng:NextNumber(30, 460)
+		hot(glowPart(DISC("HotPatch", rng:NextNumber(20, 60), 0.3, Vector3.new(math.cos(a) * d, LAVA_SEA_Y + 0.05, math.sin(a) * d), LAVA_GLOW, Enum.Material.Neon, scenery)))
+	end
+	local function nearFall(p: Vector3, r: number): boolean
+		for _, s in ipairs(FALL_SPOTS) do
+			if (Vector3.new(s.X, 0, s.Z) - p).Magnitude < r then
+				return true
+			end
+		end
+		return false
+	end
+	local function crust(size: Vector3, cf: CFrame)
+		local plate = deco(NP("Crust", size, cf, crustShade(), Enum.Material.CrackedLava, scenery))
+		plate.CastShadow = false
+		CollectionService:AddTag(plate, "LavaCrust")
+	end
+	local SPACING = 60
+	for gx = -8, 8 do
+		for gz = -8, 8 do
+			local c = Vector3.new(gx * SPACING + rng:NextNumber(-10, 10), 0, gz * SPACING + rng:NextNumber(-10, 10))
+			if c.Magnitude < 480 and not nearFall(c, 24) then
+				local size = Vector3.new(rng:NextNumber(34, 52), rng:NextNumber(1.2, 2.2), rng:NextNumber(26, 46))
+				local cf = CFrame.new(c.X, LAVA_SEA_Y + 0.5, c.Z) * CFrame.Angles(rng:NextNumber(-0.02, 0.02), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.02, 0.02))
+				crust(size, cf)
+				if rng:NextNumber() < 0.7 then
+					local sub = Vector3.new(size.X * rng:NextNumber(0.45, 0.7), size.Y * 0.9, size.Z * rng:NextNumber(0.45, 0.7))
+					crust(sub, cf * CFrame.new(rng:NextNumber(-0.5, 0.5) * size.X, 0.2, rng:NextNumber(-0.5, 0.5) * size.Z) * CFrame.Angles(0, rng:NextNumber(0.3, 1.2), 0))
+				end
+			end
+		end
+	end
+	for _ = 1, 60 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local d = rng:NextNumber(20, 470)
+		local p = Vector3.new(math.cos(a) * d, LAVA_SEA_Y + 0.4, math.sin(a) * d)
+		if not nearFall(p, 16) then
+			crust(Vector3.new(rng:NextNumber(6, 14), rng:NextNumber(0.8, 1.4), rng:NextNumber(5, 12)), CFrame.new(p) * CFrame.Angles(0, rng:NextNumber(0, 6), 0))
+		end
+	end
+	local seaVent = marker("LavaSeaVent", Vector3.new(0, LAVA_SEA_Y + 0.6, 0), scenery)
+	seaVent:SetAttribute("Radius", 470)
+	seaVent:SetAttribute("SurfaceY", LAVA_SEA_Y + 0.4)
+	seaVent:SetAttribute("Sea", true)
+	CollectionService:AddTag(seaVent, "LavaVent")
+	for i = 1, 10 do
+		local a = i / 10 * math.pi * 2 + rng:NextNumber(-0.2, 0.2)
+		local d = rng:NextNumber(90, 230)
+		local src = marker("LavaHaze", Vector3.new(math.cos(a) * d, LAVA_SEA_Y + 1, math.sin(a) * d), scenery)
+		local haze = smokeEmitter(src, 1.2, 16, 46, 16, 6)
+		haze.Color = ColorSequence.new(Color3.fromRGB(120, 64, 56), Color3.fromRGB(52, 36, 40))
+		haze.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+		emberEmitter(src, 7, 14, 60)
 	end
 
-	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(255, 150, 120), 38, -66, -36, 50, 320, 0.22)
-	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(70, 52, 58), 14, 80, 115, 120, 320, 0.42)
+	-- Smoky haze drifting between the platforms and the sea, dusk sky.
+	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(96, 64, 62), 38, -66, -36, 50, 320, 0.45)
+	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(62, 46, 52), 14, 80, 115, 120, 320, 0.5)
 	ArenaKit.ApplyAtmosphere({
-		Density = 0.36, Offset = 0.1,
-		Color = Color3.fromRGB(255, 160, 112), Decay = Color3.fromRGB(190, 84, 70),
-		Glare = 0.8, Haze = 2.2,
-		Ambient = Color3.fromRGB(112, 72, 66), OutdoorAmbient = Color3.fromRGB(150, 100, 92),
-		ClockTime = 17.7, FogColor = Color3.fromRGB(120, 56, 40), FogEnd = 1200,
-		Brightness = 2.2,
+		Density = 0.42, Offset = 0.2,
+		Color = Color3.fromRGB(170, 82, 60), Decay = Color3.fromRGB(80, 30, 30),
+		Glare = 0, Haze = 2.6,
+		Ambient = Color3.fromRGB(128, 82, 72), OutdoorAmbient = Color3.fromRGB(168, 104, 88),
+		ClockTime = 17.9, FogColor = Color3.fromRGB(96, 44, 34), FogEnd = 1300,
+		Brightness = 1.6,
+		HideCelestial = true,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
 	return arena

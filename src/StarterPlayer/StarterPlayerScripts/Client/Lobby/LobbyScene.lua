@@ -460,8 +460,7 @@ local function buildMascot()
 		local dir = Vector3.new(-1, 0.06, -0.38).Unit
 		local z = dir:Cross(Vector3.yAxis).Unit
 		local gunCF = CFrame.fromMatrix(mid, dir, z:Cross(dir).Unit, z)
-		local gun = BlasterBuilder.Build(weaponId, skinId, gunCF)
-		scaleAbout(gun, gunCF, GUN_SCALE)
+		local gun = BlasterBuilder.Build(weaponId, skinId, gunCF, GUN_SCALE)
 		local grip = hands[1].Position.X > hands[2].Position.X and hands[1] or hands[2]
 		for _, p in ipairs(gun:GetDescendants()) do
 			if p:IsA("BasePart") then

@@ -240,7 +240,7 @@ end
 
 -- ── spawning ─────────────────────────────────────────────────────────────────
 local function spawnBot(botId: number, teamId: string, botName: string)
-	local model = CatBuilder.Build(nil, botName)
+	local model = CatBuilder.Build(nil, botName, { Id = "PawBlaster" })
 	model.Name = botName
 	model:SetAttribute("IsBot", true)
 	model:SetAttribute("Team", teamId)

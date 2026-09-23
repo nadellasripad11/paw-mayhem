@@ -52,9 +52,11 @@ function BlasterBuilder.PaletteFor(weaponId: string, skinId: string?): Palette
 end
 
 -- `base` places the whole gun (the previews use it for a 3/4 angle).
-function BlasterBuilder.Build(weaponId: string, skinId: string?, base: CFrame?): Model
+function BlasterBuilder.Build(weaponId: string, skinId: string?, base: CFrame?, scale: number?): Model
 	local pal = BlasterBuilder.PaletteFor(weaponId, skinId)
 	local origin = base or CFrame.identity
+	local s = scale or 1
+	local tip = Vector3.new(-math.huge, 0, 0) -- frontmost point, for the muzzle
 	local model = Instance.new("Model")
 	model.Name = weaponId
 
@@ -70,8 +72,11 @@ function BlasterBuilder.Build(weaponId: string, skinId: string?, base: CFrame?):
 		if shape then
 			p.Shape = shape
 		end
-		p.Size = size
-		p.CFrame = origin * CFrame.new(pos) * (rot or CFrame.identity)
+		p.Size = size * s
+		if pos.X + size.X / 2 > tip.X then
+			tip = Vector3.new(pos.X + size.X / 2, pos.Y, 0)
+		end
+		p.CFrame = origin * CFrame.new(pos * s) * (rot or CFrame.identity)
 		p.Color = color
 		p.Material = material or Enum.Material.SmoothPlastic
 		p.Parent = model
@@ -106,12 +111,12 @@ function BlasterBuilder.Build(weaponId: string, skinId: string?, base: CFrame?):
 		box(V(0.09, 0.3, 0.26), pos + V(0.42, -0.12, 0), pal.Dark)
 	end
 	-- Paw print decal on the show (+Z) side.
-	local function paw(x: number, y: number, z: number, color: Color3, s: number)
-		cyl(0.05, 0.36 * s, V(x, y, z), color, nil, ROT_Y90)
+	local function paw(x: number, y: number, z: number, color: Color3, ps: number)
+		cyl(0.05, 0.36 * ps, V(x, y, z), color, nil, ROT_Y90)
 		for i, a in ipairs({ -50, -15, 15, 50 }) do
 			local r = math.rad(a + 90)
 			local d = (i == 1 or i == 4) and 0.12 or 0.15
-			cyl(0.05, d * s, V(x + math.cos(r) * 0.27 * s, y + math.sin(r) * 0.27 * s, z), color, nil, ROT_Y90)
+			cyl(0.05, d * ps, V(x + math.cos(r) * 0.27 * ps, y + math.sin(r) * 0.27 * ps, z), color, nil, ROT_Y90)
 		end
 	end
 	local function muzzle(x: number, y: number, ringD: number, glowD: number, ringColor: Color3)
@@ -286,6 +291,17 @@ function BlasterBuilder.Build(weaponId: string, skinId: string?, base: CFrame?):
 
 	local build = builders[weaponId] or builders.PawBlaster
 	build()
+	-- Invisible marker at the front of the barrel; shots and flashes start here.
+	local m = Instance.new("Part")
+	m.Name = "MuzzlePoint"
+	m.Size = Vector3.one * 0.1
+	m.Transparency = 1
+	m.Anchored = true
+	m.CanCollide = false
+	m.CanQuery = false
+	m.CanTouch = false
+	m.CFrame = origin * CFrame.new((tip + Vector3.new(0.1, 0, 0)) * s)
+	m.Parent = model
 	return model
 end
 

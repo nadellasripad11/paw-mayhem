@@ -31,10 +31,17 @@ local function animate(emoteId: string)
 		return
 	end
 	playing = true
+	local char = player.Character
+	if char then
+		char:SetAttribute("Emoting", true)
+	end
 	local base = r.CFrame
 
 	local function restore()
 		playing = false
+		if char then
+			char:SetAttribute("Emoting", nil)
+		end
 	end
 
 	if emoteId == "Spin" then

@@ -182,10 +182,15 @@ local function step(dt: number)
 	end
 	camera.CFrame = finalCF
 
-	-- Rotate the character to face the aim yaw so shots go where you look.
+	-- Face where you aim, shooter-style, so the held blaster points at the
+	-- crosshair (the cat's front is its -Z, same as the camera's look).
 	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum and hum.MoveDirection.Magnitude < 0.05 then
-		-- face camera yaw while standing still
+	if hum and hum.Health > 0 and not char:GetAttribute("Emoting") then
+		hum.AutoRotate = false
+		local want = CFrame.Angles(0, yaw, 0)
+		if root.CFrame.LookVector:Dot(want.LookVector) < 0.9999 then
+			root.CFrame = CFrame.new(root.Position) * want
+		end
 	end
 end
 
@@ -215,6 +220,11 @@ function CameraController.SetEnabled(on: boolean)
 	lookTouch = nil
 	touchLastPos = nil
 	camDist = 0
+	local spawnRoot = on and player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if spawnRoot then
+		local lv = spawnRoot.CFrame.LookVector
+		yaw = math.atan2(-lv.X, -lv.Z)
+	end
 	if on then
 		lobbyView = false
 	end

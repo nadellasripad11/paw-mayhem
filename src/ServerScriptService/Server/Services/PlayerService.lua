@@ -115,7 +115,9 @@ function PlayerService.Spawn(player: Player)
 		player.Character = nil
 	end
 
-	local model = CatBuilder.Build(cat, player.DisplayName)
+	local loadout = profile and profile.Loadout
+	local weapon = { Id = loadout and loadout.Weapon or "PawBlaster", Skin = loadout and loadout.Skin or nil }
+	local model = CatBuilder.Build(cat, player.DisplayName, weapon)
 	model.Name = player.Name
 
 	-- Team accent ring under the cat for readability.

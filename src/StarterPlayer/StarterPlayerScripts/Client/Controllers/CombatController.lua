@@ -37,6 +37,11 @@ local function muzzlePosition(): Vector3
 	if not root then
 		return Vector3.new()
 	end
+	-- Shots leave the barrel of the blaster the cat is holding.
+	local tip = char and char:FindFirstChild("MuzzlePoint", true)
+	if tip and tip:IsA("BasePart") then
+		return tip.Position
+	end
 	-- The custom camera can look independently from the Humanoid's current
 	-- facing direction. Place the visual muzzle on the camera's horizontal aim
 	-- so the local flash, server origin validation, and crosshair all agree.
