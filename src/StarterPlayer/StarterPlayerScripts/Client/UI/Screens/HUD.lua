@@ -1,23 +1,21 @@
 --!strict
--- HUD: in-match heads-up display (mirrors the second reference).
---   * Team scores + match timer (top center)
---   * Kill feed (top right)
---   * Mini scoreboard (top left)
---   * Center crosshair with hit/kick feedback
---   * Health bar + active power-up (bottom left)
---   * Weapon name + unlimited ammo (bottom right)
---   * Elimination banner + "Get Ready" countdown + Victory/Defeat
---   * Mobile touch controls (fire / jump / sprint)
+-- HUD: in-match heads-up display, kept deliberately minimal:
+--   * Center crosshair with shot/hit kick
+--   * Compact health bar + active power-up (bottom left)
+--   * Small weapon + ammo pill (bottom center)
+--   * Mobile only: FIRE / JUMP / RUN buttons (bottom right)
+--   * Transient banners: countdown, Get Ready, Eliminated, notices
+-- Roblox's player list, health bar, backpack and mobile jump button are hidden
+-- so they don't duplicate or clutter it.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
+local StarterGui = game:GetService("StarterGui")
 
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
 local Weapons = require(Shared.Config.Weapons)
-local GameConfig = require(Shared.Config.GameConfig)
 local Progression = require(Shared.Config.Progression)
 
 local Theme = require(script.Parent.Parent.Theme)
@@ -82,212 +80,83 @@ local function kickCrosshair()
 	UIUtil.tween(c, 0.15, { Size = UDim2.fromOffset(28, 28) })
 end
 
--- ── top center: scores + timer ──────────────────────────────────────────────
-local function buildTopBar(parent, topInset)
-	local bar = UIUtil.make("Frame", {
-		Parent = parent,
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, topInset + 12),
-		Size = UDim2.fromOffset(330, 58),
-		BackgroundTransparency = 1,
-	})
-	local blueTile = UIUtil.panel({
-		Parent = bar, Size = UDim2.fromOffset(90, 56),
-		BackgroundColor3 = Color3.fromRGB(24, 119, 225),
-	})
-	local blue = UIUtil.label({
-		Parent = blueTile, Text = "0", Font = Theme.Font.Number, TextSize = 30,
-		TextColor3 = Theme.Color.Text, TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.new(0, 80, 1, 0), Position = UDim2.fromScale(0, 0),
-	})
-	local mid = UIUtil.panel({
-		Parent = bar, BackgroundColor3 = Theme.Color.PanelDark,
-		Size = UDim2.fromOffset(150, 56), Position = UDim2.new(0.5, -75, 0, 0),
-	})
-	local timer = UIUtil.label({
-		Parent = mid, Text = "3:00", Font = Theme.Font.Heading, TextSize = 22,
-		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 4),
-	})
-	UIUtil.label({
-		Parent = mid, Text = "TDM", Font = Theme.Font.Bold, TextSize = 11,
-		TextColor3 = Theme.Color.TextMuted, TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 32),
-	})
-	local redTile = UIUtil.panel({
-		Parent = bar, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.fromOffset(90, 56), BackgroundColor3 = Color3.fromRGB(236, 64, 76),
-	})
-	local red = UIUtil.label({
-		Parent = redTile, Text = "0", Font = Theme.Font.Number, TextSize = 30,
-		TextColor3 = Theme.Color.Text, TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.fromScale(1, 1),
-	})
-	refs.blueScore, refs.redScore, refs.timer = blue, red, timer
-end
-
--- ── kill feed (top right) ────────────────────────────────────────────────────
-local function buildKillFeed(parent, topInset)
-	local feed = UIUtil.make("Frame", {
-		Parent = parent,
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -12, 0, topInset + 12),
-		Size = UDim2.fromOffset(280, 140),
-		BackgroundTransparency = 1,
-	})
-	local layout = UIUtil.listLayout(feed, 4)
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-	refs.killFeed = feed
-end
-
-local function addKillFeedEntry(data)
-	if not refs.killFeed then return end
-	local row = UIUtil.panel({
-		Parent = refs.killFeed,
-		Size = UDim2.fromOffset(0, 26),
-		AutomaticSize = Enum.AutomaticSize.X,
-		BackgroundColor3 = Theme.Color.PanelDark,
-		BackgroundTransparency = 0.1,
-	})
-	UIUtil.padding(6, row)
-	UIUtil.listLayout(row, 6, Enum.FillDirection.Horizontal).VerticalAlignment = Enum.VerticalAlignment.Center
-	local kColor = data.killerTeam == "Red" and Theme.Color.Red or Theme.Color.Blue
-	local vColor = data.victimTeam == "Red" and Theme.Color.Red or Theme.Color.Blue
-	UIUtil.label({ Parent = row, Text = tostring(data.killer), TextColor3 = kColor, Font = Theme.Font.Bold, TextSize = 14, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18) })
-	local weapon = data.weaponId and Weapons.Get(data.weaponId)
-	local iconSlot = UIUtil.make("Frame", { Parent = row, Size = UDim2.fromOffset(20, 18), BackgroundTransparency = 1 })
-	if data.ringout then
-		Icons.Place("Burst", iconSlot, 16, Theme.Color.Warn)
-	else
-		Icons.Place("Gun", iconSlot, 16, (weapon and weapon.TrailColor) or Theme.Color.TextDim)
-	end
-	UIUtil.label({ Parent = row, Text = tostring(data.victim), TextColor3 = vColor, Font = Theme.Font.Bold, TextSize = 14, AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18) })
-
-	task.delay(5, function()
-		if row and row.Parent then
-			row:Destroy()
-		end
-	end)
-	-- cap entries
-	local kids = refs.killFeed:GetChildren()
-	local count = 0
-	for _, k in ipairs(kids) do
-		if k:IsA("Frame") then count += 1 end
-	end
-	if count > 5 then
-		for _, k in ipairs(kids) do
-			if k:IsA("Frame") then k:Destroy() break end
-		end
-	end
-end
-
--- ── mini scoreboard (top left) ───────────────────────────────────────────────
-local function buildScoreboard(parent, topInset)
-	local sb = UIUtil.panel({
-		Parent = parent,
-		Position = UDim2.fromOffset(12, topInset + 12),
-		Size = UDim2.fromOffset(190, 176),
-		BackgroundColor3 = Theme.Color.PanelDark,
-		BackgroundTransparency = 0.1,
-	})
-	UIUtil.padding(8, sb)
-	local list = UIUtil.make("Frame", { Parent = sb, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) })
-	UIUtil.listLayout(list, 3)
-	refs.scoreboard = list
-end
-
-local function updateScoreboard(board)
-	if not refs.scoreboard then return end
-	refs.scoreboard:ClearAllChildren()
-	UIUtil.listLayout(refs.scoreboard, 3)
-	for i, entry in ipairs(board) do
-		if i > 8 then break end
-		local row = UIUtil.make("Frame", { Parent = refs.scoreboard, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 18), LayoutOrder = i })
-		local color = entry.Team == "Red" and Theme.Color.Red or Theme.Color.Blue
-		UIUtil.label({ Parent = row, Text = tostring(i), TextColor3 = Theme.Color.TextMuted, TextSize = 12, Size = UDim2.fromOffset(16, 18) })
-		UIUtil.label({ Parent = row, Text = entry.Display or entry.Name, TextColor3 = color, TextSize = 13, Font = Theme.Font.Bold, Position = UDim2.fromOffset(20, 0), Size = UDim2.new(1, -60, 1, 0) })
-		UIUtil.label({ Parent = row, Text = tostring(entry.Elims), TextColor3 = Theme.Color.Text, TextSize = 13, Font = Theme.Font.Number, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(1, -40, 0, 0), Size = UDim2.fromOffset(40, 18) })
-	end
-end
-
--- ── bottom left: health + power-up ───────────────────────────────────────────
-local function buildBottomLeft(parent)
+-- ── bottom left: compact health + power-up ───────────────────────────────────
+local function buildHealth(parent)
 	local wrap = UIUtil.make("Frame", {
 		Parent = parent,
 		AnchorPoint = Vector2.new(0, 1),
-		Position = UDim2.new(0, 12, 1, -12),
-		Size = UDim2.fromOffset(326, 68),
+		Position = UDim2.new(0, 14, 1, -14),
+		Size = UDim2.fromOffset(200, 28),
 		BackgroundTransparency = 1,
 	})
-	local portrait = UIUtil.panel({ Parent = wrap, Position = UDim2.fromOffset(0, 0), Size = UDim2.fromOffset(58, 58), BackgroundColor3 = Theme.Color.PanelDark })
-	local portraitSlot = UIUtil.make("Frame", { Parent = portrait, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
-	Icons.Place("CatFace", portraitSlot, 48, Color3.fromRGB(245, 245, 245), Color3.fromRGB(255, 184, 198))
-	UIUtil.label({ Parent = wrap, Text = "CAT HEALTH", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(70, 2), Size = UDim2.fromOffset(200, 16) })
+	local badge = UIUtil.make("Frame", {
+		Parent = wrap, Size = UDim2.fromOffset(28, 28),
+		BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), badge)
+	UIUtil.stroke(Theme.Color.Stroke, 1.5, badge)
+	Icons.Place("CatFace", badge, 22, Color3.fromRGB(245, 245, 245), Color3.fromRGB(255, 184, 198))
+
 	local track = UIUtil.make("Frame", {
-		Parent = wrap, Position = UDim2.fromOffset(70, 25), Size = UDim2.fromOffset(220, 22),
-		BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0,
+		Parent = wrap, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 34, 0.5, 0),
+		Size = UDim2.fromOffset(128, 14), BackgroundColor3 = Theme.Color.PanelDark,
+		BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	})
 	UIUtil.corner(UDim.new(1, 0), track)
 	UIUtil.stroke(Theme.Color.Stroke, 1.5, track)
 	local fill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Color.Success, BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(1, 0), fill)
 	UIUtil.gradient(Color3.fromRGB(120, 230, 140), Color3.fromRGB(80, 190, 110), 0, fill)
-	local hpText = UIUtil.label({ Parent = track, Text = "100", Font = Theme.Font.Number, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 2 })
-
-	local power = UIUtil.panel({
-		Parent = wrap, Position = UDim2.fromOffset(286, 12), Size = UDim2.fromOffset(40, 40),
-		BackgroundColor3 = Theme.Color.PanelDark, Visible = false,
+	local hpText = UIUtil.label({
+		Parent = track, Text = "100", Font = Theme.Font.Number, TextSize = 11,
+		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 2,
+		TextStrokeTransparency = 0.6,
 	})
+
+	local power = UIUtil.make("Frame", {
+		Parent = wrap, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 168, 0.5, 0),
+		Size = UDim2.fromOffset(26, 26), BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0, Visible = false,
+	})
+	UIUtil.corner(UDim.new(1, 0), power)
 	local powerIconSlot = UIUtil.make("Frame", { Parent = power, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
 
 	refs.hpFill, refs.hpText, refs.power, refs.powerIconSlot = fill, hpText, power, powerIconSlot
 end
 
--- ── bottom right: weapon + ammo ──────────────────────────────────────────────
-local function buildBottomRight(parent)
-	local wrap = UIUtil.panel({
+-- ── bottom center: weapon + ammo ─────────────────────────────────────────────
+local function buildAmmo(parent)
+	local pill = UIUtil.make("Frame", {
 		Parent = parent,
-		AnchorPoint = Vector2.new(1, 1),
-		Position = UDim2.new(1, -12, 1, -12),
-		Size = UDim2.fromOffset(184, 62),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -10),
+		Size = UDim2.fromOffset(0, 28),
+		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = Theme.Color.PanelDark,
+		BackgroundTransparency = 0.15,
+		BorderSizePixel = 0,
 	})
-	UIUtil.padding(8, wrap)
-	local name = UIUtil.label({ Parent = wrap, Text = "Paw Blaster", Font = Theme.Font.Heading, TextSize = 15, Size = UDim2.new(1, -58, 0, 20) })
-	UIUtil.label({ Parent = wrap, Text = "16  ∞", Font = Theme.Font.Number, TextSize = 25, TextColor3 = Theme.Color.Text, Size = UDim2.new(1, -58, 0, 26), Position = UDim2.fromOffset(0, 23) })
-	local icon = UIUtil.make("Frame", { Parent = wrap, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0 })
-	UIUtil.corner(Theme.CornerSmall, icon)
-	local iconSlot = UIUtil.make("Frame", { Parent = icon, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
-	refs.weaponName, refs.weaponIcon, refs.weaponIconSlot = name, icon, iconSlot
-end
+	UIUtil.corner(UDim.new(1, 0), pill)
+	UIUtil.stroke(Theme.Color.Stroke, 1.5, pill)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 12)
+	pad.Parent = pill
+	local layout = UIUtil.listLayout(pill, 6, Enum.FillDirection.Horizontal)
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- ── bottom center: contextual action slots ──────────────────────────────────
--- These are intentionally visual-only affordances: the existing movement and
--- combat controllers retain authority, while this gives their controls the
--- same instantly-readable presentation as the reference fight screen.
-local function buildAbilityBar(parent)
-	local wrap = UIUtil.make("Frame", {
-		Parent = parent, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -12),
-		Size = UDim2.fromOffset(238, 70), BackgroundTransparency = 1,
+	local iconSlot = UIUtil.make("Frame", { Parent = pill, Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1, LayoutOrder = 1 })
+	local name = UIUtil.label({
+		Parent = pill, Text = "PAW BLASTER", Font = Theme.Font.Bold, TextSize = 12,
+		TextColor3 = Theme.Color.TextDim, AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 16), LayoutOrder = 2,
 	})
-	local function actionSlot(x: number, key: string, title: string, color: Color3, iconName: string)
-		local slot = UIUtil.panel({ Parent = wrap, Position = UDim2.fromOffset(x, 8), Size = UDim2.fromOffset(62, 62), BackgroundColor3 = Theme.Color.PanelDark })
-		local icon = UIUtil.make("Frame", { Parent = slot, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.14), Size = UDim2.fromOffset(28, 28), BackgroundColor3 = color, BorderSizePixel = 0 })
-		UIUtil.corner(UDim.new(0.28, 0), icon)
-		Icons.Place(iconName, icon, 17, Theme.Color.Text)
-		UIUtil.label({ Parent = slot, Text = title, Font = Theme.Font.Bold, TextSize = 9, TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 39), Size = UDim2.new(1, 0, 0, 13) })
-		local keyTile = UIUtil.make("TextLabel", { Parent = slot, Text = key, Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Text, Position = UDim2.fromOffset(43, 4), Size = UDim2.fromOffset(14, 14), BackgroundColor3 = Theme.Color.Panel, BorderSizePixel = 0 })
-		UIUtil.corner(UDim.new(0.28, 0), keyTile)
-	end
-	actionSlot(0, "Q", "DASH", Theme.Color.Accent2, "Bolt")
-	local weaponSlot = UIUtil.panel({ Parent = wrap, Position = UDim2.fromOffset(78, 0), Size = UDim2.fromOffset(76, 70), BackgroundColor3 = Color3.fromRGB(73, 36, 114) })
-	UIUtil.stroke(Theme.Color.Gem, 2, weaponSlot)
-	local weaponPreview = UIUtil.make("Frame", { Parent = weaponSlot, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.10), Size = UDim2.fromOffset(38, 38), BackgroundColor3 = Theme.Color.Gem, BorderSizePixel = 0 })
-	UIUtil.corner(UDim.new(0.28, 0), weaponPreview)
-	local weaponPreviewSlot = UIUtil.make("Frame", { Parent = weaponPreview, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
-	Icons.Place("Gun", weaponPreviewSlot, 23, Theme.Color.Text)
-	UIUtil.label({ Parent = weaponSlot, Text = "PRIMARY", Font = Theme.Font.Bold, TextSize = 9, TextColor3 = Theme.Color.Text, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 50), Size = UDim2.new(1, 0, 0, 13) })
-	actionSlot(176, "E", "SPRINT", Theme.Color.Warn, "Burst")
-	refs.weaponAbility, refs.weaponAbilitySlot = weaponPreview, weaponPreviewSlot
+	UIUtil.label({
+		Parent = pill, Text = "∞", Font = Theme.Font.Number, TextSize = 18,
+		TextColor3 = Theme.Color.Text, AutomaticSize = Enum.AutomaticSize.X,
+		Size = UDim2.fromOffset(0, 20), LayoutOrder = 3,
+	})
+	refs.weaponName, refs.weaponIconSlot = name, iconSlot
 end
 
 -- ── center banners ───────────────────────────────────────────────────────────
@@ -336,44 +205,132 @@ function HUD.HideBig()
 end
 
 -- ── mobile controls ──────────────────────────────────────────────────────────
+local function touchButton(parent, name: string, pos: UDim2, d: number, color: Color3, iconName: string, label: string)
+	local b = Instance.new("TextButton")
+	b.Name = name
+	b.Text = ""
+	b.AutoButtonColor = false
+	b.AnchorPoint = Vector2.new(0.5, 0.5)
+	b.Position = pos
+	b.Size = UDim2.fromOffset(d, d)
+	b.BackgroundColor3 = Color3.fromRGB(16, 22, 40)
+	b.BackgroundTransparency = 0.3
+	b.BorderSizePixel = 0
+	b.Parent = parent
+	UIUtil.corner(UDim.new(1, 0), b)
+	local ring = UIUtil.stroke(color, 3, b)
+	local tint = UIUtil.make("Frame", {
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, -8, 1, -8), BackgroundColor3 = color, BackgroundTransparency = 0.72, BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), tint)
+	Icons.Place(iconName, b, math.floor(d * 0.46), Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.43))
+	UIUtil.label({
+		Parent = b, Text = label, Font = Theme.Font.Bold, TextSize = d >= 80 and 11 or 9,
+		TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
+		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.8),
+		Size = UDim2.new(1, 0, 0, 12), TextStrokeTransparency = 0.6,
+	})
+	local scale = Instance.new("UIScale")
+	scale.Parent = b
+	local function setLit(on: boolean)
+		tint.BackgroundTransparency = on and 0.35 or 0.72
+		ring.Thickness = on and 4 or 3
+	end
+	local function setPressed(on: boolean)
+		scale.Scale = on and 0.92 or 1
+	end
+	return b, setLit, setPressed
+end
+
+-- Hides Roblox's built-in mobile jump button; ours replaces it.
+local function hideDefaultJumpButton()
+	local pg = player:WaitForChild("PlayerGui")
+	local function hook(inst: Instance)
+		if inst.Name == "JumpButton" and inst:IsA("GuiObject") and inst:FindFirstAncestor("TouchGui") then
+			local g = inst :: GuiObject
+			g.Visible = false
+			g:GetPropertyChangedSignal("Visible"):Connect(function()
+				if g.Visible then
+					g.Visible = false
+				end
+			end)
+		end
+	end
+	for _, d in ipairs(pg:GetDescendants()) do
+		hook(d)
+	end
+	pg.DescendantAdded:Connect(hook)
+end
+
 local function buildMobile(parent)
 	if not isMobile() then return end
-	local function touchButton(pos, size, text, color)
-		local b = UIUtil.button({
-			Parent = parent, AnchorPoint = Vector2.new(1, 1), Position = pos, Size = size,
-			BackgroundColor3 = color, Text = text, TextSize = 22, CornerRadius = UDim.new(1, 0),
-			BackgroundTransparency = 0.15,
-		})
-		UIUtil.stroke(Color3.fromRGB(255, 255, 255), 2, b).Transparency = 0.5
-		return b
+	local function isPress(input: InputObject): boolean
+		return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
 	end
-	local fire = touchButton(UDim2.new(1, -30, 1, -90), UDim2.fromOffset(96, 96), "FIRE", Theme.Color.Danger)
-	fire.MouseButton1Down:Connect(function() CombatController.SetFiring(true) end)
-	fire.MouseButton1Up:Connect(function() CombatController.SetFiring(false) end)
 
-	local jump = touchButton(UDim2.new(1, -140, 1, -60), UDim2.fromOffset(74, 74), "JUMP", Theme.Color.Accent)
-	jump.MouseButton1Down:Connect(function()
-		local char = player.Character
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
-		if hum then hum.Jump = true end
+	-- FIRE tracks the exact touch, so sliding a finger off the button still
+	-- stops firing when it lifts.
+	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -78, 1, -104), 92, Theme.Color.Danger, "Reticle", "FIRE")
+	local fireInput: InputObject? = nil
+	fire.InputBegan:Connect(function(input)
+		if isPress(input) and not fireInput then
+			fireInput = input
+			CombatController.SetFiring(true)
+			firePressed(true)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input == fireInput then
+			fireInput = nil
+			CombatController.SetFiring(false)
+			firePressed(false)
+		end
 	end)
 
-	local sprint = touchButton(UDim2.new(1, -140, 1, -150), UDim2.fromOffset(74, 74), "RUN", Theme.Color.Accent2)
-	sprint.MouseButton1Click:Connect(function() MovementController.ToggleSprint() end)
+	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -180, 1, -58), 66, Theme.Color.Accent, "JumpArrow", "JUMP")
+	jump.InputBegan:Connect(function(input)
+		if isPress(input) then
+			jumpPressed(true)
+			local char = player.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			if hum then hum.Jump = true end
+		end
+	end)
+	jump.InputEnded:Connect(function(input)
+		if isPress(input) then jumpPressed(false) end
+	end)
+
+	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -170, 1, -160), 58, Theme.Color.Warn, "Dash", "RUN")
+	run.InputBegan:Connect(function(input)
+		if isPress(input) then
+			runPressed(true)
+			MovementController.ToggleSprint()
+		end
+	end)
+	run.InputEnded:Connect(function(input)
+		if isPress(input) then runPressed(false) end
+	end)
+	MovementController.SprintChanged = runLit
+	runLit(MovementController.IsSprinting())
+
+	task.spawn(hideDefaultJumpButton)
+end
+
+-- Roblox's own player list / health bar / backpack would clutter the HUD.
+local function hideCoreGui()
+	for _ = 1, 20 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+		end)
+		if ok then return end
+		task.wait(0.5)
+	end
 end
 
 -- ── updates ──────────────────────────────────────────────────────────────────
-local function onMatch(m)
-	if refs.blueScore then
-		refs.blueScore.Text = tostring(m.scores.Blue or 0)
-		refs.redScore.Text = tostring(m.scores.Red or 0)
-		local mins = math.floor((m.timeLeft or 0) / 60)
-		local secs = (m.timeLeft or 0) % 60
-		refs.timer.Text = string.format("%d:%02d", mins, secs)
-	end
-	if m.board then updateScoreboard(m.board) end
-end
-
 local function updateHealth()
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -389,20 +346,9 @@ local function updateWeapon()
 	if profile and refs.weaponName then
 		local w = Weapons.Get(profile.Loadout.Weapon)
 		if w then
-			refs.weaponName.Text = w.Name
-			local skin = Weapons.GetSkin(profile.Loadout.Skin)
-			refs.weaponIcon.BackgroundColor3 = skin.Tint
-			if refs.weaponIconSlot then
-				refs.weaponIconSlot:ClearAllChildren()
-				Icons.Place("Gun", refs.weaponIconSlot, 22, w.TrailColor, w.MuzzleColor)
-			end
-			if refs.weaponAbility then
-				refs.weaponAbility.BackgroundColor3 = skin.Tint
-			end
-			if refs.weaponAbilitySlot then
-				refs.weaponAbilitySlot:ClearAllChildren()
-				Icons.Place("Gun", refs.weaponAbilitySlot, 23, w.TrailColor, w.MuzzleColor)
-			end
+			refs.weaponName.Text = string.upper(w.Name)
+			refs.weaponIconSlot:ClearAllChildren()
+			Icons.Place(w.Icon or "Gun", refs.weaponIconSlot, 20, w.TrailColor, w.MuzzleColor)
 		end
 	end
 end
@@ -417,24 +363,17 @@ function HUD.Build()
 		IgnoreGuiInset = true, ResetOnSpawn = false, DisplayOrder = 5, Enabled = false,
 	}) :: ScreenGui
 
-	local topInset = UIUtil.topInset()
+	task.spawn(hideCoreGui)
 
 	buildCrosshair(gui)
-	buildTopBar(gui, topInset)
-	buildKillFeed(gui, topInset)
-	buildScoreboard(gui, topInset)
-	buildBottomLeft(gui)
-	buildBottomRight(gui)
-	buildAbilityBar(gui)
+	buildHealth(gui)
+	buildAmmo(gui)
 	buildBanners(gui)
 	buildMobile(gui)
 
-	-- Hooks
-	ClientState.MatchChanged:Connect(onMatch)
 	ClientState.ProfileChanged:Connect(updateWeapon)
 
-	Remotes.Get("KillFeed").OnClientEvent:Connect(addKillFeedEntry)
-	Remotes.Get("Eliminated").OnClientEvent:Connect(function(data)
+	Remotes.Get("Eliminated").OnClientEvent:Connect(function()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
 	end)
 	Remotes.Get("Notify").OnClientEvent:Connect(function(data)
@@ -445,25 +384,21 @@ function HUD.Build()
 		if p and refs.power then
 			refs.power.Visible = true
 			refs.power.BackgroundColor3 = p.Color
-			if refs.powerIconSlot then
-				refs.powerIconSlot:ClearAllChildren()
-				Icons.Place(POWERUP_ICON[data.powerId] or "Sparkle", refs.powerIconSlot, 24, Color3.new(1, 1, 1))
-			end
+			refs.powerIconSlot:ClearAllChildren()
+			Icons.Place(POWERUP_ICON[data.powerId] or "Sparkle", refs.powerIconSlot, 18, Color3.new(1, 1, 1))
 			task.delay(data.duration or 10, function()
 				if refs.power then refs.power.Visible = false end
 			end)
 		end
 	end)
 
-	EffectsController.OnHitConfirm = function(data)
+	EffectsController.OnHitConfirm = function()
 		kickCrosshair()
-		HUD.ShowElim(string.format("HIT  •  %d fluff", math.floor(data.accumulated or 0)))
 	end
 	CombatController.OnLocalShot = function()
 		kickCrosshair()
 	end
 
-	-- health + weapon refresh loop
 	task.spawn(function()
 		while gui.Parent do
 			updateHealth()

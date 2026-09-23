@@ -572,7 +572,7 @@ end
 local function bridgeBraziers(isle: any)
 	for i, a in ipairs(isle.links) do
 		local d = isle.r - 3.5
-		local b = a + (i % 2 == 0 and 1 or -1) * math.asin(math.min(0.95, 5.2 / d))
+		local b = a + (i % 2 == 0 and 1 or -1) * math.asin(math.min(0.95, 6.4 / d))
 		local p = ArenaKit.Polar(isle, b, d)
 		makeBrazier(p, isle.folder)
 		ArenaKit.Reserve(isle, p, 1.8)

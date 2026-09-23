@@ -27,6 +27,7 @@ Remotes.Definitions = {
 	KillFeed = "Event", -- {killer, victim, weaponId}
 	HitConfirm = "Event", -- {victim, damage, knockback} to shooter for feedback
 	YouWereHit = "Event", -- {from, direction} to victim for shake/blood
+	Launch = "Event", -- {velocity} to victim; its client applies the knockback
 	Eliminated = "Event", -- {by, xp} to victim
 	ScoreUpdate = "Event", -- {blue, red, board = {...}}
 	ProfileUpdate = "Event", -- full/partial player profile (coins, xp, unlocks...)

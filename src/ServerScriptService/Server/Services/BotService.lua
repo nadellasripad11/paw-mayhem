@@ -22,10 +22,10 @@ local Runtime         = require(script.Parent.Runtime)
 local BotService = {}
 
 -- ── difficulty knobs ────────────────────────────────────────────────────────
-local AIM_ERROR_DEG    = 4.5   -- extra aim scatter (degrees)
-local REACTION_SECS    = 0.7   -- delay before firing at a new target
-local BOT_FIRE_INTERVAL = 0.50 -- minimum seconds between shots
-local ATTACK_RANGE     = 120   -- studs: stop chasing and start shooting
+local AIM_ERROR_DEG    = 8.0   -- extra aim scatter (degrees)
+local REACTION_SECS    = 1.0   -- delay before firing at a new target
+local BOT_FIRE_INTERVAL = 1.10 -- minimum seconds between shots
+local ATTACK_RANGE     = 75    -- studs: stop chasing and start shooting
 local CHASE_SPEED      = 18
 local PATROL_SPEED     = 12
 
@@ -173,7 +173,7 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	vHum:TakeDamage(dmg * 0.5)
 	vState.LastAttackAt = os.clock()
 
-	local dV     = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, 1)
+	local dV     = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, 0.6)
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
 	vState.StunUntil = os.clock() + GameConfig.Character.LaunchStunSeconds

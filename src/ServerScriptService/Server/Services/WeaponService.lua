@@ -130,44 +130,14 @@ local function firePellet(player: Player, weapon, origin: Vector3, dir: Vector3,
 	})
 end
 
--- Per-victim launch token so overlapping hits don't restore ownership early.
-local launchTokens: { [Player]: number } = {}
-
--- Take server network ownership, apply the impulse, and restore client ownership
--- after the launch settles (or a max window elapses).
-function WeaponService.ApplyLaunch(victim: Player, hum: Humanoid, root: BasePart, impulse: Vector3)
-	launchTokens[victim] = (launchTokens[victim] or 0) + 1
-	local token = launchTokens[victim]
-
-	pcall(function()
-		if not root.Anchored then
-			root:SetNetworkOwner(nil) -- server authority
-		end
-	end)
-	hum.PlatformStand = true
-	root:ApplyImpulse(impulse)
-
-	local LAUNCH_WINDOW = 1.4
-	task.delay(LAUNCH_WINDOW, function()
-		-- Only the latest launch restores control.
-		if launchTokens[victim] ~= token then
-			return
-		end
-		local char = victim.Character
-		if not char then
-			return
-		end
-		local h = char:FindFirstChildOfClass("Humanoid")
-		local r = char.PrimaryPart
-		if h then
-			h.PlatformStand = false
-		end
-		pcall(function()
-			if r and not r.Anchored and victim.Parent then
-				r:SetNetworkOwner(victim)
-			end
-		end)
-	end)
+-- The victim's client owns its character's physics, so the launch is sent to
+-- that client to apply. Taking server ownership instead froze the player's
+-- controls and rubber-banded their cat on every hit.
+function WeaponService.ApplyLaunch(victim: Player, _hum: Humanoid, root: BasePart, impulse: Vector3)
+	local mass = root.AssemblyMass
+	if mass > 0 then
+		Remotes.Get("Launch"):FireClient(victim, { velocity = impulse / mass })
+	end
 end
 
 -- Apply damage + knockback to a victim (server authority).
@@ -201,11 +171,7 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	vState.LastAttacker = shooter
 	vState.LastAttackAt = os.clock()
 
-	-- Knockback impulse (mass-correct). Because the client normally owns its own
-	-- character's physics, the server temporarily takes network ownership so the
-	-- launch is authoritative and can't be ignored client-side; ownership returns
-	-- after the launch window. PlatformStand stops the Humanoid controller from
-	-- immediately damping the velocity.
+	-- Knockback impulse (mass-correct), applied by the victim's own client.
 	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * (1 - knockResist))
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
@@ -297,7 +263,6 @@ function WeaponService.Start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastFire[player] = nil
-		launchTokens[player] = nil
 		limiter:Clear(player)
 	end)
 end

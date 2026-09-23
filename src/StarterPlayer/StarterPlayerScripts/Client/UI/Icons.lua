@@ -584,10 +584,68 @@ function Icons.Plus(size: number, color: Color3): Frame
 end
 
 -- Registry so callers can pass a string key (used by itemCard/Icons.Draw).
+-- ── Reticle (mobile FIRE button) ─────────────────────────────────────────────
+function Icons.Reticle(size: number, color: Color3): Frame
+	local f = base(size)
+	local ring = circle(f, size * 0.6, color)
+	ring.BackgroundTransparency = 1
+	pos(ring, size * 0.5, size * 0.5)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = math.max(2, size * 0.09)
+	s.Parent = ring
+	for _, d in ipairs({ { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 } }) do
+		local horiz = d[1] ~= 0
+		local tick = chip(f, horiz and size * 0.22 or size * 0.1, horiz and size * 0.1 or size * 0.22, color, 0.5)
+		pos(tick, size * (0.5 + d[1] * 0.38), size * (0.5 + d[2] * 0.38))
+	end
+	local dot = circle(f, size * 0.16, color)
+	pos(dot, size * 0.5, size * 0.5)
+	return f
+end
+
+-- ── Up arrow off a ground line (mobile JUMP button) ──────────────────────────
+function Icons.JumpArrow(size: number, color: Color3): Frame
+	local f = base(size)
+	local t = size * 0.15
+	local len = size * 0.42
+	local apex = size * 0.2
+	for _, side in ipairs({ -1, 1 }) do
+		local arm = chip(f, len, t, color, 0.5)
+		pos(arm, size * 0.5 + side * len * 0.33, apex + len * 0.33, side * 45)
+	end
+	local stem = chip(f, t, size * 0.44, color, 0.5)
+	pos(stem, size * 0.5, apex + size * 0.24)
+	local ground = chip(f, size * 0.56, size * 0.1, color, 0.5)
+	pos(ground, size * 0.5, size * 0.84)
+	ground.BackgroundTransparency = 0.35
+	return f
+end
+
+-- ── Paw with speed lines (mobile RUN button) ─────────────────────────────────
+function Icons.Dash(size: number, color: Color3): Frame
+	local f = base(size)
+	local paw = Icons.Paw(size * 0.66, color)
+	paw.AnchorPoint = Vector2.new(0.5, 0.5)
+	paw.Position = UDim2.fromOffset(size * 0.62, size * 0.5)
+	paw.Rotation = 90
+	paw.Parent = f
+	for i, y in ipairs({ 0.32, 0.5, 0.68 }) do
+		local w = size * (i == 2 and 0.3 or 0.2)
+		local line = chip(f, w, size * 0.08, color, 0.5)
+		pos(line, size * 0.26 - w / 2 + size * 0.1, size * y)
+		line.BackgroundTransparency = i == 2 and 0 or 0.3
+	end
+	return f
+end
+
 Icons.Registry = {
 	Bag = Icons.Bag,
 	Podium = Icons.Podium,
 	Plus = Icons.Plus,
+	Reticle = Icons.Reticle,
+	JumpArrow = Icons.JumpArrow,
+	Dash = Icons.Dash,
 	Gun = Icons.Gun,
 	GunHeavy = Icons.GunHeavy,
 	GunFast = Icons.GunFast,

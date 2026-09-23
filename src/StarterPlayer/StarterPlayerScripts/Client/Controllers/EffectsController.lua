@@ -161,7 +161,7 @@ function EffectsController.Start()
 	end)
 
 	Remotes.Get("YouWereHit").OnClientEvent:Connect(function(data)
-		CameraController.AddShake(0.8)
+		CameraController.AddShake(0.35)
 		if ClientState.Settings.ShowDamage then
 			flashHurt()
 		end

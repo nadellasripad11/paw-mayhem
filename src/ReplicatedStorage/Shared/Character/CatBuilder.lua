@@ -19,10 +19,11 @@ local CatBuilder = {}
 
 local ROOT_SIZE = Vector3.new(2, 2, 1.4)
 -- The invisible HumanoidRootPart is the ONLY collider (all cosmetics are
--- Massless + CanCollide=false), so it must collide or the cat falls through the
--- floor. HipHeight 0 rests the root's bottom on the ground; cosmetics are welded
--- so the stubby legs sit at that bottom.
-local HIP_HEIGHT = 0
+-- Massless + CanCollide=false). HipHeight lifts it so the Humanoid hovers
+-- instead of dragging the box along the floor, which snagged on seams and
+-- shoved the cat sideways. 0.4 puts the stubby legs (1.4 below root centre)
+-- exactly on the ground.
+local HIP_HEIGHT = 0.4
 
 local function part(name: string, size: Vector3, color: Color3, shape: Enum.PartType?): BasePart
 	local p = Instance.new("Part")

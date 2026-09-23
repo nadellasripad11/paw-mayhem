@@ -251,22 +251,35 @@ function ArenaKit.TryPlace(isle: any, rng: Random, minD: number, maxD: number, r
 	return nil
 end
 
--- Invisible collision for a walkway between two isles: one smooth deck that
--- runs a little into each island (no seams to snag on) plus side guards.
--- Returns the visible span endpoints.
-function ArenaKit.WalkwayCollision(A: any, B: any, parent: Instance, width: number, inset: number): (Vector3, Vector3)
-	local a, b = ArenaKit.EdgePoints(A, B, inset)
-	local flat = Vector3.new(b.X - a.X, 0, b.Z - a.Z).Unit
-	local a2, b2 = a - flat * 2.5, b + flat * 2.5
-	local deck = ArenaKit.NewPart("Deck", Vector3.new(width, 0.6, (b2 - a2).Magnitude), CFrame.lookAt((a2 + b2) / 2, b2) * CFrame.new(0, -0.3, 0), Color3.new(0.5, 0.5, 0.5), Enum.Material.SmoothPlastic, parent)
-	deck.Transparency = 1
-	local span = (b - a).Magnitude
-	local spanCF = CFrame.lookAt((a + b) / 2, b)
-	for _, x in ipairs({ -(width / 2 + 0.2), width / 2 + 0.2 }) do
-		local guard = ArenaKit.NewPart("Guard", Vector3.new(0.3, 2.6, math.max(1, span - 1)), spanCF * CFrame.new(x, 1.3, 0), Color3.new(0.5, 0.5, 0.5), Enum.Material.SmoothPlastic, parent)
-		guard.Transparency = 1
+-- Invisible walking surface between two rim points `ea` (on island A, at A's
+-- ground height) and `eb`: a smooth ramp plus a flat landing reaching 4 studs
+-- into each island, and side guards over the gap. The ramp must end exactly at
+-- each island's ground height at its rim; ending it further in left it under
+-- the higher island's floor, a hidden ledge players couldn't step up.
+local function rampCollision(ea: Vector3, eb: Vector3, width: number, parent: Instance)
+	local flat = Vector3.new(eb.X - ea.X, 0, eb.Z - ea.Z).Unit
+	local function slab(name: string, p: Vector3, q: Vector3)
+		local s = ArenaKit.NewPart(name, Vector3.new(width, 1, (q - p).Magnitude + 0.3), CFrame.lookAt((p + q) / 2, q) * CFrame.new(0, -0.5, 0), Color3.new(0.5, 0.5, 0.5), Enum.Material.SmoothPlastic, parent)
+		s.Transparency = 1
 	end
-	return a, b
+	slab("Deck", ea, eb)
+	slab("Landing", ea - flat * 4, ea)
+	slab("Landing", eb, eb + flat * 4)
+	local spanCF = CFrame.lookAt((ea + eb) / 2, eb)
+	for _, x in ipairs({ -(width / 2 + 0.2), width / 2 + 0.2 }) do
+		local guard = ArenaKit.NewPart("Guard", Vector3.new(0.3, 2.6, (eb - ea).Magnitude), spanCF * CFrame.new(x, 1.3, 0), Color3.new(0.5, 0.5, 0.5), Enum.Material.SmoothPlastic, parent)
+		guard.Transparency = 1
+		guard.CanQuery = false
+	end
+end
+
+-- Walkway collision between two isles. Returns the inset span endpoints (for
+-- visuals) and the rim endpoints the ramp runs between.
+function ArenaKit.WalkwayCollision(A: any, B: any, parent: Instance, width: number, inset: number): (Vector3, Vector3, Vector3, Vector3)
+	local a, b = ArenaKit.EdgePoints(A, B, inset)
+	local ea, eb = ArenaKit.EdgePoints(A, B, -0.3)
+	rampCollision(ea, eb, width, parent)
+	return a, b, ea, eb
 end
 
 export type StairStyle = { step: Color3, stepAlt: Color3, wall: Color3, under: Color3, material: Enum.Material }
@@ -277,7 +290,7 @@ function ArenaKit.MakeStairs(A: any, B: any, parent: Instance, st: StairStyle)
 	local f = Instance.new("Folder")
 	f.Name = "Stairs"
 	f.Parent = parent
-	local a, b = ArenaKit.WalkwayCollision(A, B, f, 8.4, 1.5)
+	local _, _, a, b = ArenaKit.WalkwayCollision(A, B, f, 8.4, 1.5)
 	local lo, hi = a, b
 	if b.Y > a.Y then
 		lo, hi = b, a
@@ -314,7 +327,9 @@ function ArenaKit.MakeBridge(a: Vector3, b: Vector3, parent: Instance, palette: 
 	local a2, b2 = a - flat * 2, b + flat * 2
 	local dist = (b2 - a2).Magnitude
 	local cf = CFrame.lookAt((a2 + b2) / 2, b2)
-	ArenaKit.NewPart("Deck", Vector3.new(5.2, 0.6, dist), cf * CFrame.new(0, -0.3, 0), palette.Wood, Enum.Material.WoodPlanks, folder)
+	ArenaKit.NewPart("Deck", Vector3.new(5.2, 0.6, dist), cf * CFrame.new(0, -0.3, 0), palette.Wood, Enum.Material.WoodPlanks, folder).CanCollide = false
+	-- a and b sit 2 studs inside each rim; walk on a rim-to-rim ramp instead.
+	rampCollision(a + flat * 2.3, b - flat * 2.3, 5.2, folder)
 	for _, side in ipairs({ -2.6, 2.6 }) do
 		ArenaKit.NewPart("Rail", Vector3.new(0.3, 0.3, dist), cf * CFrame.new(side, 1.5, 0), palette.WoodDark, Enum.Material.Wood, folder).CanCollide = false
 	end

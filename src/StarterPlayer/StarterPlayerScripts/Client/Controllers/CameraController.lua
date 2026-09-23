@@ -23,10 +23,33 @@ local yaw, pitch = 0, 0.15
 local distance = GameConfig.Camera.ThirdPersonDistance
 local enabled = false
 local lobbyView = false
-local touchRotating = false
+local lookTouch: InputObject? = nil
 local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
 local parallax = Vector2.zero
+local camDist = 0
+
+-- Distance to the first solid, visible part between two points. Walk-through
+-- decoration (trees, lips, planks) and invisible walkway/guard collision are
+-- skipped so they don't yank the camera in as you move past them.
+local function blockerDistance(char: Model, from: Vector3, to: Vector3): number?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.RespectCanCollide = true
+	local ignore: { Instance } = { char }
+	for _ = 1, 6 do
+		params.FilterDescendantsInstances = ignore
+		local hit = Workspace:Raycast(from, to - from, params)
+		if not hit then
+			return nil
+		end
+		if hit.Instance.Transparency < 0.6 then
+			return (hit.Position - from).Magnitude
+		end
+		table.insert(ignore, hit.Instance)
+	end
+	return nil
+end
 
 -- Add a camera shake impulse (respects the CameraShake setting).
 function CameraController.AddShake(amount: number)
@@ -43,12 +66,13 @@ local function isMobile()
 	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 end
 
--- Right-side of screen begins a look drag on mobile (left side is the joystick).
+-- A touch that starts on free screen space (not the joystick or a HUD button)
+-- becomes the look drag. Only that finger turns the camera, so moving the
+-- joystick while holding Fire can't swing the view.
 local function onInputBegan(input: InputObject, gpe: boolean)
-	if input.UserInputType == Enum.UserInputType.Touch and enabled then
-		local vpx = camera.ViewportSize.X
-		if input.Position.X > vpx * 0.4 then
-			touchRotating = true
+	if input.UserInputType == Enum.UserInputType.Touch and enabled and not gpe and not lookTouch then
+		if input.Position.X > camera.ViewportSize.X * 0.4 then
+			lookTouch = input
 			touchLastPos = Vector2.new(input.Position.X, input.Position.Y)
 		end
 	end
@@ -64,7 +88,7 @@ local function onInputChanged(input: InputObject, gpe: boolean)
 			yaw -= d.X * 0.004 * (GameConfig.Camera.Sensitivity + 0.2)
 			pitch = math.clamp(pitch - d.Y * 0.004 * (GameConfig.Camera.Sensitivity + 0.2), MIN_PITCH, MAX_PITCH)
 		end
-	elseif input.UserInputType == Enum.UserInputType.Touch and touchRotating then
+	elseif input == lookTouch then
 		local pos = Vector2.new(input.Position.X, input.Position.Y)
 		if touchLastPos then
 			local d = pos - touchLastPos
@@ -77,8 +101,8 @@ local function onInputChanged(input: InputObject, gpe: boolean)
 end
 
 local function onInputEnded(input: InputObject)
-	if input.UserInputType == Enum.UserInputType.Touch then
-		touchRotating = false
+	if input == lookTouch then
+		lookTouch = nil
 		touchLastPos = nil
 	end
 end
@@ -131,18 +155,20 @@ local function step(dt: number)
 	local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
 	local shoulder = GameConfig.Camera.ShoulderOffset
 
-	-- Camera sits behind + offset from the shoulder.
+	-- Camera sits behind + offset from the shoulder. It snaps in when a wall
+	-- blocks it and eases back out, so it never pops back and forth.
 	local offset = rot:VectorToWorldSpace(Vector3.new(shoulder.X, shoulder.Y, distance))
-	local camPos = focus + offset
-
-	-- Collision: pull the camera in if something blocks it.
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { char }
-	local hit = Workspace:Raycast(focus, camPos - focus, params)
-	if hit then
-		camPos = focus + (camPos - focus).Unit * math.max(2, (hit.Position - focus).Magnitude - 1)
+	local want = offset.Magnitude
+	local block = blockerDistance(char, focus, focus + offset)
+	if block then
+		want = math.max(2, block - 1)
 	end
+	if camDist <= 0 or want < camDist then
+		camDist = want
+	else
+		camDist += (want - camDist) * math.clamp(dt * 5, 0, 1)
+	end
+	local camPos = focus + offset.Unit * camDist
 
 	local lookAt = focus + rot:VectorToWorldSpace(Vector3.new(shoulder.X, shoulder.Y, -20))
 	local finalCF = CFrame.lookAt(camPos, lookAt)
@@ -150,8 +176,8 @@ local function step(dt: number)
 	-- Apply decaying shake.
 	if shake > 0.001 then
 		local s = shake
-		finalCF = finalCF * CFrame.new((math.random() - 0.5) * s, (math.random() - 0.5) * s, 0)
-			* CFrame.Angles((math.random() - 0.5) * s * 0.05, (math.random() - 0.5) * s * 0.05, 0)
+		finalCF = finalCF * CFrame.new((math.random() - 0.5) * s * 0.4, (math.random() - 0.5) * s * 0.4, 0)
+			* CFrame.Angles((math.random() - 0.5) * s * 0.015, (math.random() - 0.5) * s * 0.015, 0)
 		shake = math.max(0, shake - dt * 4)
 	end
 	camera.CFrame = finalCF
@@ -186,6 +212,9 @@ end
 
 function CameraController.SetEnabled(on: boolean)
 	enabled = on
+	lookTouch = nil
+	touchLastPos = nil
+	camDist = 0
 	if on then
 		lobbyView = false
 	end
