@@ -30,7 +30,7 @@ local ROOT_SIZE = Vector3.new(2, 2, 1.4)
 local HIP_HEIGHT = 0.4
 
 local V = Vector3.new
-local HEAD_POS = V(0, 1.35, 0) -- head centre in root space
+local HEAD_POS = V(0, 1.41, 0) -- head centre in root space
 local PINK = Color3.fromRGB(255, 172, 192)
 local ROT_Z90 = CFrame.Angles(0, 0, math.rad(90)) -- cylinder axis X -> Y
 local ROT_Y90 = CFrame.Angles(0, math.rad(90), 0) -- cylinder axis X -> Z
@@ -130,12 +130,21 @@ local function outfitColors(outfit, fur)
 	return outfit.Color, fur.Accent, outfit.Color:Lerp(Color3.new(0, 0, 0), 0.3), nil
 end
 
+-- The torso is ~0.74x as wide and ~0.82x as deep as the original design that
+-- the outfit/back-item offsets were authored against; squeeze them to fit.
+local SLIM_X, SLIM_Z = 0.74, 0.82
+local function slim(p: BasePart, cf: CFrame): CFrame
+	p.Size = V(p.Size.X * SLIM_X, p.Size.Y * 0.92, p.Size.Z * SLIM_Z)
+	local pos = cf.Position
+	return CFrame.new(pos.X * SLIM_X, pos.Y, pos.Z * SLIM_Z) * cf.Rotation
+end
+
 -- ── outfit details (torso, root space) ──────────────────────────────────────
 local function addOutfitDetails(root: BasePart, outfit, top: Color3)
 	local id = outfit.Id
 	local dark = top:Lerp(Color3.new(0, 0, 0), 0.22)
 	local function add(p: BasePart, cf: CFrame)
-		weld(root, p, cf)
+		weld(root, p, slim(p, cf))
 	end
 	if id == "Hoodie" then
 		add(oval("Hood", V(1.35, 0.55, 0.95), top), CFrame.new(0, 0.55, 0.4))
@@ -188,89 +197,97 @@ end
 
 -- ── accessories (root space) ────────────────────────────────────────────────
 local function addBackItem(root: BasePart, acc)
+	local function add(p: BasePart, cf: CFrame)
+		weld(root, p, slim(p, cf))
+	end
 	if acc.Shape == "Backpack" then
-		weld(root, oval("Backpack", V(0.95, 1.05, 0.5), acc.Color), CFrame.new(0, 0.05, 0.66))
-		weld(root, oval("BackpackPocket", V(0.7, 0.42, 0.22), acc.Color:Lerp(Color3.new(0, 0, 0), 0.2)), CFrame.new(0, -0.18, 0.88))
+		add(oval("Backpack", V(0.95, 1.05, 0.5), acc.Color), CFrame.new(0, 0.05, 0.66))
+		add(oval("BackpackPocket", V(0.7, 0.42, 0.22), acc.Color:Lerp(Color3.new(0, 0, 0), 0.2)), CFrame.new(0, -0.18, 0.88))
 		for i = -1, 1, 2 do
-			weld(root, part("BackpackStrap", V(0.12, 0.7, 0.05), acc.Color:Lerp(Color3.new(0, 0, 0), 0.3)), CFrame.new(0.4 * i, 0.18, -0.46) * CFrame.Angles(0, math.rad(-30 * i), 0))
+			add(part("BackpackStrap", V(0.12, 0.7, 0.05), acc.Color:Lerp(Color3.new(0, 0, 0), 0.3)), CFrame.new(0.4 * i, 0.18, -0.46) * CFrame.Angles(0, math.rad(-30 * i), 0))
 		end
 	elseif acc.Shape == "Jetpack" then
 		for i = -1, 1, 2 do
 			local tank = part("JetTank", V(0.9, 0.42, 0.42), acc.Color, Enum.PartType.Cylinder)
 			tank.Material = Enum.Material.Metal
-			weld(root, tank, CFrame.new(0.24 * i, 0.12, 0.72) * ROT_Z90)
-			weld(root, oval("JetCap", V(0.42, 0.26, 0.42), acc.Color), CFrame.new(0.24 * i, 0.57, 0.72))
-			weld(root, part("JetNozzle", V(0.22, 0.3, 0.3), Color3.fromRGB(60, 60, 70), Enum.PartType.Cylinder), CFrame.new(0.24 * i, -0.43, 0.72) * ROT_Z90)
+			weld(root, tank, CFrame.new(0.2 * i, 0.12, 0.6) * ROT_Z90)
+			weld(root, oval("JetCap", V(0.42, 0.26, 0.42), acc.Color), CFrame.new(0.2 * i, 0.57, 0.6))
+			weld(root, part("JetNozzle", V(0.22, 0.3, 0.3), Color3.fromRGB(60, 60, 70), Enum.PartType.Cylinder), CFrame.new(0.2 * i, -0.43, 0.6) * ROT_Z90)
 			local flame = oval("JetFlame", V(0.22, 0.42, 0.22), Color3.fromRGB(255, 150, 50))
 			flame.Material = Enum.Material.Neon
-			weld(root, flame, CFrame.new(0.24 * i, -0.72, 0.72))
+			weld(root, flame, CFrame.new(0.2 * i, -0.72, 0.6))
 		end
 	end
 end
 
 -- ── head: face, ears, markings, hats, glasses (head space) ──────────────────
 local function buildHead(root: BasePart, fur, hat, acc): BasePart
-	local head = oval("Head", V(2.1, 1.75, 1.8), fur.Body)
-	joint("PawNeck", root, head, CFrame.new(0, 0.55, 0), CFrame.new(0, 0.8, 0))
+	local head = oval("Head", V(2.2, 1.9, 1.85), fur.Body)
+	joint("PawNeck", root, head, CFrame.new(0, 0.55, 0), CFrame.new(0, 0.86, 0))
 	local function add(p: BasePart, cf: CFrame)
 		weld(head, p, cf)
 	end
 	local marking = fur.Marking or fur.Accent
 
-	-- Chubby cheeks + tuft
+	-- Fluffy side tufts (sweeping out and back, not forward) + a tuft on top
 	for i = -1, 1, 2 do
-		add(oval("CheekFluff", V(0.8, 0.64, 0.7), fur.Body), CFrame.new(0.62 * i, -0.32, -0.42))
+		add(oval("CheekFluff", V(0.5, 0.42, 0.62), fur.Body), CFrame.new(0.9 * i, -0.34, -0.12) * CFrame.Angles(0, 0, math.rad(-24 * i)))
+		add(oval("CheekFluff", V(0.34, 0.28, 0.44), fur.Body), CFrame.new(1.04 * i, -0.2, 0.02) * CFrame.Angles(0, 0, math.rad(-38 * i)))
 	end
-	add(oval("Tuft", V(0.26, 0.42, 0.22), fur.Body), CFrame.new(-0.08, 0.88, -0.12) * CFrame.Angles(0, 0, math.rad(15)))
-	add(oval("Tuft", V(0.22, 0.36, 0.2), fur.Body), CFrame.new(0.1, 0.85, -0.08) * CFrame.Angles(0, 0, math.rad(-22)))
+	add(oval("Tuft", V(0.26, 0.44, 0.22), fur.Body), CFrame.new(-0.08, 0.96, -0.12) * CFrame.Angles(0, 0, math.rad(15)))
+	add(oval("Tuft", V(0.22, 0.38, 0.2), fur.Body), CFrame.new(0.1, 0.93, -0.08) * CFrame.Angles(0, 0, math.rad(-22)))
 
-	-- Muzzle: two puffs, nose, and a little philtrum line
+	-- Small muzzle, tiny pink nose and a little "w" mouth
 	for i = -1, 1, 2 do
-		add(oval("MuzzlePuff", V(0.46, 0.36, 0.36), fur.Accent), CFrame.new(0.17 * i, -0.27, -0.8))
+		add(oval("MuzzlePuff", V(0.3, 0.22, 0.2), fur.Accent), CFrame.new(0.11 * i, -0.38, -0.86))
+		local mouth = part("Mouth", V(0.13, 0.035, 0.03), Color3.fromRGB(110, 60, 70))
+		add(mouth, CFrame.new(0.058 * i, -0.39, -0.955) * CFrame.Angles(0, math.rad(-14 * i), math.rad(24 * i)))
 	end
-	add(oval("Chin", V(0.32, 0.18, 0.24), fur.Accent), CFrame.new(0, -0.44, -0.74))
-	add(oval("Nose", V(0.2, 0.13, 0.13), Color3.fromRGB(255, 140, 165)), CFrame.new(0, -0.13, -0.95))
-	add(part("Philtrum", V(0.04, 0.12, 0.04), Color3.fromRGB(150, 80, 90)), CFrame.new(0, -0.22, -0.95))
+	add(oval("Chin", V(0.24, 0.12, 0.16), fur.Accent), CFrame.new(0, -0.5, -0.8))
+	add(oval("Nose", V(0.15, 0.1, 0.1), Color3.fromRGB(255, 138, 162)), CFrame.new(0, -0.26, -0.945))
 
-	-- Eyes: big glossy ovals, coloured iris, two highlights, blush
+	-- Eyes: big, dark and glossy. Dark rim, coloured iris that glows lighter
+	-- at the bottom, a large pupil and two white highlights.
 	local eyeColor = fur.Eye or Color3.fromRGB(52, 160, 140)
 	for i = -1, 1, 2 do
-		local turn = CFrame.Angles(0, math.rad(-12 * i), 0)
-		add(oval("EyeWhite", V(0.56, 0.7, 0.3), Color3.new(1, 1, 1)), CFrame.new(0.42 * i, 0.07, -0.78) * turn)
-		add(oval("Iris", V(0.5, 0.62, 0.28), eyeColor), CFrame.new(0.43 * i, 0.06, -0.84) * turn)
-		add(oval("IrisGlow", V(0.3, 0.3, 0.26), eyeColor:Lerp(Color3.new(1, 1, 1), 0.35)), CFrame.new(0.43 * i, -0.08, -0.86) * turn)
-		add(oval("Pupil", V(0.28, 0.4, 0.24), Color3.fromRGB(22, 18, 30)), CFrame.new(0.44 * i, 0.04, -0.9) * turn)
-		add(oval("Shine", V(0.18, 0.2, 0.1), Color3.new(1, 1, 1)), CFrame.new(0.49 * i, 0.2, -0.98))
-		add(oval("Shine", V(0.09, 0.09, 0.08), Color3.new(1, 1, 1)), CFrame.new(0.36 * i, -0.07, -0.98))
-		add(part("Lash", V(0.3, 0.05, 0.05), Color3.fromRGB(40, 30, 40)), CFrame.new(0.52 * i, 0.4, -0.84) * turn * CFrame.Angles(0, 0, math.rad(-18 * i)))
-		local shut = part("ClosedEye", V(0.44, 0.07, 0.05), Color3.fromRGB(40, 30, 40))
+		local turn = CFrame.Angles(0, math.rad(-16 * i), 0)
+		local function at(x: number, y: number, z: number): CFrame
+			return CFrame.new(0.44 * i + x * i, y, z) * turn
+		end
+		add(oval("EyeWhite", V(0.54, 0.66, 0.24), Color3.fromRGB(28, 22, 32)), at(0, -0.04, -0.8))
+		add(oval("Iris", V(0.47, 0.59, 0.24), eyeColor:Lerp(Color3.fromRGB(20, 16, 26), 0.35)), at(0, -0.04, -0.815))
+		add(oval("IrisGlow", V(0.36, 0.26, 0.22), eyeColor:Lerp(Color3.new(1, 1, 1), 0.2)), at(0, -0.19, -0.835))
+		add(oval("Pupil", V(0.3, 0.4, 0.22), Color3.fromRGB(16, 12, 22)), at(0, -0.02, -0.85))
+		add(oval("Shine", V(0.19, 0.21, 0.08), Color3.new(1, 1, 1)), at(0.07, 0.11, -0.93))
+		add(oval("Shine", V(0.09, 0.09, 0.07), Color3.new(1, 1, 1)), at(-0.08, -0.17, -0.92))
+		local shut = part("ClosedEye", V(0.42, 0.07, 0.05), Color3.fromRGB(40, 30, 40))
 		shut.Transparency = 1
-		add(shut, CFrame.new(0.42 * i, 0.02, -0.9) * turn * CFrame.Angles(0, 0, math.rad(-10 * i)))
-		local blush = oval("Blush", V(0.36, 0.2, 0.08), Color3.fromRGB(255, 150, 175))
-		blush.Transparency = 0.35
-		add(blush, CFrame.new(0.66 * i, -0.16, -0.69) * CFrame.Angles(0, math.rad(-35 * i), 0))
+		add(shut, at(0, -0.04, -0.9) * CFrame.Angles(0, 0, math.rad(-8 * i)))
+		local blush = oval("Blush", V(0.3, 0.15, 0.06), Color3.fromRGB(255, 150, 175))
+		blush.Transparency = 0.45
+		add(blush, CFrame.new(0.7 * i, -0.34, -0.7) * CFrame.Angles(0, math.rad(-38 * i), 0))
 	end
 
 	-- Ears: two mirrored wedges each (a wedge's tall side is its back face),
 	-- pink inside. Calico gets one patched ear.
 	for i = -1, 1, 2 do
 		local earColor = (fur.Pattern == "Calico" and i == -1) and marking or fur.Body
-		local earCF = CFrame.new(0.5 * i, 0.95, 0.05) * CFrame.Angles(0, 0, math.rad(-16 * i))
-		add(wedge("Ear", V(0.3, 1.0, 0.45), earColor), earCF * CFrame.new(-0.225, 0, 0) * CFrame.Angles(0, math.rad(90), 0))
-		add(wedge("Ear", V(0.3, 1.0, 0.45), earColor), earCF * CFrame.new(0.225, 0, 0) * CFrame.Angles(0, math.rad(-90), 0))
-		add(wedge("InnerEar", V(0.06, 0.62, 0.26), PINK), earCF * CFrame.new(-0.13, -0.08, -0.18) * CFrame.Angles(0, math.rad(90), 0))
-		add(wedge("InnerEar", V(0.06, 0.62, 0.26), PINK), earCF * CFrame.new(0.13, -0.08, -0.18) * CFrame.Angles(0, math.rad(-90), 0))
+		local earCF = CFrame.new(0.56 * i, 1.04, 0.05) * CFrame.Angles(0, 0, math.rad(-14 * i))
+		add(wedge("Ear", V(0.32, 1.2, 0.5), earColor), earCF * CFrame.new(-0.25, 0, 0) * CFrame.Angles(0, math.rad(90), 0))
+		add(wedge("Ear", V(0.32, 1.2, 0.5), earColor), earCF * CFrame.new(0.25, 0, 0) * CFrame.Angles(0, math.rad(-90), 0))
+		add(wedge("InnerEar", V(0.06, 0.8, 0.3), PINK), earCF * CFrame.new(-0.15, -0.1, -0.2) * CFrame.Angles(0, math.rad(90), 0))
+		add(wedge("InnerEar", V(0.06, 0.8, 0.3), PINK), earCF * CFrame.new(0.15, -0.1, -0.2) * CFrame.Angles(0, math.rad(-90), 0))
 	end
 
 	-- Fur markings
 	if fur.Pattern == "Tiger" then
 		for i = -1, 1 do
 			local z = i == 0 and -0.64 or -0.6
-			add(part("TigerStripe", V(0.12, 0.42, 0.06), marking), CFrame.new(i * 0.26, 0.62, z) * CFrame.Angles(math.rad(-40), 0, math.rad(i * 14)))
+			add(part("TigerStripe", V(0.12, 0.42, 0.06), marking), CFrame.new(i * 0.26, 0.68, z - 0.02) * CFrame.Angles(math.rad(-40), 0, math.rad(i * 14)))
 		end
 		for i = -1, 1, 2 do
 			for k = 0, 1 do
-				add(part("CheekStripe", V(0.28, 0.07, 0.06), marking), CFrame.new(0.9 * i, -0.02 - k * 0.16, -0.36) * CFrame.Angles(0, math.rad(-58 * i), math.rad(8 * i)))
+				add(part("CheekStripe", V(0.28, 0.07, 0.06), marking), CFrame.new(0.95 * i, -0.06 - k * 0.16, -0.47) * CFrame.Angles(0, math.rad(-58 * i), math.rad(8 * i)))
 			end
 		end
 	elseif fur.Pattern == "Calico" then
@@ -280,27 +297,27 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 
 	-- Hats
 	if hat and hat.Shape == "Cap" then
-		add(oval("Cap", V(1.8, 0.75, 1.75), hat.Color), CFrame.new(0, 0.62, 0.02))
-		add(part("CapBrim", V(1.3, 0.1, 0.75), hat.Color:Lerp(Color3.new(0, 0, 0), 0.15)), CFrame.new(0, 0.5, -0.85) * CFrame.Angles(math.rad(-8), 0, 0))
-		add(oval("CapButton", V(0.16, 0.1, 0.16), hat.Color:Lerp(Color3.new(1, 1, 1), 0.3)), CFrame.new(0, 1.0, 0.02))
+		add(oval("Cap", V(1.9, 0.8, 1.85), hat.Color), CFrame.new(0, 0.68, 0.02))
+		add(part("CapBrim", V(1.3, 0.1, 0.75), hat.Color:Lerp(Color3.new(0, 0, 0), 0.15)), CFrame.new(0, 0.55, -0.9) * CFrame.Angles(math.rad(-8), 0, 0))
+		add(oval("CapButton", V(0.16, 0.1, 0.16), hat.Color:Lerp(Color3.new(1, 1, 1), 0.3)), CFrame.new(0, 1.08, 0.02))
 	elseif hat and hat.Shape == "Beanie" then
-		add(oval("Beanie", V(1.95, 1.0, 1.9), hat.Color), CFrame.new(0, 0.62, 0.04))
-		add(oval("BeanieCuff", V(2.02, 0.26, 1.95), hat.Color:Lerp(Color3.new(0, 0, 0), 0.18)), CFrame.new(0, 0.3, 0.04))
-		add(oval("Pompom", V(0.38, 0.38, 0.38), Color3.fromRGB(250, 246, 240)), CFrame.new(0, 1.18, 0.04))
+		add(oval("Beanie", V(2.05, 1.05, 2.0), hat.Color), CFrame.new(0, 0.68, 0.04))
+		add(oval("BeanieCuff", V(2.12, 0.26, 2.05), hat.Color:Lerp(Color3.new(0, 0, 0), 0.18)), CFrame.new(0, 0.36, 0.04))
+		add(oval("Pompom", V(0.38, 0.38, 0.38), Color3.fromRGB(250, 246, 240)), CFrame.new(0, 1.26, 0.04))
 	elseif hat and hat.Shape == "Crown" then
 		local band = part("Crown", V(0.38, 1.05, 1.05), hat.Color, Enum.PartType.Cylinder)
 		band.Material = Enum.Material.Metal
-		add(band, CFrame.new(0, 0.98, 0) * ROT_Z90)
+		add(band, CFrame.new(0, 1.05, 0) * ROT_Z90)
 		for k = 0, 4 do
 			local a = k / 5 * math.pi * 2
 			local spike = part("CrownPoint", V(0.2, 0.34, 0.2), hat.Color)
 			spike.Material = Enum.Material.Metal
-			add(spike, CFrame.new(math.sin(a) * 0.44, 1.28, -math.cos(a) * 0.44) * CFrame.Angles(0, -a + math.rad(45), 0))
-			add(oval("CrownGem", V(0.14, 0.14, 0.14), Color3.fromRGB(255, 90, 120)), CFrame.new(math.sin(a) * 0.44, 1.48, -math.cos(a) * 0.44))
+			add(spike, CFrame.new(math.sin(a) * 0.44, 1.35, -math.cos(a) * 0.44) * CFrame.Angles(0, -a + math.rad(45), 0))
+			add(oval("CrownGem", V(0.14, 0.14, 0.14), Color3.fromRGB(255, 90, 120)), CFrame.new(math.sin(a) * 0.44, 1.55, -math.cos(a) * 0.44))
 		end
-		add(oval("CrownJewel", V(0.18, 0.18, 0.08), Color3.fromRGB(90, 170, 255)), CFrame.new(0, 0.98, -0.53))
+		add(oval("CrownJewel", V(0.18, 0.18, 0.08), Color3.fromRGB(90, 170, 255)), CFrame.new(0, 1.05, -0.53))
 	elseif hat and hat.Shape == "Helmet" then
-		local glass = oval("Helmet", V(2.9, 2.9, 2.9), hat.Color)
+		local glass = oval("Helmet", V(3.0, 3.0, 3.0), hat.Color)
 		glass.Material = Enum.Material.Glass
 		glass.Transparency = 0.6
 		add(glass, CFrame.new(0, 0.35, 0))
@@ -312,9 +329,9 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		for i = -1, 1, 2 do
 			local lens = oval("Lens", V(0.6, 0.5, 0.1), acc.Color)
 			lens.Reflectance = 0.25
-			add(lens, CFrame.new(0.43 * i, 0.07, -0.98) * CFrame.Angles(0, math.rad(-12 * i), 0))
+			add(lens, CFrame.new(0.44 * i, -0.04, -0.96) * CFrame.Angles(0, math.rad(-16 * i), 0))
 		end
-		add(part("GlassesBridge", V(0.26, 0.06, 0.06), acc.Color), CFrame.new(0, 0.14, -1.0))
+		add(part("GlassesBridge", V(0.26, 0.06, 0.06), acc.Color), CFrame.new(0, 0.0, -1.0))
 	end
 	return head
 end
@@ -323,15 +340,15 @@ end
 -- Armed cats hold both arms forward around the blaster (the gun is welded to
 -- the right hand); unarmed arms hang at the sides.
 local function buildArm(root: BasePart, i: number, sleeve: Color3, cuff: Color3?, fur, armed: boolean): BasePart
-	local arm = oval("Arm", V(0.38, 0.72, 0.38), sleeve)
+	local arm = oval("Arm", V(0.32, 0.7, 0.32), sleeve)
 	local pivot = armed
-		and CFrame.new(0.62 * i, 0.36, -0.02) * CFrame.Angles(0, math.rad(30 * i), 0) * CFrame.Angles(math.rad(72), 0, 0)
-		or CFrame.new(0.66 * i, 0.36, -0.02) * CFrame.Angles(0, 0, math.rad(10 * i))
+		and CFrame.new(0.48 * i, 0.34, -0.02) * CFrame.Angles(0, math.rad(34 * i), 0) * CFrame.Angles(math.rad(72), 0, 0)
+		or CFrame.new(0.52 * i, 0.34, -0.02) * CFrame.Angles(0, 0, math.rad(8 * i))
 	joint(i < 0 and "PawShoulderL" or "PawShoulderR", root, arm, pivot, CFrame.new(0, -0.34, 0))
 	if cuff then
-		weld(arm, part("Cuff", V(0.1, 0.42, 0.42), cuff, Enum.PartType.Cylinder), CFrame.new(0, -0.27, 0) * ROT_Z90)
+		weld(arm, part("Cuff", V(0.1, 0.36, 0.36), cuff, Enum.PartType.Cylinder), CFrame.new(0, -0.27, 0) * ROT_Z90)
 	end
-	local hand = oval("Hand", V(0.36, 0.34, 0.38), fur.Body)
+	local hand = oval("Hand", V(0.33, 0.31, 0.34), fur.Body)
 	weld(arm, hand, CFrame.new(0, -0.42, -0.04))
 	weld(arm, oval("PawPad", V(0.16, 0.12, 0.06), PINK), CFrame.new(0, -0.45, -0.23))
 	return hand
@@ -359,14 +376,14 @@ local function attachBlaster(model: Model, root: BasePart, hand: BasePart, weapo
 end
 
 local function buildLeg(root: BasePart, i: number, shorts: Color3?, fur)
-	local leg = oval("Leg", V(0.46, 0.58, 0.48), fur.Body)
-	joint(i < 0 and "PawHipL" or "PawHipR", root, leg, CFrame.new(0.36 * i, -0.62, 0), CFrame.new(0, -0.26, 0))
+	local leg = oval("Leg", V(0.38, 0.56, 0.4), fur.Body)
+	joint(i < 0 and "PawHipL" or "PawHipR", root, leg, CFrame.new(0.27 * i, -0.62, 0), CFrame.new(0, -0.26, 0))
 	if shorts then
-		weld(leg, oval("ShortsLeg", V(0.58, 0.36, 0.6), shorts), CFrame.new(0, 0.16, 0))
+		weld(leg, oval("ShortsLeg", V(0.48, 0.34, 0.5), shorts), CFrame.new(0, 0.16, 0))
 	end
-	weld(leg, oval("Foot", V(0.5, 0.3, 0.7), fur.Body), CFrame.new(0, -0.36, -0.12))
+	weld(leg, oval("Foot", V(0.44, 0.28, 0.62), fur.Body), CFrame.new(0, -0.36, -0.1))
 	for k = -1, 1 do
-		weld(leg, oval("Toe", V(0.12, 0.08, 0.1), fur.Accent), CFrame.new(k * 0.12, -0.27, -0.4))
+		weld(leg, oval("Toe", V(0.1, 0.07, 0.09), fur.Accent), CFrame.new(k * 0.1, -0.28, -0.36))
 	end
 end
 
@@ -412,9 +429,9 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	model.PrimaryPart = root
 
 	-- Torso, chest and hips
-	weld(root, oval("Torso", V(1.45, 1.15, 1.05), top), CFrame.new(0, 0.02, 0))
-	weld(root, oval("Chest", V(0.78, 0.9, 0.34), chest), CFrame.new(0, -0.02, -0.43))
-	weld(root, oval("Hips", V(1.5, 0.72, 1.12), shorts or fur.Body), CFrame.new(0, -0.55, 0.02))
+	weld(root, oval("Torso", V(1.08, 1.12, 0.86), top), CFrame.new(0, 0.02, 0))
+	weld(root, oval("Chest", V(0.58, 0.82, 0.28), chest), CFrame.new(0, -0.02, -0.34))
+	weld(root, oval("Hips", V(1.06, 0.62, 0.88), shorts or fur.Body), CFrame.new(0, -0.5, 0.02))
 
 	local armed = weapon ~= nil and typeof(weapon.Id) == "string"
 	local rightHand: BasePart? = nil

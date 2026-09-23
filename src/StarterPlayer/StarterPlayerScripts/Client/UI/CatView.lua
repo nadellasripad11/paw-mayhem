@@ -10,7 +10,7 @@ local CatView = {}
 
 local FRAMING = {
 	Full = { target = Vector3.new(0, 0.75, 0), span = 5.0, yaw = -22 },
-	Bust = { target = Vector3.new(0, 1.6, 0), span = 3.2, yaw = -18 },
+	Bust = { target = Vector3.new(0, 1.5, 0), span = 3.5, yaw = -18 },
 	Back = { target = Vector3.new(0, 0.6, 0), span = 4.4, yaw = 155 },
 }
 CatView.Framing = FRAMING

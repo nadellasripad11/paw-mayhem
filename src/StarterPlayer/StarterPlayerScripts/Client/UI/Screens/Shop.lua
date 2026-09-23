@@ -1,9 +1,11 @@
 --!strict
--- Shop: the Robux store (Game Passes, gem bundles, Coin Rain, Starter Pack) on
--- top, then every item purchasable with coins or gems (weapons, skins and all
--- cat cosmetics). Buying here auto-adds to your Unlocks; equip from Loadout or
--- Customize. Cosmetics are never pay-to-win.
+-- Shop: category tabs down the left (Featured, Gems, Blasters, Skins, Fur,
+-- Outfits, Hats & Gear, Emotes) and a grid of cards on the right. Every card
+-- shows a real 3D render of the item (ShopArt), built the first time its tab
+-- opens. Robux items open Roblox's purchase prompt; everything else buys with
+-- coins / gems and falls back to Robux when you're short (Monetize.Buy).
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
@@ -11,201 +13,346 @@ local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
-local HeroArt = require(script.Parent.Parent.HeroArt)
-local Icons = require(script.Parent.Parent.Icons)
+local ShopArt = require(script.Parent.Parent.ShopArt)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
+local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
 local Monetize = require(script.Parent.Parent.Parent.Monetize)
 
 local Shop = {}
-local cards = {}
-local robuxCards = {}
 
-local ROBUX_GREEN = Color3.fromRGB(60, 200, 110)
-
--- Robux store rows, in display order.
-local ROBUX_ITEMS = {
-	{ pass = "VIP", icon = "Trophy", color = Color3.fromRGB(255, 190, 40), tag = "BEST" },
-	{ pass = "DoubleCoins", icon = "Coin", color = Theme.Color.Coin },
-	{ product = "StarterPack", icon = "Bag", color = Color3.fromRGB(90, 200, 255), tag = "ONCE" },
-	{ product = "Gems100", icon = "Gem", color = Theme.Color.Gem },
-	{ product = "Gems350", icon = "Gem", color = Theme.Color.Gem },
-	{ product = "Gems1000", icon = "Gem", color = Theme.Color.Gem, tag = "POPULAR" },
-	{ product = "Gems2800", icon = "Gem", color = Theme.Color.Gem, tag = "BEST VALUE" },
-	{ product = "CoinRain", icon = "Sparkle", color = Color3.fromRGB(255, 214, 70) },
-	{ pass = "EmotePack", icon = "Smiley", color = Color3.fromRGB(255, 120, 180) },
-	{ pass = "TrailPack", icon = "Dash", color = Color3.fromRGB(120, 220, 255) },
+local player = Players.LocalPlayer
+local ROBUX_GREEN = Color3.fromRGB(52, 196, 104)
+local EQUIP_GREEN = Color3.fromRGB(96, 226, 150)
+local CARD_BG = Color3.fromRGB(22, 38, 68)
+local CARD_STROKE = Color3.fromRGB(54, 84, 132)
+local RARITY_COLOR = {
+	Common = Color3.fromRGB(180, 190, 205), Uncommon = Color3.fromRGB(110, 220, 130), Rare = Color3.fromRGB(90, 170, 255),
+	Epic = Color3.fromRGB(190, 110, 255), Legendary = Color3.fromRGB(255, 170, 60), Mythic = Color3.fromRGB(255, 90, 140),
 }
 
-local function collectItems()
-	local items = {}
-	local function priced(it: any): boolean
-		return (it.CoinCost or 0) > 0 or (it.GemCost or 0) > 0 or it.PassOnly ~= nil
-	end
-	for _, w in ipairs(Weapons.List) do
-		if priced(w) then
-			table.insert(items, { kind = "Weapon", id = w.Id, def = w, name = w.Name, sub = (w :: any).Exclusive and "Exclusive Weapon" or ("Weapon • " .. w.Rarity), accent = w.TrailColor, icon = w.Icon or "Gun", iconAccent = w.MuzzleColor })
-		end
-	end
-	for _, s in ipairs(Weapons.Skins) do
-		if priced(s) then
-			table.insert(items, { kind = "Skin", id = s.Id, def = s, name = s.Name, sub = "Skin", accent = s.Tint, icon = "Gun", iconAccent = s.Tint:Lerp(Color3.new(1, 1, 1), 0.45) })
-		end
-	end
-	local EMOTE_ICON = {
-		Happy = "Smiley", Sit = "SitDown", Wave = "Wave", Laugh = "Laugh",
-		Celebrate = "Burst", Sleep = "Sleep", Spin = "Spin", Fall = "Fall",
-	}
-	local cosmetic = {
-		{ list = Cats.Fur, kind = "Fur", icon = "CatBody" }, { list = Cats.Outfits, kind = "Outfit", icon = "Shirt" },
-		{ list = Cats.Hats, kind = "Hat", icon = "Hat" }, { list = Cats.Accessories, kind = "Accessory", icon = "Glasses" },
-		{ list = Cats.Emotes, kind = "Emote", icon = "Smiley" },
-	}
-	for _, c in ipairs(cosmetic) do
-		for _, item in ipairs(c.list) do
-			if priced(item) then
-				local icon = (c.kind == "Emote" and EMOTE_ICON[item.Id]) or c.icon
-				table.insert(items, { kind = c.kind, id = item.Id, def = item, name = item.Name, sub = c.kind, accent = item.Body or item.Color or item.Tint or Theme.Color.Accent, icon = icon, iconAccent = item.Accent })
-			end
-		end
-	end
-	return items
+type Card = { refresh: () -> () }
+local cards: { Card } = {}
+
+local function currentCat()
+	local p = ClientState.Profile
+	local c = p and p.Loadout and p.Loadout.Cat or {}
+	return { Fur = c.Fur, Outfit = c.Outfit, Hat = c.Hat, Accessory = c.Accessory }
 end
 
-local function refreshCards()
-	for _, c in ipairs(cards) do
-		c.card.refresh({
-			owned = ClientState.Owns(c.kind, c.id),
-			equipped = ClientState.Equipped(c.kind) == c.id,
-		})
-	end
-	for _, r in ipairs(robuxCards) do
-		r.refresh()
-	end
+local function equippedWeapon(): string
+	local p = ClientState.Profile
+	return p and p.Loadout and p.Loadout.Weapon or Weapons.DefaultLoadout
 end
 
-local function sectionTitle(parent: Instance, order: number, text: string, sub: string, color: Color3)
-	local row = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1 })
-	UIUtil.label({ Parent = row, Text = text, Font = Theme.Font.Title, TextSize = 20, TextColor3 = color, Size = UDim2.new(0, 200, 1, 0), AutomaticSize = Enum.AutomaticSize.X })
-	UIUtil.label({ Parent = row, Text = sub, TextSize = 12, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(0, 0), Size = UDim2.new(1, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
+-- ── card shell ───────────────────────────────────────────────────────────────
+-- A card with a 3D art area on top, name + subtitle and an action button.
+local function cardShell(parent: Instance, accent: Color3, title: string, subtitle: string, subColor: Color3?)
+	local card = UIUtil.make("Frame", { Parent = parent, BackgroundColor3 = CARD_BG, BorderSizePixel = 0 }) :: Frame
+	UIUtil.corner(UDim.new(0, 14), card)
+	local stroke = UIUtil.stroke(CARD_STROKE, 1.5, card)
+	local art = UIUtil.make("Frame", {
+		Parent = card, Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -78),
+		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ClipsDescendants = true,
+	}) :: Frame
+	UIUtil.corner(UDim.new(0, 10), art)
+	UIUtil.gradient(accent:Lerp(Color3.fromRGB(40, 60, 100), 0.45), Color3.fromRGB(14, 24, 46), 90, art)
+	local glow = UIUtil.make("Frame", {
+		Parent = art, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.58), Size = UDim2.fromScale(0.8, 0.8),
+		BackgroundColor3 = accent, BackgroundTransparency = 0.8, BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), glow)
+	UIUtil.label({
+		Parent = card, Text = title, Font = Theme.Font.Title, TextSize = 16, TextTruncate = Enum.TextTruncate.AtEnd,
+		Position = UDim2.new(0, 10, 1, -70), Size = UDim2.new(1, -20, 0, 20),
+	})
+	UIUtil.label({
+		Parent = card, Text = subtitle, Font = Theme.Font.Bold, TextSize = 11, TextColor3 = subColor or Theme.Color.TextDim,
+		Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(1, -20, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd,
+	})
+	local btn = UIUtil.make("TextButton", {
+		Parent = card, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 28),
+		Text = "", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.new(1, 1, 1),
+		AutoButtonColor = true, BorderSizePixel = 0, BackgroundColor3 = ROBUX_GREEN,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(0, 9), btn)
+	return card, art, btn, stroke
 end
 
+local function tag(parent: Instance, text: string, color: Color3)
+	local t = UIUtil.label({
+		Parent = parent, Text = text, Font = Theme.Font.Bold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center,
+		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 0, BackgroundColor3 = color, TextColor3 = Color3.new(1, 1, 1), ZIndex = 3,
+	})
+	UIUtil.corner(UDim.new(1, 0), t)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 8)
+	pad.PaddingRight = UDim.new(0, 8)
+	pad.Parent = t
+end
+
+-- ── Robux cards ──────────────────────────────────────────────────────────────
 local function robuxCard(parent: Instance, spec: any)
 	local def = spec.pass and Monetization.Passes[spec.pass] or Monetization.Products[spec.product]
 	if not def then
 		return
 	end
-	local card = UIUtil.panel({ Parent = parent, BackgroundColor3 = Theme.Color.PanelLight })
-	UIUtil.padding(8, card)
-	UIUtil.stroke(spec.color, 2, card).Transparency = 0.3
-
-	local swatch = UIUtil.make("Frame", {
-		Parent = card, Size = UDim2.fromOffset(46, 46), BackgroundColor3 = spec.color, BorderSizePixel = 0,
-	})
-	UIUtil.corner(Theme.CornerSmall, swatch)
-	UIUtil.gradient(spec.color:Lerp(Color3.new(1, 1, 1), 0.25), spec.color:Lerp(Color3.new(0, 0, 0), 0.3), 90, swatch)
-	Icons.Place(spec.icon, swatch, 30, Color3.new(1, 1, 1))
-
-	UIUtil.label({
-		Parent = card, Text = string.upper(def.Name), Font = Theme.Font.Title, TextSize = 17,
-		Position = UDim2.fromOffset(54, 0), Size = UDim2.new(1, -54, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd,
-	})
-	UIUtil.label({
-		Parent = card, Text = spec.pass and "GAME PASS" or "ITEM", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = spec.color,
-		Position = UDim2.fromOffset(54, 21), Size = UDim2.new(1, -54, 0, 12),
-	})
-	UIUtil.label({
-		Parent = card, Text = def.Desc, TextSize = 11, TextColor3 = Theme.Color.TextDim, TextWrapped = true,
-		TextYAlignment = Enum.TextYAlignment.Top, Position = UDim2.fromOffset(0, 52), Size = UDim2.new(1, 0, 1, -82),
-	})
-	if spec.tag then
-		local tag = UIUtil.label({
-			Parent = card, Text = spec.tag, Font = Theme.Font.Bold, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Center,
-			AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 4, 0, -4), Size = UDim2.fromOffset(62, 16),
-			BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(255, 70, 90), TextColor3 = Color3.new(1, 1, 1),
+	local card, art, btn = cardShell(parent, spec.color, string.upper(def.Name), spec.pass and "GAME PASS  •  FOREVER" or def.Desc, spec.color)
+	ShopArt.Prop(art, spec.art, spec.tier)
+	if spec.overlay then
+		UIUtil.label({
+			Parent = art, Text = spec.overlay, Font = Theme.Font.Title, TextSize = 40, TextColor3 = Color3.fromRGB(255, 236, 140),
+			AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -4), Size = UDim2.fromOffset(90, 44), ZIndex = 3,
+			TextStrokeTransparency = 0.2, TextStrokeColor3 = Color3.fromRGB(90, 50, 0),
 		})
-		UIUtil.corner(UDim.new(1, 0), tag)
 	end
-
-	local btn = UIUtil.button({
-		Parent = card, Position = UDim2.new(0, 0, 1, -26), Size = UDim2.new(1, 0, 0, 26),
-		BackgroundColor3 = ROBUX_GREEN, TextSize = 14, CornerRadius = Theme.CornerSmall,
-		Text = "R$ " .. tostring(def.Price),
-	}, function()
+	if spec.tag then
+		tag(art, spec.tag, Color3.fromRGB(255, 70, 100))
+	end
+	btn.MouseButton1Click:Connect(function()
 		if spec.pass then
 			Monetize.PromptPass(spec.pass)
 		else
 			Monetize.PromptProduct(spec.product)
 		end
 	end)
-
 	local function refresh()
 		if spec.pass then
 			local owned = Monetize.OwnsPass(spec.pass)
 			btn.Text = owned and "OWNED" or ("R$ " .. tostring(def.Price))
 			btn.Active = not owned
-			btn.BackgroundColor3 = owned and Theme.Color.PlayDark or ROBUX_GREEN
-		elseif spec.product == "StarterPack" then
-			local profile = ClientState.Profile
-			card.Visible = not (profile and profile.StarterPackBought)
+			btn.BackgroundColor3 = owned and Color3.fromRGB(40, 90, 70) or ROBUX_GREEN
+		else
+			btn.Text = "R$ " .. tostring(def.Price)
+			if spec.product == "StarterPack" then
+				local profile = ClientState.Profile
+				card.Visible = not (profile and profile.StarterPackBought)
+			end
 		end
 	end
 	if spec.pass then
-		game:GetService("Players").LocalPlayer:GetAttributeChangedSignal(spec.pass):Connect(refresh)
+		player:GetAttributeChangedSignal(spec.pass):Connect(refresh)
 	end
 	refresh()
-	table.insert(robuxCards, { refresh = refresh })
+	table.insert(cards, { refresh = refresh })
 end
+
+-- ── catalog cards (coins / gems / pass items) ────────────────────────────────
+local function itemCard(parent: Instance, it: any)
+	local rarity = it.def.Rarity
+	local subColor = rarity and RARITY_COLOR[rarity] or Theme.Color.TextDim
+	local card, art, btn, stroke = cardShell(parent, it.accent or Theme.Color.Accent, it.def.Name, it.sub, subColor)
+	it.render(art)
+	if it.def.Exclusive then
+		tag(art, "EXCLUSIVE", Color3.fromRGB(255, 70, 140))
+	elseif it.def.PassOnly then
+		local pass = Monetization.Passes[it.def.PassOnly]
+		tag(art, pass and string.upper(pass.Name) or "PASS", Color3.fromRGB(230, 160, 20))
+	end
+	local function refresh()
+		local owned = ClientState.Owns(it.kind, it.def.Id)
+		local equipped = ClientState.Equipped(it.kind) == it.def.Id
+		stroke.Color = equipped and EQUIP_GREEN or CARD_STROKE
+		stroke.Thickness = equipped and 2.5 or 1.5
+		if equipped then
+			btn.Text, btn.BackgroundColor3 = "EQUIPPED", Color3.fromRGB(40, 110, 80)
+		elseif owned then
+			btn.Text, btn.BackgroundColor3 = "EQUIP", Theme.Color.Accent
+		else
+			local price, color = Monetize.PriceTag(it.def)
+			btn.Text, btn.BackgroundColor3 = price, color:Lerp(Color3.new(0, 0, 0), 0.15)
+		end
+	end
+	btn.MouseButton1Click:Connect(function()
+		if ClientState.Owns(it.kind, it.def.Id) then
+			if it.kind ~= "Emote" then
+				ClientActions.Equip(it.kind, it.def.Id)
+			end
+		elseif Monetize.Buy(it.kind, it.def.Id, it.def) and it.kind ~= "Emote" then
+			ClientActions.Equip(it.kind, it.def.Id)
+		end
+	end)
+	refresh()
+	table.insert(cards, { refresh = refresh })
+end
+
+local function priced(it: any): boolean
+	return (it.CoinCost or 0) > 0 or (it.GemCost or 0) > 0 or it.PassOnly ~= nil
+end
+
+local function cosmeticItems(list: { any }, kind: string, framing: string?)
+	local out = {}
+	for _, item in ipairs(list) do
+		if priced(item) then
+			table.insert(out, {
+				kind = kind, def = item, sub = kind == "Accessory" and "Gear" or kind,
+				accent = item.Body or item.Color or Theme.Color.Accent,
+				render = function(art)
+					local custom = currentCat()
+					custom[kind] = item.Id
+					local f = framing
+					if kind == "Accessory" and (item.Shape == "Backpack" or item.Shape == "Jetpack") then
+						f = "Back"
+					end
+					ShopArt.Cat(art, custom, f or "Bust")
+				end,
+			})
+		end
+	end
+	return out
+end
+
+-- ── tabs ─────────────────────────────────────────────────────────────────────
+local TABS = {
+	{
+		id = "Featured", label = "FEATURED", cell = 250,
+		robux = {
+			{ pass = "VIP", art = "VIP", color = Color3.fromRGB(255, 190, 40), tag = "BEST" },
+			{ pass = "DoubleCoins", art = "Coins", color = Theme.Color.Coin, overlay = "2x" },
+			{ product = "StarterPack", art = "Gift", color = Color3.fromRGB(90, 200, 255), tag = "ONE TIME" },
+			{ product = "CoinRain", art = "CoinRain", color = Color3.fromRGB(255, 214, 70) },
+			{ pass = "EmotePack", art = "Emote", color = Color3.fromRGB(255, 120, 180) },
+			{ pass = "TrailPack", art = "Rainbow", color = Color3.fromRGB(120, 220, 255) },
+		},
+	},
+	{
+		id = "Gems", label = "GEMS", cell = 250,
+		robux = {
+			{ product = "Gems100", art = "Gems", tier = 1, color = Theme.Color.Gem },
+			{ product = "Gems350", art = "Gems", tier = 2, color = Theme.Color.Gem },
+			{ product = "Gems1000", art = "Gems", tier = 3, color = Theme.Color.Gem, tag = "POPULAR" },
+			{ product = "Gems2800", art = "Gems", tier = 4, color = Theme.Color.Gem, tag = "BEST VALUE" },
+		},
+	},
+	{
+		id = "Blasters", label = "BLASTERS", cell = 230,
+		items = function()
+			local out = {}
+			for _, w in ipairs(Weapons.List) do
+				if priced(w) then
+					table.insert(out, {
+						kind = "Weapon", def = w, sub = (w :: any).Exclusive and "EXCLUSIVE BLASTER" or string.upper(w.Rarity) .. " BLASTER",
+						accent = w.TrailColor, render = function(art) ShopArt.Gun(art, w.Id, nil) end,
+					})
+				end
+			end
+			return out
+		end,
+	},
+	{
+		id = "Skins", label = "SKINS", cell = 230,
+		items = function()
+			local out = {}
+			for _, s in ipairs(Weapons.Skins) do
+				if priced(s) then
+					table.insert(out, {
+						kind = "Skin", def = s, sub = "BLASTER SKIN", accent = s.Tint,
+						render = function(art) ShopArt.Gun(art, equippedWeapon(), s.Id) end,
+					})
+				end
+			end
+			return out
+		end,
+	},
+	{ id = "Fur", label = "FUR", cell = 230, items = function() return cosmeticItems(Cats.Fur, "Fur") end },
+	{ id = "Outfits", label = "OUTFITS", cell = 230, items = function() return cosmeticItems(Cats.Outfits, "Outfit", "Full") end },
+	{ id = "Hats", label = "HATS", cell = 230, items = function() return cosmeticItems(Cats.Hats, "Hat") end },
+	{ id = "Gear", label = "GEAR", cell = 230, items = function() return cosmeticItems(Cats.Accessories, "Accessory") end },
+	{
+		id = "Emotes", label = "EMOTES", cell = 230,
+		items = function()
+			local out = {}
+			for _, e in ipairs(Cats.Emotes) do
+				if priced(e) then
+					table.insert(out, {
+						kind = "Emote", def = e, sub = "EMOTE", accent = Color3.fromRGB(255, 130, 190),
+						render = function(art) ShopArt.Cat(art, currentCat(), "Full", e.Id) end,
+					})
+				end
+			end
+			return out
+		end,
+	},
+}
 
 function Shop.Build(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false })
-	HeroArt.Watermark(root)
 
-	local scroll = UIUtil.make("ScrollingFrame", {
-		Parent = root, Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	-- Category rail
+	local rail = UIUtil.make("ScrollingFrame", {
+		Parent = root, Size = UDim2.new(0, 170, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	})
-	UIUtil.listLayout(scroll, 10)
+	UIUtil.listLayout(rail, 8)
 
-	-- ── Robux store ──
-	sectionTitle(scroll, 1, "ROBUX STORE", "Support the game and get something awesome", Color3.fromRGB(110, 230, 140))
-	local robuxGrid = UIUtil.make("Frame", {
-		Parent = scroll, LayoutOrder = 2, BackgroundTransparency = 1,
-		Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-	})
-	UIUtil.gridLayout(robuxGrid, UDim2.fromOffset(190, 150), UDim2.fromOffset(10, 10))
-	for _, spec in ipairs(ROBUX_ITEMS) do
-		robuxCard(robuxGrid, spec)
+	local pages: { [string]: ScrollingFrame } = {}
+	local built: { [string]: boolean } = {}
+	local tabButtons: { [string]: TextButton } = {}
+
+	local function buildPage(tab): ScrollingFrame
+		local page = UIUtil.make("ScrollingFrame", {
+			Parent = root, Position = UDim2.fromOffset(186, 0), Size = UDim2.new(1, -186, 1, 0), Visible = false,
+			BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
+			ScrollBarImageColor3 = Theme.Color.Stroke, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		}) :: ScrollingFrame
+		local pad = Instance.new("UIPadding")
+		pad.PaddingTop = UDim.new(0, 2)
+		pad.PaddingLeft = UDim.new(0, 2)
+		pad.PaddingRight = UDim.new(0, 12)
+		pad.PaddingBottom = UDim.new(0, 12)
+		pad.Parent = page
+		UIUtil.gridLayout(page, UDim2.new(0.25, -12, 0, tab.cell), UDim2.fromOffset(14, 14))
+		return page
 	end
 
-	-- ── coin + gem items ──
-	local header = UIUtil.make("Frame", { Parent = scroll, LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1 })
-	local cartSlot = UIUtil.make("Frame", { Parent = header, Size = UDim2.fromOffset(20, 20), Position = UDim2.fromOffset(0, 3), BackgroundTransparency = 1 })
-	Icons.Place("Cart", cartSlot, 20, Theme.Color.Coin)
-	UIUtil.label({ Parent = header, Text = "ITEMS", Font = Theme.Font.Title, TextSize = 20, TextColor3 = Theme.Color.Coin, Position = UDim2.fromOffset(28, 0), Size = UDim2.new(0, 80, 1, 0) })
-	UIUtil.label({ Parent = header, Text = "Spend coins from matches or gems. Cosmetics only, no power advantage.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Size = UDim2.new(1, -8, 1, 0), TextXAlignment = Enum.TextXAlignment.Right })
-
-	local grid = UIUtil.make("Frame", {
-		Parent = scroll, LayoutOrder = 4, BackgroundTransparency = 1,
-		Size = UDim2.new(1, -8, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-	})
-	UIUtil.gridLayout(grid, UDim2.fromOffset(120, 130), UDim2.fromOffset(10, 10))
-
-	for _, it in ipairs(collectItems()) do
-		local priceText, priceColor = Monetize.PriceTag(it.def)
-		local card = UIUtil.itemCard(grid, {
-			title = it.name, subtitle = it.sub, priceText = priceText, priceColor = priceColor,
-			owned = ClientState.Owns(it.kind, it.id), equipped = false,
-			accent = it.accent, icon = it.icon, iconAccent = it.iconAccent,
-		}, function(action)
-			if action == "buy" and Monetize.Buy(it.kind, it.id, it.def) then
-				refreshCards()
+	local function show(id: string)
+		for tid, b in pairs(tabButtons) do
+			local on = tid == id
+			b.BackgroundColor3 = on and Color3.fromRGB(64, 200, 255) or Color3.fromRGB(22, 38, 68)
+			b.TextColor3 = on and Color3.fromRGB(8, 30, 52) or Color3.new(1, 1, 1)
+		end
+		for _, tab in ipairs(TABS) do
+			if tab.id == id and not built[id] then
+				built[id] = true
+				local page = pages[id]
+				if tab.robux then
+					for _, spec in ipairs(tab.robux) do
+						robuxCard(page, spec)
+					end
+				else
+					for _, it in ipairs(tab.items()) do
+						local ok, err = pcall(itemCard, page, it)
+						if not ok then
+							warn("[PAW MAYHEM] Shop card failed: " .. tostring(err))
+						end
+					end
+				end
 			end
-		end)
-		table.insert(cards, { card = card, kind = it.kind, id = it.id })
+		end
+		for pid, page in pairs(pages) do
+			page.Visible = pid == id
+		end
 	end
 
-	ClientState.ProfileChanged:Connect(refreshCards)
+	for order, tab in ipairs(TABS) do
+		pages[tab.id] = buildPage(tab)
+		local b = UIUtil.make("TextButton", {
+			Parent = rail, LayoutOrder = order, Size = UDim2.new(1, 0, 0, 44), Text = tab.label,
+			Font = Theme.Font.Title, TextSize = 17, AutoButtonColor = true, BorderSizePixel = 0,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(0, 12), b)
+		b.MouseButton1Click:Connect(function()
+			show(tab.id)
+		end)
+		tabButtons[tab.id] = b
+	end
+	show("Featured")
+
+	ClientState.ProfileChanged:Connect(function()
+		for _, c in ipairs(cards) do
+			c.refresh()
+		end
+	end)
 	Shop.Root = root
 	return root
 end

@@ -64,7 +64,19 @@ local function buildCrosshair(parent)
 		UIUtil.corner(UDim.new(1, 0), a)
 		return a
 	end
-	arm(0); arm(90)
+	local arms = { arm(0), arm(90) }
+	local CROSSHAIR = {
+		White = Color3.fromRGB(255, 255, 255), Green = Color3.fromRGB(110, 255, 140), Cyan = Color3.fromRGB(90, 230, 255),
+		Pink = Color3.fromRGB(255, 120, 200), Yellow = Color3.fromRGB(255, 230, 90),
+	}
+	local function paintCrosshair()
+		local c = CROSSHAIR[ClientState.Settings.Crosshair] or CROSSHAIR.White
+		for _, a in ipairs(arms) do
+			a.BackgroundColor3 = c
+		end
+	end
+	ClientState.SettingsChanged:Connect(paintCrosshair)
+	paintCrosshair()
 	local dot = UIUtil.make("Frame", {
 		Parent = center,
 		AnchorPoint = Vector2.new(0.5, 0.5),

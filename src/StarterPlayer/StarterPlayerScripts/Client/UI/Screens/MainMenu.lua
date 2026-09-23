@@ -2,8 +2,8 @@
 -- MainMenu: the Paw Mayhem home screen. The background is the real 3D
 -- LobbyScene (mascot + floating islands) seen through the menu camera; this
 -- overlay adds the logo, the left nav, coins/gems top-right and the level pill
--- bottom-left. Nav buttons open panels in the content area; clicking the open
--- one again returns to the clean home screen.
+-- bottom-left. Each nav button opens its own full screen (logo, nav and level
+-- pill hide) with a BACK button that returns to the home screen.
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -32,6 +32,14 @@ local player = Players.LocalPlayer
 
 local gui, content, panels, coinLabel, gemLabel, levelLabel, levelFill, xpLabel, avatarSlot
 local panelBackdrop: Frame? = nil
+local homeGroups: { GuiObject } = {}
+local headerTitle: TextLabel? = nil
+local relayoutFn: (() -> ())? = nil
+
+local SCREEN_TITLES = {
+	Loadout = "LOADOUT", Shop = "SHOP", Customize = "CUSTOMIZE",
+	Leaderboard = "LEADERBOARD", Settings = "SETTINGS", Quests = "QUESTS",
+}
 local navButtons = {}
 local currentPanel
 
@@ -48,7 +56,8 @@ local NAV_BG = Color3.fromRGB(16, 22, 30)
 local NAV_BG_T = 0.32
 local LOGO_NAVY = Color3.fromRGB(28, 40, 84)
 
--- Opening the tab that's already open closes it (back to the home screen).
+-- Open a full screen (id) or return to the home screen (nil). Opening the
+-- screen that's already open goes back home.
 local function switchTo(id: string?)
 	if id ~= nil and id == currentPanel then
 		id = nil
@@ -61,6 +70,12 @@ local function switchTo(id: string?)
 	if panelBackdrop then
 		panelBackdrop.Visible = id ~= nil
 	end
+	for _, g in ipairs(homeGroups) do
+		g.Visible = id == nil
+	end
+	if headerTitle then
+		headerTitle.Text = id and (SCREEN_TITLES[id] or string.upper(id)) or ""
+	end
 	for pid, entry in pairs(navButtons) do
 		local on = pid == id
 		if pid ~= "Play" then
@@ -70,6 +85,13 @@ local function switchTo(id: string?)
 		entry.stroke.Transparency = on and 0.05 or entry.baseStroke
 	end
 	currentPanel = id
+	if relayoutFn then
+		relayoutFn()
+	end
+end
+
+MainMenu.Open = function(id: string?)
+	switchTo(id)
 end
 
 local function textStroke(label: Instance, color: Color3, thickness: number): UIStroke
@@ -414,30 +436,27 @@ function MainMenu.Build()
 	UIUtil.gradient(Color3.fromRGB(110, 222, 255), Color3.fromRGB(46, 140, 255), 0, levelFill)
 	xpLabel = nil
 
-	-- Content area (opens to the right of the nav) with a dark glass backdrop.
-	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Theme.Color.Bg, BackgroundTransparency = 0.08, BorderSizePixel = 0, Visible = false, ZIndex = 9 }) :: Frame
-	UIUtil.corner(UDim.new(0, 18), backdrop)
-	local bs = UIUtil.stroke(Theme.Color.Stroke, 1.5, backdrop)
-	bs.Transparency = 0.3
-	local close = Instance.new("TextButton")
-	close.Name = "Close"
-	close.Text = "X"
-	close.Font = Theme.Font.Title
-	close.TextSize = 18
-	close.TextColor3 = Color3.new(1, 1, 1)
-	close.AutoButtonColor = true
-	close.AnchorPoint = Vector2.new(0.5, 0.5)
-	close.Position = UDim2.new(1, -4, 0, 4)
-	close.Size = UDim2.fromOffset(34, 34)
-	close.BackgroundColor3 = Theme.Color.Danger
-	close.BorderSizePixel = 0
-	close.ZIndex = 20
-	close.Parent = backdrop
-	UIUtil.corner(UDim.new(0.5, 0), close)
-	close.MouseButton1Click:Connect(function()
+	-- Full-screen backdrop behind whichever screen is open, with a header bar:
+	-- BACK button + screen title (currency stays top right).
+	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Color3.fromRGB(10, 18, 36), BackgroundTransparency = 0.04, BorderSizePixel = 0, Visible = false, ZIndex = 9, Size = UDim2.fromScale(1, 1) }) :: Frame
+	UIUtil.gradient(Color3.fromRGB(26, 44, 82), Color3.fromRGB(8, 14, 30), 90, backdrop)
+	local header, headerScale = scaled({ Parent = backdrop, Name = "Header", Size = UDim2.fromOffset(520, 46), ZIndex = 12 })
+	local back = UIUtil.make("TextButton", {
+		Parent = header, Name = "Back", Text = "‹  BACK", Font = Theme.Font.Title, TextSize = 20,
+		TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = true, Size = UDim2.fromOffset(122, 44),
+		BackgroundColor3 = Color3.fromRGB(26, 40, 68), BorderSizePixel = 0, ZIndex = 12,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(0, 12), back)
+	UIUtil.stroke(Color3.fromRGB(120, 150, 200), 1.5, back).Transparency = 0.4
+	back.MouseButton1Click:Connect(function()
 		switchTo(nil)
 	end)
+	headerTitle = UIUtil.label({
+		Parent = header, Text = "", Font = Theme.Font.Title, TextSize = 34, TextColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(140, 0), Size = UDim2.new(1, -140, 1, 0), ZIndex = 12,
+	})
 	panelBackdrop = backdrop
+	homeGroups = { logoGroup, navGroup, lvlGroup }
 	content = UIUtil.make("Frame", { Parent = gui, Name = "Content", BackgroundTransparency = 1, ZIndex = 10 })
 
 	local camera = Workspace.CurrentCamera
@@ -455,13 +474,16 @@ function MainMenu.Build()
 		lvlScale.Scale = s
 		lvlGroup.Position = UDim2.new(0, 22 * s, 1, -16 * s)
 
-		local left = (42 + 190) * s + 30
-		local top = math.max(inset, 58 * s) + 18
-		content.Position = UDim2.fromOffset(left, top)
-		content.Size = UDim2.new(1, -(left + 30), 1, -(top + 24))
-		backdrop.Position = UDim2.fromOffset(left - 14, top - 14)
-		backdrop.Size = UDim2.new(1, -(left + 30) + 28, 1, -(top + 24) + 28)
+		-- Screens fill the display under the header bar.
+		local side = 24 * s
+		local headerY = math.max(inset + 4, 12 * s)
+		headerScale.Scale = s
+		header.Position = UDim2.fromOffset(side, headerY)
+		local top = headerY + 58 * s
+		content.Position = UDim2.fromOffset(side, top)
+		content.Size = UDim2.new(1, -side * 2, 1, -(top + 18 * s))
 	end
+	relayoutFn = relayout
 	relayout()
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
 

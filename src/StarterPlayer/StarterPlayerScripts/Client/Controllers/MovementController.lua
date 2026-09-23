@@ -355,7 +355,8 @@ local function step()
 	if not hum or not root then
 		return
 	end
-	local base = sprinting and GameConfig.Character.SprintSpeed or GameConfig.Character.WalkSpeed
+	local autoSprint = require(script.Parent.Parent.ClientState).Settings.AutoSprint
+	local base = (sprinting or autoSprint) and GameConfig.Character.SprintSpeed or GameConfig.Character.WalkSpeed
 	local mult = char:GetAttribute("SpeedMult")
 	if typeof(mult) ~= "number" then
 		mult = 1

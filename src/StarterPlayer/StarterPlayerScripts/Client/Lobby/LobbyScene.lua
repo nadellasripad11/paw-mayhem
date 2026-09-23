@@ -51,12 +51,12 @@ local LIGHTING = {
 }
 
 local ATMOSPHERE = {
-	Density = 0.3,
+	Density = 0.4,
 	Offset = 0.25,
-	Color = Color3.fromRGB(199, 228, 255),
+	Color = Color3.fromRGB(206, 230, 252),
 	Decay = Color3.fromRGB(120, 170, 228),
-	Glare = 0.35,
-	Haze = 1.2,
+	Glare = 0.55,
+	Haze = 1.9,
 }
 
 -- Palette
@@ -333,7 +333,7 @@ local function island(parent: Instance, name: string, x: number, y: number, z: n
 		local t = (i - 1) / layers
 		local lr = r * (1 - t * 0.78)
 		local cy = top - lh * (i - 0.5)
-		vcyl(m, lh, lr * 1.75, W(x, cy, z), ROCK[(i % #ROCK) + 1], Enum.Material.Slate)
+		vcyl(m, lh, lr * 1.75, W(x, cy, z), ROCK[(i % #ROCK) + 1], Enum.Material.Sandstone)
 		local n = math.clamp(math.floor(lr * 0.9), 4, 12)
 		for k = 1, n do
 			local a = (k / n) * math.pi * 2 + rng:NextNumber(-0.25, 0.25)
@@ -341,10 +341,10 @@ local function island(parent: Instance, name: string, x: number, y: number, z: n
 			block(m, Vector3.new(bw, lh * rng:NextNumber(0.95, 1.3), bw * 0.8),
 				W(x + math.cos(a) * lr * 0.74, cy + rng:NextNumber(-0.2, 0.2) * lh, z + math.sin(a) * lr * 0.74)
 					* CFrame.Angles(0, -a + math.pi / 2 + rng:NextNumber(-0.25, 0.25), 0),
-				ROCK[rng:NextInteger(1, #ROCK)], Enum.Material.Slate)
+				ROCK[rng:NextInteger(1, #ROCK)], Enum.Material.Sandstone)
 		end
 	end
-	ell(m, Vector3.new(r * 0.55, depth * 0.3, r * 0.55), W(x, top - depth - depth * 0.08, z), ROCK[3], Enum.Material.Slate)
+	ell(m, Vector3.new(r * 0.55, depth * 0.3, r * 0.55), W(x, top - depth - depth * 0.08, z), ROCK[3], Enum.Material.Sandstone)
 	for _ = 1, math.floor(r * 0.5) do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local len = rng:NextNumber(1.5, math.max(2, depth * 0.3))
@@ -514,7 +514,7 @@ local function buildForeground(parent: Instance)
 		local x = i * 5.2 + rng:NextNumber(-1, 1)
 		block(fg, Vector3.new(rng:NextNumber(5, 7), rng:NextNumber(5, 8), rng:NextNumber(4, 6)),
 			W(x, -7 + rng:NextNumber(-1, 0.5), -14 + rng:NextNumber(-0.5, 0.5)) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0),
-			ROCK[rng:NextInteger(1, #ROCK)], Enum.Material.Slate)
+			ROCK[rng:NextInteger(1, #ROCK)], Enum.Material.Sandstone)
 		ell(fg, Vector3.new(rng:NextNumber(5, 8), 2, rng:NextNumber(3, 5)), W(x, -2.7, -13.2), GRASS_DARK, Enum.Material.Grass)
 	end
 	for _ = 1, 12 do
@@ -534,7 +534,7 @@ local function buildForeground(parent: Instance)
 		{ Vector3.new(3.0, 2.2, 2.8), Vector3.new(-0.6, -2.9, 2.6), -26 },
 	}
 	for i, r in ipairs(ledge) do
-		block(fg, r[1], W(r[2].X, r[2].Y, r[2].Z) * CFrame.Angles(0, math.rad(r[3]), 0), ROCK[(i % #ROCK) + 1], Enum.Material.Slate)
+		block(fg, r[1], W(r[2].X, r[2].Y, r[2].Z) * CFrame.Angles(0, math.rad(r[3]), 0), ROCK[(i % #ROCK) + 1], Enum.Material.Sandstone)
 	end
 	vcyl(fg, 1.1, 10.5, W(4, -1.55, 0.4), GRASS_TOP, Enum.Material.Grass)
 	for k = 1, 9 do
@@ -838,21 +838,21 @@ end
 local function buildPostEffects()
 	local cam = Workspace.CurrentCamera
 	local dof = Instance.new("DepthOfFieldEffect")
-	dof.FarIntensity = 0.32
+	dof.FarIntensity = 0.62
 	dof.NearIntensity = 0.12
 	dof.FocusDistance = 27
-	dof.InFocusRadius = 11
+	dof.InFocusRadius = 7
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.2
-	bloom.Size = 16
-	bloom.Threshold = 2.4
+	bloom.Intensity = 0.32
+	bloom.Size = 26
+	bloom.Threshold = 1.9
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.16
-	cc.Contrast = 0.08
+	cc.Saturation = 0.1
+	cc.Contrast = 0.04
 	cc.Brightness = 0
-	cc.TintColor = Color3.fromRGB(255, 251, 244)
+	cc.TintColor = Color3.fromRGB(255, 246, 232)
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.05
+	rays.Intensity = 0.09
 	rays.Spread = 0.7
 	for _, e in ipairs({ dof, bloom, cc, rays } :: { any }) do
 		e.Name = "CattoLobby" .. e.ClassName
@@ -910,6 +910,24 @@ function LobbyScene.GetCameraCFrame(): CFrame
 	return SCENE * CFrame.lookAt(CAMERA_POS, CAMERA_LOOK)
 end
 
+-- Graphics Quality: Low = no post effects, Medium = colour + bloom only.
+LobbyScene.Quality = "High"
+function LobbyScene.EffectAllowed(e: Instance): boolean
+	if LobbyScene.Quality == "Low" then
+		return false
+	elseif LobbyScene.Quality == "Medium" then
+		return e:IsA("ColorCorrectionEffect") or e:IsA("BloomEffect")
+	end
+	return true
+end
+
+function LobbyScene.ApplyQuality(q: string)
+	LobbyScene.Quality = q
+	for _, e in ipairs(postEffects) do
+		(e :: any).Enabled = active and LobbyScene.EffectAllowed(e)
+	end
+end
+
 function LobbyScene.SetActive(on: boolean)
 	if on == active then
 		return
@@ -922,7 +940,7 @@ function LobbyScene.SetActive(on: boolean)
 		folder.Parent = on and Workspace or nil
 	end
 	for _, e in ipairs(postEffects) do
-		(e :: any).Enabled = on
+		(e :: any).Enabled = on and LobbyScene.EffectAllowed(e)
 	end
 	if cloudsInstance then
 		cloudsInstance.Parent = on and Workspace.Terrain or nil

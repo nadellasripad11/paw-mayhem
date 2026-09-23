@@ -17,6 +17,12 @@ ClientState.Settings = {
 	ShowDamage = true,
 	GraphicsQuality = "High",
 	MobileSensitivity = 0.5,
+	MouseSensitivity = 0.35,
+	FieldOfView = 74,
+	InvertY = false,
+	AutoSprint = false,
+	ShowFPS = false,
+	Crosshair = "White",
 }
 
 ClientState.ProfileChanged = Signal.new()

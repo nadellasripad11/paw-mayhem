@@ -20,6 +20,8 @@ Remotes.Definitions = {
 	PurchaseItem = "Function", -- {kind, id} -> {ok, reason}
 	EquipItem = "Function", -- {kind, id} -> {ok}
 	ClaimQuest = "Function", -- questId -> {ok, coins}
+	SaveSettings = "Event", -- {key = value} validated + stored in the profile
+	GetLeaderboard = "Function", -- {scope = "Global"|"Country", metric} -> {entries, country}
 	RequestJoinMatch = "Event",
 
 	-- Server -> Client (state + feedback)
@@ -38,6 +40,7 @@ Remotes.Definitions = {
 	PlayEffect = "Event", -- {kind, cframe, color} broadcast VFX
 	Announce = "Event", -- {title, sub, color} big centre banner for everyone
 	MapEvent = "Event", -- {kind, dir, duration, strength} client-side event effects
+	Podium = "Event", -- {top = {{userId?, name, elims, isBot}}} end-of-match winners stage
 }
 
 local FOLDER_NAME = "PawMayhemRemotes"

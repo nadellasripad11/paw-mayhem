@@ -59,6 +59,7 @@ function EconomyService.Push(player: Player)
 		Loadout = profile.Loadout,
 		Quests = profile.Quests,
 		StarterPackBought = profile.StarterPackBought,
+		Settings = profile.Settings,
 	})
 end
 
@@ -249,7 +250,33 @@ function EconomyService.ClaimQuest(player: Player, questId: string)
 	return { ok = false, reason = "unknown quest" }
 end
 
+-- Client settings the profile may store, with how to validate each.
+local SETTING_RULES: { [string]: any } = {
+	CameraShake = "boolean", ShowDamage = "boolean", InvertY = "boolean", AutoSprint = "boolean", ShowFPS = "boolean",
+	MobileSensitivity = { 0, 1 }, MouseSensitivity = { 0, 1 }, FieldOfView = { 60, 95 },
+	GraphicsQuality = { Low = true, Medium = true, High = true },
+	Crosshair = { White = true, Green = true, Cyan = true, Pink = true, Yellow = true },
+}
+
 function EconomyService.Start()
+	Remotes.Get("SaveSettings").OnServerEvent:Connect(function(player, patch)
+		local profile = DataService.Get(player)
+		if not profile or typeof(patch) ~= "table" then
+			return
+		end
+		profile.Settings = profile.Settings or {}
+		for k, v in pairs(patch) do
+			local rule = SETTING_RULES[k]
+			if rule == "boolean" and typeof(v) == "boolean" then
+				profile.Settings[k] = v
+			elseif typeof(rule) == "table" and rule[1] and typeof(v) == "number" then
+				profile.Settings[k] = math.clamp(v, rule[1], rule[2])
+			elseif typeof(rule) == "table" and typeof(v) == "string" and rule[v] then
+				profile.Settings[k] = v
+			end
+		end
+	end)
+
 	-- Purchase / equip / claim remote handlers.
 	Remotes.Get("PurchaseItem").OnServerInvoke = function(player, payload)
 		if type(payload) ~= "table" then

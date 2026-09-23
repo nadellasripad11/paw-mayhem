@@ -24,7 +24,15 @@ local UIManager = require(script.UI.UIManager)
 
 local function main()
 	-- Subscribe to server state pushes.
+	local settingsLoaded = false
 	Remotes.Get("ProfileUpdate").OnClientEvent:Connect(function(profile)
+		-- Saved settings are applied once, the first time the profile arrives.
+		if not settingsLoaded and typeof(profile) == "table" then
+			settingsLoaded = true
+			if typeof(profile.Settings) == "table" then
+				ClientState.UpdateSettings(profile.Settings)
+			end
+		end
 		ClientState.SetProfile(profile)
 	end)
 	Remotes.Get("MatchState").OnClientEvent:Connect(function(m)

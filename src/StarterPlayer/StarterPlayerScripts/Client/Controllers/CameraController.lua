@@ -85,16 +85,21 @@ local function onInputChanged(input: InputObject, gpe: boolean)
 	if input.UserInputType == Enum.UserInputType.MouseMovement then
 		if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
 			local d = input.Delta
-			yaw -= d.X * 0.004 * (GameConfig.Camera.Sensitivity + 0.2)
-			pitch = math.clamp(pitch - d.Y * 0.004 * (GameConfig.Camera.Sensitivity + 0.2), MIN_PITCH, MAX_PITCH)
+			local settings = require(script.Parent.Parent.ClientState).Settings
+			local sens = 0.004 * ((settings.MouseSensitivity or GameConfig.Camera.Sensitivity) + 0.2)
+			local invert = settings.InvertY and -1 or 1
+			yaw -= d.X * sens
+			pitch = math.clamp(pitch - d.Y * sens * invert, MIN_PITCH, MAX_PITCH)
 		end
 	elseif input == lookTouch then
 		local pos = Vector2.new(input.Position.X, input.Position.Y)
 		if touchLastPos then
 			local d = pos - touchLastPos
-			local sens = 0.006 * (0.5 + require(script.Parent.Parent.ClientState).Settings.MobileSensitivity)
+			local settings = require(script.Parent.Parent.ClientState).Settings
+			local sens = 0.006 * (0.5 + settings.MobileSensitivity)
+			local invert = settings.InvertY and -1 or 1
 			yaw -= d.X * sens
-			pitch = math.clamp(pitch - d.Y * sens, MIN_PITCH, MAX_PITCH)
+			pitch = math.clamp(pitch - d.Y * sens * invert, MIN_PITCH, MAX_PITCH)
 		end
 		touchLastPos = pos
 	end
@@ -149,7 +154,7 @@ local function step(dt: number)
 	updateGamepad(dt)
 
 	camera.CameraType = Enum.CameraType.Scriptable
-	camera.FieldOfView = GameConfig.Camera.FieldOfView
+	camera.FieldOfView = require(script.Parent.Parent.ClientState).Settings.FieldOfView or GameConfig.Camera.FieldOfView
 
 	local focus = root.Position + Vector3.new(0, 1.5, 0)
 	local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
