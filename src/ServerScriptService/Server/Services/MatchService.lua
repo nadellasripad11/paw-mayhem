@@ -50,13 +50,18 @@ local function queuedCount(): number
 	return count
 end
 
-local function leadingMapId(): string
+local function voteTotals(): { [string]: number }
 	local totals = { SkyIslands = 0, Volcano = 0, Toybox = 0 }
 	for _, mapId in pairs(mapVotes) do
 		if totals[mapId] ~= nil then
 			totals[mapId] += 1
 		end
 	end
+	return totals
+end
+
+local function leadingMapId(): string
+	local totals = voteTotals()
 	local winner, high = state.MapId, -1
 	for _, mapId in ipairs({ "SkyIslands", "Volcano", "Toybox" }) do
 		if totals[mapId] > high then
@@ -102,6 +107,7 @@ local function broadcastState()
 		scoreToWin = GameConfig.Match.ScoreToWin,
 		matchSeconds = GameConfig.Match.MatchSeconds,
 		mapId = state.MapId,
+		votes = voteTotals(),
 		board = buildBoard(),
 	})
 end
@@ -303,6 +309,10 @@ function MatchService.Start()
 		-- press Play, put them into the current round without forcing every
 		-- existing player through a new countdown.
 		if state.Phase == PHASE.Playing then
+			local rs = Runtime.Get(player)
+			if rs and rs.Alive then
+				return
+			end
 			queuedPlayers[player.UserId] = true
 			mapVotes[player.UserId] = state.MapId
 			Runtime.ResetMatch(player)
@@ -312,8 +322,13 @@ function MatchService.Start()
 			broadcastState()
 			return
 		end
+		-- The map is already locked in; everyone is spawned when the round starts.
+		if state.Phase == PHASE.Countdown then
+			queuedPlayers[player.UserId] = true
+			return
+		end
 		if state.Phase ~= PHASE.Intermission then
-			Remotes.Get("Notify"):FireClient(player, { text = "Map voting is closed for this round.", kind = "warning" })
+			Remotes.Get("Notify"):FireClient(player, { text = "The next round starts in a moment.", kind = "info" })
 			return
 		end
 		mapVotes[player.UserId] = mapId

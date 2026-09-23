@@ -10,15 +10,12 @@ local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
-local Progression = require(ReplicatedStorage.Shared.Config.Progression)
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local Icons = require(script.Parent.Parent.Icons)
-local HeroArt = require(script.Parent.Parent.HeroArt)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 
 local Loadout = require(script.Parent.Loadout)
@@ -27,11 +24,12 @@ local Customize = require(script.Parent.Customize)
 local Leaderboard = require(script.Parent.Leaderboard)
 local Quests = require(script.Parent.Quests)
 local Settings = require(script.Parent.Settings)
+local MapSelect = require(script.Parent.MapSelect)
 
 local MainMenu = {}
 local player = Players.LocalPlayer
 
-local gui, content, panels, coinLabel, gemLabel, levelLabel, levelFill, xpLabel, playStatus, avatarSlot
+local gui, content, panels, coinLabel, gemLabel, levelLabel, levelFill, xpLabel, avatarSlot
 local panelBackdrop: Frame? = nil
 local navButtons = {}
 local currentPanel
@@ -112,206 +110,6 @@ local function safeBuild(name: string, parent: Instance, builder: (Instance) -> 
 	return fallback
 end
 
--- ── Play tab: match card + map preview + power-up legend + effects strip ────
-local function buildMapCard(parent)
-	local card = UIUtil.panel({ Parent = parent, Size = UDim2.new(0, 220, 1, 0), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.padding(12, card)
-	local preview = UIUtil.make("Frame", { Parent = card, Size = UDim2.new(1, 0, 0, 110), BackgroundColor3 = Color3.fromRGB(90, 150, 220), BorderSizePixel = 0, ClipsDescendants = true })
-	UIUtil.corner(Theme.CornerSmall, preview)
-	UIUtil.gradient(Color3.fromRGB(130, 190, 255), Color3.fromRGB(70, 120, 190), 90, preview)
-	-- Real miniature island illustration (same art as the menu background),
-	-- not an abstract dot map — a small pcall-guarded HeroArt.Island scaled down.
-	pcall(function()
-		local mini = HeroArt.Island(preview, { width = 260, position = UDim2.fromScale(0.5, 1.15) })
-		mini.ZIndex = 2
-	end)
-	local mapNameLabel = UIUtil.label({ Parent = card, Text = "…", Font = Theme.Font.Heading, TextSize = 15, Position = UDim2.fromOffset(0, 118), Size = UDim2.new(1, 0, 0, 20) })
-	UIUtil.label({ Parent = card, Text = "Team Deathmatch  •  7 islands  •  6 spawns each  •  1 of 3 maps", TextColor3 = Theme.Color.TextDim, TextSize = 11, Position = UDim2.fromOffset(0, 138), Size = UDim2.new(1, 0, 0, 16), TextWrapped = true })
-
-	-- The active map is chosen server-side each session (ArenaBuilder picks
-	-- randomly from Sky Islands / Volcano / Toybox) and replicated as an
-	-- attribute on Workspace.Arena — read it live instead of hardcoding a name.
-	local function applyMapName()
-		local arena = workspace:FindFirstChild("Arena")
-		local name = arena and arena:GetAttribute("MapName")
-		mapNameLabel.Text = (name and string.upper(name)) or "LOADING MAP…"
-	end
-	task.spawn(function()
-		local arena = workspace:WaitForChild("Arena", 15)
-		applyMapName()
-		if arena then
-			arena:GetAttributeChangedSignal("MapName"):Connect(applyMapName)
-		end
-	end)
-
-	return card
-end
-
-local EFFECTS_CATALOG = {
-	{ id = "Shoot", icon = "Gun", color = Theme.Color.Accent2, desc = "Tracer bolt on every shot" },
-	{ id = "HitEffect", label = "Hit Effect", icon = "Burst", color = Theme.Color.Danger, desc = "Impact spark + screen flash" },
-	{ id = "Knockback", icon = "Bolt", color = Theme.Color.Warn, desc = "Physics launch impulse" },
-	{ id = "Elimination", icon = "Trophy", color = Theme.Color.Coin, desc = "Kill feed + banner" },
-	{ id = "PowerUp", label = "Power-Up", icon = "Sparkle", color = Theme.Color.Gem, desc = "Pickup sparkle burst" },
-	{ id = "Victory", icon = "Trophy", color = Theme.Color.Play, desc = "Match-end celebration" },
-}
-
-local function buildEffectsStrip(parent)
-	local card = UIUtil.panel({ Parent = parent, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.padding(12, card)
-	UIUtil.label({ Parent = card, Text = "ANIMATIONS & EFFECTS", Font = Theme.Font.Heading, TextSize = 13, TextColor3 = Theme.Color.TextDim, Size = UDim2.new(1, 0, 0, 18) })
-	local row = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 1, -26), BackgroundTransparency = 1 })
-	UIUtil.listLayout(row, 10, Enum.FillDirection.Horizontal).VerticalAlignment = Enum.VerticalAlignment.Top
-	for _, e in ipairs(EFFECTS_CATALOG) do
-		local chip = UIUtil.make("Frame", { Parent = row, Size = UDim2.fromOffset(72, 84), BackgroundTransparency = 1 })
-		local swatch = UIUtil.make("Frame", { Parent = chip, Size = UDim2.fromOffset(56, 56), BackgroundColor3 = e.color, BorderSizePixel = 0 })
-		UIUtil.corner(UDim.new(0.3, 0), swatch)
-		Icons.Place(e.icon, swatch, 30, Color3.new(1, 1, 1))
-		UIUtil.label({ Parent = chip, Text = e.label or e.id, TextXAlignment = Enum.TextXAlignment.Center, TextSize = 10, Font = Theme.Font.Bold, Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 0, 24), TextWrapped = true })
-	end
-	return card
-end
-
--- A human-readable effect line built from the power-up's REAL config values
--- (GameConfig.PowerUps.Duration + whichever multiplier field it defines) —
--- not decorative text, the actual numbers the server applies.
-local function powerUpEffectText(p)
-	local bits = {}
-	if p.FireRateMult then table.insert(bits, string.format("%.1fx Fire Rate", p.FireRateMult)) end
-	if p.KnockbackMult then table.insert(bits, string.format("%.1fx Knockback", p.KnockbackMult)) end
-	if p.DamageResist then table.insert(bits, string.format("-%d%% Damage Taken", p.DamageResist * 100)) end
-	if p.SpeedMult then table.insert(bits, string.format("%.1fx Speed", p.SpeedMult)) end
-	if p.ExtraPellets then table.insert(bits, string.format("+%d Pellets", p.ExtraPellets)) end
-	table.insert(bits, GameConfig.PowerUps.Duration .. "s")
-	return table.concat(bits, " · ")
-end
-
-local function buildPowerUpStrip(parent)
-	local card = UIUtil.panel({ Parent = parent, Size = UDim2.new(1, -236, 1, 0), Position = UDim2.fromOffset(236, 0), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.padding(12, card)
-	UIUtil.label({ Parent = card, Text = "POWER-UPS ON THE MAP", Font = Theme.Font.Heading, TextSize = 13, TextColor3 = Theme.Color.TextDim, Size = UDim2.new(1, 0, 0, 18) })
-	local row = UIUtil.make("ScrollingFrame", {
-		Parent = card, Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 1, -26),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 4,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X,
-	})
-	UIUtil.listLayout(row, 10, Enum.FillDirection.Horizontal).VerticalAlignment = Enum.VerticalAlignment.Top
-	local iconFor = { RapidFire = "Bolt", MegaKnockback = "Burst", Shield = "Shield", SpeedBoost = "Bolt", MultiShot = "MultiShot" }
-	for _, p in ipairs(Progression.PowerUps) do
-		local chip = UIUtil.make("Frame", { Parent = row, Size = UDim2.fromOffset(112, 128), BackgroundTransparency = 1 })
-		local swatch = UIUtil.make("Frame", { Parent = chip, Size = UDim2.fromOffset(56, 56), Position = UDim2.fromOffset(28, 0), BackgroundColor3 = p.Color, BorderSizePixel = 0 })
-		UIUtil.corner(UDim.new(0.3, 0), swatch)
-		Icons.Place(iconFor[p.Id] or "Sparkle", swatch, 30, Color3.new(1, 1, 1))
-		UIUtil.label({ Parent = chip, Text = p.Name, TextXAlignment = Enum.TextXAlignment.Center, TextSize = 12, Font = Theme.Font.Bold, Position = UDim2.fromOffset(0, 60), Size = UDim2.new(1, 0, 0, 18), TextWrapped = true })
-		UIUtil.label({ Parent = chip, Text = powerUpEffectText(p), TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center, TextSize = 9, Position = UDim2.fromOffset(0, 80), Size = UDim2.new(1, 0, 0, 40), TextWrapped = true })
-	end
-	return card
-end
-
-local function buildPlayPanel(parent)
-	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
-	-- The pre-match surface is a real three-card map vote, matching the
-	-- reference flow: choose an arena first, then load into the round.
-	local MAPS = {
-		{ id = "SkyIslands", name = "Sky Islands", subtitle = "Floating Village", accent = Color3.fromRGB(95, 205, 255), kind = "sky" },
-		{ id = "Volcano", name = "Volcano", subtitle = "Lava Foundry", accent = Color3.fromRGB(255, 120, 54), kind = "volcano" },
-		{ id = "Toybox", name = "Toybox", subtitle = "Candy Playground", accent = Color3.fromRGB(255, 133, 190), kind = "toy" },
-	}
-	local selectedMapId = "SkyIslands"
-	local cards = {}
-
-	local shell = UIUtil.panel({ Parent = root, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(7, 35, 61), BackgroundTransparency = 0.06, ZIndex = 10 })
-	UIUtil.padding(18, shell)
-	UIUtil.label({ Parent = shell, Text = "MAPS", Font = Theme.Font.Title, TextSize = 26, Size = UDim2.new(1, -260, 0, 32), ZIndex = 11 })
-	UIUtil.label({ Parent = shell, Text = "Choose your arena before dropping into Team Deathmatch.", TextColor3 = Theme.Color.TextDim, TextSize = 12, Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, -260, 0, 18), ZIndex = 11 })
-	local teamPill = UIUtil.panel({ Parent = shell, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.fromOffset(230, 48), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 11 })
-	UIUtil.label({ Parent = teamPill, Text = "BLUE PAWS     3  v  3     RED CLAWS", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.Accent, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 12 })
-
-	local row = UIUtil.make("Frame", { Parent = shell, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 0, 270), BackgroundTransparency = 1, ZIndex = 11 })
-	UIUtil.listLayout(row, 10, Enum.FillDirection.Vertical).HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-	local function addToyShapes(parent, map)
-		if map.kind == "volcano" then
-			for i = 1, 5 do
-				local rock = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(48 + (i % 2) * 14, 34 + (i % 3) * 9), Position = UDim2.fromScale(0.08 + i * 0.17, 0.42 - (i % 2) * 0.08), BackgroundColor3 = Color3.fromRGB(58, 38, 55), BorderSizePixel = 0, ZIndex = 12 })
-				UIUtil.corner(UDim.new(0, 7), rock)
-				local lava = UIUtil.make("Frame", { Parent = rock, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(0.42, 0, 0.72, 0), BackgroundColor3 = Color3.fromRGB(255, 118 + i * 12, 42), BorderSizePixel = 0, ZIndex = 13 })
-				UIUtil.corner(UDim.new(0, 5), lava)
-			end
-		elseif map.kind == "toy" then
-			for i = 1, 7 do
-				local block = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(22, 22), Position = UDim2.fromScale(0.08 + (i % 4) * 0.23, 0.34 + math.floor(i / 4) * 0.14), BackgroundColor3 = ({ Color3.fromRGB(255, 117, 156), Color3.fromRGB(113, 204, 255), Color3.fromRGB(255, 218, 93), Color3.fromRGB(180, 142, 255) })[(i % 4) + 1], BorderSizePixel = 0, ZIndex = 12 })
-				UIUtil.corner(UDim.new(0, 5), block)
-			end
-		end
-	end
-
-	local function selectMap(map)
-		selectedMapId = map.id
-		for _, entry in ipairs(cards) do
-			local active = entry.map.id == selectedMapId
-			entry.card.BackgroundColor3 = active and Color3.fromRGB(24, 75, 88) or Theme.Color.Panel
-			entry.stroke.Color = active and entry.map.accent or Theme.Color.Stroke
-			entry.stroke.Thickness = active and 2.5 or 1.5
-			entry.check.Visible = active
-		end
-	end
-
-	for _, map in ipairs(MAPS) do
-		local card = UIUtil.panel({ Parent = row, Size = UDim2.new(1, 0, 0, 82), BackgroundColor3 = Theme.Color.Panel, ClipsDescendants = true, ZIndex = 11 })
-		local stroke = card:FindFirstChildOfClass("UIStroke") :: UIStroke
-		local preview = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 0, 66), BackgroundColor3 = map.accent, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 12 })
-		UIUtil.corner(Theme.CornerSmall, preview)
-		if map.kind == "sky" then
-			pcall(function()
-				HeroArt.Sky(preview)
-				HeroArt.Island(preview, { width = 170, position = UDim2.fromScale(0.26, 1.12) })
-				HeroArt.Island(preview, { width = 230, position = UDim2.fromScale(0.70, 1.13) })
-			end)
-		elseif map.kind == "volcano" then
-			UIUtil.gradient(Color3.fromRGB(110, 43, 43), Color3.fromRGB(24, 17, 30), 90, preview)
-			addToyShapes(preview, map)
-		else
-			UIUtil.gradient(Color3.fromRGB(113, 206, 255), Color3.fromRGB(236, 137, 202), 90, preview)
-			addToyShapes(preview, map)
-		end
-		local tag = UIUtil.panel({ Parent = preview, Position = UDim2.fromOffset(10, 34), Size = UDim2.fromOffset(170, 26), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.08, ZIndex = 14 })
-		local title = UIUtil.label({ Parent = tag, Text = map.name, Font = Theme.Font.Heading, TextSize = 15, Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 15 })
-		UIUtil.label({ Parent = card, Text = map.subtitle, Font = Theme.Font.Bold, TextSize = 11, TextColor3 = map.accent, Position = UDim2.fromOffset(200, 16), Size = UDim2.new(0.45, 0, 0, 16), ZIndex = 13 })
-		UIUtil.label({ Parent = card, Text = "TEAM DEATHMATCH  •  6 GROUNDED SPAWNS", TextSize = 9, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(200, 39), Size = UDim2.new(0.58, 0, 0, 14), ZIndex = 13 })
-		local check = UIUtil.label({ Parent = card, Text = "✓ SELECTED", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Color3.fromRGB(182, 241, 112), TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(1, -132, 0, 14), Size = UDim2.fromOffset(116, 18), Visible = false, ZIndex = 13 })
-		local hit = UIUtil.button({ Parent = card, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 20 }, function() selectMap(map) end)
-		table.insert(cards, { map = map, card = card, stroke = stroke, check = check, title = title, hit = hit })
-	end
-
-	local selected = UIUtil.panel({ Parent = shell, Position = UDim2.fromOffset(0, 352), Size = UDim2.new(1, -190, 0, 66), BackgroundColor3 = Theme.Color.PanelDark, ZIndex = 11 })
-	UIUtil.label({ Parent = selected, Text = "SELECTED ARENA", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextMuted, Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 14), ZIndex = 12 })
-	local selectedName = UIUtil.label({ Parent = selected, Text = "SKY ISLANDS  •  FLOATING VILLAGE", Font = Theme.Font.Heading, TextSize = 16, Position = UDim2.fromOffset(14, 27), Size = UDim2.new(1, -28, 0, 22), ZIndex = 12 })
-	playStatus = UIUtil.label({ Parent = selected, Text = "Vote locked when you join the queue.", TextColor3 = Theme.Color.TextDim, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.5, 0, 0, 11), Size = UDim2.new(0.5, -14, 0, 16), ZIndex = 12 })
-	local join = UIUtil.button({ Parent = shell, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, 0, 1, 0), Size = UDim2.fromOffset(172, 52), BackgroundColor3 = Theme.Color.Play, Text = "PLAY THIS MAP", TextColor3 = Color3.fromRGB(8, 46, 52), Font = Theme.Font.Title, TextSize = 16, CornerRadius = Theme.CornerSmall, ZIndex = 12 }, function()
-		Remotes.Get("RequestJoinMatch"):FireServer({ mapId = selectedMapId })
-		playStatus.Text = "MAP VOTE LOCKED  •  QUEUED"
-	end)
-
-	local function updateSelectedName()
-		for _, map in ipairs(MAPS) do
-			if map.id == selectedMapId then
-				selectedName.Text = string.upper(map.name) .. "  •  " .. string.upper(map.subtitle)
-			end
-		end
-	end
-	for _, map in ipairs(MAPS) do
-		if map.id == selectedMapId then selectMap(map) end
-	end
-	local originalSelect = selectMap
-	selectMap = function(map)
-		originalSelect(map)
-		updateSelectedName()
-	end
-	updateSelectedName()
-	return root
-end
-
 -- ── currency chips + level pill ──────────────────────────────────────────────
 local function refreshCurrency()
 	local p = ClientState.Profile
@@ -334,24 +132,27 @@ local function refreshCurrency()
 	end
 end
 
-local function refreshPlayStatus(m)
-	if not playStatus then
-		return
-	end
-	if m.phase == "Intermission" then
-		playStatus.Text = "Next match in " .. (m.timeLeft or 0) .. "s"
-	elseif m.phase == "Countdown" then
-		playStatus.Text = "Get ready! " .. (m.timeLeft or 0)
-	elseif m.phase == "Playing" then
-		playStatus.Text = "Match in progress — press Play to join!"
-	elseif m.phase == "Results" then
-		playStatus.Text = "Match over — results…"
-	end
-end
-
 function MainMenu.SetVisible(on: boolean)
 	if gui then
 		gui.Enabled = on
+	end
+	if not on then
+		MapSelect.Close()
+	end
+end
+
+-- Play: during a live match, join it straight away; otherwise open the map
+-- picker for the next round.
+local function onPlay()
+	switchTo(nil)
+	local m = ClientState.Match
+	if m.phase == "Playing" then
+		Remotes.Get("RequestJoinMatch"):FireServer({ mapId = m.mapId or "SkyIslands" })
+	else
+		MapSelect.Open()
+		if not MapSelect.IsOpen() then
+			Remotes.Get("RequestJoinMatch"):FireServer({ mapId = "SkyIslands" })
+		end
 	end
 end
 
@@ -462,7 +263,11 @@ local function navButton(parent: Instance, item, order: number)
 		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
 	end)
 	b.MouseButton1Click:Connect(function()
-		switchTo(item.id)
+		if item.id == "Play" then
+			onPlay()
+		else
+			switchTo(item.id)
+		end
 	end)
 	navButtons[item.id] = { button = b, stroke = stroke, baseStroke = stroke.Transparency }
 end
@@ -604,7 +409,6 @@ function MainMenu.Build()
 
 	-- Build every panel defensively: a crash in one never blanks the others.
 	panels = {}
-	panels.Play = safeBuild("Play", content, buildPlayPanel)
 	panels.Loadout = safeBuild("Loadout", content, Loadout.Build)
 	panels.Shop = safeBuild("Shop", content, Shop.Build)
 	panels.Customize = safeBuild("Customize", content, Customize.Build)
@@ -618,8 +422,12 @@ function MainMenu.Build()
 	end
 	currentPanel = nil
 
+	local ok, err = pcall(MapSelect.Build, gui)
+	if not ok then
+		warn("[PAW MAYHEM] Map select failed to build: " .. tostring(err))
+	end
+
 	ClientState.ProfileChanged:Connect(refreshCurrency)
-	ClientState.MatchChanged:Connect(refreshPlayStatus)
 	if ClientState.Profile then
 		refreshCurrency()
 	end

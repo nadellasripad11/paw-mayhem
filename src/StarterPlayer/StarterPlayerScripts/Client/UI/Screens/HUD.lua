@@ -1,5 +1,6 @@
 --!strict
 -- HUD: in-match heads-up display, kept deliberately minimal:
+--   * Small team scores + match timer (top center)
 --   * Center crosshair with shot/hit kick
 --   * Compact health bar + active power-up (bottom left)
 --   * Small weapon + ammo pill (bottom center)
@@ -330,7 +331,46 @@ local function hideCoreGui()
 	end
 end
 
+-- ── top center: small scores + timer ─────────────────────────────────────────
+local function buildScoreBar(parent)
+	local bar = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8),
+		Size = UDim2.fromOffset(172, 30), BackgroundTransparency = 1,
+	})
+	local function tile(x: number, w: number, color: Color3, font: Enum.Font, size: number): (TextLabel, UIStroke)
+		local t = UIUtil.make("Frame", {
+			Parent = bar, Position = UDim2.fromOffset(x, 0), Size = UDim2.fromOffset(w, 30),
+			BackgroundColor3 = color, BackgroundTransparency = 0.1, BorderSizePixel = 0,
+		})
+		UIUtil.corner(UDim.new(0, 8), t)
+		local s = UIUtil.stroke(Color3.new(1, 1, 1), 2, t)
+		s.Enabled = false
+		local l = UIUtil.label({
+			Parent = t, Text = "0", Font = font, TextSize = size,
+			TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1),
+		})
+		return l, s
+	end
+	refs.blueScore, refs.blueStroke = tile(0, 48, Theme.Color.Blue, Theme.Font.Number, 18)
+	refs.timer = tile(53, 66, Theme.Color.PanelDark, Theme.Font.Heading, 16)
+	refs.timer.Text = "3:00"
+	refs.redScore, refs.redStroke = tile(124, 48, Theme.Color.Red, Theme.Font.Number, 18)
+end
+
 -- ── updates ──────────────────────────────────────────────────────────────────
+local function updateScoreBar(m)
+	if not refs.timer then return end
+	local scores = m.scores or {}
+	refs.blueScore.Text = tostring(scores.Blue or 0)
+	refs.redScore.Text = tostring(scores.Red or 0)
+	local t = math.max(0, m.timeLeft or 0)
+	refs.timer.Text = string.format("%d:%02d", t // 60, t % 60)
+	local char = player.Character
+	local team = char and char:GetAttribute("Team")
+	refs.blueStroke.Enabled = team == "Blue"
+	refs.redStroke.Enabled = team == "Red"
+end
+
 local function updateHealth()
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -365,6 +405,7 @@ function HUD.Build()
 
 	task.spawn(hideCoreGui)
 
+	buildScoreBar(gui)
 	buildCrosshair(gui)
 	buildHealth(gui)
 	buildAmmo(gui)
@@ -372,6 +413,8 @@ function HUD.Build()
 	buildMobile(gui)
 
 	ClientState.ProfileChanged:Connect(updateWeapon)
+	ClientState.MatchChanged:Connect(updateScoreBar)
+	updateScoreBar(ClientState.Match)
 
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
