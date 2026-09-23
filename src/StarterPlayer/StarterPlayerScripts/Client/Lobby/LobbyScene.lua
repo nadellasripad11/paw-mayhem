@@ -1,12 +1,17 @@
 -- LobbyScene: the real 3D world behind the home screen. Built locally on each
 -- client (never replicated) far away from the arena, so the menu camera looks at
--- an actual lit scene: the Catto mascot holding a glowing blaster on a mossy
--- ledge, floating islands with windmills, houses and waterfalls, clouds,
--- flowers and fences. Everything is procedural Parts — no Toolbox models.
+-- an actual lit scene: your own cat holding your blaster on a mossy ledge,
+-- floating islands with windmills, houses and waterfalls, clouds, flowers and
+-- fences. Everything is procedural Parts — no Toolbox models.
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CatBuilder = require(ReplicatedStorage.Shared.Character.CatBuilder)
+local BlasterBuilder = require(ReplicatedStorage.Shared.Character.BlasterBuilder)
+local ClientState = require(script.Parent.Parent.ClientState)
 
 local LobbyScene = {}
 LobbyScene.FieldOfView = 50
@@ -32,12 +37,14 @@ local lightingConns: { RBXScriptConnection } = {}
 
 local LIGHTING = {
 	ClockTime = 14.2,
-	Brightness = 3,
-	Ambient = Color3.fromRGB(122, 132, 158),
-	OutdoorAmbient = Color3.fromRGB(168, 178, 204),
-	EnvironmentDiffuseScale = 1,
-	EnvironmentSpecularScale = 0.8,
-	ExposureCompensation = 0.1,
+	-- Kept moderate: brighter settings pushed white fur and flowers past the
+	-- bloom threshold and washed the whole mascot out.
+	Brightness = 2.1,
+	Ambient = Color3.fromRGB(100, 108, 130),
+	OutdoorAmbient = Color3.fromRGB(146, 154, 176),
+	EnvironmentDiffuseScale = 0.6,
+	EnvironmentSpecularScale = 0.4,
+	ExposureCompensation = -0.2,
 	ShadowSoftness = 0.35,
 	FogEnd = 100000,
 	GlobalShadows = true,
@@ -71,7 +78,6 @@ local YELLOW = Color3.fromRGB(255, 212, 76)
 local WHITE = Color3.new(1, 1, 1)
 
 local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
-local SPARKLES = "rbxasset://textures/particles/sparkles_main.dds"
 
 -- ── primitive helpers ────────────────────────────────────────────────────────
 local function W(x: number, y: number, z: number): CFrame
@@ -122,12 +128,6 @@ local function wedge(parent: Instance, size: Vector3, cf: CFrame, color: Color3,
 	return newPart("WedgePart", parent, size, cf, color, material)
 end
 
--- Cylinder spanning two world points.
-local function limb(parent: Instance, a: Vector3, b: Vector3, dia: number, color: Color3, material: Enum.Material?): BasePart
-	local cf = CFrame.lookAt((a + b) / 2, b) * CFrame.Angles(0, math.pi / 2, 0)
-	return cyl(parent, (b - a).Magnitude, dia, cf, color, material)
-end
-
 -- Isosceles triangle prism (apex up) from two mirrored wedges. `cf` sits at the
 -- middle of the base edge; the triangle lies in cf's XY plane.
 local function triangle(parent: Instance, cf: CFrame, halfWidth: number, height: number, thickness: number, color: Color3, material: Enum.Material?): { BasePart }
@@ -140,16 +140,6 @@ end
 -- Gable roof: ridge runs along cf's Z axis, `cf` at the roof's center.
 local function gable(parent: Instance, cf: CFrame, width: number, height: number, depth: number, color: Color3)
 	triangle(parent, cf * CFrame.new(0, -height / 2, 0), width / 2, height, depth, color, Enum.Material.SmoothPlastic)
-end
-
-local function light(parent: Instance, color: Color3, brightness: number, range: number): PointLight
-	local l = Instance.new("PointLight")
-	l.Color = color
-	l.Brightness = brightness
-	l.Range = range
-	l.Shadows = false
-	l.Parent = parent
-	return l
 end
 
 local function noShadows(model: Instance)
@@ -364,217 +354,154 @@ local function island(parent: Instance, name: string, x: number, y: number, z: n
 end
 
 -- ── the Catto mascot ─────────────────────────────────────────────────────────
-local function buildHeroCat(parent: Instance, root: CFrame)
-	local model = Instance.new("Model")
-	model.Name = "CattoMascot"
-	model.Parent = parent
+-- The real in-game cat (your equipped look) scaled up, holding your equipped
+-- blaster. CatAnimator poses it (breathing, head sway, tail, blinking).
+local MASCOT_SCALE = 4
+local GUN_SCALE = 0.36
+local mascotRoot: CFrame? = nil
+local mascotParent: Instance? = nil
+local mascot: Model? = nil
+local mascotSig = ""
 
-	local FUR = Color3.fromRGB(255, 236, 222)
-	local FUR_LIGHT = Color3.fromRGB(255, 248, 242)
-	local PINK = Color3.fromRGB(255, 172, 184)
-	local NOSE = Color3.fromRGB(244, 126, 148)
-	local JACKET = Color3.fromRGB(50, 54, 92)
-	local JACKET_DARK = Color3.fromRGB(34, 37, 66)
-	local LEATHER = Color3.fromRGB(132, 88, 56)
-	local LEATHER_DARK = Color3.fromRGB(98, 64, 42)
-	local EYE = Color3.fromRGB(26, 18, 28)
-	local IRIS = Color3.fromRGB(86, 58, 104)
-	local SHELL = Color3.fromRGB(236, 236, 250)
-	local PURPLE = Color3.fromRGB(136, 78, 245)
-	local PURPLE_L = Color3.fromRGB(168, 112, 255)
-	local GUN_DARK = Color3.fromRGB(46, 50, 92)
-	local CYAN = Color3.fromRGB(80, 232, 255)
-	local MUZZLE = Color3.fromRGB(205, 120, 255)
-
-	local entries = {}
-	local function add(p: BasePart, group: string): BasePart
-		table.insert(entries, { part = p, rel = root:ToObjectSpace(p.CFrame), group = group })
-		return p
+-- Place every jointed part from its joints, walking out from the root.
+local function resolveJoints(model: Model)
+	local root = model.PrimaryPart
+	if not root then
+		return
 	end
-	local function R(x: number, y: number, z: number): CFrame
-		return root * CFrame.new(x, y, z)
-	end
-
-	-- feet (planted) + legs
-	for _, s in ipairs({ -1, 1 }) do
-		add(ell(model, Vector3.new(2.3, 1.5, 2.9), R(s * 1.35, 0.75, 0.6), FUR), "feet")
-		add(ell(model, Vector3.new(1.5, 0.7, 1.0), R(s * 1.35, 0.5, 1.85), FUR_LIGHT), "feet")
-		add(ell(model, Vector3.new(2.2, 2.8, 2.3), R(s * 1.2, 2.0, 0.1), FUR), "body")
-	end
-
-	-- hoodie jacket over a fluffy chest
-	add(ell(model, Vector3.new(5.1, 3.2, 4.3), R(0, 3.1, 0), JACKET), "body")
-	add(ell(model, Vector3.new(5.4, 5.0, 4.5), R(0, 4.7, 0), JACKET), "body")
-	add(ell(model, Vector3.new(2.3, 3.8, 1.3), R(0, 4.9, 1.72), FUR_LIGHT), "body")
-	for _, s in ipairs({ -1, 1 }) do
-		add(block(model, Vector3.new(0.4, 3.9, 0.3), R(s * 1.2, 4.8, 2.02) * CFrame.Angles(math.rad(-8), 0, math.rad(6 * s)), JACKET_DARK), "body")
-		add(block(model, Vector3.new(1.3, 1.0, 0.3), R(s * 1.75, 3.2, 1.62) * CFrame.Angles(0, math.rad(38 * s), 0), JACKET_DARK), "body")
-	end
-	add(ell(model, Vector3.new(4.6, 2.3, 3.0), R(0, 6.9, -1.5), JACKET), "body")
-	add(ell(model, Vector3.new(4.8, 1.3, 4.0), R(0, 6.85, 0.1), JACKET_DARK), "body")
-	add(block(model, Vector3.new(0.55, 0.75, 0.12), R(0.35, 4.2, 2.33), Color3.fromRGB(205, 210, 220), Enum.Material.Metal), "body")
-
-	-- satchel + strap
-	local bagCF = R(-2.7, 2.9, 1.0) * CFrame.Angles(0, math.rad(-40), 0)
-	add(block(model, Vector3.new(1.8, 2.0, 0.8), bagCF, LEATHER, Enum.Material.Leather), "body")
-	add(block(model, Vector3.new(1.85, 0.85, 0.86), bagCF * CFrame.new(0, 0.6, 0.02), LEATHER_DARK, Enum.Material.Leather), "body")
-	add(block(model, Vector3.new(0.3, 0.3, 0.1), bagCF * CFrame.new(0, 0.2, 0.47), Color3.fromRGB(230, 190, 90), Enum.Material.Metal), "body")
-	local strapA, strapB, strapC = R(-2.4, 3.5, 1.3).Position, R(0, 5.1, 2.4).Position, R(2.2, 6.6, 1.2).Position
-	add(limb(model, strapA, strapB, 0.38, LEATHER, Enum.Material.Leather), "body")
-	add(limb(model, strapB, strapC, 0.38, LEATHER, Enum.Material.Leather), "body")
-
-	-- tail curling up behind the right hip
-	local tailPts = { Vector3.new(1.9, 2.3, -1.7), Vector3.new(2.9, 2.7, -2.0), Vector3.new(3.7, 3.6, -2.0), Vector3.new(4.1, 4.8, -1.8), Vector3.new(4.0, 6.0, -1.5), Vector3.new(3.6, 6.9, -1.2) }
-	for i, pt in ipairs(tailPts) do
-		local d = 1.5 - (i - 1) * 0.07
-		add(ell(model, Vector3.new(d, d, d), R(pt.X, pt.Y, pt.Z), i == #tailPts and FUR_LIGHT or FUR), "tail")
-		if i > 1 then
-			local prev = tailPts[i - 1]
-			add(limb(model, R(prev.X, prev.Y, prev.Z).Position, R(pt.X, pt.Y, pt.Z).Position, d * 0.92, FUR), "tail")
+	local motors = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("Motor6D") or d:IsA("Weld") then
+			table.insert(motors, d)
 		end
 	end
-
-	-- futuristic blaster (gun-local: +X forward, +Y up, +Z toward camera)
-	local gunPos = Vector3.new(1.5, 4.55, 3.55)
-	local gunDir = Vector3.new(6.8, 0.55, 0.9).Unit
-	local gunLocal = CFrame.lookAt(gunPos, gunPos + gunDir) * CFrame.Angles(0, math.pi / 2, 0)
-	local gunCF = root * gunLocal
-	local function G(x: number, y: number, z: number): CFrame
-		return gunCF * CFrame.new(x, y, z)
-	end
-	add(block(model, Vector3.new(4.4, 1.45, 1.5), G(0, 0, 0), SHELL), "body")
-	add(block(model, Vector3.new(3.8, 0.55, 1.35), G(-0.1, 0.95, 0), PURPLE), "body")
-	add(block(model, Vector3.new(2.8, 0.8, 0.2), G(-0.5, -0.1, 0.8), PURPLE_L), "body")
-	local tube = add(cyl(model, 3.1, 0.95, G(0.35, 0.25, 0.62), CYAN, Enum.Material.Neon), "body")
-	tube.Transparency = 0.05
-	light(tube, CYAN, 2.2, 8)
-	for _, dx in ipairs({ -1.25, 1.95 }) do
-		add(cyl(model, 0.3, 1.15, G(dx, 0.25, 0.62), GUN_DARK), "body")
-	end
-	add(cyl(model, 1.7, 1.25, G(2.95, 0.15, 0), PURPLE), "body")
-	add(cyl(model, 0.35, 1.5, G(3.55, 0.15, 0), GUN_DARK), "body")
-	local muzzle = add(ell(model, Vector3.new(1.15, 1.15, 1.15), G(3.95, 0.15, 0), MUZZLE, Enum.Material.Neon), "body")
-	local muzzleLight = light(muzzle, MUZZLE, 3.5, 11)
-	local halo = add(ell(model, Vector3.new(2.1, 2.1, 2.1), G(3.95, 0.15, 0), MUZZLE, Enum.Material.Neon), "body")
-	halo.Transparency = 0.72
-	halo.CastShadow = false
-	local sparkle = Instance.new("ParticleEmitter")
-	sparkle.Texture = SPARKLES
-	sparkle.Color = ColorSequence.new(Color3.fromRGB(230, 180, 255))
-	sparkle.LightEmission = 1
-	sparkle.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(1, 0) })
-	sparkle.Lifetime = NumberRange.new(0.5, 0.9)
-	sparkle.Speed = NumberRange.new(0.6, 1.4)
-	sparkle.SpreadAngle = Vector2.new(180, 180)
-	sparkle.Rate = 7
-	sparkle.Parent = muzzle
-	add(block(model, Vector3.new(1.35, 1.65, 1.45), G(-2.6, -0.05, 0), GUN_DARK), "body")
-	add(block(model, Vector3.new(0.85, 1.8, 0.95), G(-1.55, -1.35, 0) * CFrame.Angles(0, 0, math.rad(-14)), GUN_DARK), "body")
-	add(block(model, Vector3.new(0.9, 1.0, 0.85), G(1.3, -1.0, 0), GUN_DARK), "body")
-	add(block(model, Vector3.new(0.9, 0.5, 0.4), G(-0.6, 1.42, 0), GUN_DARK), "body")
-	add(ell(model, Vector3.new(0.34, 0.34, 0.34), G(-0.18, 1.42, 0), CYAN, Enum.Material.Neon), "body")
-
-	-- arms wrapping the blaster
-	local rootInv = root:Inverse()
-	local hands = {
-		{ shoulder = Vector3.new(-2.45, 5.7, 0.3), elbow = Vector3.new(-2.9, 4.3, 1.9), hand = (rootInv * G(-1.5, -0.75, 1.0)).Position },
-		{ shoulder = Vector3.new(2.45, 5.7, 0.3), elbow = Vector3.new(3.3, 4.6, 2.0), hand = (rootInv * G(1.35, -0.55, 1.0)).Position },
-	}
-	for _, arm in ipairs(hands) do
-		local sh, el, ha = R(arm.shoulder.X, arm.shoulder.Y, arm.shoulder.Z).Position, R(arm.elbow.X, arm.elbow.Y, arm.elbow.Z).Position, R(arm.hand.X, arm.hand.Y, arm.hand.Z).Position
-		add(ell(model, Vector3.new(2.0, 2.0, 2.0), CFrame.new(sh), JACKET), "body")
-		add(limb(model, sh, el, 1.7, JACKET), "body")
-		add(ell(model, Vector3.new(1.75, 1.75, 1.75), CFrame.new(el), JACKET), "body")
-		add(limb(model, el, ha, 1.6, JACKET), "body")
-		local cuffAt = el:Lerp(ha, 0.82)
-		add(cyl(model, 0.45, 1.8, CFrame.lookAt(cuffAt, ha) * CFrame.Angles(0, math.pi / 2, 0), JACKET_DARK), "body")
-		add(ell(model, Vector3.new(1.55, 1.4, 1.6), CFrame.new(ha), FUR), "body")
-	end
-
-	-- head
-	add(ell(model, Vector3.new(8.3, 7.1, 7.0), R(0, 10.2, 0.2), FUR), "head")
-	for _, s in ipairs({ -1, 1 }) do
-		add(ell(model, Vector3.new(3.1, 2.5, 3.0), R(s * 3.45, 8.85, 0.8), FUR), "head")
-	end
-	add(ell(model, Vector3.new(1.0, 1.7, 0.9), R(-0.35, 13.75, 0.9) * CFrame.Angles(0, 0, math.rad(18)), FUR), "head")
-	add(ell(model, Vector3.new(0.8, 1.3, 0.8), R(0.35, 13.65, 1.0) * CFrame.Angles(0, 0, math.rad(-14)), FUR), "head")
-	add(ell(model, Vector3.new(2.8, 1.8, 1.4), R(0, 8.95, 3.25), FUR_LIGHT), "head")
-	add(ell(model, Vector3.new(0.6, 0.42, 0.4), R(0, 9.45, 3.98), NOSE), "head")
-	for _, s in ipairs({ -1, 1 }) do
-		add(block(model, Vector3.new(0.5, 0.12, 0.1), R(s * 0.22, 8.85, 3.97) * CFrame.Angles(0, 0, math.rad(-30 * s)), Color3.fromRGB(80, 44, 56)), "head")
-		local blush = add(ell(model, Vector3.new(1.3, 0.6, 0.3), R(s * 2.75, 9.35, 2.85) * CFrame.Angles(0, math.rad(35 * s), 0), Color3.fromRGB(255, 160, 172)), "head")
-		blush.Transparency = 0.3
-	end
-
-	local eyes = {}
-	for _, s in ipairs({ -1, 1 }) do
-		local cf = R(s * 1.75, 10.3, 3.26) * CFrame.Angles(0, math.rad(22 * s), 0)
-		local outer = add(ell(model, Vector3.new(1.95, 2.35, 0.9), cf, EYE), "head")
-		local iris = add(ell(model, Vector3.new(1.45, 1.75, 0.35), cf * CFrame.new(0, -0.22, 0.33), IRIS), "head")
-		local pupil = add(ell(model, Vector3.new(0.85, 1.05, 0.3), cf * CFrame.new(0, -0.12, 0.4), EYE), "head")
-		local shine = add(ell(model, Vector3.new(0.72, 0.72, 0.2), cf * CFrame.new(-0.38, 0.5, 0.45), WHITE, Enum.Material.Neon), "head")
-		local shine2 = add(ell(model, Vector3.new(0.34, 0.34, 0.15), cf * CFrame.new(0.42, -0.55, 0.45), WHITE, Enum.Material.Neon), "head")
-		table.insert(eyes, { outer = outer, size = outer.Size, hide = { iris, pupil, shine, shine2 } })
-	end
-
-	for _, s in ipairs({ -1, 1 }) do
-		local base = R(s * 2.2, 12.3, 0.1) * CFrame.Angles(0, 0, math.rad(-22 * s))
-		for _, p in ipairs(triangle(model, base, 1.8, 4.6, 1.3, FUR)) do
-			add(p, "head")
-		end
-		for _, p in ipairs(triangle(model, base * CFrame.new(0, 0.5, 0.67), 1.15, 3.0, 0.3, PINK)) do
-			add(p, "head")
-		end
-	end
-
-	local parts, rels, groups = {}, {}, {}
-	for i, e in ipairs(entries) do
-		parts[i] = e.part
-		rels[i] = e.rel
-		groups[i] = e.group
-	end
-	local neck = CFrame.new(0, 7.2, 0.2)
-	local neckInv = neck:Inverse()
-	local tailPivot = CFrame.new(1.9, 2.3, -1.7)
-	local tailInv = tailPivot:Inverse()
-	local cfs = table.create(#parts)
-	local nextBlink = os.clock() + 2.5
-	local blinkUntil = 0
-
-	local function setEyesClosed(closed: boolean)
-		for _, e in ipairs(eyes) do
-			e.outer.Size = closed and Vector3.new(e.size.X, 0.28, e.size.Z) or e.size
-			for _, p in ipairs(e.hide) do
-				p.Transparency = closed and 1 or 0
+	local queue, seen = { root }, { [root] = true }
+	local i = 1
+	while queue[i] do
+		local p0 = queue[i]
+		i += 1
+		for _, m in ipairs(motors) do
+			local j = m :: any
+			if j.Part0 == p0 and j.Part1 and not seen[j.Part1] then
+				j.Part1.CFrame = p0.CFrame * j.C0 * j.C1:Inverse()
+				seen[j.Part1] = true
+				table.insert(queue, j.Part1)
 			end
 		end
 	end
+end
 
-	table.insert(animators, function(t: number)
-		local breathe = math.sin(t * 2.1) * 0.1
-		local body = CFrame.new(0, breathe, 0)
-		local head = body * neck * CFrame.Angles(math.sin(t * 0.8) * 0.025, math.sin(t * 0.55) * 0.04, math.sin(t * 0.9 + 1) * 0.05) * neckInv
-		local tail = CFrame.new(0, breathe * 0.5, 0) * tailPivot * CFrame.Angles(0, math.sin(t * 1.4) * 0.25, math.sin(t * 1.7) * 0.12) * tailInv
-		local pick = { head = head, tail = tail, feet = CFrame.identity }
-		for i = 1, #parts do
-			local g = groups[i]
-			local m = pick[g] or body
-			cfs[i] = root * m * rels[i]
+-- Scale parts, joint offsets and stored rest poses about `pivot`.
+local function scaleAbout(inst: Instance, pivot: CFrame, s: number)
+	local function scaled(cf: CFrame): CFrame
+		return cf - cf.Position + cf.Position * s
+	end
+	for _, d in ipairs(inst:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local rel = pivot:ToObjectSpace(d.CFrame)
+			d.Size *= s
+			d.CFrame = pivot * scaled(rel)
+		elseif d:IsA("Motor6D") or d:IsA("Weld") then
+			local j = d :: any
+			j.C0 = scaled(j.C0)
+			j.C1 = scaled(j.C1)
+			local base = d:GetAttribute("BaseC0")
+			if typeof(base) == "CFrame" then
+				d:SetAttribute("BaseC0", scaled(base))
+			end
 		end
-		Workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+	end
+end
 
-		if blinkUntil == 0 and t >= nextBlink then
-			blinkUntil = t + 0.13
-			setEyesClosed(true)
-		elseif blinkUntil > 0 and t >= blinkUntil then
-			blinkUntil = 0
-			nextBlink = t + rng:NextNumber(2.2, 5)
-			setEyesClosed(false)
+local function loadoutNow()
+	local p = ClientState.Profile
+	local cat = p and p.Loadout and p.Loadout.Cat or {}
+	local weaponId = p and p.Loadout and p.Loadout.Weapon or "PawBlaster"
+	local skinId = p and p.Loadout and p.Loadout.Skin or "Default"
+	return cat, weaponId, skinId
+end
+
+local function buildMascot()
+	if not mascotRoot or not mascotParent then
+		return
+	end
+	local cat, weaponId, skinId = loadoutNow()
+	local model = CatBuilder.Build(cat)
+	model.Name = "CattoMascot"
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum:Destroy()
+	end
+	local root = model.PrimaryPart :: BasePart
+	root.Anchored = true
+	model:PivotTo(CFrame.identity)
+
+	-- Arms raised forward to hold the blaster.
+	for _, i in ipairs({ -1, 1 }) do
+		local m = model:FindFirstChild(i < 0 and "PawShoulderL" or "PawShoulderR", true) :: Motor6D?
+		if m then
+			local hold = CFrame.new(0.62 * i, 0.36, -0.02) * CFrame.Angles(0, 0, math.rad(-14 * i)) * CFrame.Angles(math.rad(72), 0, 0)
+			m.C0 = hold
+			m:SetAttribute("BaseC0", hold)
 		end
-		local pulse = math.sin(t * 4)
-		muzzleLight.Brightness = 3.5 + pulse * 0.9
-		halo.Transparency = 0.72 + pulse * 0.08
-	end)
+	end
+	resolveJoints(model)
+
+	-- Blaster across the body, muzzle to screen-right and a little toward the
+	-- camera, gripped by the right hand.
+	local hands = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name == "Hand" then
+			table.insert(hands, d)
+		end
+	end
+	if #hands == 2 then
+		local mid = (hands[1].Position + hands[2].Position) / 2 + Vector3.new(0, 0.06, -0.14)
+		local dir = Vector3.new(-1, 0.06, -0.38).Unit
+		local z = dir:Cross(Vector3.yAxis).Unit
+		local gunCF = CFrame.fromMatrix(mid, dir, z:Cross(dir).Unit, z)
+		local gun = BlasterBuilder.Build(weaponId, skinId, gunCF)
+		scaleAbout(gun, gunCF, GUN_SCALE)
+		local grip = hands[1].Position.X > hands[2].Position.X and hands[1] or hands[2]
+		for _, p in ipairs(gun:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.Anchored = false
+				p.Massless = true
+				local w = Instance.new("Weld")
+				w.Part0 = grip
+				w.Part1 = p
+				w.C0 = grip.CFrame:ToObjectSpace(p.CFrame)
+				w.Parent = p
+			end
+		end
+		gun.Parent = model
+	end
+
+	scaleAbout(model, CFrame.identity, MASCOT_SCALE)
+	model:PivotTo(mascotRoot)
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.CanQuery = false
+			d.CanTouch = false
+		end
+	end
+	if mascot then
+		mascot:Destroy()
+	end
+	mascot = model
+	model.Parent = mascotParent
+end
+
+local function refreshMascot()
+	local cat, weaponId, skinId = loadoutNow()
+	local sig = table.concat({ cat.Fur or "", cat.Outfit or "", cat.Hat or "", cat.Accessory or "", weaponId, skinId }, "|")
+	if sig ~= mascotSig then
+		mascotSig = sig
+		local ok, err = pcall(buildMascot)
+		if not ok then
+			warn("[CATTO] Lobby mascot failed to build: " .. tostring(err))
+		end
+	end
 end
 
 -- ── world layout ─────────────────────────────────────────────────────────────
@@ -917,13 +844,13 @@ local function buildPostEffects()
 	dof.FocusDistance = 27
 	dof.InFocusRadius = 11
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.45
-	bloom.Size = 26
-	bloom.Threshold = 1.45
+	bloom.Intensity = 0.2
+	bloom.Size = 16
+	bloom.Threshold = 2.4
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.22
+	cc.Saturation = 0.16
 	cc.Contrast = 0.08
-	cc.Brightness = 0.02
+	cc.Brightness = 0
 	cc.TintColor = Color3.fromRGB(255, 251, 244)
 	local rays = Instance.new("SunRaysEffect")
 	rays.Intensity = 0.05
@@ -964,7 +891,11 @@ function LobbyScene.Build()
 		buildForeground(f)
 	end)
 	section("mascot", function()
-		buildHeroCat(f, W(4, -1.0, 0) * CFrame.Angles(0, math.rad(-8), 0))
+		-- Feet sit 1.4 below the cat's root; it faces -Z, so turn it to the camera.
+		mascotRoot = W(4, -1.0 + 1.4 * MASCOT_SCALE, 0) * CFrame.Angles(0, math.rad(180 - 12), 0)
+		mascotParent = f
+		refreshMascot()
+		ClientState.ProfileChanged:Connect(refreshMascot)
 	end)
 	section("islands", function()
 		local isles, mills = buildIslands(f)

@@ -242,6 +242,9 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		add(oval("Shine", V(0.18, 0.2, 0.1), Color3.new(1, 1, 1)), CFrame.new(0.49 * i, 0.2, -0.98))
 		add(oval("Shine", V(0.09, 0.09, 0.08), Color3.new(1, 1, 1)), CFrame.new(0.36 * i, -0.07, -0.98))
 		add(part("Lash", V(0.3, 0.05, 0.05), Color3.fromRGB(40, 30, 40)), CFrame.new(0.52 * i, 0.4, -0.84) * turn * CFrame.Angles(0, 0, math.rad(-18 * i)))
+		local shut = part("ClosedEye", V(0.44, 0.07, 0.05), Color3.fromRGB(40, 30, 40))
+		shut.Transparency = 1
+		add(shut, CFrame.new(0.42 * i, 0.02, -0.9) * turn * CFrame.Angles(0, 0, math.rad(-10 * i)))
 		local blush = oval("Blush", V(0.36, 0.2, 0.08), Color3.fromRGB(255, 150, 175))
 		blush.Transparency = 0.35
 		add(blush, CFrame.new(0.66 * i, -0.16, -0.69) * CFrame.Angles(0, math.rad(-35 * i), 0))
@@ -427,23 +430,58 @@ end
 
 -- ── posing ───────────────────────────────────────────────────────────────────
 local JOINTS = { "PawNeck", "PawShoulderL", "PawShoulderR", "PawHipL", "PawHipR", "PawTail" }
-local jointCache: { [Model]: { [string]: { motor: Motor6D, base: CFrame } } } = setmetatable({}, { __mode = "k" }) :: any
+local OPEN_EYE = { EyeWhite = true, Iris = true, IrisGlow = true, Pupil = true, Shine = true }
+
+type PoseRig = {
+	joints: { [string]: { motor: Motor6D, base: CFrame } },
+	open: { BasePart },
+	shut: { BasePart },
+	closed: boolean,
+}
+local rigCache: { [Model]: PoseRig } = setmetatable({}, { __mode = "k" }) :: any
+
+local function rigFor(model: Model): PoseRig
+	local rig = rigCache[model]
+	if rig then
+		return rig
+	end
+	local r: PoseRig = { joints = {}, open = {}, shut = {}, closed = false }
+	for _, name in ipairs(JOINTS) do
+		local m = model:FindFirstChild(name, true)
+		if m and m:IsA("Motor6D") then
+			local base = m:GetAttribute("BaseC0")
+			if typeof(base) == "CFrame" then
+				r.joints[name] = { motor = m, base = base }
+			end
+		end
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			if OPEN_EYE[d.Name] then
+				table.insert(r.open, d)
+			elseif d.Name == "ClosedEye" then
+				table.insert(r.shut, d)
+			end
+		end
+	end
+	rigCache[model] = r
+	return r
+end
 
 -- Poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed.
 function CatBuilder.Pose(model: Model, t: number, move: number)
-	local j = jointCache[model]
-	if not j then
-		j = {}
-		for _, name in ipairs(JOINTS) do
-			local m = model:FindFirstChild(name, true)
-			if m and m:IsA("Motor6D") then
-				local base = m:GetAttribute("BaseC0")
-				if typeof(base) == "CFrame" then
-					j[name] = { motor = m, base = base }
-				end
-			end
+	local rig = rigFor(model)
+	local j = rig.joints
+
+	local closed = (t % 3.7) < 0.12
+	if closed ~= rig.closed then
+		rig.closed = closed
+		for _, p in ipairs(rig.open) do
+			p.Transparency = closed and 1 or 0
 		end
-		jointCache[model] = j
+		for _, p in ipairs(rig.shut) do
+			p.Transparency = closed and 0 or 1
+		end
 	end
 	local walk = math.clamp(move, 0, 1)
 	local phase = t * (7 + 5 * math.clamp(move, 0, 1.6))
