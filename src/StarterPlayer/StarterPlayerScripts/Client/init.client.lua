@@ -18,6 +18,7 @@ local EffectsController = require(Controllers.EffectsController)
 local EmoteController = require(Controllers.EmoteController)
 local CatAnimator = require(Controllers.CatAnimator)
 local LavaFX = require(Controllers.LavaFX)
+local CatOverheads = require(Controllers.CatOverheads)
 
 local UIManager = require(script.UI.UIManager)
 
@@ -44,6 +45,7 @@ local function main()
 	EmoteController.Start()
 	CatAnimator.Start()
 	LavaFX.Start()
+	CatOverheads.Start()
 
 	-- Build UI (also coordinates gameplay enable/disable).
 	UIManager.Start()

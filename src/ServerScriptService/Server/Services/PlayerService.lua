@@ -205,16 +205,25 @@ local function startKillFloorLoop()
 	end)
 end
 
--- Status loop: publishes a SpeedMult attribute on each character (read by the
--- client MovementController) so Frost slow + Speed Boost feel responsive while
--- staying server-decided. Also expires power-ups.
+-- Status loop: publishes SpeedMult (read by the client MovementController) and
+-- Fluff (the knockback % shown above each cat) on each character, regenerates
+-- health once a cat stops taking hits, and expires power-ups.
 local function startStatusLoop()
-	RunService.Heartbeat:Connect(function()
+	RunService.Heartbeat:Connect(function(dt)
 		local now = os.clock()
 		for _, player in ipairs(Players:GetPlayers()) do
 			local state = Runtime.Get(player)
 			local char = player.Character
 			if state and char then
+				local fluff = math.floor(state.Accumulated)
+				if char:GetAttribute("Fluff") ~= fluff then
+					char:SetAttribute("Fluff", fluff)
+				end
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if state.Alive and hum and hum.Health > 0 and hum.Health < hum.MaxHealth
+					and now - (state.LastAttackAt or 0) > GameConfig.Regen.Delay then
+					hum.Health = math.min(hum.MaxHealth, hum.Health + GameConfig.Regen.PerSecond * dt)
+				end
 				local mult = 1.0
 				if now < (state.SlowUntil or 0) then
 					mult *= 0.6

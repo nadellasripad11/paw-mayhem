@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
@@ -150,6 +151,65 @@ local function pickupSparkle(pos: Vector3, color: Color3)
 	end
 end
 
+-- Floating damage number that pops up at the hit and drifts away.
+local function damageNumber(pos: Vector3, amount: number)
+	local anchor = Instance.new("Part")
+	anchor.Size = Vector3.one * 0.1
+	anchor.Transparency = 1
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.CanQuery = false
+	anchor.CanTouch = false
+	anchor.CFrame = CFrame.new(pos + Vector3.new((math.random() - 0.5) * 2, 2.5, (math.random() - 0.5) * 2))
+	anchor.Parent = workspace
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.fromOffset(90, 40)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.Parent = anchor
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.Text = tostring(math.floor(amount + 0.5))
+	label.TextColor3 = amount >= 25 and Color3.fromRGB(255, 120, 60) or Color3.fromRGB(255, 232, 110)
+	label.TextStrokeTransparency = 0.2
+	label.Parent = gui
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1.5
+	scale.Parent = label
+	TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	TweenService:Create(anchor, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = anchor.CFrame + Vector3.new(0, 3, 0) }):Play()
+	local fade = TweenService:Create(label, TweenInfo.new(0.35, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0.45), { TextTransparency = 1, TextStrokeTransparency = 1 })
+	fade.Completed:Connect(function()
+		anchor:Destroy()
+	end)
+	fade:Play()
+end
+
+-- Expanding flash for big pickups (supply crates).
+local function burst(pos: Vector3, color: Color3)
+	local ball = Instance.new("Part")
+	ball.Shape = Enum.PartType.Ball
+	ball.Size = Vector3.one * 2
+	ball.CFrame = CFrame.new(pos)
+	ball.Color = color
+	ball.Material = Enum.Material.Neon
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.CanTouch = false
+	ball.CastShadow = false
+	ball.Parent = workspace
+	local t = TweenService:Create(ball, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 14, Transparency = 1 })
+	t.Completed:Connect(function()
+		ball:Destroy()
+	end)
+	t:Play()
+	pickupSparkle(pos, color)
+end
+
 function EffectsController.Start()
 	Remotes.Get("PlayEffect").OnClientEvent:Connect(function(data)
 		if type(data) ~= "table" then
@@ -157,6 +217,8 @@ function EffectsController.Start()
 		end
 		if data.kind == "Tracer" then
 			drawTracer(data.from, data.to, data.color or Color3.fromRGB(180, 120, 255))
+		elseif data.kind == "Burst" and typeof(data.position) == "Vector3" then
+			burst(data.position, data.color or Color3.fromRGB(255, 204, 64))
 		end
 	end)
 
@@ -171,6 +233,9 @@ function EffectsController.Start()
 	end)
 
 	Remotes.Get("HitConfirm").OnClientEvent:Connect(function(data)
+		if type(data) == "table" and typeof(data.position) == "Vector3" and type(data.damage) == "number" then
+			damageNumber(data.position, data.damage)
+		end
 		if EffectsController.OnHitConfirm then
 			EffectsController.OnHitConfirm(data)
 		end

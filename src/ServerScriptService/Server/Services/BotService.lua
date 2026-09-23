@@ -173,7 +173,8 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	vHum:TakeDamage(dmg * 0.5)
 	vState.LastAttackAt = os.clock()
 
-	local dV     = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, 0.6)
+	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
+	local dV     = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, 0.6 * mayhem)
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
 	vState.StunUntil = os.clock() + GameConfig.Character.LaunchStunSeconds
@@ -195,15 +196,32 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 	bot.accumulated += weapon.Damage
 	bot.humanoid:TakeDamage(weapon.Damage * 0.5)
 	bot.lastAttacker = shooter
+	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
 
-	local dV = Knockback.ComputeDeltaV(dir, bot.accumulated, weapon.Knockback, 1)
+	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
+	local dV = Knockback.ComputeDeltaV(dir, bot.accumulated, weapon.Knockback, mayhem)
 	bot.root:ApplyImpulse(dV * bot.root.AssemblyMass)
 
 	Remotes.Get("HitConfirm"):FireClient(shooter, {
 		victim      = bot.name,
 		damage      = weapon.Damage,
 		accumulated = bot.accumulated,
+		position    = bot.root.Position,
 	})
+end
+
+-- Hazards (meteors, stampede balls, burning ground) hitting a bot.
+function BotService.EnvironmentHit(model: Model, damage: number, dV: Vector3): boolean
+	local botId = modelToId[model]
+	local bot = botId and bots[botId]
+	if not bot or not bot.alive then return false end
+	bot.accumulated += damage
+	bot.humanoid:TakeDamage(damage * 0.5)
+	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
+	if dV.Magnitude > 0 then
+		bot.root:ApplyImpulse(dV * bot.root.AssemblyMass)
+	end
+	return true
 end
 
 -- ── AI loop ──────────────────────────────────────────────────────────────────

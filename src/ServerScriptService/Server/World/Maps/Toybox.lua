@@ -223,8 +223,11 @@ function Toybox.Build(): Folder
 	makeCrate(Vector3.new(14, 1.6, -10), center)
 	ArenaKit.AddPowerPad(Vector3.new(0, 9, 0), powerPads)
 
+	local outerFolders: { Folder } = {}
+	local satFolders: { Folder } = {}
 	for i, o in ipairs(layout.Outer) do
 		local isl = ArenaKit.MakeIslandBase(o.pos, o.r, "Island" .. i, PALETTE, Enum.Material.SmoothPlastic, arena)
+		outerFolders[i] = isl
 		scatterDecor(o.pos, o.r, isl, 5, 16)
 		makeStreamerFall(o.pos + Vector3.new(o.r - 2, 1, 0), 36 + i * 3, isl)
 		makeStreamerFall(o.pos + Vector3.new(-(o.r - 2), 1, 4), 30 + i * 3, isl)
@@ -255,8 +258,29 @@ function Toybox.Build(): Folder
 
 	for si, s in ipairs(layout.Satellites) do
 		local isl = ArenaKit.MakeIslandBase(s.pos, s.r, "Satellite" .. si, PALETTE, Enum.Material.SmoothPlastic, arena)
+		satFolders[si] = isl
 		scatterDecor(s.pos, s.r, isl, 1, 6)
 	end
+
+	-- Supply drops land on the centre and outer islands. Jump pads on two outer
+	-- islands reach the floating satellites, whose own pads drop you back onto
+	-- the centre (landing spots chosen clear of the toy houses and arch).
+	ArenaKit.MarkPlayable(center)
+	for _, f in ipairs(outerFolders) do
+		ArenaKit.MarkPlayable(f)
+	end
+	local pads = Instance.new("Folder")
+	pads.Name = "JumpPads"
+	pads.Parent = arena
+	local centerIsle = ArenaKit.NewIsle(centerPos, centerR, center)
+	local o3 = ArenaKit.NewIsle(layout.Outer[3].pos, layout.Outer[3].r, outerFolders[3])
+	local o4 = ArenaKit.NewIsle(layout.Outer[4].pos, layout.Outer[4].r, outerFolders[4])
+	local s1 = ArenaKit.NewIsle(layout.Satellites[1].pos, layout.Satellites[1].r, satFolders[1])
+	local s2 = ArenaKit.NewIsle(layout.Satellites[2].pos, layout.Satellites[2].r, satFolders[2])
+	ArenaKit.AddJumpPad(o3, ArenaKit.AngleTo(o3.pos, s2.pos), o3.r * 0.55, ArenaKit.FacingPoint(s2, o3.pos, s2.r * 0.55, 0), pads)
+	ArenaKit.AddJumpPad(o4, math.rad(112), o4.r * 0.55, ArenaKit.FacingPoint(s1, o4.pos, s1.r * 0.55, 0), pads)
+	ArenaKit.AddJumpPad(s1, 0, 0, ArenaKit.Polar(centerIsle, math.rad(80), centerR * 0.6), pads)
+	ArenaKit.AddJumpPad(s2, 0, 0, ArenaKit.Polar(centerIsle, math.rad(240), centerR * 0.6), pads)
 
 	ArenaKit.ScatterDebris(arena, 22, PALETTE, false)
 	ArenaKit.MakeClouds(arena, Color3.fromRGB(255, 245, 250))

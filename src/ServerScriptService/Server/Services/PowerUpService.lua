@@ -35,17 +35,29 @@ local function getPads(): { BasePart }
 	return pads
 end
 
-local function grant(player: Player, powerId: string)
+local function grant(player: Player, powerId: string, duration: number?)
 	local state = Runtime.Get(player)
 	if not state or not state.Alive then
 		return
 	end
-	state.PowerUp = { Id = powerId, Expires = os.clock() + GameConfig.PowerUps.Duration }
+	local seconds = duration or GameConfig.PowerUps.Duration
+	state.PowerUp = { Id = powerId, Expires = os.clock() + seconds }
 	EconomyService.AddStat(player, "PowerupsGrabbed", 1)
 	Remotes.Get("PowerUpActive"):FireClient(player, {
 		powerId = powerId,
-		duration = GameConfig.PowerUps.Duration,
+		duration = seconds,
 	})
+end
+
+-- Used by supply drops.
+PowerUpService.Grant = grant
+
+-- Power-ups that can appear on the pads (drop-only ones are excluded).
+local padPool = {}
+for _, p in ipairs(Progression.PowerUps) do
+	if not p.DropOnly then
+		table.insert(padPool, p)
+	end
 end
 
 local function spawnPickup()
@@ -54,7 +66,7 @@ local function spawnPickup()
 		return
 	end
 	local pad = pads[math.random(1, #pads)]
-	local def = Progression.PowerUps[math.random(1, #Progression.PowerUps)]
+	local def = padPool[math.random(1, #padPool)]
 
 	nextId += 1
 	local id = "pu_" .. nextId

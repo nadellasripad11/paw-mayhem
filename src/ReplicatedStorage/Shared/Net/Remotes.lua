@@ -36,6 +36,8 @@ Remotes.Definitions = {
 	PowerUpActive = "Event", -- {powerId, duration} to the owner
 	Notify = "Event", -- {text, kind} toast
 	PlayEffect = "Event", -- {kind, cframe, color} broadcast VFX
+	Announce = "Event", -- {title, sub, color} big centre banner for everyone
+	MapEvent = "Event", -- {kind, dir, duration, strength} client-side event effects
 }
 
 local FOLDER_NAME = "PawMayhemRemotes"

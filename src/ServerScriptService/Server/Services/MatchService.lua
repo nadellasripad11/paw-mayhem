@@ -108,6 +108,7 @@ local function broadcastState()
 		matchSeconds = GameConfig.Match.MatchSeconds,
 		mapId = state.MapId,
 		votes = voteTotals(),
+		mayhem = Runtime.Mayhem,
 		board = buildBoard(),
 	})
 end
@@ -119,14 +120,70 @@ local function broadcastScore()
 	})
 end
 
+local function announce(title: string, sub: string?, color: Color3?)
+	Remotes.Get("Announce"):FireAllClients({ title = title, sub = sub, color = color })
+end
+
+local FIRE_ORANGE = Color3.fromRGB(255, 140, 50)
+local STREAK_TITLES = { [5] = "is UNSTOPPABLE!", [8] = "is LEGENDARY!", [12] = "is GODLIKE!" }
+
+-- A kill extends the killer's streak; at the threshold they go On Fire and
+-- carry a bounty.
+local function addStreak(killer: Player)
+	local s = Runtime.Ensure(killer)
+	s.Streak += 1
+	local char = killer.Character
+	if char then
+		char:SetAttribute("Streak", s.Streak)
+	end
+	local cfg = GameConfig.Streaks
+	if s.Streak == cfg.OnFire then
+		announce(killer.DisplayName .. " is ON FIRE!", "Take them down to claim the bounty", FIRE_ORANGE)
+	elseif STREAK_TITLES[s.Streak] then
+		announce(killer.DisplayName .. " " .. STREAK_TITLES[s.Streak], string.format("%d eliminations in a row", s.Streak), FIRE_ORANGE)
+	end
+end
+
+-- The victim's streak ends; whoever ended a hot streak collects the bounty.
+local function endStreak(victim: Player, killer: Player?)
+	local s = Runtime.Get(victim)
+	if not s then
+		return
+	end
+	local streak = s.Streak
+	s.Streak = 0
+	local cfg = GameConfig.Streaks
+	if streak < cfg.OnFire then
+		return
+	end
+	if killer then
+		local bounty = cfg.BountyCoinsPerKill * (streak - cfg.OnFire + 1)
+		EconomyService.AddCoins(killer, bounty)
+		EconomyService.AddXP(killer, cfg.BountyXP)
+		EconomyService.Push(killer)
+		announce(killer.DisplayName .. " ended " .. victim.DisplayName .. "'s streak!", string.format("%d-kill streak  •  +%d coin bounty", streak, bounty), Color3.fromRGB(255, 214, 90))
+	else
+		announce(victim.DisplayName .. "'s streak is over!", string.format("%d-kill streak ended", streak), Color3.fromRGB(255, 214, 90))
+	end
+end
+
+local function setMayhem(on: boolean)
+	Runtime.Mayhem = on
+	if on then
+		announce("MAYHEM MODE!", "Double knockback — supply drops are raining down!", Color3.fromRGB(255, 70, 90))
+	end
+end
+
 -- Elimination handler wired into PlayerService.
 local function onElimination(victim: Player, killer: Player?, weaponId: string?, ringout: boolean)
 	local vState = Runtime.Get(victim)
 	if vState then
 		EconomyService.AddStat(victim, "Deaths", 1)
 	end
+	endStreak(victim, killer ~= victim and killer or nil)
 
 	if killer and killer ~= victim then
+		addStreak(killer)
 		local kState = Runtime.Ensure(killer)
 		kState.MatchElims += 1
 		kState.MatchScore += 1
@@ -180,6 +237,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 	if not state.Winner then
 		state.Winner = (state.Scores.Blue >= state.Scores.Red) and "Blue" or "Red"
 	end
+	setMayhem(false)
 	state.Phase = PHASE.Results
 	state.TimeLeft = GameConfig.Match.ResultsSeconds
 	PlayerService.MatchActive = false
@@ -203,6 +261,7 @@ end
 
 local function enterIntermission()
 	BotService.DespawnAll()
+	setMayhem(false)
 	state.Phase = PHASE.Intermission
 	state.TimeLeft = GameConfig.Match.IntermissionSeconds
 	state.Winner = nil
@@ -227,6 +286,7 @@ local function enterCountdown()
 end
 
 local function enterPlaying()
+	setMayhem(false)
 	state.Phase = PHASE.Playing
 	state.TimeLeft = GameConfig.Match.MatchSeconds
 	PlayerService.MatchActive = true
@@ -266,6 +326,9 @@ local function mainLoop()
 			elseif state.TimeLeft <= 0 then
 				MatchService.EndMatch(nil)
 			else
+				if not Runtime.Mayhem and state.TimeLeft <= GameConfig.Mayhem.Seconds then
+					setMayhem(true)
+				end
 				broadcastState()
 			end
 		elseif state.Phase == PHASE.Results then
@@ -283,6 +346,7 @@ function MatchService.Start()
 
 	-- Award a team point when a bot is eliminated (mirrors onElimination for players).
 	BotService.OnBotEliminated = function(killer: Player, botTeam: string)
+		addStreak(killer)
 		local kState = Runtime.Get(killer)
 		local kTeam = kState and kState.Team
 		if kTeam and state.Scores[kTeam] ~= nil then

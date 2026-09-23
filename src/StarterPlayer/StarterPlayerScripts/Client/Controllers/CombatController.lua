@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
 local Weapons = require(Shared.Config.Weapons)
+local Progression = require(Shared.Config.Progression)
 
 local CameraController = require(script.Parent.CameraController)
 local ClientState = require(script.Parent.Parent.ClientState)
@@ -21,11 +22,17 @@ local player = Players.LocalPlayer
 local firing = false
 local lastShot = 0
 local enabled = false
+local powerUp = { id = "", untilT = 0 } -- mirrors the server's active power-up for fire rate
 
 -- Fires whenever a local shot goes out, so the HUD can kick the crosshair.
 CombatController.OnLocalShot = nil :: ((weaponId: string) -> ())?
 
 local function currentWeapon()
+	-- A supply-drop blaster (set by the server on the character) wins.
+	local override = player.Character and player.Character:GetAttribute("WeaponOverride")
+	if typeof(override) == "string" and Weapons.Get(override) then
+		return Weapons.Get(override)
+	end
 	local profile = ClientState.Profile
 	local id = profile and profile.Loadout.Weapon or Weapons.DefaultLoadout
 	return Weapons.Get(id) or Weapons.Get(Weapons.DefaultLoadout)
@@ -64,7 +71,12 @@ local function tryFire()
 	if not weapon then
 		return
 	end
-	local interval = 1 / weapon.FireRate
+	local rateMult = 1
+	if os.clock() < powerUp.untilT then
+		local p = Progression.PowerUpById[powerUp.id]
+		rateMult = p and p.FireRateMult or 1
+	end
+	local interval = 1 / (weapon.FireRate * rateMult)
 	local now = os.clock()
 	if now - lastShot < interval then
 		return
@@ -135,6 +147,13 @@ function CombatController.Start()
 			firing = false
 		elseif input.KeyCode == Enum.KeyCode.ButtonR2 then
 			firing = false
+		end
+	end)
+
+	Remotes.Get("PowerUpActive").OnClientEvent:Connect(function(data)
+		if typeof(data) == "table" and typeof(data.powerId) == "string" then
+			powerUp.id = data.powerId
+			powerUp.untilT = os.clock() + (tonumber(data.duration) or 10)
 		end
 	end)
 

@@ -35,6 +35,14 @@ local limiter = RateLimiter.new(20, 25)
 local MAX_ORIGIN_DRIFT = 14 -- studs the claimed origin may differ from the cat
 
 local function getEquippedWeapon(player: Player)
+	-- A supply-drop weapon overrides the loadout for the rest of that life.
+	local state = Runtime.Get(player)
+	if state and state.WeaponOverride then
+		local w = Weapons.Get(state.WeaponOverride)
+		if w then
+			return w
+		end
+	end
 	local profile = DataService.Get(player)
 	if not profile then
 		return nil
@@ -172,7 +180,8 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	vState.LastAttackAt = os.clock()
 
 	-- Knockback impulse (mass-correct), applied by the victim's own client.
-	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * (1 - knockResist))
+	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
+	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * mayhem * (1 - knockResist))
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
 	-- brief stun so victims can't instantly cancel the launch
@@ -189,6 +198,7 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	-- Feedback remotes.
 	Remotes.Get("HitConfirm"):FireClient(shooter, {
 		victim = victim.Name,
+		position = vRoot.Position,
 		damage = dmg,
 		accumulated = vState.Accumulated,
 	})

@@ -466,6 +466,26 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	return model
 end
 
+-- Swap the blaster in a built cat's hands (e.g. a supply-drop weapon).
+function CatBuilder.SetBlaster(model: Model, weapon: any)
+	local old = model:FindFirstChild("Blaster")
+	if old then
+		old:Destroy()
+	end
+	local shoulder = model:FindFirstChild("PawShoulderR", true)
+	local arm = shoulder and shoulder:IsA("Motor6D") and shoulder.Part1
+	local root = model.PrimaryPart
+	if not arm or not root then
+		return
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("Motor6D") and d.Part0 == arm and d.Part1 and d.Part1.Name == "Hand" then
+			attachBlaster(model, root, d.Part1, weapon)
+			return
+		end
+	end
+end
+
 -- ── posing ───────────────────────────────────────────────────────────────────
 local JOINTS = { "PawNeck", "PawShoulderL", "PawShoulderR", "PawHipL", "PawHipR", "PawTail" }
 local OPEN_EYE = { EyeWhite = true, Iris = true, IrisGlow = true, Pupil = true, Shine = true }

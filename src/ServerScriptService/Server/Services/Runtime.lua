@@ -17,9 +17,14 @@ export type PlayerState = {
 	MatchElims: number, -- eliminations this match (for scoreboard)
 	MatchScore: number, -- points this match
 	SpawnProtectUntil: number, -- brief invuln after spawn
+	Streak: number, -- eliminations since last death (kill streak)
+	WeaponOverride: string?, -- supply-drop weapon held for the rest of this life
 }
 
 Runtime.States = {} :: { [Player]: PlayerState }
+
+-- True during the final-seconds Mayhem Mode (double knockback, drop rain).
+Runtime.Mayhem = false
 
 function Runtime.Ensure(player: Player): PlayerState
 	local s = Runtime.States[player]
@@ -36,6 +41,8 @@ function Runtime.Ensure(player: Player): PlayerState
 			MatchElims = 0,
 			MatchScore = 0,
 			SpawnProtectUntil = 0,
+			Streak = 0,
+			WeaponOverride = nil,
 		}
 		Runtime.States[player] = s
 	end
@@ -58,6 +65,8 @@ function Runtime.ResetLife(player: Player)
 	s.LastAttackAt = 0
 	s.SlowUntil = 0
 	s.StunUntil = 0
+	s.Streak = 0
+	s.WeaponOverride = nil
 end
 
 -- Reset per-match fields.

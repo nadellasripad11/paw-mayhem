@@ -74,6 +74,67 @@ GameConfig.PowerUps = {
 	RespawnAfterPickup = 22,
 }
 
+-- Sky supply drops + fish snacks (DropService) --------------------------------
+GameConfig.Drops = {
+	FirstDelay = 20, -- seconds into a match before the first crate
+	Interval = 32,
+	IntervalJitter = 6,
+	MayhemInterval = 8, -- crates rain down in the final Mayhem Mode
+	FallTime = 7, -- seconds from appearing in the sky to landing
+	DropHeight = 140,
+	Lifetime = 45, -- an untouched crate vanishes after this
+	GrabRadius = 5,
+	LegendaryWeapons = { "VoidCannon", "GoldenPurr", "Starfall", "BoomPaw" },
+	-- Roll weights for what a crate gives.
+	Rewards = { Weapon = 30, Overdrive = 30, Heal = 25, Coins = 15 },
+	CoinsMin = 60,
+	CoinsMax = 150,
+	OverdriveSeconds = 15,
+	ShieldSeconds = 12,
+}
+
+GameConfig.Snacks = {
+	Interval = 22,
+	MaxActive = 3,
+	Heal = 40,
+	FluffCut = 30, -- knockback damage removed by eating one
+	GrabRadius = 4,
+}
+
+-- Health slowly returns once you've stopped taking hits.
+GameConfig.Regen = {
+	Delay = 5,
+	PerSecond = 6,
+}
+
+-- Dash + double jump (client-driven movement) -------------------------------
+GameConfig.Movement = {
+	DashSpeed = 78,
+	DashTime = 0.18,
+	DashCooldown = 2.5,
+	DoubleJumpSpeed = 50,
+}
+
+-- Kill streaks + bounties -----------------------------------------------------
+GameConfig.Streaks = {
+	OnFire = 3, -- eliminations in a row to go "On Fire" (and carry a bounty)
+	BountyCoinsPerKill = 25, -- per streak kill beyond the threshold, paid to whoever ends it
+	BountyXP = 60,
+}
+
+-- Map events (eruption / wind / stampede) ------------------------------------
+GameConfig.Events = {
+	FirstDelay = 50,
+	Interval = 60,
+}
+
+-- Final-seconds Mayhem Mode ----------------------------------------------------
+GameConfig.Mayhem = {
+	Seconds = 30,
+	KnockbackMult = 2,
+}
+
+
 GameConfig.DataStore = {
 	Name = "PawMayhem_Player_v1",
 	AutoSaveSeconds = 120,

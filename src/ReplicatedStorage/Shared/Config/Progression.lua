@@ -59,6 +59,8 @@ Progression.PowerUps = {
 	{ Id = "Shield", Name = "Shield", Color = Color3.fromRGB(90, 220, 130), DamageResist = 0.5, KnockbackResist = 0.6 },
 	{ Id = "SpeedBoost", Name = "Speed Boost", Color = Color3.fromRGB(255, 200, 80), SpeedMult = 1.5 },
 	{ Id = "MultiShot", Name = "Multi Shot", Color = Color3.fromRGB(170, 120, 255), ExtraPellets = 2, SpreadAdd = 4 },
+	-- Supply-drop only (never spawns on power pads).
+	{ Id = "Overdrive", Name = "Overdrive", Color = Color3.fromRGB(255, 196, 60), FireRateMult = 1.6, KnockbackMult = 1.6, SpeedMult = 1.25, DropOnly = true },
 }
 
 Progression.PowerUpById = {}

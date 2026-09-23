@@ -574,6 +574,23 @@ function SkyIslands.Build(): Folder
 		end
 	end
 
+	-- Supply drops land on any playable island; jump pads on the team bases
+	-- and windmill islands fling you onto the windmill hill.
+	for _, isle in pairs(I) do
+		ArenaKit.MarkPlayable(isle.folder)
+	end
+	local pads = Instance.new("Folder")
+	pads.Name = "JumpPads"
+	pads.Parent = arena
+	for _, spec in ipairs({ { "teamB", 0.75 }, { "teamB", -0.75 }, { "teamR", 0.75 }, { "teamR", -0.75 }, { "millL", 0 }, { "millR", 0 } }) do
+		local from, c = I[spec[1]], I.center
+		-- Mill pads land beside (not on) the cottages that sit east/west of centre.
+		local turn = spec[2] ~= 0 and -spec[2] * 0.6 or 0.6
+		local land = ArenaKit.FacingPoint(c, from.pos, c.r * 0.62, turn)
+		ArenaKit.Reserve(c, land, 4)
+		ArenaKit.AddJumpPad(from, ArenaKit.AngleTo(from.pos, c.pos) + spec[2], from.r * 0.55, land, pads)
+	end
+
 	-- Windmill hill (centre high ground)
 	do
 		local c = I.center

@@ -5,6 +5,8 @@
 -- guarantees around spawn placement — live here ONCE so every map gets them
 -- identically instead of being re-derived (and possibly re-broken) per map.
 
+local CollectionService = game:GetService("CollectionService")
+
 local ArenaKit = {}
 
 export type Palette = {
@@ -249,6 +251,96 @@ function ArenaKit.TryPlace(isle: any, rng: Random, minD: number, maxD: number, r
 		end
 	end
 	return nil
+end
+
+-- ── Gameplay markers ─────────────────────────────────────────────────────────
+-- Playable islands' floors are tagged so supply drops, snacks and map events
+-- only ever land where players can walk.
+function ArenaKit.MarkPlayable(folder: Instance)
+	local floor = folder:FindFirstChild("Floor")
+	if floor then
+		CollectionService:AddTag(floor, "DropZone")
+	end
+end
+
+-- A point on `toIsle`'s surface `dist` from its centre, on the side facing
+-- `fromPos`, turned by `turn` radians (for landing spots).
+function ArenaKit.FacingPoint(toIsle: any, fromPos: Vector3, dist: number, turn: number): Vector3
+	return ArenaKit.Polar(toIsle, ArenaKit.AngleTo(toIsle.pos, fromPos) + turn, dist)
+end
+
+local JUMP_GLOW = Color3.fromRGB(90, 230, 255)
+
+-- Jump pad on `isle` that flings players to `target` (the client computes the
+-- arc). Placed as close to `angle` as the walkways allow, and its lane is
+-- reserved so decoration keeps clear. Flush with the ground: no step to trip on.
+function ArenaKit.AddJumpPad(isle: any, angle: number, dist: number, target: Vector3, parent: Instance): BasePart?
+	local chosen: number? = nil
+	for _, off in ipairs({ 0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75, 1, -1 }) do
+		local a = angle + off
+		local p = ArenaKit.Polar(isle, a, dist)
+		local free = not ArenaKit.Blocked(isle, a, dist, 3.5)
+		if free then
+			for _, q in ipairs(isle.placed) do
+				if Vector2.new(p.X - q.x, p.Z - q.z).Magnitude < 3.5 + q.rad then
+					free = false
+					break
+				end
+			end
+		end
+		if free then
+			chosen = a
+			break
+		end
+	end
+	if not chosen then
+		return nil
+	end
+	local pos = ArenaKit.Polar(isle, chosen, dist)
+	ArenaKit.Reserve(isle, pos, 3.5)
+	table.insert(isle.reserved, chosen)
+
+	local model = Instance.new("Model")
+	model.Name = "JumpPad"
+	model.Parent = parent
+	local function flat(name: string, d: number, h: number, color: Color3, mat: Enum.Material): BasePart
+		local p = ArenaKit.NewDisc(name, d, h, pos + Vector3.new(0, h / 2, 0), color, mat, model)
+		p.CanCollide = false
+		return p
+	end
+	flat("PadBase", 5.8, 0.2, Color3.fromRGB(46, 50, 64), Enum.Material.Metal)
+	local ring = flat("PadRing", 4.8, 0.24, JUMP_GLOW, Enum.Material.Neon)
+	ring.CastShadow = false
+	flat("PadCore", 3.3, 0.28, Color3.fromRGB(28, 58, 82), Enum.Material.Metal)
+	local toward = Vector3.new(target.X - pos.X, 0, target.Z - pos.Z).Unit
+	for k = 0, 2 do
+		local c = pos + toward * (-0.75 + k * 0.75) + Vector3.new(0, 0.34, 0)
+		local cf = CFrame.lookAt(c, c + toward)
+		for s = -1, 1, 2 do
+			local bar = ArenaKit.NewPart("Chevron", Vector3.new(0.9, 0.08, 0.22), cf * CFrame.new(s * 0.3, 0, 0) * CFrame.Angles(0, math.rad(-35 * s), 0), JUMP_GLOW, Enum.Material.Neon, model)
+			bar.CanCollide = false
+			bar.CastShadow = false
+		end
+	end
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(JUMP_GLOW)
+	sparks.LightEmission = 1
+	sparks.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 0) })
+	sparks.Lifetime = NumberRange.new(0.6, 1.1)
+	sparks.Speed = NumberRange.new(4, 9)
+	sparks.SpreadAngle = Vector2.new(12, 12)
+	sparks.Rate = 10
+	sparks.EmissionDirection = Enum.NormalId.Right -- the disc's X axis points up
+	sparks.Parent = ring
+	local light = Instance.new("PointLight")
+	light.Color = JUMP_GLOW
+	light.Range = 10
+	light.Brightness = 1
+	light.Parent = ring
+	CollectionService:AddTag(ring, "JumpPad")
+	ring:SetAttribute("Target", target)
+	return ring
 end
 
 -- Invisible walking surface between two rim points `ea` (on island A, at A's
