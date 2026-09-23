@@ -9,9 +9,9 @@ local CatBuilder = require(ReplicatedStorage.Shared.Character.CatBuilder)
 local CatView = {}
 
 local FRAMING = {
-	Full = { target = Vector3.new(0, 0.78, 0), span = 5.2, yaw = -22 },
-	Bust = { target = Vector3.new(0, 1.72, 0), span = 3.3, yaw = -18 },
-	Back = { target = Vector3.new(0, 0.9, 0), span = 4.4, yaw = 155 },
+	Full = { target = Vector3.new(0, 0.75, 0), span = 5.0, yaw = -22 },
+	Bust = { target = Vector3.new(0, 1.6, 0), span = 3.2, yaw = -18 },
+	Back = { target = Vector3.new(0, 0.6, 0), span = 4.4, yaw = 155 },
 }
 CatView.Framing = FRAMING
 
@@ -27,8 +27,19 @@ function CatView.Create(parent: Instance, size: UDim2, position: UDim2): Viewpor
 	return vf
 end
 
+-- Joints only move parts inside a WorldModel, so the cat lives in one (lets
+-- CatAnimator pose previews too).
+local function world(vf: ViewportFrame): WorldModel
+	local w = vf:FindFirstChildOfClass("WorldModel")
+	if not w then
+		w = Instance.new("WorldModel")
+		w.Parent = vf
+	end
+	return w :: WorldModel
+end
+
 function CatView.SetYaw(vf: ViewportFrame, yaw: number)
-	local model = vf:FindFirstChild("CatModel") :: Model?
+	local model = world(vf):FindFirstChild("CatModel") :: Model?
 	if model then
 		model:PivotTo(CFrame.Angles(0, yaw, 0))
 	end
@@ -36,8 +47,10 @@ end
 
 -- `custom` is a Loadout.Cat-style table: { Fur, Outfit, Hat, Accessory }.
 function CatView.Set(vf: ViewportFrame, custom: any, framing: string)
+	local w = world(vf)
+	w:ClearAllChildren()
 	for _, child in ipairs(vf:GetChildren()) do
-		if child:IsA("Model") or child:IsA("Camera") then
+		if child:IsA("Camera") then
 			child:Destroy()
 		end
 	end
@@ -49,7 +62,7 @@ function CatView.Set(vf: ViewportFrame, custom: any, framing: string)
 		hum:Destroy()
 	end
 	model:PivotTo(CFrame.Angles(0, math.rad(f.yaw), 0))
-	model.Parent = vf
+	model.Parent = w
 
 	local cam = Instance.new("Camera")
 	cam.FieldOfView = 30
