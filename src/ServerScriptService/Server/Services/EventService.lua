@@ -178,8 +178,8 @@ end
 local function windGust()
 	local a = rng:NextNumber(0, math.pi * 2)
 	local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-	local duration, strength = 8, 16
-	announce("WIND GUST!", "Hold on tight — the wind is pushing everyone!", Color3.fromRGB(170, 230, 255))
+	local duration, strength = 6, 6
+	announce("WIND GUST!", "A breeze is nudging everyone sideways!", Color3.fromRGB(170, 230, 255))
 	Remotes.Get("MapEvent"):FireAllClients({ kind = "Wind", dir = dir, duration = duration, strength = strength })
 	-- Bots are simulated here, so push them directly.
 	local untilT = os.clock() + duration
@@ -187,7 +187,7 @@ local function windGust()
 		for _, m in ipairs(HazardService.Cats()) do
 			if m:GetAttribute("IsBot") then
 				local root = m.PrimaryPart :: BasePart
-				root.AssemblyLinearVelocity += dir * 2.2
+				root.AssemblyLinearVelocity += dir * 0.8
 			end
 		end
 		task.wait(0.1)

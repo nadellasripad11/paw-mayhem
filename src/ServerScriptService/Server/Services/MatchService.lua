@@ -295,7 +295,8 @@ local function enterPlaying()
 	state.TimeLeft = GameConfig.Match.MatchSeconds
 	PlayerService.MatchActive = true
 	PlayerService.SpawnAll()
-	BotService.SpawnBots(#Players:GetPlayers())
+	-- Bots fill the teams up to the target size around the players who queued.
+	BotService.SpawnBots(queuedCount())
 	broadcastState()
 end
 
@@ -367,6 +368,18 @@ function MatchService.Start()
 		end
 	end
 
+	-- A bot knocked out an enemy bot: its team scores.
+	BotService.OnTeamPoint = function(teamId: string)
+		if state.Phase ~= PHASE.Playing or state.Scores[teamId] == nil then
+			return
+		end
+		state.Scores[teamId] += 1
+		broadcastScore()
+		if state.Scores[teamId] >= GameConfig.Match.ScoreToWin then
+			MatchService.EndMatch(teamId)
+		end
+	end
+
 	BotService.Start()
 	Remotes.Get("RequestJoinMatch").OnServerEvent:Connect(function(player, payload)
 		local mapId = typeof(payload) == "table" and payload.mapId or nil
@@ -386,6 +399,7 @@ function MatchService.Start()
 			Runtime.ResetMatch(player)
 			PlayerService.AssignTeam(player)
 			PlayerService.Spawn(player)
+			BotService.Rebalance(queuedCount())
 			Remotes.Get("Notify"):FireClient(player, { text = "Dropping into the current match!", kind = "success" })
 			broadcastState()
 			return
@@ -415,6 +429,9 @@ function MatchService.Start()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		queuedPlayers[player.UserId] = nil
+		if state.Phase == PHASE.Playing then
+			BotService.Rebalance(queuedCount())
+		end
 	end)
 
 	enterIntermission()
