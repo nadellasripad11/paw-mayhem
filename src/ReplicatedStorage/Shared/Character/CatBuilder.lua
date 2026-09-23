@@ -35,11 +35,22 @@ local function part(name: string, size: Vector3, color: Color3, shape: Enum.Part
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	p.CanCollide = false
 	p.CanQuery = false
+	p.CanTouch = false
 	p.Massless = true
-	if shape then
+	if shape == Enum.PartType.Ball then
+		-- Ball parts are always perfect spheres; a built-in sphere mesh on a
+		-- block stretches to the part size, giving real ovals.
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+	elseif shape then
 		p.Shape = shape
 	end
 	return p
+end
+
+local function oval(name: string, size: Vector3, color: Color3): BasePart
+	return part(name, size, color, Enum.PartType.Ball)
 end
 
 local function ball(name: string, d: number, color: Color3): BasePart
@@ -83,9 +94,19 @@ local function addHat(root: BasePart, head: BasePart, hat)
 		b.Parent = root
 		weld(root, b, CFrame.new(0, 2.5, 0))
 	elseif hat.Shape == "Crown" then
-		local band = part("Crown", Vector3.new(1.5, 0.5, 1.5), hat.Color, Enum.PartType.Cylinder)
+		-- Cylinders run along X, so X is the band's height after the roll.
+		local band = part("Crown", Vector3.new(0.45, 1.3, 1.3), hat.Color, Enum.PartType.Cylinder)
 		band.Parent = root
-		weld(root, band, CFrame.new(0, 2.7, 0) * CFrame.Angles(0, 0, math.rad(90)))
+		weld(root, band, CFrame.new(0, 2.62, 0) * CFrame.Angles(0, 0, math.rad(90)))
+		for k = 0, 4 do
+			local a = k / 5 * math.pi * 2
+			local spike = part("CrownPoint", Vector3.new(0.24, 0.42, 0.24), hat.Color)
+			spike.Parent = root
+			weld(root, spike, CFrame.new(math.sin(a) * 0.55, 2.98, -math.cos(a) * 0.55) * CFrame.Angles(0, -a, 0) * CFrame.Angles(0, math.rad(45), 0))
+			local gem = ball("CrownGem", 0.16, Color3.fromRGB(255, 90, 120))
+			gem.Parent = root
+			weld(root, gem, CFrame.new(math.sin(a) * 0.55, 3.24, -math.cos(a) * 0.55))
+		end
 	elseif hat.Shape == "Helmet" then
 		local h = part("Helmet", Vector3.new(2.1, 2.1, 2.1), hat.Color, Enum.PartType.Ball)
 		h.Transparency = 0.35
@@ -100,9 +121,15 @@ local function addAccessory(root: BasePart, acc)
 		return
 	end
 	if acc.Shape == "Glasses" then
-		local g = part("Glasses", Vector3.new(1.6, 0.4, 0.15), acc.Color)
-		g.Parent = root
-		weld(root, g, CFrame.new(0, 2.15, -0.85))
+		for i = -1, 1, 2 do
+			local lens = part("Lens", Vector3.new(0.58, 0.48, 0.1), acc.Color, Enum.PartType.Ball)
+			lens.Reflectance = 0.25
+			lens.Parent = root
+			weld(root, lens, CFrame.new(0.4 * i, 1.67, -1.04))
+		end
+		local bridge = part("GlassesBridge", Vector3.new(0.3, 0.06, 0.06), acc.Color)
+		bridge.Parent = root
+		weld(root, bridge, CFrame.new(0, 1.74, -1.06))
 	elseif acc.Shape == "Backpack" then
 		local bp = part("Backpack", Vector3.new(1.2, 1.3, 0.6), acc.Color)
 		bp.Parent = root
@@ -156,20 +183,32 @@ local function addOutfitDetails(root: BasePart, outfit)
 		local hood = part("Hood", Vector3.new(1.72, 0.7, 1.55), outfit.Color, Enum.PartType.Ball)
 		hood.Parent = root
 		weld(root, hood, CFrame.new(0, 1.15, 0.18))
+		for i = -1, 1, 2 do
+			local cord = part("Drawstring", Vector3.new(0.06, 0.42, 0.06), Color3.fromRGB(240, 240, 248))
+			cord.Parent = root
+			weld(root, cord, CFrame.new(0.2 * i, 0.5, -0.68))
+			local aglet = part("Aglet", Vector3.new(0.1, 0.12, 0.1), Color3.fromRGB(200, 205, 215), Enum.PartType.Ball)
+			aglet.Parent = root
+			weld(root, aglet, CFrame.new(0.2 * i, 0.27, -0.74))
+		end
+		local pocket = part("Pocket", Vector3.new(0.95, 0.32, 0.08), outfit.Color:Lerp(Color3.new(0, 0, 0), 0.18))
+		pocket.Parent = root
+		weld(root, pocket, CFrame.new(0, -0.36, -0.82))
 	elseif id == "Streetwear" then
-		local jacket = part("StreetwearJacket", Vector3.new(1.78, 1.05, 1.42), outfit.Color, Enum.PartType.Ball)
-		jacket.Parent = root
-		weld(root, jacket, CFrame.new(0, 0.15, 0))
+		local collar = part("StreetwearCollar", Vector3.new(1.5, 0.35, 1.25), outfit.Color:Lerp(Color3.new(1, 1, 1), 0.18), Enum.PartType.Ball)
+		collar.Parent = root
+		weld(root, collar, CFrame.new(0, 0.95, 0))
 		local zipper = part("StreetwearZipper", Vector3.new(0.08, 0.95, 0.08), Color3.fromRGB(220, 235, 245))
 		zipper.Parent = root
-		weld(root, zipper, CFrame.new(0, 0.18, -0.73))
+		weld(root, zipper, CFrame.new(0, 0.18, -0.84))
 	elseif id == "Robot" then
-		local chest = part("RobotChest", Vector3.new(1.7, 1.35, 1.35), outfit.Color, Enum.PartType.Ball)
-		chest.Parent = root
-		weld(root, chest, CFrame.new(0, 0.12, 0))
+		local plate = part("RobotChest", Vector3.new(1.1, 0.9, 0.3), outfit.Color:Lerp(Color3.new(1, 1, 1), 0.2), Enum.PartType.Ball)
+		plate.Parent = root
+		weld(root, plate, CFrame.new(0, 0.2, -0.74))
 		local core = part("RobotCore", Vector3.new(0.42, 0.42, 0.12), Color3.fromRGB(35, 210, 255), Enum.PartType.Ball)
+		core.Material = Enum.Material.Neon
 		core.Parent = root
-		weld(root, core, CFrame.new(0, 0.18, -0.72))
+		weld(root, core, CFrame.new(0, 0.2, -0.9))
 	elseif id == "Ninja" then
 		local sash = part("NinjaSash", Vector3.new(1.9, 0.18, 1.55), Color3.fromRGB(165, 40, 60))
 		sash.Parent = root
@@ -180,7 +219,7 @@ local function addOutfitDetails(root: BasePart, outfit)
 		weld(root, cape, CFrame.new(0, 0.25, 0.72))
 		local sash = part("RoyalSash", Vector3.new(0.18, 1.25, 0.1), Color3.fromRGB(255, 210, 80))
 		sash.Parent = root
-		weld(root, sash, CFrame.new(0, 0.22, -0.73))
+		weld(root, sash, CFrame.new(0, 0.22, -0.84))
 	elseif id == "Space" then
 		local suit = part("SpaceSuit", Vector3.new(1.82, 1.45, 1.45), outfit.Color, Enum.PartType.Ball)
 		suit.Parent = root
@@ -211,78 +250,112 @@ function CatBuilder.Build(custom: any?, displayName: string?): Model
 	model.PrimaryPart = root
 
 	-- Body (rounded torso) ----------------------------------------------
-	local bodyColor = (outfit.Id ~= "None") and outfit.Color or fur.Body
-	local body = part("Body", Vector3.new(2, 1.9, 1.5), bodyColor, Enum.PartType.Ball)
+	local hasOutfit = outfit.Id ~= "None"
+	local bodyColor = hasOutfit and outfit.Color or fur.Body
+	local body = oval("Body", Vector3.new(2, 1.9, 1.5), bodyColor)
 	body.Parent = model
 	weld(root, body, CFrame.new(0, 0.1, 0))
 
-	local belly = part("Belly", Vector3.new(1.4, 1.3, 1.0), fur.Accent, Enum.PartType.Ball)
+	local belly = oval("Belly", Vector3.new(1.3, 1.2, 0.6), fur.Accent)
 	belly.Parent = model
-	weld(root, belly, CFrame.new(0, -0.1, -0.55))
+	weld(root, belly, CFrame.new(0, -0.1, -0.52))
+
+	-- Arms: sleeves in the outfit colour, paws in fur.
+	for i = -1, 1, 2 do
+		local arm = oval("Arm", Vector3.new(0.46, 0.9, 0.46), bodyColor)
+		arm.Parent = model
+		weld(root, arm, CFrame.new(0.93 * i, 0.05, -0.15) * CFrame.Angles(0, 0, math.rad(12 * i)))
+		local paw = oval("Paw", Vector3.new(0.42, 0.36, 0.44), fur.Body)
+		paw.Parent = model
+		weld(root, paw, CFrame.new(1.02 * i, -0.38, -0.2))
+	end
 
 	-- Head ---------------------------------------------------------------
 	local head = ball("Head", 1.9, fur.Body)
 	head.Parent = model
 	weld(root, head, CFrame.new(0, 1.55, 0))
 
-	-- Muzzle / nose
-	local muzzle = part("Muzzle", Vector3.new(1.0, 0.7, 0.6), fur.Accent, Enum.PartType.Ball)
+	-- Muzzle, nose and a little "w" mouth
+	local muzzle = oval("Muzzle", Vector3.new(0.9, 0.56, 0.5), fur.Accent)
 	muzzle.Parent = model
-	weld(root, muzzle, CFrame.new(0, 1.35, -0.75))
+	weld(root, muzzle, CFrame.new(0, 1.32, -0.78))
 
-	local nose = part("Nose", Vector3.new(0.24, 0.18, 0.18), Color3.fromRGB(255, 150, 170), Enum.PartType.Ball)
+	local nose = oval("Nose", Vector3.new(0.22, 0.15, 0.14), Color3.fromRGB(255, 140, 165))
 	nose.Parent = model
-	weld(root, nose, CFrame.new(0, 1.42, -1.0))
+	weld(root, nose, CFrame.new(0, 1.44, -1.02))
+	for i = -1, 1, 2 do
+		local mouth = part("Mouth", Vector3.new(0.16, 0.04, 0.04), Color3.fromRGB(70, 45, 55))
+		mouth.Parent = model
+		weld(root, mouth, CFrame.new(0.07 * i, 1.3, -1.035) * CFrame.Angles(0, 0, math.rad(-30 * i)))
+	end
 	addFurMarkings(root, fur)
 
-	-- Eyes (big and cute)
+	-- Eyes: big glossy ovals with a coloured iris and two highlights.
+	local eyeColor = fur.Eye or Color3.fromRGB(52, 160, 140)
 	for i = -1, 1, 2 do
-		local eyeWhite = part("EyeWhite", Vector3.new(0.55, 0.62, 0.35), Color3.fromRGB(255, 255, 255), Enum.PartType.Ball)
-		eyeWhite.Parent = model
-		weld(root, eyeWhite, CFrame.new(0.42 * i, 1.7, -0.78))
-		local pupil = part("Pupil", Vector3.new(0.3, 0.38, 0.3), Color3.fromRGB(35, 30, 45), Enum.PartType.Ball)
+		local white = oval("EyeWhite", Vector3.new(0.52, 0.64, 0.3), Color3.fromRGB(255, 255, 255))
+		white.Parent = model
+		weld(root, white, CFrame.new(0.4 * i, 1.66, -0.8))
+		local iris = oval("Iris", Vector3.new(0.46, 0.58, 0.28), eyeColor)
+		iris.Parent = model
+		weld(root, iris, CFrame.new(0.41 * i, 1.65, -0.86))
+		local pupil = oval("Pupil", Vector3.new(0.26, 0.36, 0.24), Color3.fromRGB(25, 20, 35))
 		pupil.Parent = model
-		weld(root, pupil, CFrame.new(0.44 * i, 1.68, -0.92))
-		local shine = part("Shine", Vector3.new(0.12, 0.12, 0.12), Color3.fromRGB(255, 255, 255), Enum.PartType.Ball)
+		weld(root, pupil, CFrame.new(0.42 * i, 1.63, -0.93))
+		local shine = oval("Shine", Vector3.new(0.16, 0.18, 0.1), Color3.fromRGB(255, 255, 255))
 		shine.Parent = model
-		weld(root, shine, CFrame.new(0.5 * i, 1.78, -1.0))
+		weld(root, shine, CFrame.new(0.47 * i, 1.76, -1.0))
+		local shine2 = ball("Shine", 0.08, Color3.fromRGB(255, 255, 255))
+		shine2.Parent = model
+		weld(root, shine2, CFrame.new(0.36 * i, 1.55, -1.01))
+		local cheek = oval("Cheek", Vector3.new(0.34, 0.2, 0.08), Color3.fromRGB(255, 150, 175))
+		cheek.Transparency = 0.35
+		cheek.Parent = model
+		weld(root, cheek, CFrame.new(0.62 * i, 1.4, -0.72) * CFrame.Angles(0, math.rad(-35 * i), 0))
 	end
 
-	-- Ears (triangular via wedges) + inner ear
+	-- Ears: two mirrored wedges per ear form a pointed triangle facing the
+	-- front (a wedge's tall side is its back face), with a pink inner ear.
+	local function earHalf(name: string, size: Vector3, color: Color3, cf: CFrame)
+		local w = Instance.new("WedgePart")
+		w.Name = name
+		w.Size = size
+		w.Color = color
+		w.Material = Enum.Material.SmoothPlastic
+		w.CanCollide = false
+		w.CanQuery = false
+		w.CanTouch = false
+		w.Massless = true
+		w.Parent = model
+		weld(root, w, cf)
+	end
 	for i = -1, 1, 2 do
-		local ear = Instance.new("WedgePart")
-		ear.Name = "Ear"
-		ear.Size = Vector3.new(0.6, 0.8, 0.7)
-		ear.Color = fur.Body
-		ear.Material = Enum.Material.SmoothPlastic
-		ear.CanCollide = false
-		ear.CanQuery = false
-		ear.Massless = true
-		ear.Parent = model
-		weld(root, ear, CFrame.new(0.6 * i, 2.5, 0.1) * CFrame.Angles(0, math.rad(-20 * i), math.rad(-8 * i)))
-		local innerEar = part("InnerEar", Vector3.new(0.3, 0.4, 0.35), fur.Accent, Enum.PartType.Ball)
-		innerEar.Parent = model
-		weld(root, innerEar, CFrame.new(0.6 * i, 2.4, 0.0))
+		local earCF = CFrame.new(0.58 * i, 2.45, 0) * CFrame.Angles(0, 0, math.rad(-14 * i))
+		earHalf("Ear", Vector3.new(0.28, 1.0, 0.5), fur.Body, earCF * CFrame.new(-0.25, 0, 0) * CFrame.Angles(0, math.rad(90), 0))
+		earHalf("Ear", Vector3.new(0.28, 1.0, 0.5), fur.Body, earCF * CFrame.new(0.25, 0, 0) * CFrame.Angles(0, math.rad(-90), 0))
+		local pink = Color3.fromRGB(255, 172, 192)
+		earHalf("InnerEar", Vector3.new(0.06, 0.62, 0.28), pink, earCF * CFrame.new(-0.14, -0.08, -0.17) * CFrame.Angles(0, math.rad(90), 0))
+		earHalf("InnerEar", Vector3.new(0.06, 0.62, 0.28), pink, earCF * CFrame.new(0.14, -0.08, -0.17) * CFrame.Angles(0, math.rad(-90), 0))
 	end
 
 	-- Legs (stubby)
 	for i = -1, 1, 2 do
-		local frontLeg = part("FrontLeg", Vector3.new(0.55, 0.8, 0.55), fur.Body, Enum.PartType.Ball)
+		local frontLeg = oval("FrontLeg", Vector3.new(0.55, 0.8, 0.6), fur.Body)
 		frontLeg.Parent = model
 		weld(root, frontLeg, CFrame.new(0.55 * i, -1.0, -0.45))
-		local backLeg = part("BackLeg", Vector3.new(0.6, 0.85, 0.6), fur.Body, Enum.PartType.Ball)
+		local backLeg = oval("BackLeg", Vector3.new(0.6, 0.85, 0.6), fur.Body)
 		backLeg.Parent = model
 		weld(root, backLeg, CFrame.new(0.6 * i, -1.0, 0.45))
 	end
 
 	-- Tail (segmented curl)
 	for s = 1, 4 do
-		local seg = part("Tail" .. s, Vector3.new(0.5 - s * 0.05, 0.5 - s * 0.05, 0.5), fur.Body, Enum.PartType.Ball)
+		local seg = oval("Tail" .. s, Vector3.new(0.5 - s * 0.05, 0.5 - s * 0.05, 0.5), fur.Body)
 		seg.Parent = model
 		local cf = CFrame.new(0, 0.2 + s * 0.35, 0.9 + s * 0.18) * CFrame.Angles(math.rad(-30 * s / 2), 0, 0)
 		weld(root, seg, cf)
 	end
-	local tip = part("TailTip", Vector3.new(0.35, 0.35, 0.35), fur.Accent, Enum.PartType.Ball)
+	local tip = ball("TailTip", 0.35, fur.Accent)
 	tip.Parent = model
 	weld(root, tip, CFrame.new(0, 1.7, 1.65) * CFrame.Angles(math.rad(-70), 0, 0))
 

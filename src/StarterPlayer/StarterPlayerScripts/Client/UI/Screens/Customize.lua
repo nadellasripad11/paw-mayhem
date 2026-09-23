@@ -1,201 +1,356 @@
 --!strict
--- Customize: change fur / outfit / hat / accessory / emote. A slim icon rail on
--- the far left picks the category (mirrors reference 3), a big live preview of
--- the equipped cat sits next to it, and the item grid fills the rest.
+-- Customize: fur / hat / accessory / outfit / emote. A slim icon rail picks
+-- the category, the real 3D cat stands in the middle (drag to spin), and a
+-- grid of 3D portrait tiles shows your cat wearing each option.
 
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local Icons = require(script.Parent.Parent.Icons)
+local CatView = require(script.Parent.Parent.CatView)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
 
 local Customize = {}
 
+local W, H = 760, 500
+local TILE = 108
+local EQUIP_GREEN = Color3.fromRGB(182, 241, 112)
+local TILE_STROKE = Color3.fromRGB(78, 116, 166)
+
 local CATEGORIES = {
-	{ kind = "Fur", label = "Fur", list = Cats.Fur, icon = "CatFace" },
-	{ kind = "Hat", label = "Hat", list = Cats.Hats, icon = "Hat" },
-	{ kind = "Accessory", label = "Accessory", list = Cats.Accessories, icon = "Glasses" },
-	{ kind = "Outfit", label = "Outfit", list = Cats.Outfits, icon = "Shirt" },
-	{ kind = "Emote", label = "Emote", list = Cats.Emotes, icon = "Paw" },
+	{ kind = "Fur", title = "FUR", list = Cats.Fur, icon = "CatFace" },
+	{ kind = "Hat", title = "HATS", list = Cats.Hats, icon = "Hat" },
+	{ kind = "Accessory", title = "ACCESSORIES", list = Cats.Accessories, icon = "Glasses" },
+	{ kind = "Outfit", title = "OUTFITS", list = Cats.Outfits, icon = "Shirt" },
+	{ kind = "Emote", title = "EMOTES", list = Cats.Emotes, icon = "Paw" },
 }
 
--- Each emote gets its own readable icon instead of one generic smiley for all.
 local EMOTE_ICON = {
 	Happy = "Smiley", Sit = "SitDown", Wave = "Wave", Laugh = "Laugh",
 	Celebrate = "Burst", Sleep = "Sleep", Spin = "Spin", Fall = "Fall",
 }
 
-local grid, tabButtons, activeKind
-local previewFace, previewLabel, gridTitle
-local summaryChips = {}
-local cards = {}
+local grid: ScrollingFrame
+local gridTitle: TextLabel
+local previewVF: ViewportFrame
+local previewName: TextLabel
+local railButtons: { [string]: any } = {}
+local tiles: { any } = {}
+local activeCat = CATEGORIES[1]
+local lastSig = ""
 
-local function refreshCards()
-	for _, c in ipairs(cards) do
-		c.card.refresh({
-			owned = ClientState.Owns(c.kind, c.id),
-			equipped = ClientState.Equipped(c.kind) == c.id,
-		})
-	end
-end
-
-local function refreshPreview()
-	if not previewFace then
-		return
-	end
+local function currentCat(): { [string]: string }
 	local p = ClientState.Profile
-	local fur = Cats.FurById[p and p.Loadout.Cat.Fur or Cats.Default.Fur] or Cats.FurById[Cats.Default.Fur]
-	local outfit = Cats.OutfitById[p and p.Loadout.Cat.Outfit or Cats.Default.Outfit] or Cats.OutfitById[Cats.Default.Outfit]
-	local hat = Cats.HatById[p and p.Loadout.Cat.Hat or Cats.Default.Hat] or Cats.HatById[Cats.Default.Hat]
-	local accessory = Cats.AccessoryById[p and p.Loadout.Cat.Accessory or Cats.Default.Accessory] or Cats.AccessoryById[Cats.Default.Accessory]
-	local previewBody = outfit and outfit.Id ~= "None" and outfit.Color or fur.Body
-	previewFace:ClearAllChildren()
-	Icons.Place("CatBody", previewFace, 220, previewBody, fur.Accent)
-	if outfit and outfit.Id ~= "None" then
-		Icons.Place("Shirt", previewFace, 64, outfit.Color, nil, UDim2.fromScale(0.5, 0.60))
+	local c = p and p.Loadout and p.Loadout.Cat or {}
+	return {
+		Fur = c.Fur or Cats.Default.Fur,
+		Outfit = c.Outfit or Cats.Default.Outfit,
+		Hat = c.Hat or Cats.Default.Hat,
+		Accessory = c.Accessory or Cats.Default.Accessory,
+	}
+end
+
+local function catSig(): string
+	local c = currentCat()
+	return c.Fur .. "|" .. c.Outfit .. "|" .. c.Hat .. "|" .. c.Accessory
+end
+
+local function framingFor(kind: string, item): string
+	if kind == "Outfit" then
+		return "Full"
+	elseif kind == "Accessory" and (item.Shape == "Backpack" or item.Shape == "Jetpack") then
+		return "Back"
 	end
-	if hat and hat.Id ~= "None" then
-		Icons.Place("Hat", previewFace, 58, hat.Color, nil, UDim2.fromScale(0.5, 0.20))
-	end
-	if accessory and accessory.Id ~= "None" then
-		Icons.Place(accessory.Shape == "Glasses" and "Glasses" or "Paw", previewFace, 48, accessory.Color, nil, UDim2.fromScale(0.5, 0.40))
-	end
-	if previewLabel then
-		previewLabel.Text = fur.Name .. "  •  " .. (outfit and outfit.Name or "Classic")
-	end
-	for kind, chip in pairs(summaryChips) do
-		local item = kind == "Outfit" and outfit or (kind == "Hat" and hat or accessory)
-		if item then
-			chip.BackgroundColor3 = item.Color or Theme.Color.PanelLight
+	return "Bust"
+end
+
+local function buyOrEquip(kind: string, id: string)
+	if ClientState.Owns(kind, id) then
+		ClientActions.Equip(kind, id)
+	else
+		local result = ClientActions.Purchase(kind, id)
+		if result and result.ok then
+			ClientActions.Equip(kind, id)
 		end
 	end
 end
 
-local function setActiveTab(kind)
-	activeKind = kind
-	for k, btn in pairs(tabButtons) do
-		local active = k == kind
-		btn.BackgroundColor3 = active and Color3.fromRGB(20, 83, 92) or Theme.Color.PanelLight
-		local stroke = btn:FindFirstChild("ActiveStroke")
-		if stroke then
-			stroke.Color = active and Theme.Color.Accent or Theme.Color.Stroke
-			stroke.Thickness = active and 2 or 1
+-- ── tiles ────────────────────────────────────────────────────────────────────
+local function refreshTiles()
+	local level = ClientState.Profile and ClientState.Profile.Level or 1
+	for _, t in ipairs(tiles) do
+		local owned = ClientState.Owns(t.kind, t.item.Id)
+		local equipped = ClientState.Equipped(t.kind) == t.item.Id
+		t.stroke.Color = equipped and EQUIP_GREEN or TILE_STROKE
+		t.stroke.Thickness = equipped and 3 or 1.5
+		t.stroke.Transparency = equipped and 0 or 0.35
+		t.check.Visible = equipped
+		local cost = t.item.CoinCost or 0
+		local locked = not owned and (t.item.UnlockLevel or 0) > level
+		t.pill.Visible = not owned
+		t.coin.Visible = not owned and not locked and cost > 0
+		if locked then
+			t.pillText.Text = "LV " .. tostring(t.item.UnlockLevel)
+			t.pillText.TextColor3 = Theme.Color.TextDim
+		else
+			t.pillText.Text = cost > 0 and tostring(cost) or "FREE"
+			t.pillText.TextColor3 = Theme.Color.Coin
 		end
 	end
+end
+
+local function buildTile(cat, item, order: number)
+	local tile = UIUtil.make("TextButton", {
+		Parent = grid, Text = "", AutoButtonColor = false, LayoutOrder = order,
+		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ClipsDescendants = true,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(0, 14), tile)
+	UIUtil.gradient(Color3.fromRGB(38, 66, 110), Color3.fromRGB(16, 32, 62), 90, tile)
+	local stroke = UIUtil.stroke(TILE_STROKE, 1.5, tile)
+
+	if cat.kind == "Emote" then
+		local slot = UIUtil.make("Frame", { Parent = tile, Size = UDim2.new(1, 0, 1, -20), BackgroundTransparency = 1 })
+		Icons.Place(EMOTE_ICON[item.Id] or "Smiley", slot, 46, Color3.new(1, 1, 1))
+	else
+		local vf = CatView.Create(tile, UDim2.new(1, -4, 1, -4), UDim2.fromOffset(2, 2))
+		local custom = currentCat()
+		custom[cat.kind] = item.Id
+		CatView.Set(vf, custom, framingFor(cat.kind, item))
+	end
+
+	-- Name caption over a dark fade at the bottom.
+	local fade = UIUtil.make("Frame", {
+		Parent = tile, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1),
+		Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(6, 12, 26), BorderSizePixel = 0,
+	})
+	local fadeGrad = Instance.new("UIGradient")
+	fadeGrad.Rotation = 90
+	fadeGrad.Transparency = NumberSequence.new(1, 0.2)
+	fadeGrad.Parent = fade
+	UIUtil.label({
+		Parent = tile, Text = item.Name, Font = Theme.Font.Bold, TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0, 1),
+		Position = UDim2.new(0, 4, 1, -4), Size = UDim2.new(1, -8, 0, 15),
+		TextTruncate = Enum.TextTruncate.AtEnd, TextStrokeTransparency = 0.6,
+	})
+
+	-- Equipped check (top left) and price / level pill (top right).
+	local check = UIUtil.make("Frame", {
+		Parent = tile, Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(20, 20),
+		BackgroundColor3 = EQUIP_GREEN, BorderSizePixel = 0, Visible = false,
+	})
+	UIUtil.corner(UDim.new(1, 0), check)
+	Icons.Place("Check", check, 12, Color3.fromRGB(16, 40, 30))
+
+	local pill = UIUtil.make("Frame", {
+		Parent = tile, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -5, 0, 5),
+		Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Color3.fromRGB(8, 16, 32), BackgroundTransparency = 0.15, BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), pill)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 5)
+	pad.PaddingRight = UDim.new(0, 6)
+	pad.Parent = pill
+	local layout = UIUtil.listLayout(pill, 2, Enum.FillDirection.Horizontal)
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	local coin = UIUtil.make("Frame", { Parent = pill, Size = UDim2.fromOffset(12, 12), BackgroundTransparency = 1, LayoutOrder = 1 })
+	Icons.Place("Coin", coin, 12, Theme.Color.Coin)
+	local pillText = UIUtil.label({
+		Parent = pill, Text = "", Font = Theme.Font.Bold, TextSize = 10,
+		AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 12), LayoutOrder = 2,
+	})
+
+	tile.MouseEnter:Connect(function()
+		if ClientState.Equipped(cat.kind) ~= item.Id then
+			stroke.Transparency = 0
+		end
+	end)
+	tile.MouseLeave:Connect(refreshTiles)
+	tile.MouseButton1Click:Connect(function()
+		buyOrEquip(cat.kind, item.Id)
+	end)
+	table.insert(tiles, { kind = cat.kind, item = item, stroke = stroke, check = check, pill = pill, coin = coin, pillText = pillText })
 end
 
 local function loadCategory(cat)
-	setActiveTab(cat.kind)
-	if gridTitle then
-		gridTitle.Text = string.upper(cat.label .. " VARIATIONS")
+	activeCat = cat
+	for kind, b in pairs(railButtons) do
+		local on = kind == cat.kind
+		b.button.BackgroundColor3 = on and Color3.fromRGB(22, 96, 110) or Color3.fromRGB(20, 38, 66)
+		b.stroke.Color = on and Theme.Color.Accent or TILE_STROKE
+		b.stroke.Thickness = on and 2 or 1
+		b.stroke.Transparency = on and 0 or 0.5
+		b.glow.Visible = on
 	end
-	grid:ClearAllChildren()
-	UIUtil.gridLayout(grid, UDim2.fromOffset(110, 116), UDim2.fromOffset(9, 9))
-	cards = {}
-	for _, item in ipairs(cat.list) do
-		local swatchColor = item.Body or item.Color or item.Tint or Theme.Color.Accent
-		local icon = (cat.kind == "Emote" and EMOTE_ICON[item.Id]) or cat.icon
-		local tile = UIUtil.button({
-			Parent = grid, Size = UDim2.fromOffset(110, 116), BackgroundColor3 = Theme.Color.PanelLight,
-			Text = "", CornerRadius = Theme.CornerSmall,
-		}, function()
-			local owned = ClientState.Owns(cat.kind, item.Id)
-			local result
-			if owned then
-				result = ClientActions.Equip(cat.kind, item.Id)
-			else
-				result = ClientActions.Purchase(cat.kind, item.Id)
-				if result and result.ok then
-					ClientActions.Equip(cat.kind, item.Id)
-				end
-			end
-			if result and result.ok then
-				refreshCards()
-				refreshPreview()
-			end
-		end)
-		local tileStroke = UIUtil.stroke(Theme.Color.Stroke, 1, tile)
-		local tilePreview = UIUtil.make("Frame", { Parent = tile, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.fromOffset(90, 82), BackgroundColor3 = swatchColor, BorderSizePixel = 0 })
-		UIUtil.corner(Theme.CornerSmall, tilePreview)
-		UIUtil.gradient(swatchColor:Lerp(Color3.new(1, 1, 1), 0.12), swatchColor:Lerp(Color3.new(0, 0, 0), 0.18), 90, tilePreview)
-		Icons.Place(icon, tilePreview, cat.kind == "Fur" and 78 or 56, swatchColor, item.Accent)
-		UIUtil.label({ Parent = tile, Text = item.Name, Font = Theme.Font.Bold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 89), Size = UDim2.new(1, -8, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd })
-		UIUtil.label({ Parent = tile, Text = item.Desc or cat.label, TextColor3 = Theme.Color.TextMuted, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(4, 103), Size = UDim2.new(1, -8, 0, 12), TextTruncate = Enum.TextTruncate.AtEnd })
-		local card = {
-			refresh = function(state)
-				tile.BackgroundColor3 = state.equipped and Color3.fromRGB(30, 82, 79) or Theme.Color.PanelLight
-				tileStroke.Color = state.equipped and Color3.fromRGB(182, 241, 112) or Theme.Color.Stroke
-				tileStroke.Thickness = state.equipped and 2.5 or 1
-			end,
-		}
-		card.refresh({ owned = ClientState.Owns(cat.kind, item.Id), equipped = ClientState.Equipped(cat.kind) == item.Id })
-		table.insert(cards, { card = card, kind = cat.kind, id = item.Id })
+	gridTitle.Text = cat.title
+	for _, child in ipairs(grid:GetChildren()) do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	tiles = {}
+	for i, item in ipairs(cat.list) do
+		buildTile(cat, item, i)
+	end
+	refreshTiles()
+end
+
+-- ── preview ──────────────────────────────────────────────────────────────────
+local function refreshPreview()
+	local c = currentCat()
+	CatView.Set(previewVF, c, "Full")
+	local fur = Cats.FurById[c.Fur]
+	local outfit = Cats.OutfitById[c.Outfit]
+	previewName.Text = (fur and fur.Name or "Cat") .. (outfit and outfit.Id ~= "None" and ("  •  " .. outfit.Name) or "")
+end
+
+local function onProfileChanged()
+	local sig = catSig()
+	if sig ~= lastSig then
+		lastSig = sig
+		refreshPreview()
+		loadCategory(activeCat)
+	else
+		refreshTiles()
 	end
 end
 
 function Customize.Build(parent)
-	local root = UIUtil.make("Frame", { Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Size = UDim2.fromOffset(650, 500), Visible = false }) :: Frame
-	local shell = UIUtil.panel({ Parent = root, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Color.PanelDark, ClipsDescendants = true })
+	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
+	local stage = UIUtil.make("Frame", {
+		Parent = root, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(W, H), BackgroundColor3 = Color3.fromRGB(10, 22, 44), BorderSizePixel = 0,
+	}) :: Frame
+	UIUtil.corner(UDim.new(0, 18), stage)
+	UIUtil.stroke(Theme.Color.Stroke, 1.5, stage).Transparency = 0.4
+	local stageScale = Instance.new("UIScale")
+	stageScale.Parent = stage
+	local function fit()
+		local s = root.AbsoluteSize
+		if s.X > 0 and s.Y > 0 then
+			stageScale.Scale = math.min(s.X / W, s.Y / H)
+		end
+	end
+	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	fit()
 
-	-- Slim category icon rail
-	local rail = UIUtil.panel({ Parent = root, Size = UDim2.new(0, 64, 1, 0), BackgroundColor3 = Theme.Color.PanelDark })
-	UIUtil.padding(8, rail)
-	UIUtil.listLayout(rail, 8)
-	tabButtons = {}
-	for _, cat in ipairs(CATEGORIES) do
-		local btn = UIUtil.button({
-			Parent = rail, Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = Theme.Color.PanelLight, Text = "",
-		}, function()
+	-- Category rail --------------------------------------------------------
+	local rail = UIUtil.make("Frame", {
+		Parent = stage, Position = UDim2.fromOffset(12, 12), Size = UDim2.fromOffset(66, H - 24),
+		BackgroundColor3 = Color3.fromRGB(12, 26, 50), BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(0, 18), rail)
+	UIUtil.stroke(TILE_STROKE, 1, rail).Transparency = 0.6
+	for i, cat in ipairs(CATEGORIES) do
+		local y = 12 + (i - 1) * 62
+		local glow = UIUtil.make("Frame", {
+			Parent = rail, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(33, y + 25),
+			Size = UDim2.fromOffset(62, 62), BackgroundColor3 = Theme.Color.Accent, BackgroundTransparency = 0.82,
+			BorderSizePixel = 0, Visible = false,
+		})
+		UIUtil.corner(UDim.new(0, 18), glow)
+		local b = UIUtil.make("TextButton", {
+			Parent = rail, Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(8, y),
+			Size = UDim2.fromOffset(50, 50), BackgroundColor3 = Color3.fromRGB(20, 38, 66), BorderSizePixel = 0,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(0, 14), b)
+		local stroke = UIUtil.stroke(TILE_STROKE, 1, b)
+		Icons.Place(cat.icon, b, 28, Color3.new(1, 1, 1))
+		b.MouseButton1Click:Connect(function()
 			loadCategory(cat)
 		end)
-		local activeStroke = UIUtil.stroke(Theme.Color.Stroke, 1, btn)
-		activeStroke.Name = "ActiveStroke"
-		Icons.Place(cat.icon, btn, 26, Theme.Color.Text)
-		tabButtons[cat.kind] = btn
+		railButtons[cat.kind] = { button = b, stroke = stroke, glow = glow }
 	end
 
-	-- Big live preview
-	local previewPanel = UIUtil.make("Frame", { Parent = root, Position = UDim2.fromOffset(74, 0), Size = UDim2.fromOffset(200, 500), BackgroundTransparency = 1 })
-	UIUtil.padding(14, previewPanel)
-	local previewCard = UIUtil.make("Frame", { Parent = previewPanel, Size = UDim2.new(1, 0, 0, 360), BackgroundColor3 = Theme.Color.PanelDark, BorderSizePixel = 0 })
-	UIUtil.corner(Theme.CornerSmall, previewCard)
-	UIUtil.gradient(Color3.fromRGB(18, 47, 73), Color3.fromRGB(8, 27, 52), 90, previewCard)
-	previewFace = UIUtil.make("Frame", { Parent = previewCard, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.fromOffset(220, 330), BackgroundTransparency = 1 })
-	previewLabel = UIUtil.label({ Parent = previewPanel, Text = "Your Cat", Font = Theme.Font.Heading, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 370), Size = UDim2.new(1, 0, 0, 22) })
-
-	-- equipped summary chips (outfit / hat / accessory)
-	local summary = UIUtil.make("Frame", { Parent = previewPanel, Position = UDim2.fromOffset(0, 404), Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 })
-	UIUtil.listLayout(summary, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Center
-	for _, catKind in ipairs({ "Outfit", "Hat", "Accessory" }) do
-		local cat
-		for _, c in ipairs(CATEGORIES) do
-			if c.kind == catKind then
-				cat = c
-			end
-		end
-		local chip = UIUtil.make("Frame", { Parent = summary, Size = UDim2.fromOffset(36, 36), BackgroundColor3 = Theme.Color.PanelLight, BorderSizePixel = 0 })
-		UIUtil.corner(Theme.CornerSmall, chip)
-		Icons.Place(cat.icon, chip, 20, Theme.Color.TextDim)
-		summaryChips[catKind] = chip
-	end
-
-	-- Item grid
-	gridTitle = UIUtil.label({ Parent = root, Text = "FUR VARIATIONS", Font = Theme.Font.Heading, TextSize = 14, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(288, 10), Size = UDim2.new(1, -300, 0, 20) })
-	grid = UIUtil.make("ScrollingFrame", {
-		Parent = root, Position = UDim2.fromOffset(288, 38), Size = UDim2.new(1, -300, 1, -50),
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	-- 3D preview -------------------------------------------------------------
+	local holder = UIUtil.make("Frame", { Parent = stage, Position = UDim2.fromOffset(88, 12), Size = UDim2.fromOffset(296, H - 24), BackgroundTransparency = 1 })
+	local spot = UIUtil.make("Frame", {
+		Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(148, 200),
+		Size = UDim2.fromOffset(270, 330), BackgroundColor3 = Theme.Color.Accent, BackgroundTransparency = 0.9, BorderSizePixel = 0,
 	})
-	loadCategory(CATEGORIES[1])
-	refreshPreview()
+	UIUtil.corner(UDim.new(1, 0), spot)
+	local spotCore = UIUtil.make("Frame", {
+		Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(148, 190),
+		Size = UDim2.fromOffset(180, 230), BackgroundColor3 = Color3.fromRGB(150, 220, 255), BackgroundTransparency = 0.9, BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), spotCore)
+	local shadow = UIUtil.make("Frame", {
+		Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(148, 392),
+		Size = UDim2.fromOffset(150, 24), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.6, BorderSizePixel = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), shadow)
+	previewVF = CatView.Create(holder, UDim2.fromOffset(296, 410), UDim2.new())
 
-	ClientState.ProfileChanged:Connect(function()
-		refreshCards()
-		refreshPreview()
+	previewName = UIUtil.label({
+		Parent = holder, Text = "", Font = Theme.Font.Title, TextSize = 22,
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 414), Size = UDim2.new(1, 0, 0, 26),
+	})
+	UIUtil.label({
+		Parent = holder, Text = "Drag to spin", Font = Theme.Font.Body, TextSize = 12, TextColor3 = Theme.Color.TextMuted,
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 442), Size = UDim2.new(1, 0, 0, 16),
+	})
+
+	-- Drag to spin, with a gentle idle sway.
+	local spin = UIUtil.make("TextButton", { Parent = holder, Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(296, 410) }) :: TextButton
+	local userYaw = math.rad(CatView.Framing.Full.yaw)
+	local dragInput: InputObject? = nil
+	local lastX = 0
+	spin.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+			lastX = input.Position.X
+		end
 	end)
+	spin.InputChanged:Connect(function(input)
+		if dragInput and (input == dragInput or input.UserInputType == Enum.UserInputType.MouseMovement) then
+			userYaw += (input.Position.X - lastX) * 0.012
+			lastX = input.Position.X
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input == dragInput or (dragInput and input.UserInputType == Enum.UserInputType.MouseButton1) then
+			dragInput = nil
+		end
+	end)
+	local t = 0
+	RunService.RenderStepped:Connect(function(dt)
+		local gui = root:FindFirstAncestorOfClass("ScreenGui")
+		if not root.Visible or not (gui and gui.Enabled) then
+			return
+		end
+		t += dt
+		local sway = dragInput and 0 or math.sin(t * 0.8) * 0.14
+		CatView.SetYaw(previewVF, userYaw + sway)
+	end)
+
+	-- Grid -------------------------------------------------------------------
+	gridTitle = UIUtil.label({
+		Parent = stage, Text = "FUR", Font = Theme.Font.Heading, TextSize = 14, TextColor3 = Theme.Color.TextDim,
+		Position = UDim2.fromOffset(398, 16), Size = UDim2.fromOffset(348, 18),
+	})
+	grid = UIUtil.make("ScrollingFrame", {
+		Parent = stage, Position = UDim2.fromOffset(394, 42), Size = UDim2.fromOffset(360, H - 54),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Theme.Color.Stroke, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}) :: ScrollingFrame
+	local gpad = Instance.new("UIPadding")
+	gpad.PaddingTop = UDim.new(0, 4)
+	gpad.PaddingLeft = UDim.new(0, 4)
+	gpad.PaddingBottom = UDim.new(0, 8)
+	gpad.Parent = grid
+	UIUtil.gridLayout(grid, UDim2.fromOffset(TILE, TILE), UDim2.fromOffset(10, 10))
+
+	lastSig = catSig()
+	refreshPreview()
+	loadCategory(CATEGORIES[1])
+	ClientState.ProfileChanged:Connect(onProfileChanged)
+
 	Customize.Root = root
 	return root
 end

@@ -9,13 +9,13 @@ end
 
 local Cats = {}
 
--- Fur variations (base body color + accent). Names mirror the design sheet
+-- Fur variations (base body color + accent, optional eye colour). Names mirror the design sheet
 -- but colors/values are original tuning for this game.
 Cats.Fur = {
 	{ Id = "Orange", Name = "Orange", Desc = "Default", Pattern = "Solid", Body = c(240, 150, 70), Accent = c(255, 200, 140), UnlockLevel = 0, CoinCost = 0 },
-	{ Id = "Black", Name = "Black", Desc = "Stealth", Pattern = "Solid", Body = c(45, 45, 55), Accent = c(90, 90, 110), UnlockLevel = 0, CoinCost = 200 },
-	{ Id = "White", Name = "White", Desc = "Fluffy", Pattern = "Solid", Body = c(245, 245, 245), Accent = c(210, 215, 230), UnlockLevel = 0, CoinCost = 200 },
-	{ Id = "Gray", Name = "Gray", Desc = "Cool", Pattern = "Solid", Body = c(150, 155, 165), Accent = c(110, 115, 130), UnlockLevel = 2, CoinCost = 300 },
+	{ Id = "Black", Name = "Black", Desc = "Stealth", Pattern = "Solid", Body = c(45, 45, 55), Accent = c(90, 90, 110), Eye = c(236, 196, 64), UnlockLevel = 0, CoinCost = 200 },
+	{ Id = "White", Name = "White", Desc = "Fluffy", Pattern = "Solid", Body = c(245, 245, 245), Accent = c(210, 215, 230), Eye = c(84, 164, 232), UnlockLevel = 0, CoinCost = 200 },
+	{ Id = "Gray", Name = "Gray", Desc = "Cool", Pattern = "Solid", Body = c(150, 155, 165), Accent = c(110, 115, 130), Eye = c(110, 196, 110), UnlockLevel = 2, CoinCost = 300 },
 	{ Id = "Blue", Name = "Blue", Desc = "Sporty", Pattern = "Solid", Body = c(120, 170, 240), Accent = c(90, 130, 210), UnlockLevel = 3, CoinCost = 400 },
 	{ Id = "Purple", Name = "Purple", Desc = "Mystic", Pattern = "Solid", Body = c(170, 130, 230), Accent = c(140, 100, 210), UnlockLevel = 5, CoinCost = 600 },
 	{ Id = "Calico", Name = "Calico", Desc = "Trendy", Pattern = "Calico", Marking = c(120, 80, 60), Body = c(235, 180, 130), Accent = c(255, 245, 225), UnlockLevel = 7, CoinCost = 800 },
