@@ -125,7 +125,23 @@ local function updateGamepad(dt: number)
 	end
 end
 
+-- End-of-match shot of the winners' podium (overrides everything else).
+local showcase: CFrame? = nil
+local showcaseAt = 0
+function CameraController.SetShowcase(cf: CFrame?)
+	showcase = cf
+	showcaseAt = os.clock()
+end
+
 local function step(dt: number)
+	if showcase then
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = 55
+		-- Slow push-in toward the stage.
+		local t = os.clock() - showcaseAt
+		camera.CFrame = showcase * CFrame.new(math.sin(t * 0.4) * 2, 0, -math.min(t * 1.4, 12))
+		return
+	end
 	if lobbyView then
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = LobbyScene.FieldOfView

@@ -177,6 +177,7 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	vState.Accumulated += dmg
 	vHum:TakeDamage(dmg * 0.5) -- HP also ticks so pure damage can eliminate too
 	vState.LastAttacker = shooter
+	vState.LastBot = nil
 	vState.LastAttackAt = os.clock()
 
 	-- Knockback impulse (mass-correct), applied by the victim's own client.

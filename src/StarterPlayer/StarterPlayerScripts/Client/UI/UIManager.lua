@@ -132,6 +132,9 @@ local function onCharacter(char)
 	end
 end
 
+-- Camera shot of the winners' podium, sent by the server at match end.
+local podiumShot: CFrame? = nil
+
 local function onPhase(m)
 	local phase = m.phase
 	if phase == lastPhase then
@@ -145,6 +148,10 @@ local function onPhase(m)
 	end
 	lastPhase = phase
 	playTransition()
+	if phase ~= "Results" then
+		podiumShot = nil
+		CameraController.SetShowcase(nil)
+	end
 
 	if phase == "Intermission" then
 		MainMenu.SetVisible(true)
@@ -180,11 +187,22 @@ local function onPhase(m)
 		if fallbackGui then fallbackGui.Enabled = false end
 		HUD.SetVisible(false)
 		enableGameplay(false)
+		if podiumShot then
+			CameraController.SetShowcase(podiumShot)
+		end
 		Results.Show(m)
 	end
 end
 
 function UIManager.Start()
+	Remotes.Get("Podium").OnClientEvent:Connect(function(data)
+		if typeof(data) == "table" and typeof(data.camera) == "CFrame" then
+			podiumShot = data.camera
+			if ClientState.Match.phase == "Results" then
+				CameraController.SetShowcase(podiumShot)
+			end
+		end
+	end)
 	local sceneOk, sceneErr = pcall(LobbyScene.Build)
 	if not sceneOk then
 		warn("[PAW MAYHEM] Lobby scene failed to build: " .. tostring(sceneErr))

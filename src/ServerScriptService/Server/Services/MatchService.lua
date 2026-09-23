@@ -18,6 +18,7 @@ local PlayerService = require(script.Parent.PlayerService)
 local Runtime = require(script.Parent.Runtime)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 local BotService = require(script.Parent.BotService)
+local PodiumService = require(script.Parent.PodiumService)
 
 local MatchService = {}
 
@@ -87,13 +88,20 @@ local function buildBoard()
 		table.insert(board, {
 			Name = player.Name,
 			Display = player.DisplayName,
+			UserId = player.UserId,
 			Team = s and s.Team or "Blue",
 			Elims = s and s.MatchElims or 0,
 			Score = s and s.MatchScore or 0,
 		})
 	end
+	for _, row in ipairs(BotService.Board()) do
+		table.insert(board, row)
+	end
 	table.sort(board, function(a, b)
-		return a.Elims > b.Elims
+		if a.Elims ~= b.Elims then
+			return a.Elims > b.Elims
+		end
+		return (a.Score or 0) > (b.Score or 0)
 	end)
 	return board
 end
@@ -204,6 +212,14 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		end
 		EconomyService.Push(killer)
 		Remotes.Get("Eliminated"):FireClient(victim, { by = killer.DisplayName, xp = 0 })
+	elseif vState and vState.LastBot and os.clock() - (vState.LastBotAt or 0) < 8 then
+		local kb = vState.LastBot
+		vState.LastBot = nil
+		BotService.CreditKill(kb.name, kb.team)
+		if state.Scores[kb.team] ~= nil then
+			state.Scores[kb.team] += Scoring.EliminationTeamPoints
+		end
+		Remotes.Get("Eliminated"):FireClient(victim, { by = kb.name, xp = 0 })
 	else
 		Remotes.Get("Eliminated"):FireClient(victim, { by = ringout and "the void" or "themselves", xp = 0 })
 	end
@@ -261,10 +277,19 @@ function MatchService.EndMatch(winnerTeam: string?)
 
 	broadcastState()
 	PlayerService.DespawnAll()
+
+	-- Top 3 of the match stand on the winners' podium beside the arena.
+	local board = buildBoard()
+	local top = {}
+	for i = 1, math.min(3, #board) do
+		top[i] = board[i]
+	end
+	task.spawn(PodiumService.Show, top)
 end
 
 local function enterIntermission()
 	BotService.DespawnAll()
+	PodiumService.Clear()
 	setMayhem(false)
 	state.Phase = PHASE.Intermission
 	state.TimeLeft = GameConfig.Match.IntermissionSeconds

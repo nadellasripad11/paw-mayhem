@@ -69,6 +69,8 @@ local nextBotId      = 1
 local pending:       { [number]: { team: string, name: string } } = {}
 -- Total cats per match; bots fill whatever real players don't.
 local TARGET_CATS    = 8
+-- Eliminations each bot has this match (by name, so respawns keep them).
+local botElims:      { [string]: { elims: number, team: string } } = {}
 local matchActive    = false
 
 -- Set by MatchService.Start so bot kills update the live scoreboard.
@@ -218,6 +220,8 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	if not vHum or not vRoot then return end
 
 	local dmg = weapon.Damage
+	vState.LastBot = { name = bot.name, team = bot.team }
+	vState.LastBotAt = os.clock()
 	vState.Accumulated += dmg
 	vHum:TakeDamage(dmg * 0.5)
 	vState.LastAttackAt = os.clock()
@@ -483,6 +487,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 			})
 		elseif bot.lastBot and bot.lastBot.team ~= teamId then
 			local kb = bot.lastBot
+			BotService.CreditKill(kb.name, kb.team)
 			if BotService.OnTeamPoint then
 				BotService.OnTeamPoint(kb.team)
 			end
@@ -591,7 +596,39 @@ function BotService.Rebalance(realPlayerCount: number)
 	end
 end
 
+-- A bot eliminated someone: count it for the scoreboard / podium.
+function BotService.CreditKill(name: string, team: string)
+	local e = botElims[name]
+	if not e then
+		e = { elims = 0, team = team }
+		botElims[name] = e
+	end
+	e.elims += 1
+	e.team = team
+end
+
+-- Scoreboard rows for every bot that played this match.
+function BotService.Board(): { any }
+	local rows = {}
+	local seen = {}
+	for _, b in pairs(bots) do
+		seen[b.name] = b.team
+	end
+	for _, p in pairs(pending) do
+		seen[p.name] = p.team
+	end
+	for name, e in pairs(botElims) do
+		seen[name] = seen[name] or e.team
+	end
+	for name, team in pairs(seen) do
+		local e = botElims[name]
+		table.insert(rows, { Name = name, Display = name, Team = team, Elims = e and e.elims or 0, Score = e and e.elims or 0, IsBot = true })
+	end
+	return rows
+end
+
 function BotService.SpawnBots(realPlayerCount: number)
+	botElims = {}
 	matchActive = true
 	BotService.Rebalance(realPlayerCount)
 end

@@ -10,6 +10,8 @@ export type PlayerState = {
 	Alive: boolean,
 	Accumulated: number, -- fluff damage taken this life (drives knockback)
 	LastAttacker: Player?, -- for ringout kill credit
+	LastBot: any?, -- {name, team} of the bot that hit this player last
+	LastBotAt: number?,
 	LastAttackAt: number, -- os.clock() of last hit taken
 	SlowUntil: number, -- status: slowed movement until this os.clock()
 	StunUntil: number, -- launch stun window end
