@@ -19,6 +19,10 @@ local Runtime = require(script.Parent.Runtime)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 local BotService = require(script.Parent.BotService)
 local PodiumService = require(script.Parent.PodiumService)
+local SeasonService = require(script.Parent.SeasonService)
+local Modes = require(game:GetService("ReplicatedStorage").Shared.Config.Modes)
+local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
 
 local MatchService = {}
 
@@ -35,10 +39,48 @@ local state = {
 	Scores = { Blue = 0, Red = 0 },
 	Winner = nil :: string?,
 	MapId = "SkyIslands",
+	Mode = Modes.Default,
 }
 
 local MAP_IDS = { SkyIslands = true, Volcano = true, Toybox = true }
 local mapVotes: { [number]: string } = {}
+local modeVotes: { [number]: string } = {}
+
+local function currentMode(): any
+	return Modes.Get(state.Mode)
+end
+
+local function scoreToWin(): number
+	return currentMode().ScoreToWin
+end
+
+local function isFFA(): boolean
+	return state.Mode == "FFA"
+end
+
+local function modeTotals(): { [string]: number }
+	local totals = {}
+	for _, m in ipairs(Modes.List) do
+		totals[m.Id] = 0
+	end
+	for _, id in pairs(modeVotes) do
+		if totals[id] ~= nil then
+			totals[id] += 1
+		end
+	end
+	return totals
+end
+
+local function leadingModeId(): string
+	local totals = modeTotals()
+	local winner, high = Modes.Default, 0
+	for _, m in ipairs(Modes.List) do
+		if totals[m.Id] > high then
+			winner, high = m.Id, totals[m.Id]
+		end
+	end
+	return winner
+end
 local queuedPlayers: { [number]: boolean } = {}
 
 local function queuedCount(): number
@@ -112,7 +154,9 @@ local function broadcastState()
 		timeLeft = math.max(0, math.floor(state.TimeLeft)),
 		scores = state.Scores,
 		winner = state.Winner,
-		scoreToWin = GameConfig.Match.ScoreToWin,
+		scoreToWin = scoreToWin(),
+		mode = state.Mode,
+		modeVotes = modeTotals(),
 		matchSeconds = GameConfig.Match.MatchSeconds,
 		mapId = state.MapId,
 		votes = voteTotals(),
@@ -200,15 +244,17 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		kState.MatchElims += 1
 		kState.MatchScore += 1
 		-- Team point.
-		if kState.Team and state.Scores[kState.Team] ~= nil then
-			state.Scores[kState.Team] += Scoring.EliminationTeamPoints
+		if not isFFA() and kState.Team and state.Scores[kState.Team] ~= nil then
+			state.Scores[kState.Team] += Scoring.EliminationTeamPoints * currentMode().KillPoints
 		end
 		-- Rewards.
 		EconomyService.AddXP(killer, Scoring.EliminationXP)
 		EconomyService.AddCoins(killer, Scoring.EliminationCoins)
 		EconomyService.AddStat(killer, "Eliminations", 1)
+		SeasonService.AddXP(killer, "Elimination")
 		if ringout then
 			EconomyService.AddStat(killer, "Ringouts", 1)
+			SeasonService.AddXP(killer, "Ringout")
 		end
 		EconomyService.Push(killer)
 		Remotes.Get("Eliminated"):FireClient(victim, { by = killer.DisplayName, xp = 0 })
@@ -216,8 +262,8 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		local kb = vState.LastBot
 		vState.LastBot = nil
 		BotService.CreditKill(kb.name, kb.team)
-		if state.Scores[kb.team] ~= nil then
-			state.Scores[kb.team] += Scoring.EliminationTeamPoints
+		if not isFFA() and state.Scores[kb.team] ~= nil then
+			state.Scores[kb.team] += Scoring.EliminationTeamPoints * currentMode().KillPoints
 		end
 		Remotes.Get("Eliminated"):FireClient(victim, { by = kb.name, xp = 0 })
 	else
@@ -236,14 +282,132 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 
 	broadcastScore()
 
-	-- Early match end on score cap.
-	if state.Phase == PHASE.Playing then
-		for teamId, sc in pairs(state.Scores) do
-			if sc >= GameConfig.Match.ScoreToWin then
-				MatchService.EndMatch(teamId)
-				break
-			end
+	MatchService.CheckWin()
+end
+
+-- End the match as soon as a team (or, in Free For All, a cat) hits the target.
+function MatchService.CheckWin()
+	if state.Phase ~= PHASE.Playing then
+		return
+	end
+	if isFFA() then
+		local top = buildBoard()[1]
+		if top and (top.Elims or 0) >= scoreToWin() then
+			MatchService.EndMatch(top.Name)
 		end
+		return
+	end
+	for teamId, sc in pairs(state.Scores) do
+		if sc >= scoreToWin() then
+			MatchService.EndMatch(teamId)
+			return
+		end
+	end
+end
+
+-- ── King of the Hill ─────────────────────────────────────────────────────────
+local HILL_RADIUS = 14
+local hillParts: { BasePart } = {}
+local hillPos: Vector3? = nil
+
+local function stopHill()
+	for _, p in ipairs(hillParts) do
+		p:Destroy()
+	end
+	hillParts = {}
+	hillPos = nil
+	Runtime.HillPos = nil
+end
+
+local function startHill()
+	stopHill()
+	-- The playable floor nearest the middle of the map becomes the hill.
+	local floors = CollectionService:GetTagged("DropZone")
+	if #floors == 0 then
+		return
+	end
+	local mid = Vector3.zero
+	for _, f in ipairs(floors) do
+		mid += (f :: BasePart).Position
+	end
+	mid /= #floors
+	local best, bestD = nil, math.huge
+	for _, f in ipairs(floors) do
+		local p = (f :: BasePart).Position
+		local d = Vector3.new(p.X - mid.X, 0, p.Z - mid.Z).Magnitude
+		if d < bestD then
+			best, bestD = f :: BasePart, d
+		end
+	end
+	if not best then
+		return
+	end
+	local pos = best.Position + Vector3.new(0, best.Size.Y / 2, 0)
+	local function piece(size: Vector3, cf: CFrame, transparency: number): BasePart
+		local p = Instance.new("Part")
+		p.Shape = Enum.PartType.Cylinder
+		p.Size = size
+		p.CFrame = cf
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.Material = Enum.Material.Neon
+		p.Color = Color3.fromRGB(255, 230, 140)
+		p.Transparency = transparency
+		p.CastShadow = false
+		p.Parent = Workspace
+		table.insert(hillParts, p)
+		return p
+	end
+	local up = CFrame.Angles(0, 0, math.rad(90))
+	piece(Vector3.new(0.3, HILL_RADIUS * 2, HILL_RADIUS * 2), CFrame.new(pos + Vector3.new(0, 0.2, 0)) * up, 0.55)
+	piece(Vector3.new(26, HILL_RADIUS * 2, HILL_RADIUS * 2), CFrame.new(pos + Vector3.new(0, 13, 0)) * up, 0.9)
+	hillPos = pos
+	Runtime.HillPos = pos
+	announce("KING OF THE HILL", "Stand in the glowing hill to score for your team!", Color3.fromRGB(255, 214, 90))
+end
+
+-- Once a second: a team holding the hill alone scores a point.
+local function tickHill()
+	if not hillPos then
+		return
+	end
+	local present: { [string]: number } = {}
+	local function inHill(pos: Vector3): boolean
+		local off = pos - (hillPos :: Vector3)
+		return Vector3.new(off.X, 0, off.Z).Magnitude <= HILL_RADIUS and math.abs(off.Y) < 12
+	end
+	for _, p in ipairs(Players:GetPlayers()) do
+		local s = Runtime.Get(p)
+		local root = p.Character and p.Character.PrimaryPart
+		if s and s.Alive and s.Team and root and inHill(root.Position) then
+			present[s.Team] = (present[s.Team] or 0) + 1
+		end
+	end
+	for _, b in ipairs(BotService.Positions()) do
+		if inHill(b.pos) then
+			present[b.team] = (present[b.team] or 0) + 1
+		end
+	end
+	local teams = {}
+	for t in pairs(present) do
+		table.insert(teams, t)
+	end
+	local color = Color3.fromRGB(255, 230, 140)
+	if #teams == 1 then
+		local t = teams[1]
+		if state.Scores[t] ~= nil then
+			state.Scores[t] += 1
+		end
+		color = t == "Blue" and Color3.fromRGB(70, 150, 255) or Color3.fromRGB(255, 80, 90)
+		broadcastScore()
+		MatchService.CheckWin()
+	elseif #teams > 1 then
+		color = Color3.fromRGB(190, 110, 255) -- contested
+	end
+	for _, p in ipairs(hillParts) do
+		p.Color = color
 	end
 end
 
@@ -255,8 +419,14 @@ function MatchService.EndMatch(winnerTeam: string?)
 	state.Winner = winnerTeam
 	-- Determine winner if not provided (highest score).
 	if not state.Winner then
-		state.Winner = (state.Scores.Blue >= state.Scores.Red) and "Blue" or "Red"
+		if isFFA() then
+			local top = buildBoard()[1]
+			state.Winner = top and top.Name or nil
+		else
+			state.Winner = (state.Scores.Blue >= state.Scores.Red) and "Blue" or "Red"
+		end
 	end
+	stopHill()
 	setMayhem(false)
 	state.Phase = PHASE.Results
 	state.TimeLeft = GameConfig.Match.ResultsSeconds
@@ -266,9 +436,12 @@ function MatchService.EndMatch(winnerTeam: string?)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
 		EconomyService.AddStat(player, "Matches", 1)
+		SeasonService.AddXP(player, "MatchPlayed")
 		EconomyService.AddXP(player, Scoring.MatchPlayedXP)
-		if s and s.Team == state.Winner then
+		local won = (isFFA() and player.Name == state.Winner) or (not isFFA() and s ~= nil and s.Team == state.Winner)
+		if won then
 			EconomyService.AddStat(player, "Wins", 1)
+			SeasonService.AddXP(player, "Win")
 			EconomyService.AddXP(player, Scoring.WinBonusXP)
 			EconomyService.AddCoins(player, Scoring.WinBonusCoins)
 		end
@@ -290,6 +463,8 @@ end
 local function enterIntermission()
 	BotService.DespawnAll()
 	PodiumService.Clear()
+	stopHill()
+	modeVotes = {}
 	setMayhem(false)
 	state.Phase = PHASE.Intermission
 	state.TimeLeft = GameConfig.Match.IntermissionSeconds
@@ -305,6 +480,8 @@ local function enterCountdown()
 	-- Lock the vote and rebuild while players are still in the lobby, before
 	-- characters and power-up pickups exist for the next match.
 	buildVotedMap()
+	state.Mode = leadingModeId()
+	Runtime.Mode = state.Mode
 	state.Phase = PHASE.Countdown
 	state.TimeLeft = GameConfig.Match.CountdownSeconds
 	-- Reset per-match runtime + spawn everyone.
@@ -322,6 +499,13 @@ local function enterPlaying()
 	PlayerService.SpawnAll()
 	-- Bots fill the teams up to the target size around the players who queued.
 	BotService.SpawnBots(queuedCount())
+	if state.Mode == "KOTH" then
+		startHill()
+	elseif state.Mode == "Ringout" then
+		announce("RINGOUT", "Blasters do no damage — knock cats off the map!", Color3.fromRGB(190, 120, 255))
+	elseif state.Mode == "FFA" then
+		announce("FREE FOR ALL", "Everyone is an enemy. First to " .. scoreToWin() .. " KOs wins!", Color3.fromRGB(255, 120, 90))
+	end
 	broadcastState()
 end
 
@@ -356,6 +540,9 @@ local function mainLoop()
 			elseif state.TimeLeft <= 0 then
 				MatchService.EndMatch(nil)
 			else
+				if state.Mode == "KOTH" then
+					tickHill()
+				end
 				if not Runtime.Mayhem and state.TimeLeft <= GameConfig.Mayhem.Seconds then
 					setMayhem(true)
 				end
@@ -379,18 +566,11 @@ function MatchService.Start()
 		addStreak(killer)
 		local kState = Runtime.Get(killer)
 		local kTeam = kState and kState.Team
-		if kTeam and state.Scores[kTeam] ~= nil then
-			state.Scores[kTeam] += 1
+		if not isFFA() and kTeam and state.Scores[kTeam] ~= nil then
+			state.Scores[kTeam] += currentMode().KillPoints
 		end
 		broadcastScore()
-		if state.Phase == PHASE.Playing then
-			for teamId, sc in pairs(state.Scores) do
-				if sc >= GameConfig.Match.ScoreToWin then
-					MatchService.EndMatch(teamId)
-					break
-				end
-			end
-		end
+		MatchService.CheckWin()
 	end
 
 	-- A bot knocked out an enemy bot: its team scores.
@@ -398,11 +578,11 @@ function MatchService.Start()
 		if state.Phase ~= PHASE.Playing or state.Scores[teamId] == nil then
 			return
 		end
-		state.Scores[teamId] += 1
-		broadcastScore()
-		if state.Scores[teamId] >= GameConfig.Match.ScoreToWin then
-			MatchService.EndMatch(teamId)
+		if not isFFA() then
+			state.Scores[teamId] += currentMode().KillPoints
 		end
+		broadcastScore()
+		MatchService.CheckWin()
 	end
 
 	BotService.Start()
@@ -439,6 +619,10 @@ function MatchService.Start()
 			return
 		end
 		mapVotes[player.UserId] = mapId
+		local modeId = typeof(payload) == "table" and payload.modeId or nil
+		if typeof(modeId) == "string" and Modes.ById[modeId] then
+			modeVotes[player.UserId] = modeId
+		end
 		queuedPlayers[player.UserId] = true
 		state.MapId = leadingMapId()
 		Remotes.Get("Notify"):FireAllClients({ text = player.DisplayName .. " voted for " .. mapId, kind = "info" })

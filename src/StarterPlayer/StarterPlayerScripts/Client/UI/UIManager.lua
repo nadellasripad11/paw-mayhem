@@ -115,6 +115,7 @@ end
 
 local function onCharacter(char)
 	alive = true
+	CameraController.SetSpectate(nil)
 	-- wait a beat for parts to settle
 	task.wait(0.2)
 	if ClientState.Match.phase == "Playing" then
@@ -127,7 +128,9 @@ local function onCharacter(char)
 	if hum then
 		hum.Died:Connect(function()
 			alive = false
-			enableGameplay(false)
+			-- Stay in the arena for the kill-cam (no lobby view while dead).
+			CameraController.SetEnabled(false)
+			CombatController.SetEnabled(false)
 		end)
 	end
 end
@@ -151,6 +154,9 @@ local function onPhase(m)
 	if phase ~= "Results" then
 		podiumShot = nil
 		CameraController.SetShowcase(nil)
+	end
+	if phase ~= "Playing" then
+		CameraController.SetSpectate(nil)
 	end
 
 	if phase == "Intermission" then
@@ -188,6 +194,7 @@ local function onPhase(m)
 		HUD.SetVisible(false)
 		enableGameplay(false)
 		if podiumShot then
+			CameraController.SetLobbyView(false)
 			CameraController.SetShowcase(podiumShot)
 		end
 		Results.Show(m)
@@ -195,10 +202,29 @@ local function onPhase(m)
 end
 
 function UIManager.Start()
+	-- Kill-cam: watch whoever eliminated you.
+	Remotes.Get("Eliminated").OnClientEvent:Connect(function(data)
+		local by = typeof(data) == "table" and data.by or nil
+		local target: Model? = nil
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p.DisplayName == by and p.Character then
+				target = p.Character
+			end
+		end
+		if not target and typeof(by) == "string" then
+			local m = workspace:FindFirstChild(by)
+			target = m and m:IsA("Model") and m or nil
+		end
+		CameraController.SetSpectate(target)
+		if target then
+			HUD.Announce({ title = "KNOCKED OUT BY " .. string.upper(tostring(by)), sub = "Spectating until you respawn", small = true, color = Color3.fromRGB(255, 120, 120) })
+		end
+	end)
 	Remotes.Get("Podium").OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" and typeof(data.camera) == "CFrame" then
 			podiumShot = data.camera
 			if ClientState.Match.phase == "Results" then
+				CameraController.SetLobbyView(false)
 				CameraController.SetShowcase(podiumShot)
 			end
 		end

@@ -156,7 +156,7 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	end
 	-- Friendly fire off + spawn protection.
 	local sState = Runtime.Get(shooter)
-	if sState and vState.Team and sState.Team == vState.Team then
+	if Runtime.Mode ~= "FFA" and sState and vState.Team and sState.Team == vState.Team then
 		return
 	end
 	if os.clock() < (vState.SpawnProtectUntil or 0) then
@@ -175,14 +175,17 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	-- Damage (fluff) accumulation drives future knockback.
 	local dmg = weapon.Damage * (1 - dmgResist)
 	vState.Accumulated += dmg
-	vHum:TakeDamage(dmg * 0.5) -- HP also ticks so pure damage can eliminate too
+	if Runtime.Mode ~= "Ringout" then
+		vHum:TakeDamage(dmg * 0.5) -- HP also ticks so pure damage can eliminate too
+	end
 	vState.LastAttacker = shooter
 	vState.LastBot = nil
 	vState.LastAttackAt = os.clock()
 
 	-- Knockback impulse (mass-correct), applied by the victim's own client.
 	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
-	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * mayhem * (1 - knockResist))
+	local ringout = Runtime.Mode == "Ringout" and 1.3 or 1
+	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * mayhem * ringout * (1 - knockResist))
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
 	-- brief stun so victims can't instantly cancel the launch

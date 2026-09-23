@@ -121,6 +121,10 @@ Weapons.Skins = {
 	{ Id = "Aurora", Name = "Aurora", Tint = c(90, 230, 200), CoinCost = 0, GemCost = 120 },
 	{ Id = "Molten", Name = "Molten", Tint = c(255, 110, 40), CoinCost = 0, GemCost = 120 },
 	{ Id = "VIPGold", Name = "VIP Gold", Tint = c(255, 206, 60), CoinCost = 0, PassOnly = "VIP" },
+	-- Season 1 exclusives (earned in the season pass only)
+	{ Id = "Sakura", Name = "Sakura", Tint = c(255, 170, 205), CoinCost = 0, Season = 1 },
+	{ Id = "Glitch", Name = "Glitch", Tint = c(60, 255, 200), CoinCost = 0, Season = 1 },
+	{ Id = "Starlight", Name = "Starlight", Tint = c(150, 170, 255), CoinCost = 0, Season = 1 },
 }
 
 local byId: { [string]: WeaponDef } = {}

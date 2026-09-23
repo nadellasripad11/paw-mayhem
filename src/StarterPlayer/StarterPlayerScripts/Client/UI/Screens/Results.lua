@@ -89,6 +89,11 @@ function Results.Show(match)
 	local winner = match.winner
 	local mine = myTeam()
 	local won = winner ~= nil and mine ~= nil and winner == mine
+	local ffa = match.mode == "FFA"
+	if ffa then
+		won = winner == player.Name
+		mine = "FFA"
+	end
 	titleLabel.Text = won and "VICTORY!" or (mine and "DEFEAT" or "MATCH OVER")
 	titleLabel.TextColor3 = won and Color3.fromRGB(255, 214, 90) or (mine and RED or Color3.new(1, 1, 1))
 	local old = banner:FindFirstChildOfClass("UIGradient")
@@ -98,6 +103,15 @@ function Results.Show(match)
 	UIUtil.gradient((won and Color3.fromRGB(120, 90, 20) or Color3.fromRGB(70, 24, 40)), Color3.fromRGB(12, 20, 40), 90, banner)
 	scoreLabel.Text = string.format('<font color="#5AA0FF">%d</font>   -   <font color="#FF6070">%d</font>', match.scores.Blue or 0, match.scores.Red or 0)
 	subLabel.Text = winner and ((winner == "Blue" and "BLUE PAWS" or "RED CLAWS") .. " WIN THE MATCH") or ""
+	if ffa then
+		local name = winner or "?"
+		for _, e in ipairs(match.board or {}) do
+			if e.Name == winner then
+				name = e.Display or e.Name
+			end
+		end
+		subLabel.Text = string.upper(name) .. " WINS THE FREE FOR ALL"
+	end
 
 	for _, c in ipairs(boardList:GetChildren()) do
 		if c:IsA("Frame") then

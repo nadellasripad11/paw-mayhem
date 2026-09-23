@@ -61,6 +61,9 @@ end
 
 -- Price button text + colour for a catalog item (coins, gems or a pass).
 function Monetize.PriceTag(item: any): (string, Color3)
+	if item.Season then
+		return "SEASON PASS", Color3.fromRGB(150, 110, 255)
+	end
 	if item.PassOnly then
 		local pass = Monetization.Passes[item.PassOnly]
 		return (pass and string.upper(pass.Name) or "PASS") .. " PASS", Color3.fromRGB(255, 190, 40)
@@ -73,6 +76,12 @@ end
 -- Buy a catalog item: coins/gems first, then fall back to Robux (the pass
 -- that unlocks it, or its "Unlock" product when the player is short).
 function Monetize.Buy(kind: string, id: string, item: any): boolean
+	if item and item.Season then
+		if Monetize.OnUnavailable then
+			Monetize.OnUnavailable("Earn this in the Season Pass!")
+		end
+		return false
+	end
 	if item and item.PassOnly then
 		Monetize.PromptPass(item.PassOnly)
 		return false

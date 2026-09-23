@@ -16,6 +16,7 @@ Monetization.Passes = {
 	VIP = { Id = 1991786724, Price = 199, Name = "VIP", Desc = "Gold VIP tag, +25% coins forever, VIP Gold blaster skin and Royal Gold fur." },
 	DoubleCoins = { Id = 1993418269, Price = 249, Name = "2x Coins", Desc = "Double every coin reward. Stacks with VIP." },
 	EmotePack = { Id = 1993058474, Price = 99, Name = "Emote Pack", Desc = "Unlocks every emote plus the exclusive Dance and Flex." },
+	SeasonPass = { Id = 0, Price = 299, Name = "Season Pass", Desc = "Unlocks every premium reward in the current season pass." },
 	TrailPack = { Id = 1988444705, Price = 149, Name = "Trail Pack", Desc = "Rainbow dash trail and confetti bursts on every elimination." },
 } :: { [string]: Pass }
 
@@ -29,6 +30,7 @@ Monetization.Products = {
 	Gems1000 = { Id = 3714380695, Price = 399, Name = "1,000 Gems", Desc = "A chest of gems.", Kind = "Gems", Amount = 1000 },
 	Gems2800 = { Id = 3714380755, Price = 999, Name = "2,800 Gems", Desc = "A vault of gems. Best value!", Kind = "Gems", Amount = 2800 },
 	CoinRain = { Id = 3714380823, Price = 99, Name = "Coin Rain", Desc = "Make it rain! Everyone in the server gets 150 coins (you get 300).", Kind = "CoinRain", Amount = 150 },
+	SeasonTiers = { Id = 0, Price = 99, Name = "+5 Season Tiers", Desc = "Jump 5 tiers ahead in the season pass.", Kind = "SeasonTiers", Amount = 5 },
 	StarterPack = { Id = 3714380879, Price = 79, Name = "Starter Pack", Desc = "1,500 coins, 150 gems and the Aurora blaster skin. Once per player.", Kind = "StarterPack" },
 } :: { [string]: Product }
 

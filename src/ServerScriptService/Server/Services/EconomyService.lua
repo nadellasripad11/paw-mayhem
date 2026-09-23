@@ -11,6 +11,7 @@ local Progression = require(Shared.Config.Progression)
 local Weapons = require(Shared.Config.Weapons)
 local Cats = require(Shared.Config.Cats)
 local Monetization = require(Shared.Config.Monetization)
+local DailyRewards = require(Shared.Config.DailyRewards)
 
 local DataService = require(script.Parent.DataService)
 
@@ -41,6 +42,9 @@ local function findItem(kind: string, id: string)
 end
 
 -- Push the full profile snapshot to a player's client.
+-- Set by BadgeService: runs after every profile push (milestone checks).
+EconomyService.OnPushed = nil :: ((Player, any, number) -> ())?
+
 function EconomyService.Push(player: Player)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -60,7 +64,13 @@ function EconomyService.Push(player: Player)
 		Quests = profile.Quests,
 		StarterPackBought = profile.StarterPackBought,
 		Settings = profile.Settings,
+		Daily = DailyRewards.Status(profile.Daily),
+		Season = profile.Season,
+		TutorialDone = profile.TutorialDone,
 	})
+	if EconomyService.OnPushed then
+		task.spawn(EconomyService.OnPushed, player, profile, level)
+	end
 end
 
 -- Award XP (and handle level-up coin bonuses). Returns new level.
@@ -176,6 +186,9 @@ function EconomyService.Purchase(player: Player, kind: string, id: string)
 	if item.PassOnly then
 		return { ok = false, reason = "pass only" }
 	end
+	if item.Season then
+		return { ok = false, reason = "season only" }
+	end
 	if item.GemCost then
 		if (profile.Gems or 0) < item.GemCost then
 			return { ok = false, reason = "not enough gems" }
@@ -253,7 +266,7 @@ end
 -- Client settings the profile may store, with how to validate each.
 local SETTING_RULES: { [string]: any } = {
 	CameraShake = "boolean", ShowDamage = "boolean", InvertY = "boolean", AutoSprint = "boolean", ShowFPS = "boolean",
-	MobileSensitivity = { 0, 1 }, MouseSensitivity = { 0, 1 }, FieldOfView = { 60, 95 },
+	MobileSensitivity = { 0, 1 }, MusicVolume = { 0, 1 }, SFXVolume = { 0, 1 }, MouseSensitivity = { 0, 1 }, FieldOfView = { 60, 95 },
 	GraphicsQuality = { Low = true, Medium = true, High = true },
 	Crosshair = { White = true, Green = true, Cyan = true, Pink = true, Yellow = true },
 }

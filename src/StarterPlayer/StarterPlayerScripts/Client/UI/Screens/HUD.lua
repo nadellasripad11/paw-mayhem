@@ -423,6 +423,12 @@ local function buildScoreBar(parent)
 	refs.timer = tile(53, 66, Theme.Color.PanelDark, Theme.Font.Heading, 16)
 	refs.timer.Text = "3:00"
 	refs.redScore, refs.redStroke = tile(124, 48, Theme.Color.Red, Theme.Font.Number, 18)
+	-- Mode name under the bar (FFA: left = your KOs, right = the leader's).
+	refs.modeLabel = UIUtil.label({
+		Parent = bar, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(-40, 32), Size = UDim2.new(1, 80, 0, 14),
+		TextStrokeTransparency = 0.4,
+	})
 end
 
 -- ── announcements (below the timer) ──────────────────────────────────────────
@@ -514,6 +520,21 @@ local function updateScoreBar(m)
 	local scores = m.scores or {}
 	refs.blueScore.Text = tostring(scores.Blue or 0)
 	refs.redScore.Text = tostring(scores.Red or 0)
+	local MODE_TEXT = { TDM = "TEAM DEATHMATCH", FFA = "FREE FOR ALL  •  YOU vs LEADER", KOTH = "KING OF THE HILL  •  HOLD THE HILL", Ringout = "RINGOUT  •  KNOCK THEM OFF" }
+	if refs.modeLabel then
+		refs.modeLabel.Text = MODE_TEXT[m.mode or "TDM"] or ""
+	end
+	if m.mode == "FFA" then
+		local mine, top = 0, 0
+		for _, e in ipairs(m.board or {}) do
+			top = math.max(top, e.Elims or 0)
+			if e.Name == player.Name then
+				mine = e.Elims or 0
+			end
+		end
+		refs.blueScore.Text = tostring(mine)
+		refs.redScore.Text = tostring(top)
+	end
 	local t = math.max(0, m.timeLeft or 0)
 	refs.timer.Text = string.format("%d:%02d", t // 60, t % 60)
 	local mayhem = m.mayhem == true and m.phase == "Playing"

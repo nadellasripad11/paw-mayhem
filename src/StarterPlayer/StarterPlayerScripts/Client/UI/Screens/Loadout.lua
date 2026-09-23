@@ -128,8 +128,9 @@ local function cardShell(parent: Instance, stageH: number, weaponId: string, ski
 		card.BackgroundColor3 = equipped and Color3.fromRGB(20, 52, 62) or CARD_BG
 		local cost = def.CoinCost or 0
 		local gems = def.GemCost or 0
-		coinSlot.Visible = not owned and not def.PassOnly and gems == 0 and cost > 0
-		gemSlot.Visible = not owned and not def.PassOnly and gems > 0
+		local special = def.PassOnly or def.Season
+		coinSlot.Visible = not owned and not special and gems == 0 and cost > 0
+		gemSlot.Visible = not owned and not special and gems > 0
 		if equipped then
 			pillText.Text = "EQUIPPED"
 			pillText.TextColor3 = EQUIP_GREEN
@@ -138,7 +139,7 @@ local function cardShell(parent: Instance, stageH: number, weaponId: string, ski
 			pillText.TextColor3 = Theme.Color.TextDim
 		else
 			local price, color = Monetize.PriceTag(def)
-			if def.PassOnly then
+			if def.PassOnly or def.Season then
 				pillText.Text = price
 			elseif gems > 0 or cost > 0 then
 				pillText.Text = tostring(gems > 0 and gems or cost)

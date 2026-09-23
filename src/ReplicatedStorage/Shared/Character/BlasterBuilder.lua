@@ -41,6 +41,9 @@ BlasterBuilder.SkinPalettes = {
 	Void = { Body = c(46, 26, 82), Accent = c(130, 70, 222), Dark = c(16, 12, 26), Glow = c(192, 102, 255), Trim = c(92, 70, 132) },
 	Aurora = { Body = c(40, 70, 110), Accent = c(90, 230, 200), Dark = c(18, 28, 48), Glow = c(170, 120, 255), Trim = c(120, 255, 210) },
 	Molten = { Body = c(36, 30, 34), Accent = c(255, 110, 40), Dark = c(20, 16, 18), Glow = c(255, 180, 60), Trim = c(255, 80, 30) },
+	Sakura = { Body = c(255, 214, 228), Accent = c(255, 120, 170), Dark = c(120, 70, 90), Glow = c(255, 170, 205), Trim = c(255, 255, 255) },
+	Glitch = { Body = c(24, 26, 38), Accent = c(60, 255, 200), Dark = c(12, 12, 20), Glow = c(255, 60, 220), Trim = c(60, 255, 200) },
+	Starlight = { Body = c(30, 36, 90), Accent = c(150, 170, 255), Dark = c(14, 16, 40), Glow = c(255, 240, 150), Trim = c(255, 255, 255) },
 	VIPGold = { Body = c(255, 206, 60), Accent = c(30, 26, 36), Dark = c(24, 20, 28), Glow = c(255, 240, 160), Trim = c(255, 255, 255) },
 }
 

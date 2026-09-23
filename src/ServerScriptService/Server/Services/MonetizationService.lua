@@ -19,6 +19,7 @@ local Cats = require(Shared.Config.Cats)
 
 local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
+local SeasonService = require(script.Parent.SeasonService)
 
 local MonetizationService = {}
 
@@ -98,6 +99,9 @@ local function grantProduct(player: Player, key: string): boolean
 		EconomyService.Grant(player, "Skin", pack.Skin)
 		profile.StarterPackBought = true
 		Remotes.Get("Notify"):FireClient(player, { text = "Starter Pack unlocked!", kind = "success" })
+	elseif product.Kind == "SeasonTiers" then
+		SeasonService.SkipTiers(player, product.Amount or 5)
+		Remotes.Get("Notify"):FireClient(player, { text = string.format("+%d season tiers!", product.Amount or 5), kind = "success" })
 	elseif product.Kind == "Unlock" and product.ItemKind and product.ItemId then
 		EconomyService.Grant(player, product.ItemKind, product.ItemId)
 		EconomyService.Equip(player, product.ItemKind, product.ItemId)

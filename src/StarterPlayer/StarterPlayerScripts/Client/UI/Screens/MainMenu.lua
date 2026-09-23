@@ -26,6 +26,9 @@ local Leaderboard = require(script.Parent.Leaderboard)
 local Quests = require(script.Parent.Quests)
 local Settings = require(script.Parent.Settings)
 local MapSelect = require(script.Parent.MapSelect)
+local SeasonPass = require(script.Parent.SeasonPass)
+local DailyReward = require(script.Parent.DailyReward)
+local Tutorial = require(script.Parent.Tutorial)
 
 local MainMenu = {}
 local player = Players.LocalPlayer
@@ -38,13 +41,14 @@ local relayoutFn: (() -> ())? = nil
 
 local SCREEN_TITLES = {
 	Loadout = "LOADOUT", Shop = "SHOP", Customize = "CUSTOMIZE",
-	Leaderboard = "LEADERBOARD", Settings = "SETTINGS", Quests = "QUESTS",
+	Leaderboard = "LEADERBOARD", Settings = "SETTINGS", Quests = "QUESTS", Season = "SEASON PASS",
 }
 local navButtons = {}
 local currentPanel
 
 local NAV = {
 	{ id = "Play", label = "Play", icon = "Play" },
+	{ id = "Season", label = "Season Pass", icon = "Trophy" },
 	{ id = "Loadout", label = "Loadout", icon = "Gun" },
 	{ id = "Shop", label = "Shop", icon = "Bag" },
 	{ id = "Customize", label = "Customize", icon = "CatFace" },
@@ -327,14 +331,14 @@ function MainMenu.Build()
 	buildLogo(logoGroup)
 
 	-- Left nav
-	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", Size = UDim2.fromOffset(190, 330), ZIndex = 10 })
+	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", Size = UDim2.fromOffset(190, 390), ZIndex = 10 })
 	UIUtil.listLayout(navGroup, 7)
 	for i, item in ipairs(NAV) do
 		navButton(navGroup, item, i)
 	end
 
 	-- Coins + gems (top right)
-	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(340, 40), ZIndex = 10 })
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(440, 40), ZIndex = 10 })
 	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
 	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
@@ -362,6 +366,32 @@ function MainMenu.Build()
 			switchTo("Shop")
 		end
 	end)
+
+	-- DAILY rewards button (red dot when today's reward is waiting).
+	local daily = Instance.new("TextButton")
+	daily.Name = "Daily"
+	daily.Text = "DAILY"
+	daily.Font = Theme.Font.Title
+	daily.TextSize = 18
+	daily.TextColor3 = Color3.new(1, 1, 1)
+	daily.Size = UDim2.fromOffset(84, 40)
+	daily.LayoutOrder = -1
+	daily.BackgroundColor3 = Color3.fromRGB(255, 110, 150)
+	daily.BorderSizePixel = 0
+	daily.ZIndex = 10
+	daily.Parent = currGroup
+	UIUtil.corner(UDim.new(0, 12), daily)
+	UIUtil.stroke(Color3.fromRGB(255, 220, 235), 1.5, daily)
+	local dot = UIUtil.make("Frame", { Parent = daily, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(14, 14), BackgroundColor3 = Color3.fromRGB(255, 50, 60), BorderSizePixel = 0, ZIndex = 11 })
+	UIUtil.corner(UDim.new(1, 0), dot)
+	UIUtil.stroke(Color3.new(1, 1, 1), 2, dot)
+	daily.MouseButton1Click:Connect(function()
+		DailyReward.Open()
+	end)
+	ClientState.ProfileChanged:Connect(function()
+		dot.Visible = DailyReward.CanClaim()
+	end)
+	dot.Visible = false
 
 	-- Gold VIP button (hidden once owned).
 	local vip = Instance.new("TextButton")
@@ -495,6 +525,7 @@ function MainMenu.Build()
 	panels.Leaderboard = safeBuild("Leaderboard", content, Leaderboard.Build)
 	panels.Quests = safeBuild("Quests", content, Quests.Build)
 	panels.Settings = safeBuild("Settings", content, Settings.Build)
+	panels.Season = safeBuild("Season", content, SeasonPass.Build)
 	for _, root in pairs(panels) do
 		if root then
 			root.Visible = false
@@ -511,6 +542,29 @@ function MainMenu.Build()
 	if ClientState.Profile then
 		refreshCurrency()
 	end
+
+	-- First visit: the tutorial; after that, the daily reward popup (once per
+	-- session) whenever one is waiting.
+	local dailyOk = pcall(DailyReward.Build)
+	local greeted = false
+	local function greet()
+		if greeted or not ClientState.Profile or not gui.Enabled then
+			return
+		end
+		greeted = true
+		local function daily()
+			if dailyOk and DailyReward.CanClaim() then
+				DailyReward.Open()
+			end
+		end
+		if Tutorial.ShouldShow() then
+			Tutorial.Open(daily)
+		else
+			daily()
+		end
+	end
+	ClientState.ProfileChanged:Connect(greet)
+	greet()
 
 	return gui
 end

@@ -179,6 +179,7 @@ function MovementController.Dash()
 	dir = dir.Unit
 	dashReadyAt = os.clock() + cfg.DashCooldown
 	holdHorizontal(root, dir * cfg.DashSpeed, cfg.DashTime, "dash")
+	require(script.Parent.SoundController).Play("Dash")
 
 	-- Speed trail behind the cat.
 	local a0 = Instance.new("Attachment")
@@ -277,6 +278,7 @@ local function padLaunch(pad: BasePart, root: BasePart, hum: Humanoid)
 	root.AssemblyLinearVelocity = flat / t + Vector3.new(0, vy, 0)
 	hum:ChangeState(Enum.HumanoidStateType.Freefall)
 	holdHorizontal(root, flat / t, t, "pad")
+	require(script.Parent.SoundController).Play("Spring")
 	ringFx(pad.Position + Vector3.new(0, 0.3, 0), Color3.fromRGB(90, 230, 255), 9)
 end
 

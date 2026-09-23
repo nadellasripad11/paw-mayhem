@@ -20,6 +20,8 @@ Cats.Fur = {
 	{ Id = "Purple", Name = "Purple", Desc = "Mystic", Pattern = "Solid", Body = c(170, 130, 230), Accent = c(140, 100, 210), UnlockLevel = 5, CoinCost = 600 },
 	{ Id = "Calico", Name = "Calico", Desc = "Trendy", Pattern = "Calico", Marking = c(120, 80, 60), Body = c(235, 180, 130), Accent = c(255, 245, 225), UnlockLevel = 7, CoinCost = 800 },
 	{ Id = "Tiger", Name = "Tiger", Desc = "Wild", Pattern = "Tiger", Marking = c(60, 45, 40), Body = c(240, 150, 60), Accent = c(255, 205, 120), UnlockLevel = 10, CoinCost = 1200 },
+	{ Id = "Sakura", Name = "Sakura", Desc = "Season 1 reward", Pattern = "Solid", Body = c(255, 206, 222), Accent = c(255, 242, 246), Eye = c(150, 90, 170), UnlockLevel = 0, CoinCost = 0, Season = 1 },
+	{ Id = "Midnight", Name = "Midnight", Desc = "Season 1 premium reward", Pattern = "Solid", Body = c(44, 48, 96), Accent = c(130, 150, 235), Eye = c(255, 214, 90), UnlockLevel = 0, CoinCost = 0, Season = 1 },
 	{ Id = "Galaxy", Name = "Galaxy", Desc = "Gem exclusive", Pattern = "Solid", Body = c(76, 58, 150), Accent = c(236, 150, 230), Eye = c(110, 240, 255), UnlockLevel = 0, CoinCost = 0, GemCost = 200 },
 	{ Id = "RoyalGold", Name = "Royal Gold", Desc = "VIP", Pattern = "Solid", Body = c(250, 200, 70), Accent = c(255, 244, 210), Eye = c(70, 150, 255), UnlockLevel = 0, CoinCost = 0, PassOnly = "VIP" },
 }

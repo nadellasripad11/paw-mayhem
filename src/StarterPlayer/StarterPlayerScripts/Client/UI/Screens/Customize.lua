@@ -92,7 +92,7 @@ local function refreshTiles()
 		local locked = not owned and (t.item.UnlockLevel or 0) > level
 		t.pill.Visible = not owned
 		local gems = t.item.GemCost or 0
-		local pass = t.item.PassOnly ~= nil
+		local pass = t.item.PassOnly ~= nil or t.item.Season ~= nil
 		t.coin.Visible = not owned and not locked and not pass and gems == 0 and cost > 0
 		t.gem.Visible = not owned and not locked and not pass and gems > 0
 		if locked then

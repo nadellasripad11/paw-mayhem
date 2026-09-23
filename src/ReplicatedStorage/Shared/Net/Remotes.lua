@@ -20,6 +20,9 @@ Remotes.Definitions = {
 	PurchaseItem = "Function", -- {kind, id} -> {ok, reason}
 	EquipItem = "Function", -- {kind, id} -> {ok}
 	ClaimQuest = "Function", -- questId -> {ok, coins}
+	ClaimDaily = "Function", -- -> {ok, streak, coins, gems}
+	ClaimSeason = "Function", -- {tier, track} -> {ok, reason}
+	TutorialDone = "Event",
 	SaveSettings = "Event", -- {key = value} validated + stored in the profile
 	GetLeaderboard = "Function", -- {scope = "Global"|"Country", metric} -> {entries, country}
 	RequestJoinMatch = "Event",

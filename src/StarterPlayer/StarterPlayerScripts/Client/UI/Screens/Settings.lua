@@ -230,6 +230,8 @@ function Settings.Build(parent)
 		UIUtil.listLayout(root, 16, Enum.FillDirection.Horizontal)
 
 		local gameplay = card(root, 1, "GAMEPLAY", Color3.fromRGB(255, 170, 70))
+		slider(gameplay, -2, "Music", "MusicVolume", 0, 1, pct)
+		slider(gameplay, -1, "Sound Effects", "SFXVolume", 0, 1, pct)
 		toggle(gameplay, 1, "Auto Sprint", "AutoSprint", "Always run, no button needed")
 		toggle(gameplay, 2, "Camera Shake", "CameraShake", "Shake when you're hit or launched")
 		toggle(gameplay, 3, "Damage Effects", "ShowDamage", "Red flash when you take damage")

@@ -133,7 +133,44 @@ function CameraController.SetShowcase(cf: CFrame?)
 	showcaseAt = os.clock()
 end
 
+-- Kill-cam: orbit whoever eliminated you until you respawn. If they go down
+-- too, it hops to another living cat.
+local spectating: Model? = nil
+local spectateAt = 0
+function CameraController.SetSpectate(target: Model?)
+	spectating = target
+	spectateAt = os.clock()
+end
+
+local function livingCat(): Model?
+	for _, m in ipairs(game:GetService("CollectionService"):GetTagged("PawCat")) do
+		local hum = m:FindFirstChildOfClass("Humanoid")
+		if m:IsA("Model") and m ~= player.Character and m:IsDescendantOf(workspace) and hum and hum.Health > 0 then
+			return m
+		end
+	end
+	return nil
+end
+
 local function step(dt: number)
+	if spectating and not showcase then
+		local hum = spectating:FindFirstChildOfClass("Humanoid")
+		if not spectating.Parent or (hum and hum.Health <= 0 and os.clock() - spectateAt > 1.5) then
+			spectating = livingCat()
+			spectateAt = os.clock()
+		end
+		local target = spectating and spectating.PrimaryPart
+		if target then
+			camera.CameraType = Enum.CameraType.Scriptable
+			camera.FieldOfView = 70
+			local t = os.clock() - spectateAt
+			local focus = target.Position + Vector3.new(0, 1.5, 0)
+			local orbit = CFrame.Angles(0, t * 0.35, 0) * CFrame.new(0, 5, 14)
+			local want = CFrame.lookAt(focus + orbit.Position, focus)
+			camera.CFrame = camera.CFrame:Lerp(want, math.clamp(dt * 6, 0, 1))
+			return
+		end
+	end
 	if showcase then
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = 55

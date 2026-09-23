@@ -52,7 +52,12 @@ function Runtime.Ensure(player: Player): PlayerState
 end
 
 function Runtime.Get(player: Player): PlayerState?
-	return Runtime.States[player]
+	-- Current game mode ("TDM" | "FFA" | "KOTH" | "Ringout") and the King of the
+-- Hill centre, read by combat + bots.
+Runtime.Mode = "TDM"
+Runtime.HillPos = nil :: Vector3?
+
+return Runtime.States[player]
 end
 
 function Runtime.Remove(player: Player)

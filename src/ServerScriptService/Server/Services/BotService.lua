@@ -20,6 +20,7 @@ local Remotes    = require(Shared.Net.Remotes)
 local WeaponService   = require(script.Parent.WeaponService)
 local EconomyService  = require(script.Parent.EconomyService)
 local Runtime         = require(script.Parent.Runtime)
+local SeasonService   = require(script.Parent.SeasonService)
 
 local BotService = {}
 
@@ -117,12 +118,12 @@ end
 local ENGAGE_RANGE = 150
 local function findNearestEnemy(bot: BotState): (Model?, number)
 	local best: Model? = nil
-	local bestDist = ENGAGE_RANGE
+	local bestDist = Runtime.HillPos and 45 or ENGAGE_RANGE
 	for _, p in ipairs(Players:GetPlayers()) do
 		local s    = Runtime.Get(p)
 		local char = p.Character
 		local root = char and (char.PrimaryPart :: BasePart?)
-		if s and s.Alive and s.Team ~= bot.team and root and char then
+		if s and s.Alive and (Runtime.Mode == "FFA" or s.Team ~= bot.team) and root and char then
 			local d = (root.Position - bot.root.Position).Magnitude
 			if d < bestDist then
 				bestDist = d
@@ -131,7 +132,7 @@ local function findNearestEnemy(bot: BotState): (Model?, number)
 		end
 	end
 	for _, other in pairs(bots) do
-		if other.alive and other.team ~= bot.team then
+		if other.alive and other ~= bot and (Runtime.Mode == "FFA" or other.team ~= bot.team) then
 			local d = (other.root.Position - bot.root.Position).Magnitude
 			if d < bestDist then
 				bestDist = d
@@ -154,9 +155,11 @@ end
 
 -- A bot's shot landing on another (enemy) bot.
 local function botHitBot(shooter: BotState, victim: BotState, weapon: any, dir: Vector3)
-	if not victim.alive or victim.team == shooter.team then return end
+	if not victim.alive or victim == shooter or (Runtime.Mode ~= "FFA" and victim.team == shooter.team) then return end
 	victim.accumulated += weapon.Damage
-	victim.humanoid:TakeDamage(weapon.Damage * 0.5)
+	if Runtime.Mode ~= "Ringout" then
+		victim.humanoid:TakeDamage(weapon.Damage * 0.5)
+	end
 	victim.lastAttacker = nil
 	victim.lastBot = shooter
 	victim.model:SetAttribute("Fluff", math.floor(victim.accumulated))
@@ -223,7 +226,9 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	vState.LastBot = { name = bot.name, team = bot.team }
 	vState.LastBotAt = os.clock()
 	vState.Accumulated += dmg
-	vHum:TakeDamage(dmg * 0.5)
+	if Runtime.Mode ~= "Ringout" then
+		vHum:TakeDamage(dmg * 0.5)
+	end
 	vState.LastAttackAt = os.clock()
 
 	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
@@ -247,7 +252,9 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 	if not bot or not bot.alive then return end
 
 	bot.accumulated += weapon.Damage
-	bot.humanoid:TakeDamage(weapon.Damage * 0.5)
+	if Runtime.Mode ~= "Ringout" then
+		bot.humanoid:TakeDamage(weapon.Damage * 0.5)
+	end
 	bot.lastAttacker = shooter
 	bot.lastBot = nil
 	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
@@ -401,7 +408,8 @@ local function runBot(bot: BotState)
 			bot.target = nil
 			bot.humanoid.WalkSpeed = PATROL_SPEED
 			if not bot.waypoints then
-				local p = randomFloorPoint()
+				local hill = Runtime.HillPos
+				local p = hill and (hill + Vector3.new(math.random(-8, 8), 2, math.random(-8, 8))) or randomFloorPoint()
 				if p then
 					computePath(bot, p)
 				end
@@ -474,6 +482,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 			EconomyService.AddXP(killer, GameConfig.Scoring.EliminationXP)
 			EconomyService.AddCoins(killer, GameConfig.Scoring.EliminationCoins)
 			EconomyService.AddStat(killer, "Eliminations", 1)
+			SeasonService.AddXP(killer, "Elimination")
 			EconomyService.Push(killer)
 			if killer:GetAttribute("TrailPack") then
 				Remotes.Get("PlayEffect"):FireAllClients({ kind = "Confetti", position = root.Position })
@@ -485,7 +494,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 				killer = killer.DisplayName, killerTeam = kState.Team,
 				victim = botName, victimTeam = teamId, ringout = false,
 			})
-		elseif bot.lastBot and bot.lastBot.team ~= teamId then
+		elseif bot.lastBot and bot.lastBot ~= bot and (Runtime.Mode == "FFA" or bot.lastBot.team ~= teamId) then
 			local kb = bot.lastBot
 			BotService.CreditKill(kb.name, kb.team)
 			if BotService.OnTeamPoint then
@@ -631,6 +640,17 @@ function BotService.SpawnBots(realPlayerCount: number)
 	botElims = {}
 	matchActive = true
 	BotService.Rebalance(realPlayerCount)
+end
+
+-- Where every living bot is (King of the Hill scoring).
+function BotService.Positions(): { { team: string, pos: Vector3 } }
+	local out = {}
+	for _, b in pairs(bots) do
+		if b.alive then
+			table.insert(out, { team = b.team, pos = b.root.Position })
+		end
+	end
+	return out
 end
 
 function BotService.DespawnAll()

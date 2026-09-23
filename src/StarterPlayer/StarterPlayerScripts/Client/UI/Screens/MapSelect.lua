@@ -15,6 +15,7 @@ local UIUtil = require(script.Parent.Parent.UIUtil)
 local Icons = require(script.Parent.Parent.Icons)
 local HeroArt = require(script.Parent.Parent.HeroArt)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
+local Modes = require(ReplicatedStorage.Shared.Config.Modes)
 
 local MapSelect = {}
 
@@ -30,6 +31,10 @@ local CARD_W, CARD_H, ART_H = 316, 400, 292
 local root: TextButton
 local cards: { any } = {}
 local selectedId = "SkyIslands"
+local selectedMode = Modes.Default
+local modeLabels: { TextLabel } = {}
+local modeButtons: { [string]: TextButton } = {}
+local rulesLabel: TextLabel? = nil
 local queued = false
 local statusMain: TextLabel
 local statusSub: TextLabel
@@ -165,11 +170,36 @@ end
 local function sendVote()
 	local m = ClientState.Match
 	local mapId = m.phase == "Playing" and (m.mapId or selectedId) or selectedId
-	Remotes.Get("RequestJoinMatch"):FireServer({ mapId = mapId })
+	Remotes.Get("RequestJoinMatch"):FireServer({ mapId = mapId, modeId = selectedMode })
 	if m.phase ~= "Playing" then
 		queued = true
 	end
 	refreshStatus()
+end
+
+local function paintModes()
+	local mode = Modes.Get(selectedMode)
+	for id, b in pairs(modeButtons) do
+		local on = id == selectedMode
+		local c = Modes.Get(id).Color
+		b.BackgroundColor3 = on and c or Color3.fromRGB(22, 36, 62)
+		b.TextColor3 = on and Color3.fromRGB(12, 16, 30) or Color3.new(1, 1, 1)
+	end
+	for _, l in ipairs(modeLabels) do
+		l.Text = mode.Short
+	end
+	if rulesLabel then
+		local match = GameConfig.Match
+		rulesLabel.Text = string.format("%s  •  %d:%02d  •  %s", mode.Short, match.MatchSeconds // 60, match.MatchSeconds % 60, mode.Rules)
+	end
+end
+
+local function chooseMode(id: string)
+	selectedMode = id
+	paintModes()
+	if queued and ClientState.Match.phase == "Intermission" then
+		sendVote()
+	end
 end
 
 local function chooseMap(id: string)
@@ -260,10 +290,10 @@ local function buildCard(parent: Instance, map, index: number)
 		Parent = card, Text = string.upper(map.subtitle), Font = Theme.Font.Bold, TextSize = 14, TextColor3 = map.accent,
 		Position = UDim2.fromOffset(20, ART_H + 56), Size = UDim2.new(1, -40, 0, 18),
 	})
-	UIUtil.label({
+	table.insert(modeLabels, UIUtil.label({
 		Parent = card, Text = "TEAM DEATHMATCH", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextMuted,
 		TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.fromOffset(20, ART_H + 56), Size = UDim2.new(1, -40, 0, 18),
-	})
+	}))
 
 	card.MouseButton1Click:Connect(function()
 		chooseMap(map.id)
@@ -297,12 +327,30 @@ function MapSelect.Build(parent: Instance)
 		Parent = stage, Text = "CHOOSE A MAP", Font = Theme.Font.Title, TextSize = 38,
 		Position = UDim2.fromOffset(132, -4), Size = UDim2.fromOffset(600, 42),
 	})
-	local match = GameConfig.Match
-	UIUtil.label({
-		Parent = stage, Font = Theme.Font.Bold, TextSize = 14, TextColor3 = Theme.Color.TextMuted,
-		Text = string.format("TEAM DEATHMATCH  •  %d:%02d  •  FIRST TO %d", match.MatchSeconds // 60, match.MatchSeconds % 60, match.ScoreToWin),
+	rulesLabel = UIUtil.label({
+		Parent = stage, Font = Theme.Font.Bold, TextSize = 14, TextColor3 = Theme.Color.TextMuted, Text = "",
 		Position = UDim2.fromOffset(134, 36), Size = UDim2.fromOffset(600, 18),
 	})
+	-- Mode vote pills (top right)
+	local modeRow = UIUtil.make("Frame", {
+		Parent = stage, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromOffset(W, 2), Size = UDim2.fromOffset(470, 40), BackgroundTransparency = 1,
+	})
+	UIUtil.listLayout(modeRow, 6, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
+	for i, m in ipairs(Modes.List) do
+		local b = UIUtil.make("TextButton", {
+			Parent = modeRow, LayoutOrder = i, Size = UDim2.fromOffset(0, 38), AutomaticSize = Enum.AutomaticSize.X,
+			Text = string.upper(m.Name), Font = Theme.Font.Title, TextSize = 13, AutoButtonColor = true, BorderSizePixel = 0,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(1, 0), b)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 12)
+		pad.PaddingRight = UDim.new(0, 12)
+		pad.Parent = b
+		b.MouseButton1Click:Connect(function()
+			chooseMode(m.Id)
+		end)
+		modeButtons[m.Id] = b
+	end
 
 	local row = UIUtil.make("Frame", {
 		Parent = stage, Position = UDim2.fromOffset(0, 72), Size = UDim2.fromOffset(W, CARD_H), BackgroundTransparency = 1,
@@ -338,6 +386,7 @@ function MapSelect.Build(parent: Instance)
 		playScale.Scale = 1
 	end)
 	playButton.MouseButton1Click:Connect(sendVote)
+	paintModes()
 
 	local camera = Workspace.CurrentCamera
 	local function relayout()

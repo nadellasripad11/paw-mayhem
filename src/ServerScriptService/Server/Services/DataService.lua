@@ -64,6 +64,11 @@ local function defaultProfile()
 		},
 		Receipts = {}, -- Robux purchase ids already granted (duplicate-safe)
 		StarterPackBought = false,
+		Daily = { LastDay = 0, Streak = 0 },
+		Season = { Id = 1, XP = 0, Free = {}, Premium = {} },
+		TutorialDone = false,
+		Badges = {},
+		Settings = {},
 		Quests = {
 			Day = 0, -- os.time() day-number the quests were rolled for
 			Active = {}, -- { {Id, Metric, Target, Progress, Claimed} }
