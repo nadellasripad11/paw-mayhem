@@ -33,9 +33,9 @@ random.seed(7)
 HEAD_CENTER = (0, 1.22, 0)
 SHOULDER = (0.68, 0.24, 0)
 HIP = (0.3, -0.78, 0)
-TAIL_POINTS = [
-    (0.1, -0.6, 0.5), (0.32, -0.78, 0.6), (0.54, -0.98, 0.58), (0.72, -1.1, 0.46),
-    (0.84, -1.12, 0.3), (0.9, -1.04, 0.16),
+TAIL_POINTS = [  # lower back -> down to the floor -> round beside the foot -> tip curls up
+    (0.1, -0.6, 0.5), (0.26, -0.86, 0.68), (0.5, -1.13, 0.72), (0.78, -1.25, 0.54),
+    (0.96, -1.25, 0.26), (1.03, -1.2, 0.02), (1.0, -1.04, -0.1), (0.94, -0.9, -0.1),
 ]
 
 # ── axes ─────────────────────────────────────────────────────────────────────
@@ -307,118 +307,52 @@ def build_head():
     piece(head, "Head", "fur_head")
     surf = Surface(head)
 
-    # Ears, sculpted like the reference: a big wide-based triangle with a
-    # softly rounded tip, thick at the base and thinning upward. The sides
-    # curl forward like half a cone and the front is scooped into a deep bowl
-    # inside a thick soft rim. Tilted outward.
-    EAR_H, EAR_W, EAR_D = 0.92, 0.5, 0.19  # height, half-width at base, half-depth at base
-    EAR_CURL = 0.85  # how far the sides wrap forward
-
-    def ear_width(t):
-        return EAR_W * (1 - t) ** 0.95 + 0.02 * t
-
-    def ear_depth(t):
-        return EAR_D * (1 - 0.6 * t)
-
-    def ear_close(t):
-        """Round off the tip (and the buried base) instead of a point."""
-        if t > 0.84:
-            return math.sqrt(max(0.0, 1 - ((t - 0.84) / 0.16) ** 2))
-        if t < 0.08:
-            return math.sqrt(max(0.0, 1 - ((0.08 - t) / 0.08) ** 2))
-        return 1.0
-
-    def ear_frame(i):
-        return Matrix.Translation(R(0.5 * i, 0.46, 0.06)) @ rot_r(4, -16 * i, -18 * i).to_4x4()
-
-    def ear_local(x, t, z):
-        """Ear-local point: x across, t up (0 base..1 tip), z back (Roblox)."""
-        return R(x, t * EAR_H, z - EAR_CURL * x * x)
-
+    # Ears: cupped like real ears (hollowed front), rounded tip, fur outside.
     ears = []
     for i in (-1, 1):
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=56, radius=1)
-        ear = bpy.context.active_object
-        for v in ear.data.vertices:
-            t = (v.co.z + 1) / 2
-            theta = math.atan2(v.co.y, v.co.x)
-            cx, cz = math.cos(theta), -math.sin(theta)  # cz < 0: front
-            c = ear_close(t)
-            w, d = ear_width(t) * c, ear_depth(t) * c
-            x, z = cx * w, cz * d
-            if cz < 0:  # bowl scooped out of the front, rising to a thick rim
-                bowl = max(0.0, 1 - abs(cx) ** 2.6) * math.sin(math.pi * min(1.0, t / 0.92)) ** 0.55
-                z += d * 1.4 * bowl
-            v.co = ear_local(x, t, z)
-        ear.data.transform(ear_frame(i))
+        ear = cone_between((0.44 * i, 0.44, 0.08), (0.84 * i, 1.22, 0.12), 0.5, 0.05, verts=48)
+        c = R(0.62 * i, 0.86, 0.1)
+        ear.data.transform(Matrix.Translation(-c))
+        ear.data.transform(Matrix.Diagonal((1.0, 0.5, 1.0, 1.0)))
+        ear.data.transform(Matrix.Translation(c))
+        cutter = ellipsoid((0.66 * i, 0.9, -0.13), (0.31, 0.44, 0.17))
+        cutter.data.transform(Matrix.Translation(-R(0.66 * i, 0.92, -0.12)))
+        cutter.data.transform(rot_r(0, 0, -24 * i).to_4x4())
+        cutter.data.transform(Matrix.Translation(R(0.66 * i, 0.92, -0.12)))
+        bo = ear.modifiers.new("cup", "BOOLEAN")
+        bo.operation = "DIFFERENCE"
+        bo.object = cutter
+        bo.solver = "EXACT"
+        apply_mods(ear)
+        bpy.data.objects.remove(cutter)
         ears.append(ear)
-    ears_obj = fuse(ears, "Ears", voxel=0.011, smooth=6, tris=6000)
+    ears_obj = fuse(ears, "Ears", voxel=0.014, smooth=7, tris=5000)
     piece(ears_obj, "Head", "fur_plain")
     esurf = Surface(ears_obj)
 
-    def ear_hit(i, x, t):
-        """Where a ray from in front of the ear lands in its bowl."""
-        F = ear_frame(i)
-        hit, n, _, _ = esurf.bvh.ray_cast(F @ ear_local(x, t, -1.0), (F.to_3x3() @ R(0, 0, 1)).normalized())
-        return hit, n
-
-    def smooth01(a, b, v):
-        s = min(1.0, max(0.0, (v - a) / (b - a)))
-        return s * s * (3 - 2 * s)
-
-    def mix_rgb(a, b, s):
-        return srgb(tuple(a[k] + (b[k] - a[k]) * s for k in range(3)))  # colour attributes are linear
-
-    DEEP, PINK_, PALE = (228, 104, 134), (250, 164, 178), (255, 212, 204)
-
-    def cup_patch(i, inset, t0, t1, lift, rows=18, cols=14):
-        """The pink skin lying in the ear's bowl: deep pink low in the middle,
-        fading paler toward the rim and the tip (vertex colours, baked)."""
-        bm = bmesh.new()
-        grid, cols_rgb, fan_uv = [], [], []
-        for r in range(rows + 1):
-            t = t0 + (t1 - t0) * r / rows
-            v = r / rows
-            w = ear_width(t) * ear_close(t) * inset
-            row = []
-            for c in range(cols + 1):
-                u = -1 + 2 * c / cols
-                x = w * math.copysign(abs(u) ** 0.9, u)
-                hit, n = ear_hit(i, x, t)
-                p = hit + n * lift if hit is not None else ear_frame(i) @ ear_local(x, t, 0)
-                row.append(bm.verts.new(p))
-                e = math.sqrt(u * u + ((v - 0.32) / 0.68) ** 2)
-                rgb = mix_rgb(DEEP, PINK_, smooth01(0.1, 0.62, e)) if e < 0.62 else mix_rgb(PINK_, PALE, smooth01(0.62, 1.0, e))
-                cols_rgb.append(rgb)
-                fan_uv.append(((1 - u * i) / 2, v, 0.0, 1.0))  # R: 1 = inner edge, G: 0 base .. 1 tip
-            grid.append(row)
-        for r in range(rows):
-            for c in range(cols):
-                bm.faces.new((grid[r][c], grid[r][c + 1], grid[r + 1][c + 1], grid[r + 1][c]))
-        me = bpy.data.meshes.new("cup")
-        bm.to_mesh(me)
-        bm.free()
-        ca = me.color_attributes.new("Col", "FLOAT_COLOR", "POINT")
-        for k, rgb in enumerate(cols_rgb):
-            ca.data[k].color = rgb
-        fa = me.color_attributes.new("Fan", "FLOAT_COLOR", "POINT")
-        for k, uv in enumerate(fan_uv):
-            fa.data[k].color = uv
-        o = bpy.data.objects.new("cup", me)
-        bpy.context.collection.objects.link(o)
-        so = o.modifiers.new("solid", "SOLIDIFY")
-        so.thickness = 0.005
-        sub = o.modifiers.new("sub", "SUBSURF")
-        sub.levels = 1
-        apply_mods(o)
-        return o
-
-    inner = join([cup_patch(i, 0.82, 0.2, 0.86, 0.004) for i in (-1, 1)], "InnerEar")
-    finish(inner, 3000)
-    piece(inner, "Head", "skin")
-
-    # (The fine white hairs fanning up across the pink from the inner base
-    # of each ear are painted into the skin texture - see the "skin" bake.)
+    # Pink inside each ear cup + white fur tufts growing out of it.
+    inner, tufts = [], []
+    for i in (-1, 1):
+        hit, n = esurf.toward((0.64 * i, 0.9, -2), (0, 0, 1))
+        if hit:
+            tri = rotated([(-0.33, -0.34), (0.33, -0.34), (0.0, 0.5)], 22 * i)
+            o = flat_shape(tri, hit, n, subdiv=3)
+            stick(o, ears_obj, offset=0.006, thickness=0.01)
+            inner.append(o)
+            # white fur growing from the inner edge of the ear, curling up and out
+            hr = random.Random(5 + i)
+            for k in range(14):
+                t = k / 13
+                dy = -0.3 + t * 0.3
+                base = hit + R((-0.13 + 0.05 * t) * i + hr.uniform(-0.02, 0.02), dy, 0) + n * 0.004
+                lean = 0.15 + 0.45 * t + hr.uniform(-0.08, 0.08)
+                ln = hr.uniform(0.16, 0.26) * (1.1 - 0.35 * t)
+                tufts.append(strand(base, R(lean * i, 1.0, -0.3), ln, hr.uniform(0.014, 0.02), bend=R(0.05 * i, 0.02, -0.04)))
+    piece(join(inner, "InnerEar"), "Head")
+    finish(bpy.data.objects["InnerEar"], 2000)
+    t = join(tufts, "EarTufts")
+    finish(t, 2500)
+    piece(t, "Head")
 
     def add(name, objs, tris=2500):
         objs = [o for o in objs if o]
@@ -1031,23 +965,85 @@ def build_leg():
 
 
 # ── TAIL (tail-local: relative to the first tail joint) ──────────────────────
+FLOOR_Y = -1.4  # HipHeight 0.4 under the 2-stud root
+
+
+def catmull(points, per=8):
+    """A smooth curve through the given points (Vectors)."""
+    ext = [2 * points[0] - points[1]] + points + [2 * points[-1] - points[-2]]
+    out = []
+    for k in range(1, len(ext) - 2):
+        p0, p1, p2, p3 = ext[k - 1], ext[k], ext[k + 1], ext[k + 2]
+        for j in range(per):
+            t = j / per
+            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
+    out.append(points[-1].copy())
+    return out
+
+
 def build_tail():
+    # Like the reference: a small fluffy tail that drops from the lower back
+    # to the floor, sweeps round beside the foot and curls its tip up. Lots of
+    # soft, irregular fur locks flow toward a rounded fluffy end (nothing spiky).
     p0 = Vector(TAIL_POINTS[0])
-    pts = [R(*(Vector(p) - p0)) for p in TAIL_POINTS]
-    parts = [tube(pts, 0.25, "tail", taper=[0.75, 0.95, 1.05, 1.08, 0.95, 0.7])]
-    # Fluffy clumps along the tail so the outline is soft and furry.
-    for k in range(1, len(pts) - 1):
-        along = (pts[k + 1] - pts[k - 1]).normalized()
-        for j in range(5):
-            side = Matrix.Rotation(j / 5 * math.pi * 2 + k, 3, along) @ along.orthogonal().normalized()
-            c = pts[k] + side * 0.16 + along * 0.04
-            parts.append(ellipsoid(rb(c), (0.11, 0.11, 0.11)))
-    tail = fuse(parts, "Tail", voxel=0.016, smooth=10, tris=4000)
-    piece(tail, "Tail", "fur_plain")
+    ctrl = [R(*(Vector(p) - p0)) for p in TAIL_POINTS]
+    per = 8
+    pts = catmull(ctrl, per)
+    ctrl_taper = [0.7, 0.9, 1.0, 1.04, 1.03, 0.97, 0.84, 0.66]
+    taper = []
+    for k in range(len(pts)):
+        f = k / per
+        a = min(int(f), len(ctrl_taper) - 2)
+        taper.append(ctrl_taper[a] + (ctrl_taper[a + 1] - ctrl_taper[a]) * (f - a))
+    TR = 0.135
+    # Parallel-transport frames along the curve.
+    tangents = [(pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]).normalized() for k in range(len(pts))]
+    normals = [tangents[0].orthogonal().normalized()]
+    for k in range(1, len(pts)):
+        n = normals[-1] - tangents[k] * normals[-1].dot(tangents[k])
+        normals.append(n.normalized())
+    binormals = [tangents[k].cross(normals[k]) for k in range(len(pts))]
+
+    parts = [tube(pts, TR, "tail", taper=taper, res=6)]
+    parts.append(ellipsoid(rb(pts[-1]), (TR * 0.66, TR * 0.66, TR * 0.66)))  # soft, rounded fluffy end
+    # Combed fur: long soft strands laid along the tail, following its curve,
+    # half sunk into it, each ending in a soft point. Smoothed together they
+    # read as flowing fur rather than lumps.
+    hr = random.Random(11)
+    last = len(pts) - 1
+    for _ in range(90):
+        span = hr.randint(5, 8)
+        k0 = hr.randint(1, last - 3 - span)
+        phi = hr.uniform(0, 2 * math.pi)
+        twist = hr.uniform(-0.05, 0.05)
+        sink = hr.uniform(0.84, 0.94)
+        line = []
+        for j in range(k0, k0 + span + 1):
+            ang = phi + twist * (j - k0)
+            side = normals[j] * math.cos(ang) + binormals[j] * math.sin(ang)
+            line.append(pts[j] + side * TR * taper[j] * sink)
+        rad = hr.uniform(0.03, 0.038) * taper[k0]
+        parts.append(tube(line, rad, "lock", taper=[1.0 - 0.75 * (q / span) ** 1.5 for q in range(span + 1)]))
+    tail = fuse(parts, "Tail", voxel=0.011, smooth=9, tris=7000)
+
+    # Tail coordinates for the fur texture, so the strands run along the tail:
+    # R/G = position round it, B = distance along it (/3).
+    cum = [0.0]
+    for k in range(1, len(pts)):
+        cum.append(cum[-1] + (pts[k] - pts[k - 1]).length)
+    me = tail.data
+    ca = me.color_attributes.new("TailUV", "FLOAT_COLOR", "POINT")
+    for v in me.vertices:
+        k = min(range(len(pts)), key=lambda j: (v.co - pts[j]).length_squared)
+        d = v.co - pts[k]
+        a = math.atan2(d.dot(binormals[k]), d.dot(normals[k]))
+        s = cum[k] + d.dot(tangents[k])
+        ca.data[v.index].color = (0.5 + 0.5 * math.cos(a), 0.5 + 0.5 * math.sin(a), max(0.0, s) / 3, 1.0)
+    piece(tail, "Tail", "fur_tail")
 
 
 # ── texture baking ───────────────────────────────────────────────────────────
-TEX_SIZE = {"fur_head": 1024, "fur_plain": 512, "cloth": 512, "knit": 512, "leather": 512, "canvas": 256, "cord": 256, "skin": 512}
+TEX_SIZE = {"fur_head": 1024, "fur_plain": 512, "cloth": 512, "knit": 512, "leather": 512, "canvas": 256, "cord": 256, "fur_tail": 512}
 CLOTH_KINDS = ("cloth", "knit", "leather", "canvas", "cord")
 JACKET = (52, 46, 66)
 SHIRT = (236, 168, 148)
@@ -1087,7 +1083,16 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
     fine = N.new("ShaderNodeTexNoise")
     fine.inputs["Detail"].default_value = 4
     L.new(mp.outputs["Vector"], fine.inputs["Vector"])
-    if kind.startswith("fur"):
+    if kind == "fur_tail":
+        # Strands running along the tail (coordinates stored per vertex).
+        tail_uv = N.new("ShaderNodeAttribute")
+        tail_uv.attribute_name = "TailUV"
+        L.new(tail_uv.outputs["Vector"], mp.inputs["Vector"])
+        mp.inputs["Scale"].default_value = (12, 12, 7.8)
+        nz.inputs["Detail"].default_value = 3
+        fine.inputs["Scale"].default_value = 2
+        strength, dist = 0.32, 0.02
+    elif kind.startswith("fur"):
         # Long thin strands running down the body (object Z = up).
         mp.inputs["Scale"].default_value = (38, 38, 2.6)
         nz.inputs["Detail"].default_value = 3
@@ -1110,10 +1115,6 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         nz.inputs["Scale"].default_value = 160
         fine.inputs["Scale"].default_value = 30
         strength, dist = 0.25, 0.01
-    elif kind == "skin":
-        nz.inputs["Scale"].default_value = 260  # faint pores
-        fine.inputs["Scale"].default_value = 20
-        strength, dist = 0.08, 0.006
     else:  # knit
         nz.inputs["Scale"].default_value = 420
         fine.inputs["Scale"].default_value = 30
@@ -1159,68 +1160,6 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         L.new(shade.outputs["Value"], comb.inputs[k])
     L.new(comb.outputs["Color"], albedo.inputs[7])
     final = albedo
-    if kind == "skin":
-        # Gradient painted as vertex colours (deep pink centre, pale rim).
-        vc = N.new("ShaderNodeVertexColor")
-        vc.layer_name = "Col"
-        grad = N.new("ShaderNodeMix")
-        grad.data_type = "RGBA"
-        grad.blend_type = "MULTIPLY"
-        grad.inputs["Factor"].default_value = 1.0
-        L.new(albedo.outputs[2], grad.inputs[6])
-        L.new(vc.outputs["Color"], grad.inputs[7])
-        final = grad
-        # Fine white hairs growing from the inner base of the ear and fanning
-        # up and outward across the pink, like the reference.
-        fan = N.new("ShaderNodeAttribute")
-        fan.attribute_name = "Fan"
-        fsep = N.new("ShaderNodeSeparateColor")
-        L.new(fan.outputs["Color"], fsep.inputs["Color"])
-
-        def mth(op, a, b=None, c=None):
-            m = N.new("ShaderNodeMath")
-            m.operation = op
-            for k, v in enumerate((a, b, c)):
-                if v is None:
-                    continue
-                if isinstance(v, (int, float)):
-                    m.inputs[k].default_value = v
-                else:
-                    L.new(v, m.inputs[k])
-            return m.outputs[0]
-
-        def ramp(v, f0, f1, t0, t1):
-            m = N.new("ShaderNodeMapRange")
-            m.interpolation_type = "SMOOTHSTEP"
-            m.inputs["From Min"].default_value = f0
-            m.inputs["From Max"].default_value = f1
-            m.inputs["To Min"].default_value = t0
-            m.inputs["To Max"].default_value = t1
-            L.new(v, m.inputs["Value"])
-            return m.outputs["Result"]
-
-        dx = mth("MULTIPLY_ADD", fsep.outputs["Red"], -2.0, 1.92)  # 0 at the inner edge, grows outward
-        dy = mth("MULTIPLY_ADD", fsep.outputs["Green"], 1.5, -0.22)
-        ang = mth("ARCTAN2", dx, dy)  # 0 = straight up, + = toward the outer side
-        cxy = N.new("ShaderNodeCombineXYZ")
-        L.new(dx, cxy.inputs["X"])
-        L.new(dy, cxy.inputs["Y"])
-        dlen = N.new("ShaderNodeVectorMath")
-        dlen.operation = "LENGTH"
-        L.new(cxy.outputs["Vector"], dlen.inputs[0])
-        wobble = mth("MULTIPLY", fine.outputs["Fac"], 4.0)
-        phase = mth("MULTIPLY_ADD", ang, 85.0, wobble)
-        hair = mth("POWER", mth("MULTIPLY_ADD", mth("SINE", phase), 0.5, 0.5), 3.0)
-        reach = ramp(dlen.outputs["Value"], 0.4, 1.25, 1.0, 0.0)
-        side = mth("MULTIPLY", ramp(ang, 0.95, 1.4, 1.0, 0.0), ramp(ang, -0.4, -0.1, 0.0, 1.0))
-        amount = mth("MULTIPLY", mth("MULTIPLY", reach, side), mth("MULTIPLY_ADD", hair, 0.85, 0.3))
-        white = N.new("ShaderNodeMix")
-        white.data_type = "RGBA"
-        white.blend_type = "MIX"
-        L.new(amount, white.inputs["Factor"])
-        L.new(grad.outputs[2], white.inputs[6])
-        white.inputs[7].default_value = srgb((255, 250, 247))
-        final = white
     if kind == "fur_head":
         # Big soft tan patch pointing down from the top of the head.
         sep = N.new("ShaderNodeSeparateXYZ")
@@ -1340,8 +1279,8 @@ def bake(obj, tex):
     fb.inputs["Roughness"].default_value = 0.75
     obj.data.materials.clear()
     obj.data.materials.append(fm)
-    # The gradient now lives in the texture; drop the vertex colours so they
-    # are not applied a second time on import.
+    # Drop helper vertex colours (texture coordinates) so they are not
+    # applied as colour on import.
     for attr in list(obj.data.color_attributes):
         obj.data.color_attributes.remove(attr)
 
@@ -1396,7 +1335,7 @@ TINT = {
     "Hips": (40, 38, 52), "ShortsLeg": (40, 38, 52), "Cuff": (40, 36, 52), "Sleeve": JACKET, "Body": JACKET,
 }
 FLAT = {
-    "EarTufts": (255, 248, 244), "Nose": (255, 140, 160), "Blush": (255, 196, 204),
+    "EarTufts": (255, 248, 244), "InnerEar": (255, 158, 172), "Nose": (255, 140, 160), "Blush": (255, 196, 204),
     "Blaze": (255, 253, 250), "Mouth": (120, 70, 74), "Brows": (228, 192, 170), "EyeWhite": (18, 16, 22), "Iris": (18, 58, 58),
     "IrisGlow": (60, 170, 150), "Pupil": (8, 8, 12), "Shine": (255, 255, 255), "Sleeve": JACKET, "Cuff": (46, 38, 56),
     "Drawstrings": (246, 246, 250), "DogTag": (236, 238, 242), "Pocket": (214, 140, 80), "Bag": (158, 72, 56), "Strap": (184, 110, 62), "Hardware": (222, 186, 104),
@@ -1528,6 +1467,13 @@ def preview():
     cam.location = pos
     cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
     scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_face.png")
+    bpy.ops.render.render(write_still=True)
+    # Close-up of the tail on the floor beside the foot
+    tgt = R(0.7, -1.05, 0.3)
+    pos = tgt + R(2.3, 1.3, -2.1)
+    cam.location = pos
+    cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
+    scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_tail.png")
     bpy.ops.render.render(write_still=True)
 
 

@@ -434,12 +434,14 @@ local function buildLeg(root: BasePart, i: number, shorts: Color3?, fur)
 	end
 end
 
--- A big fluffy tail curling up behind the cat (on the viewer's left).
+-- A small fluffy tail that drops from the lower back to the floor, sweeps
+-- round beside the foot (on the viewer's left) and curls its tip up. Points
+-- match TAIL_POINTS in tools/blender/build_cat.py.
 local function buildTail(root: BasePart, fur)
 	local pivot = V(0, -0.6, 0.45)
 	local points = {
-		V(0.1, -0.6, 0.5), V(0.32, -0.78, 0.6), V(0.54, -0.98, 0.58), V(0.72, -1.1, 0.46),
-		V(0.84, -1.12, 0.3), V(0.9, -1.04, 0.16), V(0.92, -0.98, 0.1),
+		V(0.1, -0.6, 0.5), V(0.26, -0.86, 0.68), V(0.5, -1.13, 0.72), V(0.78, -1.25, 0.54),
+		V(0.96, -1.25, 0.26), V(1.03, -1.2, 0.02), V(1, -1.04, -0.1), V(0.94, -0.9, -0.1),
 	}
 	local marking = fur.Marking or fur.Accent
 	local base = oval("Tail1", V(0.46, 0.46, 0.46), fur.Body)
@@ -493,10 +495,6 @@ end
 function CatBuilder.HasMeshes(): boolean
 	return meshLibrary() ~= nil
 end
-
--- Textured pieces whose baked colours are final (the flat colour is only
--- the fallback when SurfaceAppearance can't be used).
-local BAKED_COLOUR = { InnerEar = true }
 
 local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color3, chest: Color3, shorts: Color3?, cuff: Color3?)
 	local lib = meshLibrary()
@@ -599,9 +597,9 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 				m.Color = color
 				m.Transparency = name == "Blush" and 0.4 or 0
 				-- Baked fur textures are white, tinted with the player's fur
-				-- colour. Clothing textures and the ear skin carry their own colour.
+				-- colour. Clothing textures carry their own colour.
 				local sa = m:FindFirstChildOfClass("SurfaceAppearance")
-				if sa and colors[name] ~= nil and not HOODIE_ONLY[name] and not BAKED_COLOUR[name] then
+				if sa and colors[name] ~= nil and not HOODIE_ONLY[name] then
 					local ok = pcall(function()
 						(sa :: any).Color = color
 					end)
