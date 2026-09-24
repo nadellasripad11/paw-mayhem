@@ -253,6 +253,27 @@ def decal(pts, surf, target, x, y, offset, thickness=0.008, subdiv=2):
     return o
 
 
+def shape_decal(outline, surf, target, center, offset, thickness):
+    """A clean, flush decal of any outline (front-view x, y points, may be
+    concave): filled, subdivided so it can follow the curve, then wrapped."""
+    hit, n = surf.front(*center)
+    bm = bmesh.new()
+    verts = [bm.verts.new((x - center[0], y - center[1], 0)) for x, y in outline]
+    edges = [bm.edges.new((verts[k], verts[(k + 1) % len(verts)])) for k in range(len(verts))]
+    bmesh.ops.triangle_fill(bm, use_beauty=True, use_dissolve=False, edges=edges)
+    for _ in range(3):
+        bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=1, use_grid_fill=True)
+    me = bpy.data.meshes.new("shape")
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("shape", me)
+    bpy.context.collection.objects.link(o)
+    me.transform(frame_at(hit, n).to_4x4())
+    me.transform(Matrix.Translation(hit + n.normalized() * 0.05))
+    stick(o, target, offset=offset, thickness=thickness)
+    return o
+
+
 PIECES = []  # (object, anchor, texture kind or None)
 
 
@@ -273,13 +294,7 @@ def build_head():
     parts = [ellipsoid((0, 0.02, 0), HR)]
     for i in (-1, 1):
         parts.append(ellipsoid((0.48 * i, -0.38, -0.16), (0.42, 0.3, 0.38)))  # full, smooth cheeks (below the eyes)
-        # Fluffy cheek fur: overlapping soft tufts along the side of the face,
-        # from eye level down to the jaw, sweeping out and down.
-        for y, rx, reach in ((-0.18, 0.86, 0.2), (-0.38, 0.78, 0.2), (-0.56, 0.6, 0.15)):
-            base = (rx * i, y, -0.08)
-            tip = ((rx + reach) * i, y - 0.13, -0.04)
-            parts.append(cone_between(base, tip, 0.17, 0.06))
-    head = fuse(parts, "HeadFur", voxel=0.016, smooth=11, tris=11000)
+    head = fuse(parts, "HeadFur", voxel=0.018, smooth=16, tris=9000)
     # A little tuft of loose strands on top (kept as strands, not fused).
     surf = Surface(head)
     tuft = [head]
@@ -369,6 +384,15 @@ def build_head():
             pts.append(hit + n * 0.012)
         brows.append(tube(pts, 0.022, "brow"))
     add("Brows", brows, 1200)
+
+    # White blaze: a stripe from between the ears down the forehead, widening
+    # into a white muzzle round the nose and mouth, and a little white chin.
+    right = [(0.03, 0.8), (0.045, 0.6), (0.065, 0.4), (0.085, 0.2), (0.1, 0.05), (0.11, -0.08), (0.13, -0.17)]
+    for deg in (60, 40, 20, 0, -20, -40, -60, -75):
+        a = math.radians(deg)
+        right.append((0.23 * math.cos(a), -0.33 + 0.17 * math.sin(a)))
+    outline = right + [(0.0, -0.5)] + [(-x, y) for x, y in reversed(right)]
+    add("Blaze", [shape_decal(outline, surf, head, (0, -0.05), 0.003, 0.003)], 4000)
 
     add("Nose", [decal([(-0.075, 0.04), (0.075, 0.04), (0.0, -0.06)], surf, head, 0, -0.25, 0.008, 0.032, subdiv=3)], 1000)
     arcs = []
@@ -1098,7 +1122,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         tan.blend_type = "MULTIPLY"
         L.new(mask.outputs["Value"], tan.inputs["Factor"])
         L.new(albedo.outputs[2], tan.inputs[6])
-        tan.inputs[7].default_value = (0.93, 0.74, 0.58, 1)
+        tan.inputs[7].default_value = (1.0, 1.0, 1.0, 1)  # (tan patch retired: the white blaze replaced it)
         # Soft pink blush on each cheek, just under the eyes.
         dx = N.new("ShaderNodeMath")
         dx.operation = "SUBTRACT"
@@ -1231,12 +1255,13 @@ def export():
 
 # ── preview render (assembled, reference colours) ───────────────────────────
 TINT = {
-    "HeadFur": (255, 236, 224), "Ears": (255, 236, 224), "Hand": (255, 236, 224), "Leg": (255, 236, 224), "Tail": (255, 236, 224),
+    # Preview in orange fur (the default in-game cat), like the reference.
+    "HeadFur": (244, 170, 100), "Ears": (244, 170, 100), "Hand": (244, 170, 100), "Leg": (244, 170, 100), "Tail": (244, 170, 100),
     "Hips": (40, 38, 52), "ShortsLeg": (40, 38, 52), "Cuff": (40, 36, 52), "Sleeve": JACKET, "Body": JACKET,
 }
 FLAT = {
     "EarTufts": (255, 248, 244), "InnerEar": (255, 158, 172), "Nose": (255, 140, 160), "Blush": (255, 196, 204),
-    "Mouth": (120, 70, 74), "Brows": (228, 192, 170), "EyeWhite": (18, 16, 22), "Iris": (18, 58, 58),
+    "Blaze": (255, 253, 250), "Mouth": (120, 70, 74), "Brows": (228, 192, 170), "EyeWhite": (18, 16, 22), "Iris": (18, 58, 58),
     "IrisGlow": (60, 170, 150), "Pupil": (8, 8, 12), "Shine": (255, 255, 255), "Sleeve": JACKET, "Cuff": (46, 38, 56),
     "Drawstrings": (246, 246, 250), "DogTag": (236, 238, 242), "Pocket": (214, 140, 80), "Bag": (158, 72, 56), "Strap": (184, 110, 62), "Hardware": (222, 186, 104),
     "Hips": (40, 38, 52), "ShortsLeg": (40, 38, 52), "Body": JACKET,

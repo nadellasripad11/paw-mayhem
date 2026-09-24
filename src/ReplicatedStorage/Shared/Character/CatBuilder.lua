@@ -503,7 +503,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 	local marking = fur.Marking or fur.Body:Lerp(Color3.fromRGB(150, 80, 40), 0.22)
 	local eyeColor = fur.Eye or Color3.fromRGB(52, 160, 140)
 	local colors: { [string]: Color3 } = {
-		HeadFur = fur.Body, Ears = fur.Body, Hand = fur.Body, Leg = fur.Body, Tail = fur.Body, EarTufts = fur.Accent,
+		HeadFur = fur.Body, Ears = fur.Body, Blaze = Color3.fromRGB(252, 250, 246), Hand = fur.Body, Leg = fur.Body, Tail = fur.Body, EarTufts = fur.Accent,
 		Muzzle = fur.Accent, TailTip = fur.Pattern == "Calico" and marking or fur.Accent,
 		ForeheadMark = marking, InnerEar = PINK, PawPad = PINK, Blush = Color3.fromRGB(255, 150, 175),
 		Nose = Color3.fromRGB(255, 136, 160), Mouth = Color3.fromRGB(110, 58, 66),
