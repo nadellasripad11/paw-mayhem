@@ -916,18 +916,26 @@ def build_arm():
     top_lip.data.transform(Matrix.Translation(R(0, -0.19, 0)))
     piece(fuse([band, lip, top_lip], "Cuff", voxel=0.009, smooth=2, tris=3000), "Arm", ("cloth", (255, 255, 255)))
 
-    hand = [ellipsoid((0, -0.44, -0.02), (0.2, 0.19, 0.2))]
+    # Paw: a smooth, rounded mitten. The toes are soft lobes sunk almost
+    # completely into it, so they only show as gentle scallops (no bumps).
+    hand = [ellipsoid((0, -0.43, -0.01), (0.19, 0.2, 0.19))]
     for k in (-1, 0, 1):
-        hand.append(ellipsoid((0.08 * k, -0.55, -0.09), (0.06, 0.05, 0.06)))
-    piece(fuse(hand, "Hand", voxel=0.012, smooth=6, tris=2500), "Arm", "fur_plain")
+        hand.append(ellipsoid((0.075 * k, -0.54, -0.06), (0.085, 0.085, 0.085)))
+    piece(fuse(hand, "Hand", voxel=0.01, smooth=12, tris=3000), "Arm", "fur_plain")
 
 
 # ── LEG (leg-local) ───────────────────────────────────────────────────────────
 def build_leg():
-    parts = [ellipsoid((0, 0, 0), (0.28, 0.28, 0.28)), ellipsoid((0, -0.26, -0.1), (0.3, 0.17, 0.38))]
+    # Chunky, rounded foot: a soft bean with a round heel. The toes are big
+    # lobes sunk almost completely in, so the front just has soft scallops.
+    parts = [
+        ellipsoid((0, 0, 0), (0.28, 0.28, 0.28)),
+        ellipsoid((0, -0.25, -0.08), (0.29, 0.16, 0.35)),
+        ellipsoid((0, -0.24, 0.1), (0.25, 0.15, 0.2)),
+    ]
     for k in (-1, 0, 1):
-        parts.append(ellipsoid((0.11 * k, -0.29, -0.41), (0.07, 0.07, 0.07)))
-    piece(fuse(parts, "Leg", voxel=0.014, smooth=6, tris=3500), "Leg", "fur_plain")
+        parts.append(ellipsoid((0.095 * k, -0.265, -0.305), (0.12, 0.12, 0.12)))
+    piece(fuse(parts, "Leg", voxel=0.012, smooth=18, tris=4500), "Leg", "fur_plain")
     # Boxy shorts leg: a wide tube over the thigh with a rolled, turned-up hem.
     bm = bmesh.new()
     rows = []
@@ -983,8 +991,8 @@ def catmull(points, per=8):
 
 def build_tail():
     # Like the reference: a small fluffy tail that drops from the lower back
-    # to the floor, sweeps round beside the foot and curls its tip up. Lots of
-    # soft, irregular fur locks flow toward a rounded fluffy end (nothing spiky).
+    # to the floor, sweeps round beside the foot and curls its tip up. One
+    # smooth, plump shape with a rounded end; the fur is in the texture only.
     p0 = Vector(TAIL_POINTS[0])
     ctrl = [R(*(Vector(p) - p0)) for p in TAIL_POINTS]
     per = 8
@@ -995,7 +1003,7 @@ def build_tail():
         f = k / per
         a = min(int(f), len(ctrl_taper) - 2)
         taper.append(ctrl_taper[a] + (ctrl_taper[a + 1] - ctrl_taper[a]) * (f - a))
-    TR = 0.135
+    TR = 0.145
     # Parallel-transport frames along the curve.
     tangents = [(pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]).normalized() for k in range(len(pts))]
     normals = [tangents[0].orthogonal().normalized()]
@@ -1006,25 +1014,7 @@ def build_tail():
 
     parts = [tube(pts, TR, "tail", taper=taper, res=6)]
     parts.append(ellipsoid(rb(pts[-1]), (TR * 0.66, TR * 0.66, TR * 0.66)))  # soft, rounded fluffy end
-    # Combed fur: long soft strands laid along the tail, following its curve,
-    # half sunk into it, each ending in a soft point. Smoothed together they
-    # read as flowing fur rather than lumps.
-    hr = random.Random(11)
-    last = len(pts) - 1
-    for _ in range(90):
-        span = hr.randint(5, 8)
-        k0 = hr.randint(1, last - 3 - span)
-        phi = hr.uniform(0, 2 * math.pi)
-        twist = hr.uniform(-0.05, 0.05)
-        sink = hr.uniform(0.84, 0.94)
-        line = []
-        for j in range(k0, k0 + span + 1):
-            ang = phi + twist * (j - k0)
-            side = normals[j] * math.cos(ang) + binormals[j] * math.sin(ang)
-            line.append(pts[j] + side * TR * taper[j] * sink)
-        rad = hr.uniform(0.03, 0.038) * taper[k0]
-        parts.append(tube(line, rad, "lock", taper=[1.0 - 0.75 * (q / span) ** 1.5 for q in range(span + 1)]))
-    tail = fuse(parts, "Tail", voxel=0.011, smooth=9, tris=7000)
+    tail = fuse(parts, "Tail", voxel=0.011, smooth=10, tris=5000)
 
     # Tail coordinates for the fur texture, so the strands run along the tail:
     # R/G = position round it, B = distance along it (/3).
@@ -1474,6 +1464,13 @@ def preview():
     cam.location = pos
     cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
     scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_tail.png")
+    bpy.ops.render.render(write_still=True)
+    # Close-up of the paws (hands and feet)
+    tgt = R(0, -0.85, -0.3)
+    pos = tgt + R(0.9, 0.6, -3.2)
+    cam.location = pos
+    cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
+    scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_paws.png")
     bpy.ops.render.render(write_still=True)
 
 

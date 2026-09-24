@@ -32,8 +32,8 @@ return {
 	{ Name = "Sleeve", Anchor = "Arm", Center = Vector3.new(-0.0011, 0.0245, 0.0024), Size = Vector3.new(0.4745, 0.6741, 0.4872), Textured = true },
 	{ Name = "HoodieSleeve", Anchor = "Arm", Center = Vector3.new(-0.0011, 0.0245, 0.0024), Size = Vector3.new(0.4745, 0.6741, 0.4872), Textured = true },
 	{ Name = "Cuff", Anchor = "Arm", Center = Vector3.new(-0.0001, -0.2532, 0.0000), Size = Vector3.new(0.5354, 0.1542, 0.5356), Textured = true },
-	{ Name = "Hand", Anchor = "Arm", Center = Vector3.new(-0.0000, -0.4397, -0.0199), Size = Vector3.new(0.3972, 0.3781, 0.3974), Textured = true },
-	{ Name = "Leg", Anchor = "Leg", Center = Vector3.new(0.0001, -0.0749, -0.0990), Size = Vector3.new(0.5965, 0.7093, 0.7573), Textured = true },
+	{ Name = "Hand", Anchor = "Arm", Center = Vector3.new(-0.0000, -0.4300, -0.0100), Size = Vector3.new(0.3790, 0.3991, 0.3790), Textured = true },
+	{ Name = "Leg", Anchor = "Leg", Center = Vector3.new(0.0001, -0.0654, -0.0635), Size = Vector3.new(0.5756, 0.6878, 0.7243), Textured = true },
 	{ Name = "ShortsLeg", Anchor = "Leg", Center = Vector3.new(0.0042, 0.0892, -0.0014), Size = Vector3.new(0.7990, 0.4306, 0.8036), Textured = true },
-	{ Name = "Tail", Anchor = "Tail", Center = Vector3.new(0.4959, -0.3804, -0.1772), Size = Vector3.new(1.1465, 0.8708, 1.0845), Textured = true },
+	{ Name = "Tail", Anchor = "Tail", Center = Vector3.new(0.4909, -0.3722, -0.1766), Size = Vector3.new(1.1531, 0.8716, 1.0875), Textured = true },
 }
