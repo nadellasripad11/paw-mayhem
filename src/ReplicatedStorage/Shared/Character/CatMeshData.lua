@@ -7,9 +7,8 @@
 
 return {
 	{ Name = "HeadFur", Anchor = "Head", Center = Vector3.new(-0.0001, -0.0234, -0.0000), Size = Vector3.new(1.6021, 1.4681, 1.3739), Textured = true },
-	{ Name = "Ears", Anchor = "Head", Center = Vector3.new(-0.0000, 0.5268, 0.0744), Size = Vector3.new(1.4490, 0.8288, 0.4015), Textured = true },
-	{ Name = "InnerEar", Anchor = "Head", Center = Vector3.new(-0.0003, 0.6279, 0.0029), Size = Vector3.new(1.3106, 0.4026, 0.0550), Textured = false },
-	{ Name = "EarTufts", Anchor = "Head", Center = Vector3.new(-0.0043, 0.6180, -0.0119), Size = Vector3.new(1.1495, 0.4026, 0.1123), Textured = false },
+	{ Name = "Ears", Anchor = "Head", Center = Vector3.new(0.0001, 0.6229, 0.0159), Size = Vector3.new(1.6280, 0.7806, 0.4100), Textured = true },
+	{ Name = "InnerEar", Anchor = "Head", Center = Vector3.new(0.0001, 0.6571, 0.0369), Size = Vector3.new(1.4513, 0.5641, 0.2329), Textured = true },
 	{ Name = "EyeWhite", Anchor = "Head", Center = Vector3.new(0.0002, -0.1315, -0.5979), Size = Vector3.new(1.0630, 0.4377, 0.1702), Textured = false },
 	{ Name = "Iris", Anchor = "Head", Center = Vector3.new(0.0001, -0.1337, -0.6070), Size = Vector3.new(1.0373, 0.3999, 0.1547), Textured = false },
 	{ Name = "IrisGlow", Anchor = "Head", Center = Vector3.new(-0.0001, -0.2550, -0.5935), Size = Vector3.new(0.9806, 0.1532, 0.1305), Textured = false },

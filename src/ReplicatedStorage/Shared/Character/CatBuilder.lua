@@ -494,6 +494,10 @@ function CatBuilder.HasMeshes(): boolean
 	return meshLibrary() ~= nil
 end
 
+-- Textured pieces whose baked colours are final (the flat colour is only
+-- the fallback when SurfaceAppearance can't be used).
+local BAKED_COLOUR = { InnerEar = true }
+
 local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color3, chest: Color3, shorts: Color3?, cuff: Color3?)
 	local lib = meshLibrary()
 	if not lib then
@@ -595,9 +599,9 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 				m.Color = color
 				m.Transparency = name == "Blush" and 0.4 or 0
 				-- Baked fur textures are white, tinted with the player's fur
-				-- colour. Clothing textures carry their own colour.
+				-- colour. Clothing textures and the ear skin carry their own colour.
 				local sa = m:FindFirstChildOfClass("SurfaceAppearance")
-				if sa and colors[name] ~= nil and not HOODIE_ONLY[name] then
+				if sa and colors[name] ~= nil and not HOODIE_ONLY[name] and not BAKED_COLOUR[name] then
 					local ok = pcall(function()
 						(sa :: any).Color = color
 					end)
