@@ -21,6 +21,12 @@ local GameConfig = require(script.Parent.Parent.Config.GameConfig)
 
 local CatBuilder = {}
 
+-- Smooth Blender meshes (tools/blender/build_cat.py). Used when the imported
+-- ReplicatedStorage.CatMeshes model is present; otherwise the cat falls back
+-- to the primitive build below.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CatMeshData = require(script.Parent.CatMeshData)
+
 CatBuilder.Tag = "PawCat"
 
 local ROOT_SIZE = Vector3.new(2, 2, 1.4)
@@ -432,8 +438,8 @@ end
 local function buildTail(root: BasePart, fur)
 	local pivot = V(0, -0.6, 0.45)
 	local points = {
-		V(0.12, -0.62, 0.58), V(0.34, -0.55, 0.76), V(0.54, -0.38, 0.86), V(0.7, -0.12, 0.86),
-		V(0.78, 0.18, 0.8), V(0.78, 0.46, 0.72), V(0.7, 0.7, 0.62),
+		V(0.14, -0.62, 0.58), V(0.46, -0.58, 0.7), V(0.8, -0.44, 0.7), V(1.06, -0.18, 0.62),
+		V(1.18, 0.14, 0.54), V(1.16, 0.46, 0.46), V(1.04, 0.7, 0.4),
 	}
 	local marking = fur.Marking or fur.Accent
 	local base = oval("Tail1", V(0.46, 0.46, 0.46), fur.Body)
@@ -447,6 +453,123 @@ local function buildTail(root: BasePart, fur)
 		end
 		local d = 0.5 - k * 0.018
 		weld(base, oval("Tail" .. k, V(d, d, d), color), CFrame.new(points[k] - points[1]))
+	end
+end
+
+-- ── Blender mesh pass ────────────────────────────────────────────────────────
+-- Primitive parts the meshes replace. Anchors (joints, the blaster hand) stay
+-- but go invisible; everything else is removed.
+local MESH_REPLACES = {
+	CheekFluff = true, Tuft = true, ForeheadMark = true, MuzzlePuff = true, Mouth = true, Chin = true,
+	Nose = true, NoseShine = true, EyeWhite = true, Iris = true, IrisGlow = true, Pupil = true, Shine = true,
+	Brow = true, Blush = true, Ear = true, InnerEar = true, EarFluff = true,
+	Torso = true, Hips = true, Hood = true, HoodRim = true, Collar = true, Lapel = true, LapelEdge = true,
+	Drawstring = true, Aglet = true, TagChain = true, DogTag = true, JacketHem = true, Pocket = true,
+	PocketFlap = true, Strap = true, StrapBack = true, Satchel = true, SatchelFlap = true, Buckle = true,
+	Cuff = true, PawPad = true, ShortsLeg = true, Foot = true, Toe = true,
+	Tail2 = true, Tail3 = true, Tail4 = true, Tail5 = true, Tail6 = true, Tail7 = true,
+}
+local MESH_ANCHORS = { Head = true, Arm = true, Leg = true, Tail1 = true, Hand = true }
+local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = true, Pocket = true, Bag = true }
+
+local function meshLibrary(): Instance?
+	local lib = ReplicatedStorage:FindFirstChild("CatMeshes")
+	-- Only once the imported model (not just the empty folder) is there.
+	if lib and lib:FindFirstChild("HeadFur", true) then
+		return lib
+	end
+	return nil
+end
+
+function CatBuilder.HasMeshes(): boolean
+	return meshLibrary() ~= nil
+end
+
+local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color3, chest: Color3, shorts: Color3?, cuff: Color3?)
+	local lib = meshLibrary()
+	if not lib then
+		return
+	end
+	local hoodie = outfit.Id == "Hoodie"
+	local marking = fur.Marking or fur.Body:Lerp(Color3.fromRGB(150, 80, 40), 0.22)
+	local eyeColor = fur.Eye or Color3.fromRGB(52, 160, 140)
+	local colors: { [string]: Color3 } = {
+		HeadFur = fur.Body, Hand = fur.Body, Leg = fur.Body, Tail = fur.Body,
+		Muzzle = fur.Accent, TailTip = fur.Pattern == "Calico" and marking or fur.Accent,
+		ForeheadMark = marking, InnerEar = PINK, PawPad = PINK, Blush = Color3.fromRGB(255, 150, 175),
+		Nose = Color3.fromRGB(255, 136, 160), Mouth = Color3.fromRGB(110, 58, 66),
+		Brows = fur.Body:Lerp(Color3.new(0, 0, 0), 0.28),
+		EyeWhite = Color3.fromRGB(22, 16, 26), Iris = eyeColor:Lerp(Color3.fromRGB(16, 20, 26), 0.45),
+		IrisGlow = eyeColor:Lerp(Color3.new(1, 1, 1), 0.12), Pupil = Color3.fromRGB(12, 8, 18), Shine = Color3.new(1, 1, 1),
+		Jacket = top, Sleeve = top, Body = top, Shirt = chest, Cuff = cuff or top,
+		Drawstrings = Color3.fromRGB(246, 246, 250), DogTag = Color3.fromRGB(214, 218, 228),
+		Pocket = Color3.fromRGB(214, 140, 72), Bag = Color3.fromRGB(150, 88, 54),
+		Hips = shorts or fur.Body, ShortsLeg = shorts or fur.Body,
+	}
+
+	-- Anchors: the rig parts each mesh welds to.
+	local anchors: { [string]: { BasePart } } = { Root = { root } }
+	local function add(key: string, p: Instance?)
+		if p and p:IsA("BasePart") then
+			anchors[key] = anchors[key] or {}
+			table.insert(anchors[key], p)
+		end
+	end
+	add("Head", model:FindFirstChild("Head"))
+	add("Tail", model:FindFirstChild("Tail1"))
+	for _, jn in ipairs({ "PawShoulderL", "PawShoulderR" }) do
+		local m = root:FindFirstChild(jn) :: Motor6D?
+		add("Arm", m and m.Part1)
+	end
+	for _, jn in ipairs({ "PawHipL", "PawHipR" }) do
+		local m = root:FindFirstChild(jn) :: Motor6D?
+		add("Leg", m and m.Part1)
+	end
+
+	-- Swap: drop the primitive details, hide the anchors.
+	for _, d in ipairs(model:GetChildren()) do
+		if d:IsA("BasePart") and d ~= root then
+			if MESH_ANCHORS[d.Name] then
+				d.Transparency = 1
+			elseif MESH_REPLACES[d.Name] or (d.Name == "Chest" and hoodie) then
+				d:Destroy()
+			end
+		end
+	end
+
+	for _, entry in ipairs(CatMeshData) do
+		local name = entry.Name
+		local wanted = true
+		if HOODIE_ONLY[name] then
+			wanted = hoodie
+		elseif name == "Body" then
+			wanted = not hoodie
+		elseif name == "ShortsLeg" then
+			wanted = shorts ~= nil
+		elseif name == "Cuff" then
+			wanted = cuff ~= nil
+		elseif name == "ForeheadMark" then
+			wanted = fur.Pattern ~= "Tiger"
+		end
+		local src = wanted and lib:FindFirstChild(name, true)
+		if src and src:IsA("MeshPart") then
+			for _, anchor in ipairs(anchors[entry.Anchor] or {}) do
+				local m = src:Clone()
+				m.Name = name
+				m.Size = entry.Size
+				m.Anchored = false
+				m.CanCollide = false
+				m.CanQuery = false
+				m.CanTouch = false
+				m.Massless = true
+				m.CastShadow = true
+				m.Material = name == "DogTag" and Enum.Material.Metal or Enum.Material.SmoothPlastic
+				m.Color = colors[name] or fur.Body
+				m.Transparency = name == "Blush" and 0.4 or 0
+				m.TextureID = ""
+				weld(anchor, m, CFrame.new(entry.Center))
+			end
+		end
 	end
 end
 
@@ -495,6 +618,7 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	if armed and rightHand then
 		attachBlaster(model, root, rightHand, weapon)
 	end
+	applyMeshes(model, root, fur, outfit, top, chest, shorts, cuff)
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.RigType = Enum.HumanoidRigType.R15
