@@ -478,7 +478,7 @@ local HEAD_GEAR = {
 }
 local MESH_HEAD_SCALE = 0.9
 local MESH_ANCHORS = { Head = true, Arm = true, Leg = true, Tail1 = true, Hand = true }
-local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = true, Pocket = true, Bag = true, HoodieSleeve = true }
+local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = true, Pocket = true, Bag = true, Strap = true, HoodieSleeve = true }
 
 local function meshLibrary(): Instance?
 	local lib = ReplicatedStorage:FindFirstChild("CatMeshes")
@@ -511,7 +511,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 		IrisGlow = eyeColor:Lerp(Color3.new(1, 1, 1), 0.12), Pupil = Color3.fromRGB(12, 8, 18), Shine = Color3.new(1, 1, 1),
 		Jacket = top, Sleeve = top, HoodieSleeve = top, Body = top, Shirt = chest, Cuff = cuff or top,
 		Drawstrings = Color3.fromRGB(246, 246, 250), DogTag = Color3.fromRGB(214, 218, 228),
-		Pocket = Color3.fromRGB(214, 140, 72), Bag = Color3.fromRGB(150, 88, 54),
+		Pocket = Color3.fromRGB(214, 140, 80), Bag = Color3.fromRGB(158, 72, 56), Strap = Color3.fromRGB(184, 110, 62),
 		Hips = shorts or fur.Body, ShortsLeg = shorts or fur.Body,
 	}
 

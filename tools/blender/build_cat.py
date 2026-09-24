@@ -364,24 +364,88 @@ def build_head():
 # ── BODY (root-local) ─────────────────────────────────────────────────────────
 TORSO_C, TORSO_R = (0, -0.15, 0), (0.66, 0.58, 0.52)
 
+# Hoodie body profile, top to bottom: (y, half-width, half-depth). A garment
+# silhouette: rounded shoulders, straight sides, hem flaring a touch.
+JACKET_RINGS = [
+    (0.45, 0.29, 0.25), (0.42, 0.42, 0.34), (0.36, 0.56, 0.44), (0.27, 0.65, 0.5),
+    (0.12, 0.68, 0.53), (-0.08, 0.68, 0.54), (-0.3, 0.69, 0.55), (-0.5, 0.71, 0.56),
+    (-0.66, 0.73, 0.57),
+]
+
+
+def lofted_shell(rings, segs=64):
+    """Open tube through elliptical rings (Roblox y, rx, rz), no caps."""
+    bm = bmesh.new()
+    rows = []
+    for y, rx, rz in rings:
+        row = []
+        for k in range(segs):
+            a = 2 * math.pi * k / segs
+            row.append(bm.verts.new(R(math.sin(a) * rx, y, -math.cos(a) * rz)))
+        rows.append(row)
+    for r in range(len(rows) - 1):
+        for k in range(segs):
+            a, b = rows[r][k], rows[r][(k + 1) % segs]
+            c, d = rows[r + 1][(k + 1) % segs], rows[r + 1][k]
+            bm.faces.new((a, b, c, d))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("shell")
+    bm.to_mesh(me)
+    bm.free()
+    o = bpy.data.objects.new("shell", me)
+    bpy.context.collection.objects.link(o)
+    return o
+
+
+def front_most(surfs, x, y):
+    """The frontmost hit among several surfaces (front = Blender +Y)."""
+    best = (None, None)
+    for s in surfs:
+        hit, n = s.front(x, y)
+        if hit is not None and (best[0] is None or hit.y > best[0].y):
+            best = (hit, n)
+    return best
+
+
+def rounded_box(size_r, bevel, segments=5, subdiv=1, local=False):
+    """A soft box centred on the origin. Roblox sizes (x, y, z), or with
+    local=True a surface-frame box (width, height, depth)."""
+    bpy.ops.mesh.primitive_cube_add(size=1)
+    o = bpy.context.active_object
+    d = size_r if local else (size_r[0], size_r[2], size_r[1])
+    o.data.transform(Matrix.Diagonal((d[0], d[1], d[2], 1.0)))
+    bev = o.modifiers.new("bev", "BEVEL")
+    bev.width = bevel
+    bev.segments = segments
+    if subdiv:
+        sub = o.modifiers.new("sub", "SUBSURF")
+        sub.levels = subdiv
+    apply_mods(o)
+    return o
+
 
 def build_body():
     piece(fuse([ellipsoid(TORSO_C, TORSO_R)], "Body", voxel=0.02, smooth=0, tris=3000), "Root")
-    shirt = fuse([ellipsoid((0, -0.15, -0.01), (0.61, 0.54, 0.48)), ellipsoid((0, 0.3, -0.1), (0.28, 0.08, 0.22))], "Shirt", voxel=0.02, smooth=2, tris=3500)
+
+    # Peach tee underneath, with a soft crew neck.
+    shirt = fuse([
+        ellipsoid((0, -0.14, -0.01), (0.62, 0.55, 0.49)),
+        ellipsoid((0, 0.34, -0.06), (0.3, 0.09, 0.26)),
+    ], "Shirt", voxel=0.02, smooth=3, tris=3500)
     piece(shirt, "Root", "knit")
 
-    # Jacket: a shell around the tee, open down the front.
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=64, ring_count=40, radius=1)
-    shell = bpy.context.active_object
-    shell.data.transform(Matrix.Diagonal((0.69, 0.55, 0.6, 1.0)))
-    shell.data.transform(Matrix.Translation(R(*TORSO_C)))
+    # Hoodie: a lofted garment shell, open down the front, with thickness.
+    shell = lofted_shell(JACKET_RINGS)
+    sub = shell.modifiers.new("sub", "SUBSURF")
+    sub.levels = 1
+    apply_mods(shell)
     bm = bmesh.new()
     bm.from_mesh(shell.data)
     kill = []
     for face in bm.faces:
         x, y, z = rb(face.calc_center_median())
-        half = 0.12 + (0.2 - y) * 0.1
-        if (z < -0.2 and abs(x) < half and y < 0.34) or y > 0.36:
+        half = 0.11 + (0.42 - y) * 0.1  # opening widens gently towards the hem
+        if z < -0.15 and abs(x) < half:
             kill.append(face)
     bmesh.ops.delete(bm, geom=list(set(kill)), context="FACES")
     bm.to_mesh(shell.data)
@@ -389,96 +453,114 @@ def build_body():
     so = shell.modifiers.new("solid", "SOLIDIFY")
     so.thickness = 0.05
     so.offset = 1.0
+    so.use_rim = True
     apply_mods(shell)
     parts = [shell]
-    for i in (-1, 1):
-        parts.append(tube([R(0.15 * i, 0.3, -0.48), R(0.19 * i, 0.05, -0.57), R(0.23 * i, -0.3, -0.56), R(0.27 * i, -0.62, -0.47)], 0.05, "lapel"))
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.36, minor_radius=0.1, major_segments=48, minor_segments=16)
-    collar = bpy.context.active_object
-    collar.data.transform(Matrix.Diagonal((1.15, 1.0, 1.0, 1.0)))
-    collar.data.transform(Matrix.Translation(R(0, 0.38, 0.02)))
-    parts.append(collar)
-    # Big bunched hood: behind the neck and peeking out at both shoulders
-    parts.append(ellipsoid((0, 0.44, 0.34), (0.64, 0.28, 0.34)))
-    parts.append(ellipsoid((0, 0.28, 0.48), (0.52, 0.26, 0.24)))
-    for i in (-1, 1):
-        parts.append(ellipsoid((0.44 * i, 0.4, 0.1), (0.2, 0.18, 0.26)))
-    jacket = fuse(parts, "Jacket", voxel=0.018, smooth=3, tris=9500)
+    # Hood: a soft roll around the back of the neck whose ends come round to
+    # the front, bunched fabric behind.
+    roll = []
+    for k in range(11):
+        a = math.pi * (-0.8 + 1.6 * k / 10)  # from front-left, round the back, to front-right
+        roll.append(R(math.sin(a) * 0.4, 0.43 + 0.04 * math.cos(a), math.cos(a) * 0.34 + 0.02))
+    parts.append(tube(roll, 0.1, "hoodroll"))
+    parts.append(ellipsoid((0, 0.38, 0.4), (0.46, 0.22, 0.2)))
+    parts.append(ellipsoid((0, 0.2, 0.5), (0.34, 0.2, 0.14)))
+    jacket = fuse(parts, "Jacket", voxel=0.016, smooth=4, tris=10000)
     piece(jacket, "Root", "fabric")
     jsurf = Surface(jacket)
     ssurf = Surface(shirt)
 
+    # Long white drawstrings from the hood's front ends, with metal tips.
     strings = []
     for i in (-1, 1):
         pts = []
-        for k, y in enumerate((0.3, 0.18, 0.06, -0.04)):
-            hit, n = ssurf.front(0.14 * i + 0.012 * k * i, y)
-            pts.append(hit + n * 0.035)
-        strings.append(tube(pts, 0.021, "string"))
-        hit, n = ssurf.front(0.19 * i, -0.1)
-        strings.append(disc(hit, n, 0.035, 0.06, 0.035, 0.035))
+        for y in (0.33, 0.18, 0.03, -0.12, -0.24):
+            hit, n = front_most([jsurf, ssurf], 0.13 * i, y)
+            pts.append(hit + n * 0.03)
+        strings.append(tube(pts, 0.02, "string"))
+        hit, n = front_most([jsurf, ssurf], 0.13 * i, -0.3)
+        strings.append(disc(hit, n, 0.03, 0.06, 0.03, 0.03))
     o = join(strings, "Drawstrings")
     finish(o, 2000)
     piece(o, "Root")
 
+    # Dog tag: a rounded rectangle on a thin chain, resting on the tee.
     tag = []
-    hit, n = ssurf.front(0, 0.04)
-    tag.append(disc(hit, n, 0.09, 0.125, 0.018, 0.03))
+    hit, n = ssurf.front(-0.02, 0.02)
+    plate = rounded_box((0.15, 0.21, 0.03), 0.05, segments=5, subdiv=0, local=True)
+    plate.data.transform(frame_at(hit, n).to_4x4())
+    plate.data.transform(Matrix.Translation(hit + n * 0.035))
+    tag.append(plate)
     for i in (-1, 1):
         pts = []
         for k in range(4):
             t = k / 3
-            h2, n2 = ssurf.front(0.13 * i * (1 - t), 0.32 - t * 0.14)
-            pts.append(h2 + n2 * 0.025)
-        tag.append(tube(pts, 0.011, "chain"))
+            h2, n2 = ssurf.front(-0.02 + 0.12 * i * (1 - t), 0.33 - t * 0.2)
+            pts.append(h2 + n2 * 0.02)
+        tag.append(tube(pts, 0.01, "chain"))
     o = join(tag, "DogTag")
     finish(o, 1500)
     piece(o, "Root")
 
-    hit, n = jsurf.toward((-0.46, -0.42, -2), (0, 0, 1))
-    bpy.ops.mesh.primitive_cube_add(size=1)
-    pocket = bpy.context.active_object
-    pocket.data.transform(Matrix.Diagonal((0.3, 0.26, 0.04, 1.0)))
-    bev = pocket.modifiers.new("bev", "BEVEL")
-    bev.width = 0.03
-    bev.segments = 3
-    apply_mods(pocket)
-    pocket.data.transform(frame_at(hit, n).to_4x4())
-    pocket.data.transform(Matrix.Translation(hit + n * 0.02))
-    pocket.name = "Pocket"
-    finish(pocket)
-    piece(pocket, "Root")
+    # Tan patch pocket with a flap (lower front, your right as you face the cat)
+    hit, n = jsurf.toward((-0.44, -0.44, -2), (0, 0, 1))
+    f = frame_at(hit, n).to_4x4()
+    pocket = rounded_box((0.3, 0.26, 0.035), 0.025, segments=3, subdiv=0, local=True)
+    pocket.data.transform(f)
+    pocket.data.transform(Matrix.Translation(hit + n * 0.015))
+    flap = rounded_box((0.32, 0.08, 0.04), 0.02, segments=3, subdiv=0, local=True)
+    flap.data.transform(Matrix.Translation(Vector((0, 0.13, 0.01))))
+    flap.data.transform(f)
+    flap.data.transform(Matrix.Translation(hit + n * 0.02))
+    o = join([pocket, flap], "Pocket")
+    finish(o, 1500)
+    piece(o, "Root")
 
-    bag = []
+    # Thin crossbody strap: from your right shoulder, across the chest, down
+    # to a small rounded pouch on the other hip (and back round behind).
+    # The strap stretches straight over the open front, so it follows the
+    # hoodie's outer surface as if it were closed (a temporary proxy).
+    proxy = lofted_shell([(y, rx + 0.05, rz + 0.05) for y, rx, rz in JACKET_RINGS])
+    psub = proxy.modifiers.new("sub", "SUBSURF")
+    psub.levels = 1
+    apply_mods(proxy)
+    psurf = Surface(proxy)
+    bpy.data.objects.remove(proxy)
+    strap = []
     for start_z, direction in ((-2, 1), (2, -1)):
         pts = []
         for k in range(17):
             t = k / 16
-            hit, n = jsurf.toward((-0.52 + t * 1.06, 0.3 - t * 0.8, start_z), (0, 0, direction))
+            hit, n = psurf.toward((-0.5 + t * 0.98, 0.32 - t * 0.8, start_z), (0, 0, direction))
             if hit:
-                pts.append(hit + n * 0.06)
-        bag.append(tube(pts, 0.04, "strap"))
-    for size, dy in (((0.44, 0.24, 0.38), 0.0), ((0.46, 0.26, 0.2), 0.1)):
-        bpy.ops.mesh.primitive_cube_add(size=1)
-        box = bpy.context.active_object
-        box.data.transform(Matrix.Diagonal((size[0], size[1], size[2], 1.0)))
-        bev = box.modifiers.new("bev", "BEVEL")
-        bev.width = 0.07 if dy == 0 else 0.06
-        bev.segments = 4
-        apply_mods(box)
-        box.data.transform(rot_r(0, -40, 0).to_4x4())
-        box.data.transform(Matrix.Translation(R(0.62, -0.54 + dy, -0.22)))
-        bag.append(box)
-    o = join(bag, "Bag")
-    finish(o, 4000)
+                pts.append(hit + n * 0.02)
+        strap.append(tube(pts, 0.026, "strap"))
+    o = join(strap, "Strap")
+    finish(o, 2500)
     piece(o, "Root")
 
-    piece(fuse([ellipsoid((0, -0.72, 0.02), (0.52, 0.2, 0.42))], "Hips", voxel=0.02, smooth=0, tris=2500), "Root")
+    pouch = rounded_box((0.38, 0.32, 0.18), 0.09, segments=6, subdiv=1)
+    flap = rounded_box((0.4, 0.16, 0.2), 0.06, segments=5, subdiv=1)
+    flap.data.transform(Matrix.Translation(R(0, 0.1, -0.01)))
+    buckle = rounded_box((0.07, 0.07, 0.03), 0.015, segments=2, subdiv=0)
+    buckle.data.transform(Matrix.Translation(R(0, 0.04, -0.11)))
+    bag = join([pouch, flap, buckle], "Bag")
+    bag.data.transform(rot_r(0, -28, 0).to_4x4())
+    bag.data.transform(Matrix.Translation(R(0.56, -0.6, -0.36)))
+    finish(bag, 3000)
+    piece(bag, "Root")
+
+    # Shorts seat (mostly hidden under the hoodie hem).
+    piece(fuse([ellipsoid((0, -0.74, 0.02), (0.56, 0.2, 0.44))], "Hips", voxel=0.02, smooth=0, tris=2500), "Root")
 
 
 # ── ARM (arm-local: the sleeve's centre is the origin, hanging down) ────────
 def build_arm():
-    sleeve = fuse([ellipsoid((0, 0.02, 0), (0.22, 0.34, 0.22)), ellipsoid((0, 0.24, 0), (0.24, 0.16, 0.24))], "Sleeve", voxel=0.014, smooth=4, tris=2500)
+    # A straight, slightly loose sleeve with a rounded shoulder cap.
+    sleeve = fuse([
+        ellipsoid((0, 0.2, 0), (0.23, 0.16, 0.23)),
+        cone_between((0, 0.22, 0), (0, -0.24, 0), 0.215, 0.2, verts=40),
+    ], "Sleeve", voxel=0.014, smooth=5, tris=2500)
     piece(sleeve, "Arm")
     hs = sleeve.copy()
     hs.data = sleeve.data.copy()
@@ -486,7 +568,8 @@ def build_arm():
     hs.name = "HoodieSleeve"
     hs.data.name = "HoodieSleeve"
     piece(hs, "Arm", "fabric")
-    piece(fuse([ellipsoid((0, -0.26, 0), (0.235, 0.07, 0.235))], "Cuff", voxel=0.012, smooth=3, tris=1500), "Arm")
+    # Folded cuff: a short soft band a little wider than the sleeve.
+    piece(fuse([cone_between((0, -0.2, 0), (0, -0.3, 0), 0.225, 0.225, verts=40)], "Cuff", voxel=0.012, smooth=4, tris=1500), "Arm")
     hand = [ellipsoid((0, -0.44, -0.02), (0.2, 0.19, 0.2))]
     for k in (-1, 0, 1):
         hand.append(ellipsoid((0.08 * k, -0.55, -0.09), (0.06, 0.05, 0.06)))
@@ -499,7 +582,12 @@ def build_leg():
     for k in (-1, 0, 1):
         parts.append(ellipsoid((0.11 * k, -0.29, -0.41), (0.07, 0.07, 0.07)))
     piece(fuse(parts, "Leg", voxel=0.014, smooth=6, tris=3500), "Leg", "fur_plain")
-    piece(fuse([ellipsoid((0, 0.1, 0), (0.33, 0.22, 0.33))], "ShortsLeg", voxel=0.014, smooth=3, tris=2500), "Leg")
+    # Boxy shorts leg: a wide tube over the thigh with a turned-up hem.
+    shorts = [
+        cone_between((0, 0.3, 0), (0, -0.04, 0), 0.32, 0.36, verts=40),
+        cone_between((0, -0.01, 0), (0, -0.08, 0), 0.375, 0.375, verts=40),
+    ]
+    piece(fuse(shorts, "ShortsLeg", voxel=0.014, smooth=3, tris=2500), "Leg")
 
 
 # ── TAIL (tail-local: relative to the first tail joint) ──────────────────────
@@ -520,8 +608,8 @@ def build_tail():
 
 # ── texture baking ───────────────────────────────────────────────────────────
 TEX_SIZE = {"fur_head": 1024, "fur_plain": 512, "fabric": 1024, "knit": 512}
-JACKET = (58, 48, 70)
-SHIRT = (228, 150, 132)
+JACKET = (52, 46, 66)
+SHIRT = (236, 168, 148)
 
 
 def srgb(c):
@@ -565,16 +653,16 @@ def build_bake_material(obj, kind):
         fine.inputs["Scale"].default_value = 2
         strength, dist = 0.22, 0.02
     elif kind == "fabric":
-        nz.inputs["Scale"].default_value = 260
-        fine.inputs["Scale"].default_value = 9  # soft wrinkles
-        strength, dist = 0.35, 0.02
+        nz.inputs["Scale"].default_value = 300
+        fine.inputs["Scale"].default_value = 6  # very soft folds
+        strength, dist = 0.18, 0.015
     else:  # knit
         nz.inputs["Scale"].default_value = 420
         fine.inputs["Scale"].default_value = 30
         strength, dist = 0.3, 0.015
     height = N.new("ShaderNodeMath")
     height.operation = "MULTIPLY_ADD"
-    height.inputs[1].default_value = 0.35
+    height.inputs[1].default_value = 0.12 if kind == "fabric" else 0.35
     L.new(fine.outputs["Fac"], height.inputs[0])
     L.new(nz.outputs["Fac"], height.inputs[2])
     bump = N.new("ShaderNodeBump")
@@ -782,8 +870,8 @@ FLAT = {
     "EarTufts": (255, 248, 244), "InnerEar": (255, 158, 172), "Nose": (255, 140, 160), "Blush": (255, 196, 204),
     "Mouth": (120, 70, 74), "Brows": (228, 192, 170), "EyeWhite": (18, 16, 22), "Iris": (18, 58, 58),
     "IrisGlow": (60, 170, 150), "Pupil": (8, 8, 12), "Shine": (255, 255, 255), "Sleeve": JACKET, "Cuff": (46, 38, 56),
-    "Drawstrings": (246, 246, 250), "DogTag": (236, 238, 242), "Pocket": (214, 140, 80), "Bag": (150, 84, 58),
-    "Hips": (44, 40, 54), "ShortsLeg": (44, 40, 54), "Body": JACKET,
+    "Drawstrings": (246, 246, 250), "DogTag": (236, 238, 242), "Pocket": (214, 140, 80), "Bag": (158, 72, 56), "Strap": (184, 110, 62),
+    "Hips": (40, 38, 52), "ShortsLeg": (40, 38, 52), "Body": JACKET,
 }
 
 
