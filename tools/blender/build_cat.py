@@ -265,8 +265,8 @@ def piece(obj, anchor, tex=None):
 HR = (0.98, 0.86, 0.84)  # head radii: round, just a little wider than tall
 # The finished head (ears and face included) is shrunk and lowered onto the
 # collar at export, after baking (the texture masks use the unscaled shape).
-HEAD_SCALE = 0.72
-HEAD_DROP = 0.15
+HEAD_SCALE = 0.82
+HEAD_DROP = 0.07
 
 
 def build_head():

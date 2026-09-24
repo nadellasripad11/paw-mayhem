@@ -476,8 +476,8 @@ local HEAD_GEAR = {
 	Crown = true, CrownPoint = true, CrownGem = true, CrownJewel = true, Helmet = true, HelmetRing = true,
 	Lens = true, GlassesBridge = true,
 }
-local MESH_HEAD_SCALE = 0.62 -- mesh head vs the primitive head
-local MESH_HEAD_DROP = 0.15 -- the mesh head sits this much lower (on the collar)
+local MESH_HEAD_SCALE = 0.705 -- mesh head vs the primitive head
+local MESH_HEAD_DROP = 0.07 -- the mesh head sits this much lower (on the collar)
 local MESH_ANCHORS = { Head = true, Arm = true, Leg = true, Tail1 = true, Hand = true }
 local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = true, Pocket = true, Bag = true, Strap = true, Hardware = true, HoodieSleeve = true }
 
@@ -546,8 +546,8 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 					p.Size *= MESH_HEAD_SCALE
 				elseif p.Name == "ClosedEye" then
 					local side = j.C0.Position.X >= 0 and 1 or -1
-					j.C0 = CFrame.new(0.31 * side, -0.21, -0.565) * CFrame.Angles(0, math.rad(-19 * side), math.rad(-8 * side))
-					p.Size = Vector3.new(0.3, 0.045, 0.03)
+					j.C0 = CFrame.new(0.353 * side, -0.136, -0.64) * CFrame.Angles(0, math.rad(-19 * side), math.rad(-8 * side))
+					p.Size = Vector3.new(0.34, 0.05, 0.035)
 				end
 			end
 		end
