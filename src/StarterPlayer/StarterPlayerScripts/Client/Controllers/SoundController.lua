@@ -179,7 +179,7 @@ function SoundController.Start()
 		if typeof(data) ~= "table" then
 			return
 		end
-		if data.kind == "Tracer" and typeof(data.from) == "Vector3" then
+		if (data.kind == "Tracer" or data.kind == "Tracers") and typeof(data.from) == "Vector3" then
 			SoundController.PlayAt("Shoot", data.from, 0.9 + math.random() * 0.2)
 		elseif data.kind == "Burst" and typeof(data.position) == "Vector3" then
 			SoundController.PlayAt("Explosion", data.position)

@@ -750,8 +750,9 @@ local function rigFor(model: Model): PoseRig
 	return r
 end
 
--- Poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed.
-function CatBuilder.Pose(model: Model, t: number, move: number)
+-- Poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed;
+-- `air` (0..1) blends into a mid-air pose (legs split, arms out).
+function CatBuilder.Pose(model: Model, t: number, move: number, air: number?)
 	local rig = rigFor(model)
 	local j = rig.joints
 
@@ -765,27 +766,28 @@ function CatBuilder.Pose(model: Model, t: number, move: number)
 			p.Transparency = closed and 0 or 1
 		end
 	end
-	local walk = math.clamp(move, 0, 1)
+	local airborne = math.clamp(air or 0, 0, 1)
+	local walk = math.clamp(move, 0, 1) * (1 - airborne)
 	local phase = t * (7 + 5 * math.clamp(move, 0, 1.6))
 	local swing = math.sin(phase) * 0.65 * walk
 	local breathe = math.sin(t * 2.2)
-	local idle = 1 - walk
+	local idle = (1 - walk) * (1 - airborne)
 	local function set(name: string, rot: CFrame)
 		local e = j[name]
 		if e then
 			e.motor.C0 = e.base * rot
 		end
 	end
-	set("PawHipL", CFrame.Angles(swing, 0, 0))
-	set("PawHipR", CFrame.Angles(-swing, 0, 0))
+	set("PawHipL", CFrame.Angles(swing + 0.4 * airborne, 0, 0))
+	set("PawHipR", CFrame.Angles(-swing - 0.25 * airborne, 0, 0))
 	if rig.armed then
 		-- Arms stay on the blaster: a small breathing / step bob only.
 		local aim = CFrame.Angles(breathe * 0.02 + math.abs(math.cos(phase)) * 0.05 * walk, 0, 0)
 		set("PawShoulderL", aim)
 		set("PawShoulderR", aim)
 	else
-		set("PawShoulderL", CFrame.Angles(-swing * 0.8, 0, -(0.05 + breathe * 0.04) * idle))
-		set("PawShoulderR", CFrame.Angles(swing * 0.8, 0, (0.05 + breathe * 0.04) * idle))
+		set("PawShoulderL", CFrame.Angles(-swing * 0.8, 0, -(0.05 + breathe * 0.04) * idle - 0.7 * airborne))
+		set("PawShoulderR", CFrame.Angles(swing * 0.8, 0, (0.05 + breathe * 0.04) * idle + 0.7 * airborne))
 	end
 	set("PawNeck", CFrame.Angles(breathe * 0.025 + math.abs(math.cos(phase)) * 0.05 * walk, math.sin(t * 0.7) * 0.08 * idle, math.sin(t * 0.9) * 0.05 * idle))
 	set("PawTail", CFrame.Angles(math.sin(t * 1.6) * 0.1, math.sin(t * 2.4 + phase * walk * 0.5) * (0.3 + 0.2 * walk), 0))

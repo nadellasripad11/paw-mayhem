@@ -113,6 +113,11 @@ GameConfig.Movement = {
 	DashTime = 0.18,
 	DashCooldown = 2.5,
 	DoubleJumpSpeed = 50,
+	-- Airborne momentum after a hit's burst / an air dash: how much of the
+	-- velocity carries on, and how fast it eases off (per second).
+	KnockbackCarry = 0.75,
+	DashCarry = 0.5,
+	AirDrag = 1.4,
 }
 
 -- Kill streaks + bounties -----------------------------------------------------

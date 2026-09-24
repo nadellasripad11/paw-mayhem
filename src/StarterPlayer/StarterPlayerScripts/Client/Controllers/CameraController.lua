@@ -3,9 +3,13 @@
 -- Drives a Scriptable camera each frame (so Roblox's default camera yields) and
 -- feeds look input from mouse, right-side touch drag, and the gamepad's right
 -- stick. Exposes the current aim direction/ray for CombatController.
+-- Speed widens the view a little (sprint, dash, getting launched), and on
+-- touch / gamepad your aim eases onto a visible enemy near the crosshair
+-- while you're shooting.
 -- Movement stays on Roblox's default control module, which follows this camera.
 
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -26,6 +30,8 @@ local lobbyView = false
 local lookTouch: InputObject? = nil
 local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
+local fovBoost = 0 -- extra field of view from speed
+local assistUntil = 0 -- aim help runs while you've shot recently
 local parallax = Vector2.zero
 local camDist = 0
 
@@ -61,6 +67,68 @@ function CameraController.AddShake(amount: number)
 end
 
 local MIN_PITCH, MAX_PITCH = -1.2, 1.2
+
+-- Called for every local shot.
+function CameraController.OnShot()
+	assistUntil = os.clock() + 0.35
+end
+
+local function isEnemy(model: Model, char: Model): boolean
+	if model == char or not (Players:GetPlayerFromCharacter(model) or model:GetAttribute("IsBot")) then
+		return false
+	end
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	if not hum or hum.Health <= 0 then
+		return false
+	end
+	local match = require(script.Parent.Parent.ClientState).Match
+	if match and match.mode == "FFA" then
+		return true
+	end
+	local mine = char:GetAttribute("Team")
+	return mine == nil or model:GetAttribute("Team") ~= mine
+end
+
+-- Touch / gamepad aim help: while shooting, ease the view toward the visible
+-- enemy nearest the crosshair (only within a small circle round it).
+local function aimAssist(dt: number, char: Model)
+	if os.clock() > assistUntil then
+		return
+	end
+	local last = UserInputService:GetLastInputType()
+	if last ~= Enum.UserInputType.Touch and not string.find(last.Name, "Gamepad") then
+		return
+	end
+	local vp = camera.ViewportSize
+	local center = vp / 2
+	local radius = vp.Y * 0.11
+	local camPos = camera.CFrame.Position
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char }
+	local best: Vector3?, bestD = nil, radius
+	for _, m in ipairs(CollectionService:GetTagged("PawCat")) do
+		local r = m:IsA("Model") and m.PrimaryPart
+		if r and m:IsDescendantOf(Workspace) and isEnemy(m, char) and (r.Position - camPos).Magnitude < 160 then
+			local aimAt = r.Position + Vector3.new(0, 0.4, 0)
+			local sp, onScreen = camera:WorldToViewportPoint(aimAt)
+			local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+			if onScreen and d < bestD then
+				local hit = Workspace:Raycast(camPos, aimAt - camPos, params)
+				if not hit or hit.Instance:IsDescendantOf(m) then
+					best, bestD = sp, d
+				end
+			end
+		end
+	end
+	if not best then
+		return
+	end
+	local focal = (vp.Y / 2) / math.tan(math.rad(camera.FieldOfView) / 2)
+	local k = math.clamp(dt * 6, 0, 1) * 0.45 * (1 - 0.5 * bestD / radius)
+	yaw -= math.atan((best.X - center.X) / focal) * k
+	pitch = math.clamp(pitch - math.atan((best.Y - center.Y) / focal) * k, MIN_PITCH, MAX_PITCH)
+end
 
 local function isMobile()
 	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
@@ -205,9 +273,16 @@ local function step(dt: number)
 	end
 
 	updateGamepad(dt)
+	aimAssist(dt, char)
 
 	camera.CameraType = Enum.CameraType.Scriptable
-	camera.FieldOfView = require(script.Parent.Parent.ClientState).Settings.FieldOfView or GameConfig.Camera.FieldOfView
+	-- Speed kick: a little wider when sprinting, more when dashing or launched.
+	local v = root.AssemblyLinearVelocity
+	local speed = Vector3.new(v.X, 0, v.Z).Magnitude
+	local walk = GameConfig.Character.WalkSpeed
+	local wantBoost = math.clamp((speed - walk - 1) / 9, 0, 1) * 4 + math.clamp((speed - walk - 12) / 40, 0, 1) * 6
+	fovBoost += (wantBoost - fovBoost) * math.clamp(dt * 6, 0, 1)
+	camera.FieldOfView = (require(script.Parent.Parent.ClientState).Settings.FieldOfView or GameConfig.Camera.FieldOfView) + fovBoost
 
 	local focus = root.Position + Vector3.new(0, 1.5, 0)
 	local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)

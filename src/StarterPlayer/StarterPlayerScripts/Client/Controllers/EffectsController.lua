@@ -1,6 +1,8 @@
 --!strict
 -- EffectsController: world + screen VFX driven by server events.
 --   PlayEffect(Tracer)  -> neon bolt from muzzle to hit point
+--   PlayEffect(Tracers) -> one shot's pellets (other players' shots; your own
+--                          are drawn instantly by CombatController)
 --   YouWereHit          -> camera shake + red screen flash
 --   HitConfirm          -> hitmarker callback (HUD draws it)
 --   PowerUpTaken/Spawned -> pickup sparkle
@@ -273,6 +275,13 @@ local function confetti(pos: Vector3)
 	end)
 end
 
+-- Draw one shot's bolts (all its pellets) from the muzzle.
+function EffectsController.Tracers(from: Vector3, tos: { Vector3 }, color: Color3)
+	for _, to in ipairs(tos) do
+		drawTracer(from, to, color)
+	end
+end
+
 function EffectsController.Start()
 	Remotes.Get("PlayEffect").OnClientEvent:Connect(function(data)
 		if type(data) ~= "table" then
@@ -280,6 +289,14 @@ function EffectsController.Start()
 		end
 		if data.kind == "Tracer" then
 			drawTracer(data.from, data.to, data.color or Color3.fromRGB(180, 120, 255))
+		elseif data.kind == "Tracers" and typeof(data.from) == "Vector3" and type(data.tos) == "table" then
+			local tos = {}
+			for _, to in ipairs(data.tos) do
+				if typeof(to) == "Vector3" then
+					table.insert(tos, to)
+				end
+			end
+			EffectsController.Tracers(data.from, tos, data.color or Color3.fromRGB(180, 120, 255))
 		elseif data.kind == "Burst" and typeof(data.position) == "Vector3" then
 			burst(data.position, data.color or Color3.fromRGB(255, 204, 64))
 		elseif data.kind == "CoinRain" then

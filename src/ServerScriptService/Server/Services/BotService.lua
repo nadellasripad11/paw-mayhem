@@ -250,6 +250,9 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 	if not botId then return end
 	local bot = bots[botId]
 	if not bot or not bot.alive then return end
+	-- No friendly fire on your own team's bots (except Free For All).
+	local sState = Runtime.Get(shooter)
+	if Runtime.Mode ~= "FFA" and sState and sState.Team and sState.Team == bot.team then return end
 
 	bot.accumulated += weapon.Damage
 	if Runtime.Mode ~= "Ringout" then

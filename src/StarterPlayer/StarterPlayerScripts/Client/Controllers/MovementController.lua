@@ -2,8 +2,11 @@
 -- MovementController: everything about how your cat moves beyond Roblox's
 -- default walking (which follows our camera):
 --   * sprint toggle, plus the server's SpeedMult (Frost slow / Speed Boost)
---   * knockback the server sends us
+--   * knockback the server sends us, whose momentum carries you through the
+--     air (easing off) instead of stopping dead when the hit burst ends
 --   * dash (Q / gamepad B / mobile button) and a mid-air double jump
+--   * forgiving jumps: a short grace after walking off a ledge, and a jump
+--     pressed just before landing goes off as you land
 --   * jump pads (fling you along an arc to their target)
 --   * map-event wind that pushes you while you keep steering
 -- Airborne horizontal speed is held with a Plane LinearVelocity, because the
@@ -33,6 +36,12 @@ local doubleUsed = false
 local airborneSince = 0
 local padReadyAt = 0
 local pads: { [BasePart]: boolean } = {}
+local lastGroundAt = 0
+local jumpedSinceGround = false
+local jumpBufferUntil = 0
+local carryVel = Vector3.zero -- airborne momentum left over from a hit or dash
+local carryStart = 0
+local carryMover: LinearVelocity? = nil
 local wind = { dir = Vector3.zero, strength = 0, untilT = 0 }
 local windMover: LinearVelocity? = nil
 local windFx: Part? = nil
@@ -97,6 +106,25 @@ local function planeMover(root: BasePart, name: string, maxForce: number): Linea
 	return lv
 end
 
+-- Keep some horizontal momentum while airborne; it eases off and ends on
+-- landing (see carryStep).
+local function startCarry(vel: Vector3)
+	carryVel = Vector3.new(vel.X, 0, vel.Z)
+	carryStart = os.clock()
+end
+
+local function stopCarry()
+	carryVel = Vector3.zero
+	if carryMover then
+		carryMover:Destroy()
+		carryMover = nil
+	end
+end
+
+local function isAirborne(hum: Humanoid): boolean
+	return hum.FloorMaterial == Enum.Material.Air
+end
+
 -- Hold a horizontal velocity for `seconds`; gravity still handles vertical.
 local function holdHorizontal(root: BasePart, vel: Vector3, seconds: number, kind: string)
 	if mover then
@@ -109,6 +137,11 @@ local function holdHorizontal(root: BasePart, vel: Vector3, seconds: number, kin
 		lv:Destroy()
 		if mover == lv then
 			mover = nil
+			-- An air dash glides on instead of stopping dead.
+			local _, hum = parts()
+			if kind == "dash" and hum and isAirborne(hum) then
+				startCarry(vel * GameConfig.Movement.DashCarry)
+			end
 		end
 	end)
 end
@@ -156,6 +189,8 @@ local function launch(velocity: Vector3)
 	if velocity.Y > 2 then
 		hum:ChangeState(Enum.HumanoidStateType.Freefall)
 	end
+	-- After the burst, the flight keeps going (see carryStep).
+	startCarry(velocity * GameConfig.Movement.KnockbackCarry)
 	local duration = math.clamp(0.12 + velocity.Magnitude / 900, 0.12, 0.3)
 	task.delay(duration, function()
 		lv:Destroy()
@@ -230,6 +265,30 @@ local function tryDoubleJump()
 	ringFx(root.Position - Vector3.new(0, 1.4, 0), Color3.new(1, 1, 1), 5)
 end
 
+local COYOTE = 0.14 -- seconds after leaving a ledge you can still jump normally
+local BUFFER = 0.16 -- a jump pressed this long before landing still counts
+
+-- A jump press while airborne: the normal jump if you only just walked off a
+-- ledge, else the double jump, else remember it for when you land.
+local function airJump()
+	local root, hum = parts()
+	if not root or not hum or not isAirborne(hum) then
+		return
+	end
+	if not jumpedSinceGround and os.clock() - lastGroundAt < COYOTE then
+		jumpedSinceGround = true
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(v.X, hum.JumpPower, v.Z)
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+		return
+	end
+	if doubleUsed then
+		jumpBufferUntil = os.clock() + BUFFER
+		return
+	end
+	tryDoubleJump()
+end
+
 -- Jump from the mobile button: a normal jump on the ground, a double jump in the air.
 function MovementController.Jump()
 	local _, hum = parts()
@@ -239,7 +298,7 @@ function MovementController.Jump()
 	if hum.FloorMaterial ~= Enum.Material.Air then
 		hum.Jump = true
 	else
-		tryDoubleJump()
+		airJump()
 	end
 end
 
@@ -249,14 +308,26 @@ local function hookCharacter(char: Model)
 		return
 	end
 	doubleUsed = false
+	jumpedSinceGround = false
+	carryVel = Vector3.zero
 	hum.StateChanged:Connect(function(_, new)
 		if new == Enum.HumanoidStateType.Jumping or new == Enum.HumanoidStateType.Freefall then
 			if airborneSince == 0 then
 				airborneSince = os.clock()
 			end
+			if new == Enum.HumanoidStateType.Jumping then
+				jumpedSinceGround = true
+			end
 		elseif new == Enum.HumanoidStateType.Landed or new == Enum.HumanoidStateType.Running then
 			airborneSince = 0
 			doubleUsed = false
+			jumpedSinceGround = false
+			if os.clock() < jumpBufferUntil then
+				jumpBufferUntil = 0
+				task.defer(function()
+					hum.Jump = true
+				end)
+			end
 		end
 	end)
 end
@@ -267,6 +338,7 @@ local function padLaunch(pad: BasePart, root: BasePart, hum: Humanoid)
 	if typeof(target) ~= "Vector3" then
 		return
 	end
+	stopCarry()
 	local goal = target + Vector3.new(0, 1.6, 0) -- root rides ~1.4 above the ground
 	local p0 = root.Position
 	local flat = Vector3.new(goal.X - p0.X, 0, goal.Z - p0.Z)
@@ -314,7 +386,7 @@ local function windStep(root: BasePart, hum: Humanoid)
 	end
 	local wm = windMover :: LinearVelocity
 	-- Knockback, dashes and pad flights take priority over the wind.
-	wm.Enabled = activeLaunch == nil and mover == nil
+	wm.Enabled = activeLaunch == nil and mover == nil and carryMover == nil
 	local walk = hum.MoveDirection * hum.WalkSpeed
 	local push = walk + wind.dir * wind.strength
 	wm.PlaneVelocity = Vector2.new(push.X, push.Z)
@@ -349,8 +421,32 @@ local function windStep(root: BasePart, hum: Humanoid)
 	;(windFx :: Part).CFrame = CFrame.lookAt(cam, cam + wind.dir)
 end
 
+-- ── airborne momentum ────────────────────────────────────────────────────────
+local function carryStep(root: BasePart, hum: Humanoid, dt: number)
+	local age = os.clock() - carryStart
+	if carryVel.Magnitude < 3 or age > 3 or (age > 0.2 and not isAirborne(hum)) then
+		stopCarry()
+		return
+	end
+	carryVel *= math.exp(-GameConfig.Movement.AirDrag * dt)
+	if activeLaunch or mover then
+		if carryMover then
+			carryMover.Enabled = false
+		end
+		return -- the hit burst / dash / pad flight is in charge right now
+	end
+	if not carryMover or carryMover.Parent ~= root then
+		carryMover = planeMover(root, "AirCarry", root.AssemblyMass * 900)
+	end
+	local cm = carryMover :: LinearVelocity
+	cm.Enabled = true
+	-- You can still steer a little against the flight.
+	local v = carryVel + hum.MoveDirection * hum.WalkSpeed * 0.6
+	cm.PlaneVelocity = Vector2.new(v.X, v.Z)
+end
+
 -- ── per-frame ────────────────────────────────────────────────────────────────
-local function step()
+local function step(dt: number)
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	local root = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -365,8 +461,13 @@ local function step()
 	end
 	hum.WalkSpeed = base * mult
 	if hum.Health <= 0 then
+		stopCarry()
 		return
 	end
+	if not isAirborne(hum) then
+		lastGroundAt = os.clock()
+	end
+	carryStep(root, hum, dt)
 	-- A pad flight ends early once you touch down.
 	if mover and moverKind == "pad" and os.clock() - moverStart > 0.25 and hum.FloorMaterial ~= Enum.Material.Air then
 		mover:Destroy()
@@ -389,7 +490,7 @@ function MovementController.Start()
 		elseif key == Enum.KeyCode.Q or key == Enum.KeyCode.ButtonB then
 			MovementController.Dash()
 		elseif key == Enum.KeyCode.Space or key == Enum.KeyCode.ButtonA then
-			tryDoubleJump()
+			airJump()
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)

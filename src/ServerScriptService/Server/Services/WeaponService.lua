@@ -1,7 +1,10 @@
 --!strict
 -- WeaponService: server-authoritative combat.
 --   * Validates every shot (ownership, alive, fire-rate, rate limit).
---   * Performs raycast hit detection on the server (hitscan + client tracer).
+--   * Hit detection favours the shooter: the client says which cat each pellet
+--     hit on its screen, and the server accepts it when that cat is within a
+--     lag-sized distance of the shot line with no wall in between (otherwise
+--     it falls back to its own raycast).
 --   * Applies damage accumulation + physics knockback (the core mechanic).
 --   * Applies weapon status effects (Frost slow) and power-up modifiers.
 -- The client only sends origin/direction; it can never deal damage directly.
@@ -33,6 +36,9 @@ local lastFire: { [Player]: number } = {}
 local limiter = RateLimiter.new(20, 25)
 
 local MAX_ORIGIN_DRIFT = 14 -- studs the claimed origin may differ from the cat
+local HIT_TOLERANCE = 4.5 -- studs a claimed hit may sit off the shot line (network lag)
+local HIT_LEAD = 0.3 -- plus this many seconds of the target's speed
+local SPREAD_SLACK = 2.5 -- degrees a claimed pellet may stray beyond the weapon's cone
 
 local function getEquippedWeapon(player: Player)
 	-- A supply-drop weapon overrides the loadout for the rest of that life.
@@ -105,37 +111,85 @@ local function directionWithSpread(dir: Vector3, spreadDeg: number): Vector3
 	return (dir.Unit + right * math.tan(a) + realUp * math.tan(b)).Unit
 end
 
--- Fire a single pellet: raycast, and if it hits an enemy cat, resolve it.
-local function firePellet(player: Player, weapon, origin: Vector3, dir: Vector3, knockMult: number)
-	local char = player.Character
-	if not char then
-		return
+-- The cat (player or bot) an instance belongs to, if any.
+local function catModel(inst: Instance?): Model?
+	local m = inst and inst:FindFirstAncestorOfClass("Model")
+	while m and not m:FindFirstChildOfClass("Humanoid") do
+		m = m:FindFirstAncestorOfClass("Model")
 	end
+	return m
+end
+
+local function hitTarget(player: Player, model: Model, weapon, dir: Vector3, knockMult: number)
+	local victim = Players:GetPlayerFromCharacter(model)
+	if victim then
+		if victim ~= player then
+			WeaponService.ResolveHit(player, victim, weapon, dir, knockMult)
+		end
+	elseif model:GetAttribute("IsBot") and WeaponService.OnBotHit then
+		WeaponService.OnBotHit(player, model, weapon, dir)
+	end
+end
+
+-- Favour the shooter: accept the cat their client saw this pellet hit when,
+-- as the server sees it, that cat is within a lag-sized distance of the shot
+-- line, in range, and not behind a wall. Returns where the bolt should end.
+local function checkClaim(player: Player, claimed: Model, origin: Vector3, dir: Vector3, range: number, serverHit: RaycastResult?): Vector3?
+	if claimed == player.Character or not claimed:IsDescendantOf(Workspace) then
+		return nil
+	end
+	local hum = claimed:FindFirstChildOfClass("Humanoid")
+	local root = claimed.PrimaryPart
+	if not hum or hum.Health <= 0 or not root then
+		return nil
+	end
+	local rel = root.Position - origin
+	local along = rel:Dot(dir)
+	if along < 0 or along > range + 6 then
+		return nil
+	end
+	local off = (rel - dir * along).Magnitude
+	if off > HIT_TOLERANCE + root.AssemblyLinearVelocity.Magnitude * HIT_LEAD then
+		return nil
+	end
+	if serverHit and serverHit.Distance < along - 3 and not catModel(serverHit.Instance) then
+		return nil -- a wall is in the way
+	end
+	return origin + dir * along
+end
+
+-- Fire a single pellet and resolve whatever it hits. Returns the bolt's end.
+local function firePellet(player: Player, weapon, origin: Vector3, dir: Vector3, knockMult: number, claimed: Model?): Vector3
+	local char = player.Character
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { char }
+	params.FilterDescendantsInstances = { char :: Model }
 	params.IgnoreWater = true
 
 	local result = Workspace:Raycast(origin, dir * weapon.Range, params)
-	local hitPos = origin + dir * weapon.Range
-	if result then
-		hitPos = result.Position
-		local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
-		local victim = hitModel and Players:GetPlayerFromCharacter(hitModel)
-		if victim and victim ~= player then
-			WeaponService.ResolveHit(player, victim, weapon, dir, knockMult)
-		elseif hitModel and hitModel:GetAttribute("IsBot") and WeaponService.OnBotHit then
-			WeaponService.OnBotHit(player, hitModel, weapon, dir)
+	local serverModel = result and catModel(result.Instance)
+	if claimed and claimed ~= serverModel then
+		local at = checkClaim(player, claimed, origin, dir, weapon.Range, result)
+		if at then
+			hitTarget(player, claimed, weapon, dir, knockMult)
+			return at
 		end
 	end
+	if serverModel then
+		hitTarget(player, serverModel, weapon, dir, knockMult)
+	end
+	return result and result.Position or origin + dir * weapon.Range
+end
 
-	-- Tell everyone to draw a tracer bolt (visual only).
-	Remotes.Get("PlayEffect"):FireAllClients({
-		kind = "Tracer",
-		from = origin,
-		to = hitPos,
-		color = weapon.TrailColor,
-	})
+-- Everyone but the shooter draws the bolts (the shooter already drew them).
+local function broadcastTracers(shooter: Player, origin: Vector3, tos: { Vector3 }, color: Color3)
+	local data = { kind = "Tracers", from = origin, tos = tos, color = color }
+	local remote = Remotes.Get("PlayEffect")
+	for _, other in ipairs(Players:GetPlayers()) do
+		if other ~= shooter then
+			remote:FireClient(other, data)
+		end
+	end
 end
 
 -- The victim's client owns its character's physics, so the launch is sent to
@@ -263,11 +317,27 @@ function WeaponService.HandleFire(player: Player, payload)
 	end
 	baseDir = baseDir.Unit
 
-	local pellets = weapon.Pellets + extraPellets
-	for _ = 1, pellets do
-		local dir = directionWithSpread(baseDir, weapon.Spread + spreadAdd)
-		firePellet(player, weapon, origin, dir, knockbackMult)
+	-- Each pellet: the client's direction and hit claim when it's inside the
+	-- weapon's cone, else a server-rolled direction.
+	local claims = type(payload.pellets) == "table" and payload.pellets or nil
+	local maxAngle = math.rad(weapon.Spread + spreadAdd + SPREAD_SLACK)
+	local tos = {}
+	for i = 1, weapon.Pellets + extraPellets do
+		local dir, claimed = nil, nil
+		local c = claims and claims[i]
+		if type(c) == "table" and typeof(c.dir) == "Vector3" and c.dir.Magnitude > 0.01 then
+			local d = c.dir.Unit
+			if math.acos(math.clamp(d:Dot(baseDir), -1, 1)) <= maxAngle then
+				dir = d
+				if typeof(c.hit) == "Instance" and c.hit:IsA("Model") then
+					claimed = c.hit
+				end
+			end
+		end
+		dir = dir or directionWithSpread(baseDir, weapon.Spread + spreadAdd)
+		table.insert(tos, firePellet(player, weapon, origin, dir, knockbackMult, claimed))
 	end
+	broadcastTracers(player, origin, tos, weapon.TrailColor)
 end
 
 function WeaponService.Start()
