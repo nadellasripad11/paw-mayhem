@@ -371,17 +371,36 @@ JACKET_RINGS = [
     (0.12, 0.68, 0.53), (-0.08, 0.68, 0.54), (-0.3, 0.69, 0.55), (-0.5, 0.71, 0.56),
     (-0.66, 0.73, 0.57),
 ]
+HEM_Y = -0.66
 
 
-def lofted_shell(rings, segs=64):
-    """Open tube through elliptical rings (Roblox y, rx, rz), no caps."""
+def opening_half(y):
+    """Half-width of the hoodie's open front at height y."""
+    return 0.11 + (0.42 - y) * 0.1
+
+
+def ring_at(y):
+    """Interpolated (rx, rz) of the hoodie profile at height y."""
+    for (y0, rx0, rz0), (y1, rx1, rz1) in zip(JACKET_RINGS, JACKET_RINGS[1:]):
+        if y1 <= y <= y0:
+            t = (y0 - y) / (y0 - y1)
+            return rx0 + (rx1 - rx0) * t, rz0 + (rz1 - rz0) * t
+    return JACKET_RINGS[-1][1], JACKET_RINGS[-1][2]
+
+
+def lofted_shell(rings, segs=64, drape=0.0):
+    """Open tube through elliptical rings (Roblox y, rx, rz), no caps.
+    `drape` adds hanging vertical folds that grow towards the hem."""
     bm = bmesh.new()
     rows = []
+    top = rings[0][0]
     for y, rx, rz in rings:
+        t = max(0.0, min(1.0, (0.15 - y) / (0.15 - HEM_Y)))
         row = []
         for k in range(segs):
             a = 2 * math.pi * k / segs
-            row.append(bm.verts.new(R(math.sin(a) * rx, y, -math.cos(a) * rz)))
+            wave = 1 + drape * t * (0.7 * math.sin(7 * a + 0.6) + 0.3 * math.sin(12 * a + 2.1))
+            row.append(bm.verts.new(R(math.sin(a) * rx * wave, y, -math.cos(a) * rz * wave)))
         rows.append(row)
     for r in range(len(rows) - 1):
         for k in range(segs):
@@ -395,6 +414,19 @@ def lofted_shell(rings, segs=64):
     o = bpy.data.objects.new("shell", me)
     bpy.context.collection.objects.link(o)
     return o
+
+
+def crumple(obj, strength=0.03, scale=0.3, name="folds"):
+    """Soft irregular fabric undulation (displace along normals)."""
+    tex = bpy.data.textures.new(name, "CLOUDS")
+    tex.noise_scale = scale
+    tex.noise_depth = 2
+    d = obj.modifiers.new("crumple", "DISPLACE")
+    d.texture = tex
+    d.strength = strength
+    d.mid_level = 0.5
+    d.texture_coords = "GLOBAL"
+    apply_mods(obj)
 
 
 def front_most(surfs, x, y):
@@ -424,49 +456,75 @@ def rounded_box(size_r, bevel, segments=5, subdiv=1, local=False):
     return o
 
 
+def ring_tube(y, radius, lift, skip_front=True, tilt=0.0, name="ring"):
+    """A soft bead running round the hoodie at height y."""
+    rx, rz = ring_at(y)
+    edge = math.asin(min(1.0, opening_half(y) / rx)) if skip_front else 0.0
+    pts = []
+    n = 40
+    for k in range(n + 1):
+        a = edge + (2 * math.pi - 2 * edge) * k / n
+        pts.append(R(math.sin(a) * (rx + lift), y + tilt * math.cos(a), -math.cos(a) * (rz + lift)))
+    return tube(pts, radius, name)
+
+
 def build_body():
-    piece(fuse([ellipsoid(TORSO_C, TORSO_R)], "Body", voxel=0.02, smooth=0, tris=3000), "Root")
+    piece(fuse([ellipsoid(TORSO_C, TORSO_R)], "Body", voxel=0.02, smooth=0, tris=3000), "Root", ("cloth", (255, 255, 255)))
 
     # Peach tee underneath, with a soft crew neck.
     shirt = fuse([
         ellipsoid((0, -0.14, -0.01), (0.62, 0.55, 0.49)),
         ellipsoid((0, 0.34, -0.06), (0.3, 0.09, 0.26)),
     ], "Shirt", voxel=0.02, smooth=3, tris=3500)
-    piece(shirt, "Root", "knit")
+    crumple(shirt, 0.012, 0.2, "teefolds")
+    piece(shirt, "Root", ("knit", SHIRT))
 
-    # Hoodie: a lofted garment shell, open down the front, with thickness.
-    shell = lofted_shell(JACKET_RINGS)
+    # Hoodie: lofted garment shell with drape folds, open down the front.
+    shell = lofted_shell(JACKET_RINGS, drape=0.035)
     sub = shell.modifiers.new("sub", "SUBSURF")
-    sub.levels = 1
+    sub.levels = 2
     apply_mods(shell)
     bm = bmesh.new()
     bm.from_mesh(shell.data)
     kill = []
     for face in bm.faces:
         x, y, z = rb(face.calc_center_median())
-        half = 0.11 + (0.42 - y) * 0.1  # opening widens gently towards the hem
-        if z < -0.15 and abs(x) < half:
+        if z < -0.15 and abs(x) < opening_half(y):
             kill.append(face)
     bmesh.ops.delete(bm, geom=list(set(kill)), context="FACES")
     bm.to_mesh(shell.data)
     bm.free()
+    crumple(shell, 0.04, 0.32, "jacketfolds")
     so = shell.modifiers.new("solid", "SOLIDIFY")
     so.thickness = 0.05
     so.offset = 1.0
     so.use_rim = True
     apply_mods(shell)
     parts = [shell]
-    # Hood: a soft roll around the back of the neck whose ends come round to
-    # the front, bunched fabric behind.
+    # Thick rounded front edges (so the fabric has visible depth) + hem.
+    for i in (-1, 1):
+        pts = []
+        for k in range(14):
+            y = 0.42 - (0.42 - HEM_Y) * k / 13
+            rx, rz = ring_at(y)
+            x = opening_half(y) + 0.01
+            z = -rz * math.sqrt(max(0.0, 1 - (x / rx) ** 2)) - 0.03
+            pts.append(R(x * i, y, z))
+        parts.append(tube(pts, 0.036, "placket"))
+    parts.append(ring_tube(HEM_Y + 0.01, 0.034, 0.028, name="hem"))
+    # Hood: a soft roll round the back of the neck whose ends come round to
+    # the front, with bunched, creased fabric behind.
     roll = []
     for k in range(11):
-        a = math.pi * (-0.8 + 1.6 * k / 10)  # from front-left, round the back, to front-right
-        roll.append(R(math.sin(a) * 0.4, 0.43 + 0.04 * math.cos(a), math.cos(a) * 0.34 + 0.02))
-    parts.append(tube(roll, 0.1, "hoodroll"))
-    parts.append(ellipsoid((0, 0.38, 0.4), (0.46, 0.22, 0.2)))
-    parts.append(ellipsoid((0, 0.2, 0.5), (0.34, 0.2, 0.14)))
-    jacket = fuse(parts, "Jacket", voxel=0.016, smooth=4, tris=10000)
-    piece(jacket, "Root", "fabric")
+        a = math.pi * (-0.8 + 1.6 * k / 10)
+        roll.append(R(math.sin(a) * 0.41, 0.43 + 0.05 * math.cos(a), math.cos(a) * 0.35 + 0.02))
+    parts.append(tube(roll, 0.115, "hoodroll"))
+    parts.append(ellipsoid((0, 0.38, 0.42), (0.48, 0.23, 0.21)))
+    parts.append(ellipsoid((0, 0.2, 0.52), (0.36, 0.22, 0.15)))
+    for dx, dy in ((-0.2, 0.3), (0.18, 0.26), (0.0, 0.1)):
+        parts.append(ellipsoid((dx, dy, 0.58), (0.12, 0.08, 0.07)))
+    jacket = fuse(parts, "Jacket", voxel=0.015, smooth=3, tris=12000)
+    piece(jacket, "Root", ("cloth", JACKET))
     jsurf = Surface(jacket)
     ssurf = Surface(shirt)
 
@@ -476,13 +534,13 @@ def build_body():
         pts = []
         for y in (0.33, 0.18, 0.03, -0.12, -0.24):
             hit, n = front_most([jsurf, ssurf], 0.13 * i, y)
-            pts.append(hit + n * 0.03)
-        strings.append(tube(pts, 0.02, "string"))
+            pts.append(hit + n * 0.035)
+        strings.append(tube(pts, 0.021, "string"))
         hit, n = front_most([jsurf, ssurf], 0.13 * i, -0.3)
-        strings.append(disc(hit, n, 0.03, 0.06, 0.03, 0.03))
+        strings.append(disc(hit, n, 0.032, 0.065, 0.032, 0.035))
     o = join(strings, "Drawstrings")
-    finish(o, 2000)
-    piece(o, "Root")
+    finish(o, 2500)
+    piece(o, "Root", ("cord", (246, 246, 250)))
 
     # Dog tag: a rounded rectangle on a thin chain, resting on the tee.
     tag = []
@@ -502,31 +560,30 @@ def build_body():
     finish(o, 1500)
     piece(o, "Root")
 
-    # Tan patch pocket with a flap (lower front, your right as you face the cat)
+    # Puffy patch pocket with a flap that stands proud of it.
     hit, n = jsurf.toward((-0.44, -0.44, -2), (0, 0, 1))
     f = frame_at(hit, n).to_4x4()
-    pocket = rounded_box((0.3, 0.26, 0.035), 0.025, segments=3, subdiv=0, local=True)
+    pocket = rounded_box((0.3, 0.26, 0.06), 0.03, segments=4, subdiv=1, local=True)
     pocket.data.transform(f)
-    pocket.data.transform(Matrix.Translation(hit + n * 0.015))
-    flap = rounded_box((0.32, 0.08, 0.04), 0.02, segments=3, subdiv=0, local=True)
-    flap.data.transform(Matrix.Translation(Vector((0, 0.13, 0.01))))
+    pocket.data.transform(Matrix.Translation(hit + n * 0.012))
+    flap = rounded_box((0.33, 0.1, 0.05), 0.025, segments=4, subdiv=1, local=True)
+    flap.data.transform(Matrix.Translation(Vector((0, 0.12, 0.035))))
     flap.data.transform(f)
-    flap.data.transform(Matrix.Translation(hit + n * 0.02))
+    flap.data.transform(Matrix.Translation(hit + n * 0.012))
     o = join([pocket, flap], "Pocket")
-    finish(o, 1500)
-    piece(o, "Root")
+    finish(o, 2000)
+    piece(o, "Root", ("canvas", (214, 140, 80)))
 
-    # Thin crossbody strap: from your right shoulder, across the chest, down
-    # to a small rounded pouch on the other hip (and back round behind).
-    # The strap stretches straight over the open front, so it follows the
-    # hoodie's outer surface as if it were closed (a temporary proxy).
-    proxy = lofted_shell([(y, rx + 0.05, rz + 0.05) for y, rx, rz in JACKET_RINGS])
+    # Crossbody strap stretched straight over the open front (it follows the
+    # hoodie's outer surface as if closed), with a buckle slider.
+    proxy = lofted_shell([(y, rx + 0.07, rz + 0.07) for y, rx, rz in JACKET_RINGS])
     psub = proxy.modifiers.new("sub", "SUBSURF")
     psub.levels = 1
     apply_mods(proxy)
     psurf = Surface(proxy)
     bpy.data.objects.remove(proxy)
     strap = []
+    front_pts = []
     for start_z, direction in ((-2, 1), (2, -1)):
         pts = []
         for k in range(17):
@@ -534,42 +591,70 @@ def build_body():
             hit, n = psurf.toward((-0.5 + t * 0.98, 0.32 - t * 0.8, start_z), (0, 0, direction))
             if hit:
                 pts.append(hit + n * 0.02)
-        strap.append(tube(pts, 0.026, "strap"))
+        strap.append(tube(pts, 0.028, "strap"))
+        if start_z < 0:
+            front_pts = pts
+    if len(front_pts) > 5:
+        a, b = front_pts[4], front_pts[5]
+        hit, n = psurf.toward((-0.5 + 0.28 * 0.98, 0.32 - 0.28 * 0.8, -2), (0, 0, 1))
+        along = (b - a).normalized()
+        side = n.cross(along).normalized()
+        m = Matrix((side, along, n.normalized())).transposed().to_4x4()
+        slider = rounded_box((0.1, 0.08, 0.05), 0.018, segments=3, subdiv=0, local=True)
+        slider.data.transform(m)
+        slider.data.transform(Matrix.Translation(a.lerp(b, 0.5) + n * 0.01))
+        strap.append(slider)
     o = join(strap, "Strap")
-    finish(o, 2500)
-    piece(o, "Root")
+    finish(o, 3000)
+    piece(o, "Root", ("leather", (184, 110, 62)))
 
     pouch = rounded_box((0.38, 0.32, 0.18), 0.09, segments=6, subdiv=1)
     flap = rounded_box((0.4, 0.16, 0.2), 0.06, segments=5, subdiv=1)
-    flap.data.transform(Matrix.Translation(R(0, 0.1, -0.01)))
+    flap.data.transform(Matrix.Translation(R(0, 0.1, -0.015)))
     buckle = rounded_box((0.07, 0.07, 0.03), 0.015, segments=2, subdiv=0)
-    buckle.data.transform(Matrix.Translation(R(0, 0.04, -0.11)))
+    buckle.data.transform(Matrix.Translation(R(0, 0.04, -0.12)))
     bag = join([pouch, flap, buckle], "Bag")
     bag.data.transform(rot_r(0, -28, 0).to_4x4())
     bag.data.transform(Matrix.Translation(R(0.56, -0.6, -0.36)))
     finish(bag, 3000)
-    piece(bag, "Root")
+    piece(bag, "Root", ("leather", (158, 72, 56)))
 
     # Shorts seat (mostly hidden under the hoodie hem).
-    piece(fuse([ellipsoid((0, -0.74, 0.02), (0.56, 0.2, 0.44))], "Hips", voxel=0.02, smooth=0, tris=2500), "Root")
+    hips = fuse([ellipsoid((0, -0.74, 0.02), (0.56, 0.2, 0.44))], "Hips", voxel=0.02, smooth=0, tris=2500)
+    piece(hips, "Root", ("cloth", (255, 255, 255)))
 
 
 # ── ARM (arm-local: the sleeve's centre is the origin, hanging down) ────────
 def build_arm():
-    # A straight, slightly loose sleeve with a rounded shoulder cap.
-    sleeve = fuse([
+    # A straight, slightly loose sleeve with a rounded shoulder cap and soft
+    # fabric bunched above the cuff.
+    parts = [
         ellipsoid((0, 0.2, 0), (0.23, 0.16, 0.23)),
         cone_between((0, 0.22, 0), (0, -0.24, 0), 0.215, 0.2, verts=40),
-    ], "Sleeve", voxel=0.014, smooth=5, tris=2500)
-    piece(sleeve, "Arm")
+    ]
+    for y, tilt, roll in ((-0.12, 14, 6), (-0.04, -9, -10)):
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.2, minor_radius=0.018, major_segments=40, minor_segments=10)
+        ring = bpy.context.active_object
+        ring.data.transform(Matrix.Rotation(math.radians(tilt), 4, "X"))
+        ring.data.transform(Matrix.Rotation(math.radians(roll), 4, "Y"))
+        ring.data.transform(Matrix.Translation(R(0, y, 0)))
+        parts.append(ring)
+    sleeve = fuse(parts, "Sleeve", voxel=0.012, smooth=4, tris=3500)
+    crumple(sleeve, 0.02, 0.12, "sleevefolds")
+    piece(sleeve, "Arm", ("cloth", (255, 255, 255)))
     hs = sleeve.copy()
     hs.data = sleeve.data.copy()
     bpy.context.collection.objects.link(hs)
     hs.name = "HoodieSleeve"
     hs.data.name = "HoodieSleeve"
-    piece(hs, "Arm", "fabric")
-    # Folded cuff: a short soft band a little wider than the sleeve.
-    piece(fuse([cone_between((0, -0.2, 0), (0, -0.3, 0), 0.225, 0.225, verts=40)], "Cuff", voxel=0.012, smooth=4, tris=1500), "Arm")
+    piece(hs, "Arm", ("cloth", JACKET))
+    # Folded cuff with a rounded turned-back edge.
+    cuff = [cone_between((0, -0.2, 0), (0, -0.3, 0), 0.228, 0.228, verts=40)]
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.228, minor_radius=0.022, major_segments=40, minor_segments=10)
+    lip = bpy.context.active_object
+    lip.data.transform(Matrix.Translation(R(0, -0.2, 0)))
+    cuff.append(lip)
+    piece(fuse(cuff, "Cuff", voxel=0.011, smooth=3, tris=2000), "Arm", ("cloth", (255, 255, 255)))
     hand = [ellipsoid((0, -0.44, -0.02), (0.2, 0.19, 0.2))]
     for k in (-1, 0, 1):
         hand.append(ellipsoid((0.08 * k, -0.55, -0.09), (0.06, 0.05, 0.06)))
@@ -582,12 +667,15 @@ def build_leg():
     for k in (-1, 0, 1):
         parts.append(ellipsoid((0.11 * k, -0.29, -0.41), (0.07, 0.07, 0.07)))
     piece(fuse(parts, "Leg", voxel=0.014, smooth=6, tris=3500), "Leg", "fur_plain")
-    # Boxy shorts leg: a wide tube over the thigh with a turned-up hem.
-    shorts = [
-        cone_between((0, 0.3, 0), (0, -0.04, 0), 0.32, 0.36, verts=40),
-        cone_between((0, -0.01, 0), (0, -0.08, 0), 0.375, 0.375, verts=40),
-    ]
-    piece(fuse(shorts, "ShortsLeg", voxel=0.014, smooth=3, tris=2500), "Leg")
+    # Boxy shorts leg: a wide tube over the thigh with a rolled, turned-up hem.
+    shorts = [cone_between((0, 0.3, 0), (0, -0.03, 0), 0.32, 0.36, verts=48)]
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.36, minor_radius=0.03, major_segments=48, minor_segments=10)
+    hem = bpy.context.active_object
+    hem.data.transform(Matrix.Translation(R(0, -0.035, 0)))
+    shorts.append(hem)
+    s = fuse(shorts, "ShortsLeg", voxel=0.012, smooth=3, tris=3000)
+    crumple(s, 0.018, 0.14, "shortsfolds")
+    piece(s, "Leg", ("cloth", (255, 255, 255)))
 
 
 # ── TAIL (tail-local: relative to the first tail joint) ──────────────────────
@@ -607,7 +695,8 @@ def build_tail():
 
 
 # ── texture baking ───────────────────────────────────────────────────────────
-TEX_SIZE = {"fur_head": 1024, "fur_plain": 512, "fabric": 1024, "knit": 512}
+TEX_SIZE = {"fur_head": 1024, "fur_plain": 512, "cloth": 512, "knit": 512, "leather": 512, "canvas": 256, "cord": 256}
+CLOTH_KINDS = ("cloth", "knit", "leather", "canvas", "cord")
 JACKET = (52, 46, 66)
 SHIRT = (236, 168, 148)
 
@@ -627,7 +716,7 @@ def unwrap(obj):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def build_bake_material(obj, kind):
+def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
     """Procedural fur / fabric shader: height (for the normal bake) and an
     albedo emitted for the colour bake."""
     mat = bpy.data.materials.new(obj.name + "_bake")
@@ -652,17 +741,30 @@ def build_bake_material(obj, kind):
         nz.inputs["Detail"].default_value = 3
         fine.inputs["Scale"].default_value = 2
         strength, dist = 0.22, 0.02
-    elif kind == "fabric":
-        nz.inputs["Scale"].default_value = 300
+    elif kind == "cloth":
+        nz.inputs["Scale"].default_value = 300  # cotton weave
         fine.inputs["Scale"].default_value = 6  # very soft folds
-        strength, dist = 0.18, 0.015
+        strength, dist = 0.2, 0.015
+    elif kind == "leather":
+        nz.inputs["Scale"].default_value = 90  # pebbled grain
+        fine.inputs["Scale"].default_value = 14
+        strength, dist = 0.25, 0.012
+    elif kind == "canvas":
+        nz.inputs["Scale"].default_value = 380
+        fine.inputs["Scale"].default_value = 8
+        strength, dist = 0.22, 0.012
+    elif kind == "cord":
+        mp.inputs["Scale"].default_value = (1, 1, 6)  # twisted cord
+        nz.inputs["Scale"].default_value = 160
+        fine.inputs["Scale"].default_value = 30
+        strength, dist = 0.25, 0.01
     else:  # knit
         nz.inputs["Scale"].default_value = 420
         fine.inputs["Scale"].default_value = 30
         strength, dist = 0.3, 0.015
     height = N.new("ShaderNodeMath")
     height.operation = "MULTIPLY_ADD"
-    height.inputs[1].default_value = 0.12 if kind == "fabric" else 0.35
+    height.inputs[1].default_value = 0.12 if kind in ("cloth", "canvas") else 0.35
     L.new(fine.outputs["Fac"], height.inputs[0])
     L.new(nz.outputs["Fac"], height.inputs[2])
     bump = N.new("ShaderNodeBump")
@@ -674,9 +776,12 @@ def build_bake_material(obj, kind):
 
     # Albedo: base * strand variation * ambient occlusion
     ao = N.new("ShaderNodeAmbientOcclusion")
-    ao.inputs["Distance"].default_value = 0.25
+    cloth = kind in CLOTH_KINDS
+    # Clothes get deeper contact shadows: creases, under the hood and pocket
+    # flap, inside the open front, where the strap sits.
+    ao.inputs["Distance"].default_value = 0.3 if cloth else 0.25
     aof = N.new("ShaderNodeMapRange")
-    aof.inputs["To Min"].default_value = 0.8
+    aof.inputs["To Min"].default_value = 0.5 if cloth else 0.8
     L.new(ao.outputs["AO"], aof.inputs["Value"])
     var = N.new("ShaderNodeMapRange")
     var.inputs["To Min"].default_value = 0.94 if kind.startswith("fur") else 0.9
@@ -686,12 +791,8 @@ def build_bake_material(obj, kind):
     L.new(aof.outputs["Result"], shade.inputs[0])
     L.new(var.outputs["Result"], shade.inputs[1])
     base = N.new("ShaderNodeRGB")
-    if kind == "fabric":
-        base.outputs[0].default_value = srgb(JACKET)
-    elif kind == "knit":
-        base.outputs[0].default_value = srgb(SHIRT)
-    else:
-        base.outputs[0].default_value = (1, 1, 1, 1)  # tinted in Roblox
+    # White = tinted with the player's colour in Roblox; otherwise baked in.
+    base.outputs[0].default_value = srgb(base_rgb)
     albedo = N.new("ShaderNodeMix")
     albedo.data_type = "RGBA"
     albedo.blend_type = "MULTIPLY"
@@ -776,11 +877,12 @@ def build_bake_material(obj, kind):
     return mat, out, bsdf, emit, img_node
 
 
-def bake(obj, kind):
+def bake(obj, tex):
+    kind, base_rgb = (tex, (255, 255, 255)) if isinstance(tex, str) else tex
     os.makedirs(TEX_DIR, exist_ok=True)
     unwrap(obj)
-    mat, out, bsdf, emit, img_node = build_bake_material(obj, kind)
-    size = TEX_SIZE[kind]
+    mat, out, bsdf, emit, img_node = build_bake_material(obj, kind, base_rgb)
+    size = 1024 if obj.name == "Jacket" else TEX_SIZE[kind]
     nt = mat.node_tree
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
@@ -865,6 +967,7 @@ def export():
 # ── preview render (assembled, reference colours) ───────────────────────────
 TINT = {
     "HeadFur": (255, 236, 224), "Ears": (255, 236, 224), "Hand": (255, 236, 224), "Leg": (255, 236, 224), "Tail": (255, 236, 224),
+    "Hips": (40, 38, 52), "ShortsLeg": (40, 38, 52), "Cuff": (40, 36, 52), "Sleeve": JACKET, "Body": JACKET,
 }
 FLAT = {
     "EarTufts": (255, 248, 244), "InnerEar": (255, 158, 172), "Nose": (255, 140, 160), "Blush": (255, 196, 204),
@@ -953,6 +1056,11 @@ def preview():
         scene.view_settings.view_transform = "Standard"
     except Exception:
         pass
+    for attr in ("use_gtao", "use_shadows"):
+        try:
+            setattr(scene.eevee, attr, True)
+        except Exception:
+            pass
     scene.render.resolution_x = 700
     scene.render.resolution_y = 900
     world = bpy.data.worlds.new("w")
@@ -960,8 +1068,8 @@ def preview():
     bg = world.node_tree.nodes.get("Background")
     bg.inputs["Color"].default_value = (0.012, 0.018, 0.04, 1)
     scene.world = world
-    light("key", "AREA", (4, 6, -7), 900, 6)
-    light("fill", "AREA", (-6, 2, -5), 350, 6)
+    light("key", "AREA", (4, 6, -7), 1100, 5)
+    light("fill", "AREA", (-6, 2, -5), 260, 7)
     light("rim", "AREA", (0, 5, 7), 500, 5, (0.8, 0.9, 1.0))
     light("amb", "SUN", (0, 10, -3), 1.2)
     cam_data = bpy.data.cameras.new("cam")
