@@ -264,14 +264,7 @@ HR = (1.08, 0.84, 0.88)  # head radii
 def build_head():
     parts = [ellipsoid((0, 0.02, 0), HR)]
     for i in (-1, 1):
-        parts.append(ellipsoid((0.5 * i, -0.3, -0.26), (0.44, 0.34, 0.4)))  # full cheeks
-        # Soft fluffy fringe low on the jaw (not beside the eyes): short clumps
-        # that sweep out and down.
-        for k in range(3):
-            t = k / 2
-            base = (0.86 * i - 0.12 * t * i, -0.34 - 0.18 * t, -0.12 + 0.02 * k)
-            tip = (base[0] + 0.15 * i, base[1] - 0.1, base[2])
-            parts.append(cone_between(base, tip, 0.13, 0.08))
+        parts.append(ellipsoid((0.5 * i, -0.3, -0.26), (0.44, 0.34, 0.4)))  # full, smooth cheeks
     head = fuse(parts, "HeadFur", voxel=0.018, smooth=10, tris=9000)
     # A little tuft of loose strands on top (kept as strands, not fused).
     surf = Surface(head)
@@ -335,16 +328,16 @@ def build_head():
 
     # Eyes: round, a touch taller than wide; mostly dark with a green glow at
     # the bottom, a big shine upper-left and a small one lower-right.
-    EX, EY = 0.45, -0.07
+    EX, EY = 0.46, -0.09
     layers = {"EyeWhite": [], "Iris": [], "IrisGlow": [], "Pupil": [], "Shine": []}
     for i in (-1, 1):
         x = EX * i
-        layers["EyeWhite"].append(decal(ellipse_pts(0.25, 0.28), surf, head, x, EY, 0.006, 0.01))
-        layers["Iris"].append(decal(ellipse_pts(0.225, 0.255), surf, head, x, EY, 0.014, 0.008))
-        layers["IrisGlow"].append(decal(ellipse_pts(0.18, 0.1), surf, head, x, EY - 0.125, 0.02, 0.008))
-        layers["Pupil"].append(decal(ellipse_pts(0.16, 0.18), surf, head, x, EY + 0.03, 0.026, 0.008))
-        layers["Shine"].append(decal(ellipse_pts(0.085, 0.095), surf, head, x + 0.08, EY + 0.1, 0.034, 0.008))
-        layers["Shine"].append(decal(ellipse_pts(0.04, 0.04), surf, head, x - 0.09, EY - 0.12, 0.034, 0.008))
+        layers["EyeWhite"].append(decal(ellipse_pts(0.26, 0.295), surf, head, x, EY, 0.006, 0.01))
+        layers["Iris"].append(decal(ellipse_pts(0.235, 0.265), surf, head, x, EY, 0.014, 0.008))
+        layers["IrisGlow"].append(decal(ellipse_pts(0.185, 0.1), surf, head, x, EY - 0.14, 0.02, 0.008))
+        layers["Pupil"].append(decal(ellipse_pts(0.195, 0.22), surf, head, x, EY + 0.015, 0.026, 0.008))
+        layers["Shine"].append(decal(ellipse_pts(0.09, 0.1), surf, head, x + 0.085, EY + 0.11, 0.034, 0.008))
+        layers["Shine"].append(decal(ellipse_pts(0.045, 0.045), surf, head, x - 0.095, EY - 0.13, 0.034, 0.008))
     for name, objs in layers.items():
         add(name, objs)
 
@@ -358,16 +351,14 @@ def build_head():
     add("Brows", brows, 1200)
 
     add("Nose", [decal([(-0.075, 0.04), (0.075, 0.04), (0.0, -0.06)], surf, head, 0, -0.26, 0.008, 0.032, subdiv=3)], 1000)
-    arcs = []
-    for i in (-1, 1):
-        pts = []
-        for k in range(5):
-            a = math.pi * k / 4
-            hit, n = surf.front(0.04 * i + 0.04 * math.cos(a) * i, -0.34 - 0.03 * math.sin(a))
-            pts.append(hit + n * 0.01)
-        arcs.append(tube(pts, 0.012, "mouth"))
+    smile = []
+    for k in range(7):
+        t = -1 + 2 * k / 6
+        hit, n = surf.front(0.1 * t, -0.36 - 0.035 * (1 - t * t))
+        smile.append(hit + n * 0.01)
+    arcs = [tube(smile, 0.013, "mouth")]
     add("Mouth", arcs, 1200)
-    add("Blush", [decal(ellipse_pts(0.14, 0.07), surf, head, 0.72 * i, -0.28, 0.008, 0.006) for i in (-1, 1)], 1200)
+
 
 
 # ── BODY (root-local) ─────────────────────────────────────────────────────────
@@ -632,8 +623,8 @@ def build_bake_material(obj, kind):
         L.new(sep.outputs["X"], ax.inputs[0])
         width = N.new("ShaderNodeMath")  # allowed half width grows with height
         width.operation = "MULTIPLY_ADD"
-        width.inputs[1].default_value = 0.62
-        width.inputs[2].default_value = -0.62 * 0.12
+        width.inputs[1].default_value = 0.85
+        width.inputs[2].default_value = -0.85 * 0.4
         L.new(sep.outputs["Z"], width.inputs[0])
         diff = N.new("ShaderNodeMath")
         diff.operation = "SUBTRACT"
@@ -657,7 +648,38 @@ def build_bake_material(obj, kind):
         L.new(mask.outputs["Value"], tan.inputs["Factor"])
         L.new(albedo.outputs[2], tan.inputs[6])
         tan.inputs[7].default_value = (0.93, 0.74, 0.58, 1)
-        final = tan
+        # Soft pink blush on each cheek, just under the eyes.
+        dx = N.new("ShaderNodeMath")
+        dx.operation = "SUBTRACT"
+        dx.inputs[1].default_value = 0.7
+        L.new(ax.outputs["Value"], dx.inputs[0])
+        dz = N.new("ShaderNodeMath")
+        dz.operation = "ADD"
+        dz.inputs[1].default_value = 0.3
+        L.new(sep.outputs["Z"], dz.inputs[0])
+        comb2 = N.new("ShaderNodeCombineXYZ")
+        L.new(dx.outputs["Value"], comb2.inputs["X"])
+        L.new(dz.outputs["Value"], comb2.inputs["Y"])
+        dist = N.new("ShaderNodeVectorMath")
+        dist.operation = "LENGTH"
+        L.new(comb2.outputs["Vector"], dist.inputs[0])
+        soft = N.new("ShaderNodeMapRange")
+        soft.inputs["From Min"].default_value = 0.07
+        soft.inputs["From Max"].default_value = 0.19
+        soft.inputs["To Min"].default_value = 0.85
+        soft.inputs["To Max"].default_value = 0.0
+        L.new(dist.outputs["Value"], soft.inputs["Value"])
+        bmask = N.new("ShaderNodeMath")
+        bmask.operation = "MULTIPLY"
+        L.new(soft.outputs["Result"], bmask.inputs[0])
+        L.new(front.outputs["Result"], bmask.inputs[1])
+        blush = N.new("ShaderNodeMix")
+        blush.data_type = "RGBA"
+        blush.blend_type = "MULTIPLY"
+        L.new(bmask.outputs["Value"], blush.inputs["Factor"])
+        L.new(tan.outputs[2], blush.inputs[6])
+        blush.inputs[7].default_value = (1.0, 0.62, 0.66, 1)
+        final = blush
     emit = N.new("ShaderNodeEmission")
     L.new(final.outputs[2], emit.inputs["Color"])
     img_node = N.new("ShaderNodeTexImage")
