@@ -150,6 +150,22 @@ local function announce(title: string, sub: string?, color: Color3?, small: bool
 	Remotes.Get("Announce"):FireAllClients({ title = title, sub = sub, color = color, small = small })
 end
 
+-- Where each live fish snack sits (bots go for them when hurt).
+local snackSpots: { [Model]: Vector3 } = {}
+
+-- Set by BotService: a bot within `radius` of `pos` eats the snack.
+DropService.BotEat = nil :: ((pos: Vector3, radius: number, heal: number, fluffCut: number) -> boolean)?
+
+function DropService.SnackSpots(): { Vector3 }
+	local out = {}
+	for snack, spot in pairs(snackSpots) do
+		if snack.Parent then
+			table.insert(out, spot)
+		end
+	end
+	return out
+end
+
 -- Nearest live player (not bot) within reach of `pos`.
 local function grabber(pos: Vector3, radius: number): Player?
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -367,6 +383,7 @@ local function spawnSnack()
 	glow.Range = 8
 	glow.Parent = body
 	snack.Parent = folder()
+	snackSpots[snack] = spot
 	rig(snack, body)
 	disc("SnackRing", 3.6, 0.15, spot + Vector3.new(0, 0.08, 0), Color3.fromRGB(110, 230, 140), snack).Transparency = 0.45
 
@@ -386,8 +403,12 @@ local function spawnSnack()
 				Remotes.Get("Notify"):FireClient(player, { text = "Fish snack!  +" .. cfg.Heal .. " HP", kind = "success" })
 				break
 			end
+			if DropService.BotEat and DropService.BotEat(spot, cfg.GrabRadius, cfg.Heal, cfg.FluffCut) then
+				break
+			end
 			task.wait(0.1)
 		end
+		snackSpots[snack] = nil
 		snack:Destroy()
 		activeSnacks -= 1
 	end)

@@ -1,7 +1,9 @@
 --!strict
--- BotService: fills matches with CPU-controlled bots when player count is low.
--- Bot count = max(0, 6 - realPlayers), so solo/small sessions stay fun.
--- Difficulty is "decent but beatable": reaction delay + aim scatter.
+-- BotService: fills matches with CPU-controlled bots so every match has
+-- TARGET_CATS cats. Each bot rolls its own skill and blaster, keeps to that
+-- blaster's range, only shoots what it can see (flanking round cover
+-- otherwise), faces its target while strafing, dodges after being hit, goes
+-- for fish snacks when hurt, and gets itself unstuck.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,16 +23,49 @@ local WeaponService   = require(script.Parent.WeaponService)
 local EconomyService  = require(script.Parent.EconomyService)
 local Runtime         = require(script.Parent.Runtime)
 local SeasonService   = require(script.Parent.SeasonService)
+local DropService     = require(script.Parent.DropService)
 
 local BotService = {}
 
 -- ── difficulty knobs ────────────────────────────────────────────────────────
-local AIM_ERROR_DEG    = 8.0   -- extra aim scatter (degrees)
-local REACTION_SECS    = 1.0   -- delay before firing at a new target
-local BOT_FIRE_INTERVAL = 1.10 -- minimum seconds between shots
-local ATTACK_RANGE     = 75    -- studs: stop chasing and start shooting
-local CHASE_SPEED      = 18
-local PATROL_SPEED     = 12
+-- Every bot rolls a skill (0 = rookie, 1 = sharp) that sets its aim scatter,
+-- reaction time and trigger speed, so a lobby has a mix of easy and tougher
+-- bots. Still beatable: no bot ever aims perfectly.
+local SKILL_MIN, SKILL_MAX = 0.3, 0.85
+local AIM_ERROR_DEG    = { 9.5, 3.5 }  -- scatter at skill 0 / 1 (degrees)
+local REACTION_SECS    = { 0.85, 0.3 } -- delay before firing at a new target
+local FIRE_DELAY       = { 0.95, 0.4 } -- minimum seconds between shots (weapon may be slower)
+local CHASE_SPEED      = 20
+local PATROL_SPEED     = 14
+local ENGAGE_RANGE     = 150
+
+-- Blasters bots carry (weight) and the distance each likes to fight from.
+local BOT_WEAPONS = {
+	{ id = "PawBlaster",    weight = 4,   range = { 22, 45 } },
+	{ id = "RapidPaw",      weight = 2,   range = { 16, 34 } },
+	{ id = "BoomPaw",       weight = 2,   range = { 12, 26 } },
+	{ id = "Starfall",      weight = 1.5, range = { 40, 70 } },
+	{ id = "FrostBlaster",  weight = 1.5, range = { 20, 40 } },
+	{ id = "BubbleBlaster", weight = 1,   range = { 10, 22 } },
+}
+
+local function lerp(a: number, b: number, t: number): number
+	return a + (b - a) * t
+end
+
+local function rollWeapon(): (any, number, number)
+	local total = 0
+	for _, w in ipairs(BOT_WEAPONS) do total += w.weight end
+	local pick = math.random() * total
+	for _, w in ipairs(BOT_WEAPONS) do
+		pick -= w.weight
+		local def = Weapons.Get(w.id)
+		if pick <= 0 and def then
+			return def, w.range[1], w.range[2]
+		end
+	end
+	return Weapons.Get("PawBlaster"), 22, 45
+end
 
 local BOT_NAMES = {
 	"Whiskers-BOT", "Mittens-BOT", "Pounce-BOT",
@@ -60,6 +95,16 @@ type BotState = {
 	pathAt:          number,
 	strafeSign:      number,
 	strafeFlipAt:    number,
+	skill:           number,
+	weapon:          any,
+	rangeMin:        number,
+	rangeMax:        number,
+	aimError:        number,
+	reaction:        number,
+	fireDelay:       number,
+	hitAt:           number,
+	dodgeAt:         number,
+	align:           AlignOrientation,
 }
 
 -- ── module-level state ───────────────────────────────────────────────────────
@@ -114,37 +159,68 @@ local function pickTeam(): string
 	return counts.Blue <= counts.Red and "Blue" or "Red"
 end
 
--- Nearest living enemy cat — a real player or an enemy bot — within range.
-local ENGAGE_RANGE = 150
-local function findNearestEnemy(bot: BotState): (Model?, number)
-	local best: Model? = nil
-	local bestDist = Runtime.HillPos and 45 or ENGAGE_RANGE
+-- The cat (player or bot) an instance belongs to, if any.
+local function catModel(inst: Instance?): Model?
+	local m = inst and inst:FindFirstAncestorOfClass("Model")
+	while m and not m:FindFirstChildOfClass("Humanoid") do
+		m = m:FindFirstAncestorOfClass("Model")
+	end
+	return m
+end
+
+-- Where the bot's shots leave from: its blaster's barrel.
+local function muzzle(bot: BotState): Vector3
+	local tip = bot.model:FindFirstChild("MuzzlePoint", true)
+	if tip and tip:IsA("BasePart") then
+		return tip.Position
+	end
+	return bot.root.Position + bot.root.CFrame.LookVector * 1.5 + Vector3.new(0, 0.8, 0)
+end
+
+-- Clear shot from `from` to the target (another cat in the way still counts;
+-- a wall doesn't).
+local function canSee(bot: BotState, target: Model, from: Vector3, at: Vector3): boolean
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { bot.model }
+	params.IgnoreWater = true
+	local hit = Workspace:Raycast(from, at - from, params)
+	return hit == nil or hit.Instance:IsDescendantOf(target) or catModel(hit.Instance) ~= nil
+end
+
+-- Best enemy to fight: close, visible, already softened up (high fluff), and
+-- a bit of loyalty to the current target so bots don't flip-flop.
+local function pickTarget(bot: BotState): (Model?, number, boolean)
+	local eye = bot.root.Position + Vector3.new(0, 1.2, 0)
+	local reach = Runtime.HillPos and 45 or ENGAGE_RANGE
+	local best: Model?, bestScore, bestDist, bestVisible = nil, math.huge, 0, false
+	local function consider(model: Model, root: BasePart, fluff: number)
+		local d = (root.Position - bot.root.Position).Magnitude
+		if d > reach then return end
+		local visible = canSee(bot, model, eye, root.Position)
+		local score = d - (visible and 35 or 0) - math.min(fluff, 150) * 0.12 - (model == bot.target and 15 or 0)
+		if score < bestScore then
+			best, bestScore, bestDist, bestVisible = model, score, d, visible
+		end
+	end
 	for _, p in ipairs(Players:GetPlayers()) do
 		local s    = Runtime.Get(p)
 		local char = p.Character
 		local root = char and (char.PrimaryPart :: BasePart?)
 		if s and s.Alive and (Runtime.Mode == "FFA" or s.Team ~= bot.team) and root and char then
-			local d = (root.Position - bot.root.Position).Magnitude
-			if d < bestDist then
-				bestDist = d
-				best = char
-			end
+			consider(char, root, s.Accumulated or 0)
 		end
 	end
 	for _, other in pairs(bots) do
 		if other.alive and other ~= bot and (Runtime.Mode == "FFA" or other.team ~= bot.team) then
-			local d = (other.root.Position - bot.root.Position).Magnitude
-			if d < bestDist then
-				bestDist = d
-				best = other.model
-			end
+			consider(other.model, other.root, other.accumulated)
 		end
 	end
-	return best, bestDist
+	return best, bestDist, bestVisible
 end
 
-local function addAimError(dir: Vector3): Vector3
-	local spread = math.rad(AIM_ERROR_DEG)
+local function addAimError(dir: Vector3, degrees: number): Vector3
+	local spread = math.rad(degrees)
 	local up     = math.abs(dir.Unit.Y) > 0.9 and Vector3.new(1, 0, 0) or Vector3.new(0, 1, 0)
 	local right  = dir.Unit:Cross(up).Unit
 	local realUp = right:Cross(dir.Unit).Unit
@@ -162,6 +238,7 @@ local function botHitBot(shooter: BotState, victim: BotState, weapon: any, dir: 
 	end
 	victim.lastAttacker = nil
 	victim.lastBot = shooter
+	victim.hitAt = os.clock()
 	victim.model:SetAttribute("Fluff", math.floor(victim.accumulated))
 	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
 	local dV = Knockback.ComputeDeltaV(dir, victim.accumulated, weapon.Knockback, 0.6 * mayhem)
@@ -169,28 +246,29 @@ local function botHitBot(shooter: BotState, victim: BotState, weapon: any, dir: 
 end
 
 -- ── combat ───────────────────────────────────────────────────────────────────
-local function botFireAt(bot: BotState, target: Model)
+local function botFireAt(bot: BotState, target: Model, tRoot: BasePart)
 	local now = os.clock()
-	if now - bot.lastFireAt < BOT_FIRE_INTERVAL then return end
-	local tRoot = target.PrimaryPart
-	if not tRoot then return end
+	local weapon = bot.weapon
+	if now - bot.lastFireAt < math.max(1 / weapon.FireRate, bot.fireDelay) then return end
+	local from = muzzle(bot)
+	if not canSee(bot, target, from, tRoot.Position) then return end
 	bot.lastFireAt = now
 
-	local weapon = Weapons.Get("PawBlaster")
-	if not weapon then return end
-
-	local dir = addAimError((tRoot.Position - bot.root.Position).Unit)
+	-- Fast-moving targets are harder to hit.
+	local speed = tRoot.AssemblyLinearVelocity.Magnitude
+	local scatter = bot.aimError * (1 + math.min(speed / 28, 1) * 0.5) + weapon.Spread * 0.5
+	local base = (tRoot.Position - from).Unit
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = { bot.model }
 	params.IgnoreWater = true
-
-	local result = Workspace:Raycast(bot.root.Position, dir * weapon.Range, params)
-	local hitPos = bot.root.Position + dir * weapon.Range
-	if result then
-		hitPos = result.Position
-		local hitModel = result.Instance:FindFirstAncestorOfClass("Model")
+	local tos = {}
+	for _ = 1, math.max(1, weapon.Pellets) do
+		local dir = addAimError(base, scatter)
+		local result = Workspace:Raycast(from, dir * weapon.Range, params)
+		table.insert(tos, result and result.Position or from + dir * weapon.Range)
+		local hitModel = result and catModel(result.Instance)
 		local victim   = hitModel and Players:GetPlayerFromCharacter(hitModel)
 		if victim then
 			BotService.DealDamageToPlayer(bot, victim, weapon, dir)
@@ -203,9 +281,9 @@ local function botFireAt(bot: BotState, target: Model)
 	end
 
 	Remotes.Get("PlayEffect"):FireAllClients({
-		kind  = "Tracer",
-		from  = bot.root.Position,
-		to    = hitPos,
+		kind  = "Tracers",
+		from  = from,
+		tos   = tos,
 		color = weapon.TrailColor,
 	})
 end
@@ -236,6 +314,9 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
 	vState.StunUntil = os.clock() + GameConfig.Character.LaunchStunSeconds
+	if weapon.SlowFactor and weapon.SlowSeconds then
+		vState.SlowUntil = math.max(vState.SlowUntil or 0, os.clock() + weapon.SlowSeconds)
+	end
 
 	Remotes.Get("YouWereHit"):FireClient(victim, {
 		from        = bot.name,
@@ -260,6 +341,7 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 	end
 	bot.lastAttacker = shooter
 	bot.lastBot = nil
+	bot.hitAt = os.clock()
 	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
 
 	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
@@ -280,6 +362,7 @@ function BotService.EnvironmentHit(model: Model, damage: number, dV: Vector3): b
 	local bot = botId and bots[botId]
 	if not bot or not bot.alive then return false end
 	bot.accumulated += damage
+	bot.hitAt = os.clock()
 	bot.humanoid:TakeDamage(damage * 0.5)
 	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
 	if dV.Magnitude > 0 then
@@ -359,6 +442,16 @@ local function followPath(bot: BotState): boolean
 	return true
 end
 
+-- Path toward `goal`, re-planning when it's stale or the goal has moved.
+local function travel(bot: BotState, goal: Vector3, now: number)
+	if not bot.waypoints or now - bot.pathAt > 1.2 or (bot.goal - goal).Magnitude > 10 then
+		computePath(bot, goal)
+	end
+	if not followPath(bot) then
+		safeStep(bot, goal)
+	end
+end
+
 -- A random spot on one of the playable island floors.
 local function randomFloorPoint(): Vector3?
 	local floors = CollectionService:GetTagged("DropZone")
@@ -369,56 +462,128 @@ local function randomFloorPoint(): Vector3?
 	return f.Position + Vector3.new(math.cos(a) * r * math.random(), f.Size.Y / 2 + 2, math.sin(a) * r * math.random())
 end
 
+-- Face the target while strafing (so the blaster points at it), or hand
+-- turning back to the Humanoid when just walking.
+local function faceToward(bot: BotState, pos: Vector3?)
+	if pos then
+		local flat = Vector3.new(pos.X, bot.root.Position.Y, pos.Z)
+		bot.humanoid.AutoRotate = false
+		bot.align.Enabled = true
+		if (flat - bot.root.Position).Magnitude > 0.5 then
+			bot.align.CFrame = CFrame.lookAt(bot.root.Position, flat)
+		end
+	else
+		bot.align.Enabled = false
+		bot.humanoid.AutoRotate = true
+	end
+end
+
+-- Nearest fish snack, if any.
+local function nearestSnack(bot: BotState): Vector3?
+	local best, bestD = nil, 120
+	for _, spot in ipairs(DropService.SnackSpots()) do
+		local d = (spot - bot.root.Position).Magnitude
+		if d < bestD then
+			best, bestD = spot, d
+		end
+	end
+	return best
+end
+
+-- Dodge after taking a hit: a hop, or a quick side-step dash.
+local function dodge(bot: BotState, tRoot: BasePart?, now: number)
+	bot.dodgeAt = now + 2.2 + math.random() * 1.5
+	if math.random() > 0.35 + 0.45 * bot.skill then
+		return
+	end
+	if math.random() < 0.5 then
+		bot.humanoid.Jump = true
+		return
+	end
+	local to = tRoot and Vector3.new(tRoot.Position.X - bot.root.Position.X, 0, tRoot.Position.Z - bot.root.Position.Z) or bot.root.CFrame.LookVector
+	if to.Magnitude < 0.1 then return end
+	local side = Vector3.new(-to.Z, 0, to.X).Unit * (math.random() < 0.5 and -1 or 1)
+	if groundAhead(bot, side) and groundAhead(bot, side * 2) then
+		bot.root:ApplyImpulse(side * 38 * bot.root.AssemblyMass)
+	end
+end
+
 local function runBot(bot: BotState)
 	bot.path = PathfindingService:CreatePath({ AgentRadius = 1.6, AgentHeight = 3.6, AgentCanJump = true, WaypointSpacing = 5 })
 	bot.strafeSign = math.random() < 0.5 and -1 or 1
 	bot.strafeFlipAt = 0
+	local lastPos, stuckSince = bot.root.Position, os.clock()
 	while bot.alive and matchActive do
 		local now = os.clock()
-		local target, dist = findNearestEnemy(bot)
+
+		-- Unstick: trying to move but going nowhere for a while -> hop and re-plan.
+		if (bot.root.Position - lastPos).Magnitude > 2 then
+			lastPos, stuckSince = bot.root.Position, now
+		elseif now - stuckSince > 1.6 and bot.humanoid.MoveDirection.Magnitude > 0.1 then
+			bot.humanoid.Jump = true
+			bot.waypoints = nil
+			lastPos, stuckSince = bot.root.Position, now
+		end
+
+		local hurt = bot.accumulated > 100 or bot.humanoid.Health < bot.humanoid.MaxHealth * 0.4
+		local snack = hurt and nearestSnack(bot) or nil
+		local target, dist, visible = pickTarget(bot)
 		local tRoot = target and target.PrimaryPart
-		if target and tRoot then
+
+		if snack and (not target or dist > 25) then
+			-- Badly hurt: go eat a fish snack (heals, cuts fluff).
+			bot.humanoid.WalkSpeed = CHASE_SPEED
+			faceToward(bot, nil)
+			travel(bot, snack, now)
+			task.wait(0.2)
+		elseif target and tRoot then
 			if target ~= bot.target then
 				bot.target = target
 				bot.targetAcquiredAt = now
 			end
-			if dist > 24 then
-				-- Chase along a path, refreshed as the target moves.
+			faceToward(bot, tRoot.Position)
+			if dist > bot.rangeMax or not visible then
+				-- Close in (or flank round cover) along a path.
 				bot.humanoid.WalkSpeed = CHASE_SPEED
-				if not bot.waypoints or now - bot.pathAt > 1.2 or (bot.goal - tRoot.Position).Magnitude > 10 then
-					computePath(bot, tRoot.Position)
-				end
-				if not followPath(bot) then
-					safeStep(bot, tRoot.Position)
-				end
+				travel(bot, tRoot.Position, now)
+			elseif dist < bot.rangeMin then
+				-- Too close for this weapon: back off.
+				bot.waypoints = nil
+				bot.humanoid.WalkSpeed = PATROL_SPEED
+				local away = Vector3.new(bot.root.Position.X - tRoot.Position.X, 0, bot.root.Position.Z - tRoot.Position.Z)
+				safeStep(bot, bot.root.Position + (away.Magnitude > 0.1 and away.Unit or Vector3.zero) * 6)
 			else
 				-- In range: strafe side to side instead of standing still.
 				bot.waypoints = nil
 				bot.humanoid.WalkSpeed = PATROL_SPEED
 				if now > bot.strafeFlipAt then
 					bot.strafeSign = -bot.strafeSign
-					bot.strafeFlipAt = now + 1 + math.random() * 1.5
+					bot.strafeFlipAt = now + lerp(1.6, 0.7, bot.skill) + math.random() * 1.2
 				end
 				local to = Vector3.new(tRoot.Position.X - bot.root.Position.X, 0, tRoot.Position.Z - bot.root.Position.Z)
 				local side = to.Magnitude > 0.1 and Vector3.new(-to.Z, 0, to.X).Unit * bot.strafeSign or Vector3.zero
 				safeStep(bot, bot.root.Position + side * 6)
 			end
-			if dist <= ATTACK_RANGE and now - bot.targetAcquiredAt >= REACTION_SECS then
-				botFireAt(bot, target)
+			if now - bot.hitAt < 0.6 and now > bot.dodgeAt then
+				dodge(bot, tRoot, now)
 			end
-			task.wait(0.2 + math.random() * 0.1)
+			if visible and dist <= bot.weapon.Range and now - bot.targetAcquiredAt >= bot.reaction then
+				botFireAt(bot, target, tRoot)
+			end
+			task.wait(0.1 + math.random() * 0.06)
 		else
 			bot.target = nil
+			faceToward(bot, nil)
 			bot.humanoid.WalkSpeed = PATROL_SPEED
 			if not bot.waypoints then
 				local hill = Runtime.HillPos
-				local p = hill and (hill + Vector3.new(math.random(-8, 8), 2, math.random(-8, 8))) or randomFloorPoint()
+				local p = hill and (hill + Vector3.new(math.random(-8, 8), 2, math.random(-8, 8))) or nearestSnack(bot) or randomFloorPoint()
 				if p then
 					computePath(bot, p)
 				end
 			end
 			if not followPath(bot) then
-				task.wait(0.8)
+				task.wait(0.6)
 			end
 			task.wait(0.25)
 		end
@@ -427,7 +592,9 @@ end
 
 -- ── spawning ─────────────────────────────────────────────────────────────────
 local function spawnBot(botId: number, teamId: string, botName: string)
-	local model = CatBuilder.Build(nil, botName, { Id = "PawBlaster" })
+	local weapon, rangeMin, rangeMax = rollWeapon()
+	local skill = lerp(SKILL_MIN, SKILL_MAX, math.random())
+	local model = CatBuilder.Build(nil, botName, { Id = weapon.Id })
 	model.Name = botName
 	model:SetAttribute("IsBot", true)
 	model:SetAttribute("Team", teamId)
@@ -459,6 +626,18 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 
+	-- Turns the bot to face its target while it strafes.
+	local alignAt = Instance.new("Attachment")
+	alignAt.Name = "BotAim"
+	alignAt.Parent = root
+	local align = Instance.new("AlignOrientation")
+	align.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	align.Attachment0 = alignAt
+	align.Responsiveness = 30
+	align.MaxTorque = math.huge
+	align.Enabled = false
+	align.Parent = root
+
 	local bot: BotState = {
 		id = botId, name = botName, model = model,
 		humanoid = humanoid, root = root, team = teamId,
@@ -466,6 +645,11 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		lastFireAt = 0, target = nil, targetAcquiredAt = 0,
 		lastBot = nil, path = nil, waypoints = nil, wpIndex = 1,
 		goal = root.Position, pathAt = 0, strafeSign = 1, strafeFlipAt = 0,
+		skill = skill, weapon = weapon, rangeMin = rangeMin, rangeMax = rangeMax,
+		aimError = lerp(AIM_ERROR_DEG[1], AIM_ERROR_DEG[2], skill),
+		reaction = lerp(REACTION_SECS[1], REACTION_SECS[2], skill),
+		fireDelay = lerp(FIRE_DELAY[1], FIRE_DELAY[2], skill),
+		hitAt = 0, dodgeAt = 0, align = align,
 	}
 	bots[botId]      = bot
 	modelToId[model] = botId
@@ -673,6 +857,19 @@ function BotService.Start()
 	-- Route player raycasts that hit bot models back here for damage.
 	WeaponService.OnBotHit = function(shooter: Player, hitModel: Model, weapon: any, dir: Vector3)
 		BotService.HandlePlayerHit(shooter, hitModel, weapon, dir)
+	end
+	-- A bot standing on a fish snack eats it (heals, cuts its fluff).
+	DropService.BotEat = function(pos: Vector3, radius: number, heal: number, fluffCut: number): boolean
+		for _, bot in pairs(bots) do
+			local off = bot.root.Position - pos
+			if bot.alive and Vector3.new(off.X, 0, off.Z).Magnitude <= radius and math.abs(off.Y) < 6 then
+				bot.humanoid.Health = math.min(bot.humanoid.MaxHealth, bot.humanoid.Health + heal)
+				bot.accumulated = math.max(0, bot.accumulated - fluffCut)
+				bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
+				return true
+			end
+		end
+		return false
 	end
 end
 

@@ -18,10 +18,13 @@ ArenaBuilder.CurrentMap = nil :: any
 -- and other small clutter snagged players or acted like invisible walls.
 local DECOR_PREFIXES = {
 	"Fence", "Rail", "ToyRail", "Lamp", "PostLamp", "Lantern", "Post", "Bush", "Bloom", "Flower", "BoxBloom",
-	"Leaf", "Crate", "ToyCrate", "Barrel", "Banner", "Flag", "ToyTeam", "Seat", "Balloon", "Anvil", "Parapet",
+	"Leaf", "Banner", "Flag", "ToyTeam", "Seat", "Balloon", "Anvil", "Parapet",
 	"Newel", "Finial", "Hang", "Rope", "String", "Sail", "Vane", "Arm", "Hub", "Emblem", "Bulb", "Drum",
 	"Chimney", "Window", "WinFrame", "SideWindow", "Door", "Curtain", "Cross", "Chevron", "Ribbon",
 }
+-- Solid cover you can see: crates, barrels and drums block both cats and
+-- shots (their trim, bands and lids are decoration).
+local COVER = { Crate = true, ToyCrate = true, Barrel = true, Drum = true }
 -- Surfaces people walk on stay solid even when small.
 local WALKABLE = { Floor = true, Deck = true, Landing = true, Step = true, Plank = true, Platform = true, Stringer = true, Guard = true, Rim = true, Top = true }
 
@@ -34,12 +37,22 @@ local function isDecor(name: string): boolean
 	return false
 end
 
+-- One rule for the whole map: what you can walk through, shots fly through
+-- too. (Walk-through decoration used to still stop bullets - and bots'
+-- line of sight - like an invisible wall.)
 local function freeMovement(arena: Instance)
 	for _, p in ipairs(arena:GetDescendants()) do
-		if p:IsA("BasePart") and p.CanCollide and not WALKABLE[p.Name] then
-			local biggest = math.max(p.Size.X, p.Size.Y, p.Size.Z)
-			if isDecor(p.Name) or biggest < 3 or p.Transparency >= 0.95 then
-				p.CanCollide = false
+		if p:IsA("BasePart") then
+			if COVER[p.Name] then
+				p.CanCollide = true
+			elseif p.CanCollide and not WALKABLE[p.Name] then
+				local biggest = math.max(p.Size.X, p.Size.Y, p.Size.Z)
+				if isDecor(p.Name) or biggest < 3 or p.Transparency >= 0.95 then
+					p.CanCollide = false
+				end
+			end
+			if not p.CanCollide or (p.Name == "Guard" and p.Transparency >= 0.95) then
+				p.CanQuery = false
 			end
 		end
 	end
