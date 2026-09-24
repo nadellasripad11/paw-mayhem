@@ -263,6 +263,10 @@ def piece(obj, anchor, tex=None):
 
 # ── HEAD (head-local; head centre = origin) ──────────────────────────────────
 HR = (0.98, 0.86, 0.84)  # head radii: round, just a little wider than tall
+# The finished head (ears and face included) is shrunk and lowered onto the
+# collar at export, after baking (the texture masks use the unscaled shape).
+HEAD_SCALE = 0.72
+HEAD_DROP = 0.15
 
 
 def build_head():
@@ -1175,6 +1179,9 @@ def export():
         "",
         "return {",
     ]
+    for obj, anchor, tex in PIECES:
+        if anchor == "Head":
+            obj.data.transform(Matrix.Translation(R(0, -HEAD_DROP, 0)) @ Matrix.Scale(HEAD_SCALE, 4))
     for obj, anchor, tex in PIECES:
         activate(obj)
         bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="BOUNDS")
