@@ -262,13 +262,13 @@ def piece(obj, anchor, tex=None):
 
 
 # ── HEAD (head-local; head centre = origin) ──────────────────────────────────
-HR = (1.0, 0.72, 0.8)  # head radii: wider than tall, like a real kitten
+HR = (0.98, 0.86, 0.84)  # head radii: round, just a little wider than tall
 
 
 def build_head():
     parts = [ellipsoid((0, 0.02, 0), HR)]
     for i in (-1, 1):
-        parts.append(ellipsoid((0.5 * i, -0.34, -0.16), (0.43, 0.26, 0.36)))  # full, smooth cheeks (below the eyes)
+        parts.append(ellipsoid((0.48 * i, -0.38, -0.16), (0.42, 0.3, 0.38)))  # full, smooth cheeks (below the eyes)
     head = fuse(parts, "HeadFur", voxel=0.018, smooth=16, tris=9000)
     # A little tuft of loose strands on top (kept as strands, not fused).
     surf = Surface(head)
@@ -285,15 +285,15 @@ def build_head():
     # Ears: cupped like real ears (hollowed front), rounded tip, fur outside.
     ears = []
     for i in (-1, 1):
-        ear = cone_between((0.44 * i, 0.34, 0.08), (0.8 * i, 1.16, 0.12), 0.42, 0.07, verts=40)
-        c = R(0.62 * i, 0.75, 0.1)
+        ear = cone_between((0.45 * i, 0.44, 0.08), (0.8 * i, 1.28, 0.12), 0.42, 0.07, verts=40)
+        c = R(0.62 * i, 0.86, 0.1)
         ear.data.transform(Matrix.Translation(-c))
         ear.data.transform(Matrix.Diagonal((1.0, 0.5, 1.0, 1.0)))
         ear.data.transform(Matrix.Translation(c))
-        cutter = ellipsoid((0.66 * i, 0.81, -0.12), (0.26, 0.4, 0.16))
-        cutter.data.transform(Matrix.Translation(-R(0.66 * i, 0.81, -0.12)))
+        cutter = ellipsoid((0.66 * i, 0.92, -0.12), (0.26, 0.4, 0.16))
+        cutter.data.transform(Matrix.Translation(-R(0.66 * i, 0.92, -0.12)))
         cutter.data.transform(rot_r(0, 0, -24 * i).to_4x4())
-        cutter.data.transform(Matrix.Translation(R(0.66 * i, 0.81, -0.12)))
+        cutter.data.transform(Matrix.Translation(R(0.66 * i, 0.92, -0.12)))
         bo = ear.modifiers.new("cup", "BOOLEAN")
         bo.operation = "DIFFERENCE"
         bo.object = cutter
@@ -308,7 +308,7 @@ def build_head():
     # Pink inside each ear cup + white fur tufts growing out of it.
     inner, tufts = [], []
     for i in (-1, 1):
-        hit, n = esurf.toward((0.64 * i, 0.79, -2), (0, 0, 1))
+        hit, n = esurf.toward((0.64 * i, 0.9, -2), (0, 0, 1))
         if hit:
             tri = rotated([(-0.26, -0.3), (0.26, -0.3), (0.0, 0.42)], 22 * i)
             o = flat_shape(tri, hit, n, subdiv=3)
@@ -332,7 +332,7 @@ def build_head():
 
     # Eyes: round, a touch taller than wide; mostly dark with a green glow at
     # the bottom, a big shine upper-left and a small one lower-right.
-    EX, EY = 0.43, -0.07
+    EX, EY = 0.43, -0.08
     layers = {"EyeWhite": [], "Iris": [], "IrisGlow": [], "Pupil": [], "Shine": []}
     for i in (-1, 1):
         x = EX * i
@@ -349,16 +349,16 @@ def build_head():
     for i in (-1, 1):
         pts = []
         for t in (0.0, 0.5, 1.0):
-            hit, n = surf.front((0.33 + 0.15 * t) * i, 0.22 + 0.03 * math.sin(t * math.pi))
+            hit, n = surf.front((0.33 + 0.15 * t) * i, 0.27 + 0.03 * math.sin(t * math.pi))
             pts.append(hit + n * 0.012)
         brows.append(tube(pts, 0.022, "brow"))
     add("Brows", brows, 1200)
 
-    add("Nose", [decal([(-0.075, 0.04), (0.075, 0.04), (0.0, -0.06)], surf, head, 0, -0.22, 0.008, 0.032, subdiv=3)], 1000)
+    add("Nose", [decal([(-0.075, 0.04), (0.075, 0.04), (0.0, -0.06)], surf, head, 0, -0.25, 0.008, 0.032, subdiv=3)], 1000)
     smile = []
     for k in range(7):
         t = -1 + 2 * k / 6
-        hit, n = surf.front(0.085 * t, -0.3 - 0.03 * (1 - t * t))
+        hit, n = surf.front(0.09 * t, -0.34 - 0.032 * (1 - t * t))
         smile.append(hit + n * 0.01)
     arcs = [tube(smile, 0.013, "mouth")]
     add("Mouth", arcs, 1200)
@@ -1052,7 +1052,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         width = N.new("ShaderNodeMath")  # allowed half width grows with height
         width.operation = "MULTIPLY_ADD"
         width.inputs[1].default_value = 0.85
-        width.inputs[2].default_value = -0.85 * 0.34
+        width.inputs[2].default_value = -0.85 * 0.42
         L.new(sep.outputs["Z"], width.inputs[0])
         diff = N.new("ShaderNodeMath")
         diff.operation = "SUBTRACT"
@@ -1083,7 +1083,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         L.new(ax.outputs["Value"], dx.inputs[0])
         dz = N.new("ShaderNodeMath")
         dz.operation = "ADD"
-        dz.inputs[1].default_value = 0.24
+        dz.inputs[1].default_value = 0.28
         L.new(sep.outputs["Z"], dz.inputs[0])
         comb2 = N.new("ShaderNodeCombineXYZ")
         L.new(dx.outputs["Value"], comb2.inputs["X"])
