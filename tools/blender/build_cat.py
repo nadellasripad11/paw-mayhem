@@ -380,7 +380,7 @@ HEM_Y = -0.66
 
 def opening_half(y):
     """Half-width of the hoodie's open front at height y."""
-    return 0.11 + (0.42 - y) * 0.1
+    return 0.12 + (0.42 - y) * 0.045
 
 
 def ring_at(y):
@@ -477,8 +477,8 @@ def build_body():
 
     # Peach tee underneath, with a soft crew neck.
     shirt = fuse([
-        ellipsoid((0, -0.14, -0.01), (0.62, 0.55, 0.49)),
-        ellipsoid((0, 0.34, -0.06), (0.3, 0.09, 0.26)),
+        ellipsoid((0, -0.14, 0.03), (0.6, 0.55, 0.44)),
+        ellipsoid((0, 0.34, -0.04), (0.29, 0.09, 0.24)),
     ], "Shirt", voxel=0.02, smooth=3, tris=3500)
     crumple(shirt, 0.012, 0.2, "teefolds")
     piece(shirt, "Root", ("knit", SHIRT))
@@ -629,8 +629,14 @@ def build_body():
 
     # ── Messenger bag on the other hip: soft rounded body with piped edges,
     # a thick flap folded over the top, buckle + tab, D-rings for the strap.
-    BAG_CF = Matrix.Translation(R(0.56, -0.62, -0.36)) @ rot_r(5, -28, 7).to_4x4()
     bw, bh, bd = 0.4, 0.32, 0.17
+    # Hang it on the outside of the hoodie at the left hip: its back rests on
+    # the fabric and it faces out along the surface normal.
+    bhit, bn = jsurf.toward((0.52, -0.6, -2), (0, 0, 1))
+    bx, by, bz = rb(bn)
+    yaw = math.degrees(math.atan2(-bx, -bz))
+    bag_center = bhit + bn.normalized() * (bd / 2 + 0.03)
+    BAG_CF = Matrix.Translation(bag_center) @ rot_r(4, yaw, 6).to_4x4()
     body = rounded_box((bw, bh, bd), 0.075, segments=6, subdiv=2)
     cast = body.modifiers.new("soft", "CAST")
     cast.factor = 0.18
@@ -667,63 +673,150 @@ def build_body():
     buckle = tube(buckle_pts, 0.011, "buckle")
     buckle.data.transform(BAG_CF)
     hardware.append(buckle)
-    rings_world = []
+    # D-rings standing up on leather tabs at the bag's top corners, facing
+    # front so you can see the strap loop through them.
+    bag_rot = BAG_CF.to_3x3()
+    bag_front = (bag_rot @ R(0, 0, -1)).normalized()
+    bag_up = (bag_rot @ R(0, 1, 0)).normalized()
+    rings = []
+    tabs = []
     for sx in (-1, 1):
-        bpy.ops.mesh.primitive_torus_add(major_radius=0.04, minor_radius=0.011, major_segments=24, minor_segments=8)
+        center_local = R(sx * (bw / 2 - 0.04), bh / 2 + 0.075, 0)
+        bpy.ops.mesh.primitive_torus_add(major_radius=0.045, minor_radius=0.012, major_segments=28, minor_segments=8)
         ring = bpy.context.active_object
-        ring.data.transform(Matrix.Rotation(math.radians(90), 4, "Y"))
-        pos = R(sx * (bw / 2 + 0.01), bh / 2 + 0.03, 0)
-        ring.data.transform(Matrix.Translation(pos))
+        ring.data.transform(Matrix.Rotation(math.radians(90), 4, "X"))  # stand it up, facing front
+        ring.data.transform(Matrix.Translation(center_local))
         ring.data.transform(BAG_CF)
         hardware.append(ring)
-        rings_world.append(BAG_CF @ (pos + R(0, 0.035, 0)))
+        # leather tab from the bag top up round the ring's bottom bar
+        tab = rounded_box((0.07, 0.07, 0.03), 0.012, segments=3, subdiv=0)
+        tab.data.transform(Matrix.Translation(center_local + R(0, -0.05, 0)))
+        tab.data.transform(BAG_CF)
+        tabs.append(tab)
+        rings.append(BAG_CF @ center_local)
 
-    # ── Crossbody strap: stretched straight over the open front (following the
-    # hoodie as if closed), clipped to the bag's D-rings, with a slider.
-    proxy = lofted_shell([(y, rx + 0.07, rz + 0.07) for y, rx, rz in JACKET_RINGS])
+    def ribbon(points, normals, width=0.075, thickness=0.018, name="strapband"):
+        """A flat leather band with real thickness and softened edges."""
+        bm = bmesh.new()
+        left, right = [], []
+        count = len(points)
+        for i, p in enumerate(points):
+            t = (points[min(i + 1, count - 1)] - points[max(i - 1, 0)]).normalized()
+            side = normals[i].normalized().cross(t).normalized()
+            left.append(bm.verts.new(p + side * width / 2))
+            right.append(bm.verts.new(p - side * width / 2))
+        for i in range(count - 1):
+            bm.faces.new((left[i], right[i], right[i + 1], left[i + 1]))
+        me = bpy.data.meshes.new(name)
+        bm.to_mesh(me)
+        bm.free()
+        o = bpy.data.objects.new(name, me)
+        bpy.context.collection.objects.link(o)
+        so = o.modifiers.new("solid", "SOLIDIFY")
+        so.thickness = thickness
+        so.offset = 0.0
+        bev = o.modifiers.new("bev", "BEVEL")
+        bev.width = thickness * 0.35
+        bev.segments = 2
+        apply_mods(o)
+        return o
+
+    # ── Crossbody strap: lies flat on the hoodie (stretched straight over the
+    # open front), runs down to each D-ring, over its top bar and folds back.
+    proxy = lofted_shell([(y, rx + 0.06, rz + 0.06) for y, rx, rz in JACKET_RINGS])
     psub = proxy.modifiers.new("sub", "SUBSURF")
     psub.levels = 1
     apply_mods(proxy)
     psurf = Surface(proxy)
     bpy.data.objects.remove(proxy)
-    inner_ring = min(rings_world, key=lambda p: p.x)  # the one nearer the middle
-    outer_ring = max(rings_world, key=lambda p: p.x)
-    strap = []
-    front_pts = []
-    # front: shoulder -> inner D-ring; back: round the back to the side -> outer D-ring
-    for start_z, direction, ring_end, x_end, y_end in ((-2, 1, inner_ring, 0.4, -0.34), (2, -1, outer_ring, 0.66, -0.38)):
-        pts = []
-        for k in range(15):
-            t = k / 14
-            hit2, n2 = psurf.toward((-0.5 + t * (x_end + 0.5), 0.32 - t * (0.32 - y_end), start_z), (0, 0, direction))
-            if hit2:
-                pts.append(hit2 + n2 * 0.02)
-        pts.append(ring_end)
-        strap.append(tube(pts, 0.028, "strap"))
-        if start_z < 0:
-            front_pts = pts
-    if len(front_pts) > 5:
-        a, b = front_pts[4], front_pts[5]
-        _, n3 = psurf.toward((-0.5 + 0.3 * 0.9, 0.32 - 0.3 * 0.66, -2), (0, 0, 1))
+    def on_top(origin_r, dir_r):
+        """Outermost of the real hoodie surface and the closed proxy, so the
+        strap sits on the fabric folds but still bridges the open front."""
+        best = (None, None)
+        for srf in (psurf, jsurf):
+            h, nn = srf.toward(origin_r, dir_r)
+            if h is None:
+                continue
+            if best[0] is None or (h - R(*origin_r)).length < (best[0] - R(*origin_r)).length:
+                best = (h, nn)
+        return best
+
+    inner_ring = min(rings, key=lambda p: p.x)
+    outer_ring = max(rings, key=lambda p: p.x)
+
+    def ring_tail(last_p, last_n, ring):
+        """Points taking the band from the body down onto a ring, over its top
+        bar and folding back, turning gradually to face the bag."""
+        above = ring + bag_up * 0.12
+        bar = ring + bag_up * 0.045 - bag_front * 0.006
+        over = ring + bag_up * 0.05 + bag_front * 0.03
+        back = ring + bag_front * 0.035
+        out = []
+        for j, p in enumerate((last_p.lerp(above, 0.5), above, bar, over, back)):
+            out.append((p, last_n.lerp(-bag_front, min(1.0, (j + 1) / 2)).normalized()))
+        return out
+
+    # One continuous band round the body in a tilted plane: high over the
+    # right shoulder, low at the left hip where it meets the bag's rings.
+    ix, iy, iz = rb(inner_ring)
+    ox, oy, oz = rb(outer_ring)
+    ring_y = max(iy, oy) + 0.12
+    slope = (ring_y - 0.37) / (0.6 + 0.5)
+
+    def loop_y(x):
+        return min(0.37, 0.37 + (x + 0.5) * slope)
+
+    th_in = math.atan2(ix, -iz)
+    th_out = math.atan2(ox, -oz) - 2 * math.pi
+    loop = []
+    steps = 64
+    for k in range(steps + 1):
+        th = (th_in - 0.1) + ((th_out + 0.1) - (th_in - 0.1)) * k / steps
+        d = Vector((math.sin(th), 0, -math.cos(th)))
+        x_guess = d.x * 0.7
+        hit2 = n2 = None
+        for _ in range(2):
+            y = loop_y(x_guess)
+            hit2, n2 = on_top((d.x * 3, y, d.z * 3), (-d.x, 0, -d.z))
+            if hit2 is None:
+                break
+            x_guess = rb(hit2)[0]
+        if hit2 is not None:
+            loop.append((hit2 + n2 * 0.016, n2))
+    start = list(reversed(ring_tail(loop[0][0], loop[0][1], inner_ring)))
+    end = ring_tail(loop[-1][0], loop[-1][1], outer_ring)
+    path = start + loop + end
+    strap = [ribbon([p for p, _ in path], [n for _, n in path])]
+    strap += tabs
+    # Buckle slider high on the chest (front part of the loop)
+    front = [(p, n) for p, n in loop if rb(p)[2] < -0.3 and rb(p)[0] < -0.1]
+    if len(front) > 3:
+        (a, n3), (b, _) = front[len(front) // 2], front[len(front) // 2 + 1]
+        n3 = n3.normalized()
         along = (b - a).normalized()
         side = n3.cross(along).normalized()
-        m = Matrix((side, along, n3.normalized())).transposed().to_4x4()
+        m = Matrix((side, along, n3)).transposed().to_4x4()
         slider = []
         for k in range(21):
             ang = 2 * math.pi * k / 20
             u, t = math.cos(ang), math.sin(ang)
-            slider.append(Vector((math.copysign(abs(u) ** 0.4, u) * 0.05, math.copysign(abs(t) ** 0.4, t) * 0.035, 0.012)))
-        sl = tube([m @ p + a.lerp(b, 0.5) for p in slider], 0.01, "slider")
-        hardware.append(sl)
+            slider.append(Vector((math.copysign(abs(u) ** 0.4, u) * 0.055, math.copysign(abs(t) ** 0.4, t) * 0.03, 0.016)))
+        hardware.append(tube([m @ p + a.lerp(b, 0.5) for p in slider], 0.01, "slider"))
     o = join(strap, "Strap")
-    finish(o, 3000)
+    finish(o, 4000)
     piece(o, "Root", ("leather", (184, 110, 62)))
     hw = join(hardware, "Hardware")
     finish(hw, 3000)
     piece(hw, "Root")
 
     # Shorts seat (mostly hidden under the hoodie hem).
-    hips = fuse([ellipsoid((0, -0.74, 0.02), (0.56, 0.2, 0.44))], "Hips", voxel=0.02, smooth=0, tris=2500)
+    seat = [ellipsoid((0, -0.72, 0.02), (0.56, 0.2, 0.44))]
+    for i in (-1, 1):
+        seat.append(cone_between((0.3 * i, -0.7, 0.0), (0.3 * i, -0.86, 0.0), 0.31, 0.33, verts=40))
+        seat.append(tube([R(0.36 * i, -0.62, -0.4), R(0.45 * i, -0.72, -0.37), R(0.5 * i, -0.8, -0.31)], 0.011, "pocketseam"))
+    seat.append(tube([R(0, -0.62, -0.44), R(0, -0.76, -0.43), R(0, -0.86, -0.36)], 0.012, "centreseam"))
+    hips = fuse(seat, "Hips", voxel=0.013, smooth=2, tris=4000)
+    crumple(hips, 0.012, 0.12, "seatfolds")
     piece(hips, "Root", ("cloth", (255, 255, 255)))
 
 
@@ -789,13 +882,38 @@ def build_leg():
         parts.append(ellipsoid((0.11 * k, -0.29, -0.41), (0.07, 0.07, 0.07)))
     piece(fuse(parts, "Leg", voxel=0.014, smooth=6, tris=3500), "Leg", "fur_plain")
     # Boxy shorts leg: a wide tube over the thigh with a rolled, turned-up hem.
-    shorts = [cone_between((0, 0.3, 0), (0, -0.03, 0), 0.32, 0.36, verts=48)]
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.36, minor_radius=0.03, major_segments=48, minor_segments=10)
+    bm = bmesh.new()
+    rows = []
+    rings = [(0.3, 0.315), (0.18, 0.33), (0.06, 0.345), (-0.04, 0.36), (-0.1, 0.365)]
+    for idx, (y, r) in enumerate(rings):
+        t = idx / (len(rings) - 1)
+        row = []
+        for k in range(48):
+            ang = 2 * math.pi * k / 48
+            wave = 1 + 0.045 * t * (0.7 * math.sin(5 * ang + 0.4) + 0.3 * math.sin(9 * ang + 1.7))
+            row.append(bm.verts.new(R(math.sin(ang) * r * wave, y, -math.cos(ang) * r * wave)))
+        rows.append(row)
+    for r_ in range(len(rows) - 1):
+        for k in range(48):
+            bm.faces.new((rows[r_][k], rows[r_][(k + 1) % 48], rows[r_ + 1][(k + 1) % 48], rows[r_ + 1][k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    me = bpy.data.meshes.new("shortsleg")
+    bm.to_mesh(me)
+    bm.free()
+    tubeo = bpy.data.objects.new("shortsleg", me)
+    bpy.context.collection.objects.link(tubeo)
+    sub = tubeo.modifiers.new("sub", "SUBSURF")
+    sub.levels = 1
+    so = tubeo.modifiers.new("solid", "SOLIDIFY")
+    so.thickness = 0.03
+    so.offset = 1.0
+    so.use_rim = True
+    apply_mods(tubeo)
+    bpy.ops.mesh.primitive_torus_add(major_radius=0.375, minor_radius=0.024, major_segments=48, minor_segments=10)
     hem = bpy.context.active_object
-    hem.data.transform(Matrix.Translation(R(0, -0.035, 0)))
-    shorts.append(hem)
-    s = fuse(shorts, "ShortsLeg", voxel=0.012, smooth=3, tris=3000)
-    crumple(s, 0.018, 0.14, "shortsfolds")
+    hem.data.transform(Matrix.Translation(R(0, -0.1, 0)))
+    s = fuse([tubeo, hem], "ShortsLeg", voxel=0.011, smooth=2, tris=4000)
+    crumple(s, 0.014, 0.12, "shortsfolds")
     piece(s, "Leg", ("cloth", (255, 255, 255)))
 
 
@@ -1210,6 +1328,13 @@ def preview():
         cam.rotation_quaternion = (target - pos).to_track_quat("-Z", "Y")
         scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_%s.png" % name)
         bpy.ops.render.render(write_still=True)
+    # Close-up of the bag, strap and pocket
+    tgt = R(0.35, -0.4, -0.4)
+    pos = tgt + R(1.3, 0.5, -3.4)
+    cam.location = pos
+    cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
+    scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_bag.png")
+    bpy.ops.render.render(write_still=True)
 
 
 def main():
