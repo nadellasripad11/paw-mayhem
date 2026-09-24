@@ -195,7 +195,7 @@ local function choice(parent: Instance, order: number, label: string, key: strin
 	paint()
 end
 
-local function card(parent: Instance, order: number, title: string, color: Color3): Frame
+local function cardFn(parent: Instance, order: number, title: string, color: Color3): Frame
 	local c = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundColor3 = CARD_BG, BorderSizePixel = 0, Size = UDim2.new(1 / 3, -12, 1, 0) }) :: Frame
 	UIUtil.corner(UDim.new(0, 18), c)
 	UIUtil.gradient(color:Lerp(CARD_BG, 0.82), CARD_BG, 90, c)
@@ -227,7 +227,25 @@ function Settings.Build(parent)
 			return
 		end
 		built = true
-		UIUtil.listLayout(root, 16, Enum.FillDirection.Horizontal)
+		-- Wide screens: three cards side by side. Phones: stacked and scrollable.
+		local narrow = root.AbsoluteSize.X < 860
+		local holder: Instance = root
+		if narrow then
+			holder = UIUtil.make("ScrollingFrame", {
+				Parent = root, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+				ScrollBarThickness = 4, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			})
+			UIUtil.listLayout(holder, 14)
+		else
+			UIUtil.listLayout(root, 16, Enum.FillDirection.Horizontal)
+		end
+		local function card(parentIgnored: Instance, order: number, title: string, color: Color3): Frame
+			local body = cardFn(holder, order, title, color)
+			if narrow then
+				(body.Parent :: Frame).Size = UDim2.new(1, -6, 0, 400)
+			end
+			return body
+		end
 
 		local gameplay = card(root, 1, "GAMEPLAY", Color3.fromRGB(255, 170, 70))
 		slider(gameplay, -2, "Music", "MusicVolume", 0, 1, pct)

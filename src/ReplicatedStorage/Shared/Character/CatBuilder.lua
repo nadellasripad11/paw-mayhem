@@ -36,7 +36,7 @@ local ROOT_SIZE = Vector3.new(2, 2, 1.4)
 local HIP_HEIGHT = 0.4
 
 local V = Vector3.new
-local HEAD_POS = V(0, 1.2, 0) -- head centre in root space
+local HEAD_POS = V(0, 1.22, 0) -- head centre in root space
 local PINK = Color3.fromRGB(255, 172, 192)
 local ROT_Z90 = CFrame.Angles(0, 0, math.rad(90)) -- cylinder axis X -> Y
 local ROT_Y90 = CFrame.Angles(0, math.rad(90), 0) -- cylinder axis X -> Z
@@ -256,7 +256,7 @@ end
 
 local function buildHead(root: BasePart, fur, hat, acc): BasePart
 	local head = oval("Head", V(2.4, 1.95, 2.0), fur.Body)
-	joint("PawNeck", root, head, CFrame.new(0, 0.3, 0), CFrame.new(0, 0.9, 0))
+	joint("PawNeck", root, head, CFrame.new(0, 0.42, 0), CFrame.new(0, 0.8, 0))
 	local function add(p: BasePart, cf: CFrame)
 		weld(head, p, cf)
 	end
@@ -388,8 +388,8 @@ end
 local function buildArm(root: BasePart, i: number, sleeve: Color3, cuff: Color3?, fur, armed: boolean): BasePart
 	local arm = oval("Arm", V(0.42, 0.66, 0.42), sleeve)
 	local pivot = armed
-		and CFrame.new(0.58 * i, 0.12, -0.02) * CFrame.Angles(0, math.rad(34 * i), 0) * CFrame.Angles(math.rad(72), 0, 0)
-		or CFrame.new(0.66 * i, 0.12, 0) * CFrame.Angles(0, 0, math.rad(12 * i))
+		and CFrame.new(0.6 * i, 0.24, -0.02) * CFrame.Angles(0, math.rad(34 * i), 0) * CFrame.Angles(math.rad(72), 0, 0)
+		or CFrame.new(0.68 * i, 0.24, 0) * CFrame.Angles(0, 0, math.rad(12 * i))
 	joint(i < 0 and "PawShoulderL" or "PawShoulderR", root, arm, pivot, CFrame.new(0, -0.3, 0))
 	if cuff then
 		weld(arm, part("Cuff", V(0.1, 0.44, 0.44), cuff, Enum.PartType.Cylinder), CFrame.new(0, -0.28, 0) * ROT_Z90)
@@ -403,7 +403,7 @@ end
 local GUN_SCALE = 0.36
 
 local function attachBlaster(model: Model, root: BasePart, hand: BasePart, weapon)
-	local gunCF = root.CFrame * CFrame.fromMatrix(V(0.08, -0.06, -1.0), V(0, 0, -1), V(0, 1, 0))
+	local gunCF = root.CFrame * CFrame.fromMatrix(V(0.08, 0.06, -1.0), V(0, 0, -1), V(0, 1, 0))
 	local gun = BlasterBuilder.Build(weapon.Id, weapon.Skin, gunCF, GUN_SCALE)
 	gun.Name = "Blaster"
 	for _, p in ipairs(gun:GetChildren()) do
@@ -468,9 +468,17 @@ local MESH_REPLACES = {
 	PocketFlap = true, Strap = true, StrapBack = true, Satchel = true, SatchelFlap = true, Buckle = true,
 	Cuff = true, PawPad = true, ShortsLeg = true, Foot = true, Toe = true,
 	Tail2 = true, Tail3 = true, Tail4 = true, Tail5 = true, Tail6 = true, Tail7 = true,
+	TigerStripe = true, CheekStripe = true, CalicoPatch = true,
 }
+-- Hats / glasses were sized for the primitive head; the mesh head is smaller.
+local HEAD_GEAR = {
+	Cap = true, CapBrim = true, CapButton = true, Beanie = true, BeanieCuff = true, Pompom = true,
+	Crown = true, CrownPoint = true, CrownGem = true, CrownJewel = true, Helmet = true, HelmetRing = true,
+	Lens = true, GlassesBridge = true,
+}
+local MESH_HEAD_SCALE = 0.9
 local MESH_ANCHORS = { Head = true, Arm = true, Leg = true, Tail1 = true, Hand = true }
-local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = true, Pocket = true, Bag = true }
+local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = true, Pocket = true, Bag = true, HoodieSleeve = true }
 
 local function meshLibrary(): Instance?
 	local lib = ReplicatedStorage:FindFirstChild("CatMeshes")
@@ -494,14 +502,14 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 	local marking = fur.Marking or fur.Body:Lerp(Color3.fromRGB(150, 80, 40), 0.22)
 	local eyeColor = fur.Eye or Color3.fromRGB(52, 160, 140)
 	local colors: { [string]: Color3 } = {
-		HeadFur = fur.Body, Hand = fur.Body, Leg = fur.Body, Tail = fur.Body,
+		HeadFur = fur.Body, Ears = fur.Body, Hand = fur.Body, Leg = fur.Body, Tail = fur.Body, EarTufts = fur.Accent,
 		Muzzle = fur.Accent, TailTip = fur.Pattern == "Calico" and marking or fur.Accent,
 		ForeheadMark = marking, InnerEar = PINK, PawPad = PINK, Blush = Color3.fromRGB(255, 150, 175),
 		Nose = Color3.fromRGB(255, 136, 160), Mouth = Color3.fromRGB(110, 58, 66),
 		Brows = fur.Body:Lerp(Color3.new(0, 0, 0), 0.28),
 		EyeWhite = Color3.fromRGB(22, 16, 26), Iris = eyeColor:Lerp(Color3.fromRGB(16, 20, 26), 0.45),
 		IrisGlow = eyeColor:Lerp(Color3.new(1, 1, 1), 0.12), Pupil = Color3.fromRGB(12, 8, 18), Shine = Color3.new(1, 1, 1),
-		Jacket = top, Sleeve = top, Body = top, Shirt = chest, Cuff = cuff or top,
+		Jacket = top, Sleeve = top, HoodieSleeve = top, Body = top, Shirt = chest, Cuff = cuff or top,
 		Drawstrings = Color3.fromRGB(246, 246, 250), DogTag = Color3.fromRGB(214, 218, 228),
 		Pocket = Color3.fromRGB(214, 140, 72), Bag = Color3.fromRGB(150, 88, 54),
 		Hips = shorts or fur.Body, ShortsLeg = shorts or fur.Body,
@@ -526,6 +534,24 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 		add("Leg", m and m.Part1)
 	end
 
+	-- Hats, glasses and the blink lid follow the smaller mesh head.
+	local headPart = model:FindFirstChild("Head")
+	if headPart then
+		for _, j in ipairs(headPart:GetChildren()) do
+			if j:IsA("Motor6D") and j.Part1 then
+				local p = j.Part1
+				if HEAD_GEAR[p.Name] then
+					j.C0 = CFrame.new(j.C0.Position * MESH_HEAD_SCALE) * j.C0.Rotation
+					p.Size *= MESH_HEAD_SCALE
+				elseif p.Name == "ClosedEye" then
+					local side = j.C0.Position.X >= 0 and 1 or -1
+					j.C0 = CFrame.new(0.45 * side, -0.07, -0.84) * CFrame.Angles(0, math.rad(-19 * side), math.rad(-8 * side))
+					p.Size = Vector3.new(0.42, 0.06, 0.04)
+				end
+			end
+		end
+	end
+
 	-- Swap: drop the primitive details, hide the anchors.
 	for _, d in ipairs(model:GetChildren()) do
 		if d:IsA("BasePart") and d ~= root then
@@ -542,7 +568,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 		local wanted = true
 		if HOODIE_ONLY[name] then
 			wanted = hoodie
-		elseif name == "Body" then
+		elseif name == "Body" or name == "Sleeve" then
 			wanted = not hoodie
 		elseif name == "ShortsLeg" then
 			wanted = shorts ~= nil
@@ -564,9 +590,20 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 				m.Massless = true
 				m.CastShadow = true
 				m.Material = name == "DogTag" and Enum.Material.Metal or Enum.Material.SmoothPlastic
-				m.Color = colors[name] or fur.Body
+				local color = colors[name] or fur.Body
+				m.Color = color
 				m.Transparency = name == "Blush" and 0.4 or 0
-				m.TextureID = ""
+				-- Baked fur textures are white, tinted with the player's fur
+				-- colour. Clothing textures carry their own colour.
+				local sa = m:FindFirstChildOfClass("SurfaceAppearance")
+				if sa and colors[name] ~= nil and not HOODIE_ONLY[name] then
+					local ok = pcall(function()
+						(sa :: any).Color = color
+					end)
+					if not ok then
+						sa:Destroy() -- no tint support: fall back to the flat colour
+					end
+				end
 				weld(anchor, m, CFrame.new(entry.Center))
 			end
 		end
@@ -594,8 +631,8 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	model.PrimaryPart = root
 
 	-- Torso, chest and hips
-	weld(root, oval("Torso", V(1.3, 1.0, 1.0), top), CFrame.new(0, -0.2, 0))
-	weld(root, oval("Chest", V(0.64, 0.8, 0.3), chest), CFrame.new(0, -0.22, -0.38))
+	weld(root, oval("Torso", V(1.32, 1.16, 1.04), top), CFrame.new(0, -0.15, 0))
+	weld(root, oval("Chest", V(0.64, 0.9, 0.3), chest), CFrame.new(0, -0.17, -0.42))
 	weld(root, oval("Hips", V(1.22, 0.5, 0.96), shorts or fur.Body), CFrame.new(0, -0.68, 0.02))
 
 	local armed = weapon ~= nil and typeof(weapon.Id) == "string"

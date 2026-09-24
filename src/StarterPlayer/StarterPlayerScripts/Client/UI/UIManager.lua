@@ -202,6 +202,7 @@ local function onPhase(m)
 end
 
 function UIManager.Start()
+	task.spawn(require(script.Parent.UIJuice).Start)
 	-- Kill-cam: watch whoever eliminated you.
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function(data)
 		local by = typeof(data) == "table" and data.by or nil

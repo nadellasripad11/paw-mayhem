@@ -8,3 +8,5 @@ PawMayhem.before-*.rbxlx
 .vscode/
 .DS_Store
 Thumbs.db
+
+tools/blender/textures/

@@ -52,7 +52,7 @@ function DailyReward.CanClaim(): boolean
 end
 
 function DailyReward.Open()
-	if gui then
+	if gui and claimButton then
 		refresh()
 		gui.Enabled = true
 	end
@@ -106,13 +106,16 @@ function DailyReward.Build()
 		local stroke = UIUtil.stroke(Color3.fromRGB(60, 90, 140), 1.5, f)
 		UIUtil.label({ Parent = f, Text = "DAY " .. i, Font = Theme.Font.Title, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 0, 20) })
 		local art = UIUtil.make("Frame", { Parent = f, Position = UDim2.fromOffset(6, 32), Size = UDim2.new(1, -12, 0, 118), BackgroundTransparency = 1 })
-		if big then
-			ShopArt.Prop(art, "Gift")
-		elseif reward.Gems then
-			ShopArt.Prop(art, "Gems", math.clamp(math.floor(reward.Gems / 10), 1, 3))
-		else
-			ShopArt.Prop(art, "Coins")
-		end
+		-- 3D art is decoration: never let it break the popup.
+		pcall(function()
+			if big then
+				ShopArt.Prop(art, "Gift")
+			elseif reward.Gems then
+				ShopArt.Prop(art, "Gems", math.clamp(math.floor(reward.Gems / 10), 1, 3))
+			else
+				ShopArt.Prop(art, "Coins")
+			end
+		end)
 		local text = {}
 		if reward.Coins then
 			table.insert(text, string.format('<font color="#FFD34A">%d</font> COINS', reward.Coins))

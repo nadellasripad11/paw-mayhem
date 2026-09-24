@@ -41,7 +41,7 @@ function Tutorial.ShouldShow(): boolean
 	return p ~= nil and p.TutorialDone ~= true and ((p.Stats and p.Stats.Matches) or 0) == 0
 end
 
-function Tutorial.Open(finished: (() -> ())?)
+local function open(finished: (() -> ())?)
 	onFinish = finished
 	if gui then
 		gui:Destroy()
@@ -122,6 +122,21 @@ function Tutorial.Open(finished: (() -> ())?)
 	end)
 	skip.MouseButton1Click:Connect(finish)
 	show()
+end
+
+-- Never leave a half-built dark overlay on screen if something fails.
+function Tutorial.Open(finished: (() -> ())?)
+	local ok, err = pcall(open, finished)
+	if not ok then
+		warn("[PAW MAYHEM] Tutorial failed: " .. tostring(err))
+		if gui then
+			gui:Destroy()
+			gui = nil
+		end
+		if finished then
+			finished()
+		end
+	end
 end
 
 return Tutorial

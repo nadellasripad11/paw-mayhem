@@ -88,6 +88,9 @@ local function switchTo(id: string?)
 		end
 		entry.stroke.Transparency = on and 0.05 or entry.baseStroke
 	end
+	if id and panels[id] and id ~= currentPanel then
+		require(script.Parent.Parent.UIJuice).Enter(panels[id])
+	end
 	currentPanel = id
 	if relayoutFn then
 		relayoutFn()

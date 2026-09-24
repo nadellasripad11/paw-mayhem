@@ -29,7 +29,7 @@ Cats.Fur = {
 -- Outfits (torso/limb overlay color + tag).
 Cats.Outfits = {
 	{ Id = "None", Name = "None", Desc = "Classic", Color = c(200, 200, 200), UnlockLevel = 0, CoinCost = 0 },
-	{ Id = "Hoodie", Name = "Hoodie", Desc = "Classic", Color = c(60, 65, 80), UnlockLevel = 0, CoinCost = 250 },
+	{ Id = "Hoodie", Name = "Hoodie", Desc = "Classic", Color = c(58, 48, 70), UnlockLevel = 0, CoinCost = 250 },
 	{ Id = "Streetwear", Name = "Streetwear", Desc = "Urban", Color = c(40, 90, 120), UnlockLevel = 2, CoinCost = 400 },
 	{ Id = "Robot", Name = "Robot", Desc = "Cyber", Color = c(150, 160, 175), UnlockLevel = 6, CoinCost = 900 },
 	{ Id = "Ninja", Name = "Ninja", Desc = "Silent", Color = c(30, 30, 38), UnlockLevel = 8, CoinCost = 1100 },

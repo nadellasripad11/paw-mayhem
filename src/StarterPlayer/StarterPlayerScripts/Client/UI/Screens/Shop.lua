@@ -280,7 +280,7 @@ function Shop.Build(parent)
 
 	-- Category rail
 	local rail = UIUtil.make("ScrollingFrame", {
-		Parent = root, Size = UDim2.new(0, 170, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0,
+		Parent = root, Size = UDim2.new(0, 170, 1, 0), ScrollingDirection = Enum.ScrollingDirection.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
 		ScrollBarThickness = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	})
 	UIUtil.listLayout(rail, 8)
@@ -301,7 +301,14 @@ function Shop.Build(parent)
 		pad.PaddingRight = UDim.new(0, 12)
 		pad.PaddingBottom = UDim.new(0, 12)
 		pad.Parent = page
-		UIUtil.gridLayout(page, UDim2.new(0.25, -12, 0, tab.cell), UDim2.fromOffset(14, 14))
+		local grid = UIUtil.gridLayout(page, UDim2.new(0.25, -12, 0, tab.cell), UDim2.fromOffset(14, 14))
+		-- As many ~210px columns as fit (2 on phones, up to 5 on wide screens).
+		local function fit()
+			local cols = math.clamp(math.floor(page.AbsoluteSize.X / 210), 2, 5)
+			grid.CellSize = UDim2.new(1 / cols, -12, 0, tab.cell)
+		end
+		page:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+		fit()
 		return page
 	end
 

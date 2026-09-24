@@ -247,19 +247,25 @@ local function buildCard(parent: Instance, map, index: number)
 		vf.Position = art.Position
 		vf.Size = art.Size
 		vf.BackgroundColor3 = PREVIEW_SKY[map.id] or map.accent
-		vf.Ambient = Color3.fromRGB(190, 190, 200)
-		vf.LightColor = Color3.fromRGB(255, 245, 230)
-		vf.LightDirection = Vector3.new(-0.4, -1, -0.3)
+		vf.Ambient = Color3.fromRGB(215, 215, 225)
+		vf.LightColor = Color3.fromRGB(255, 250, 238)
+		vf.LightDirection = Vector3.new(-0.35, -1, 0.45)
 		vf.ZIndex = 2
 		vf.Parent = card
 		UIUtil.corner(UDim.new(0, 12), vf)
 		local model = src:Clone()
 		model.Parent = vf
-		local cf, size = model:GetBoundingBox()
+		-- Frame the playable islands (saved by the server), seen from above at
+		-- a three-quarter angle like a map-select splash.
+		local bbCf, bbSize = model:GetBoundingBox()
+		local focus = src:GetAttribute("FocusCenter")
+		local span = src:GetAttribute("FocusSize")
+		local center = typeof(focus) == "Vector3" and focus or bbCf.Position
+		local size = typeof(span) == "Vector3" and span or bbSize
 		local cam = Instance.new("Camera")
-		cam.FieldOfView = 40
-		local dist = math.max(size.X, size.Z) * 0.5 / math.tan(math.rad(20)) * 0.9
-		cam.CFrame = CFrame.lookAt(cf.Position + Vector3.new(dist * 0.55, dist * 0.5, dist * 0.62), cf.Position)
+		cam.FieldOfView = 38
+		local dist = math.max(size.X, size.Z) * 0.5 / math.tan(math.rad(19)) * 0.78
+		cam.CFrame = CFrame.lookAt(center + Vector3.new(dist * 0.35, dist * 0.62, dist * 0.7), center + Vector3.new(0, -size.Y * 0.1, 0))
 		cam.Parent = vf
 		vf.CurrentCamera = cam
 		art.Visible = false
