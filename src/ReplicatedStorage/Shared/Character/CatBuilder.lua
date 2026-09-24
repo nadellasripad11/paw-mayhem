@@ -438,8 +438,8 @@ end
 local function buildTail(root: BasePart, fur)
 	local pivot = V(0, -0.6, 0.45)
 	local points = {
-		V(0.14, -0.62, 0.58), V(0.46, -0.58, 0.7), V(0.8, -0.44, 0.7), V(1.06, -0.18, 0.62),
-		V(1.18, 0.14, 0.54), V(1.16, 0.46, 0.46), V(1.04, 0.7, 0.4),
+		V(0.1, -0.6, 0.5), V(0.32, -0.78, 0.6), V(0.54, -0.98, 0.58), V(0.72, -1.1, 0.46),
+		V(0.84, -1.12, 0.3), V(0.9, -1.04, 0.16), V(0.92, -0.98, 0.1),
 	}
 	local marking = fur.Marking or fur.Accent
 	local base = oval("Tail1", V(0.46, 0.46, 0.46), fur.Body)

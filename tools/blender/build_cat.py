@@ -261,141 +261,115 @@ def piece(obj, anchor):
 
 
 # ── HEAD (head-local; head centre = origin) ──────────────────────────────────
+# A soft, round kitten head (no spikes): wide cheeks with gentle fluff, a tiny
+# tuft, rounded-tip ears. Face details are thin "decals" wrapped onto the
+# head surface so the eyes sit flat and glossy like the reference.
+def ellipse_pts(rx, ry, n=36):
+    return [(rx * math.cos(2 * math.pi * k / n), ry * math.sin(2 * math.pi * k / n)) for k in range(n)]
+
+
+def rotated(pts, deg):
+    a = math.radians(deg)
+    c, s = math.cos(a), math.sin(a)
+    return [(x * c - y * s, x * s + y * c) for x, y in pts]
+
+
+def decal(name, pts, surf, target, x, y, offset, thickness=0.008, subdiv=2):
+    hit, n = surf.front(x, y)
+    if hit is None:
+        return None
+    o = flat_shape(pts, hit, n, subdiv=subdiv)
+    stick(o, target, offset=offset, thickness=thickness)
+    o.name = name
+    return o
+
+
+def decal_toward(name, pts, surf, target, origin_r, dir_r, offset, thickness=0.01):
+    hit, n = surf.toward(origin_r, dir_r)
+    if hit is None:
+        return None
+    o = flat_shape(pts, hit, n, subdiv=2)
+    stick(o, target, offset=offset, thickness=thickness)
+    o.name = name
+    return o
+
+
 def build_head():
-    parts = []
-    parts.append(ellipsoid((0, 0.02, 0), (1.2, 0.97, 1.0)))
+    parts = [ellipsoid((0, 0.02, 0), (1.22, 0.96, 1.0))]
     for i in (-1, 1):
-        # chubby lower cheeks
-        parts.append(ellipsoid((0.6 * i, -0.38, -0.32), (0.5, 0.4, 0.46)))
-        # soft cheek fur clumps sweeping out
-        parts.append(cone_between((0.98 * i, -0.28, -0.16), (1.32 * i, -0.4, -0.1), 0.26, 0.08))
-        parts.append(cone_between((0.9 * i, -0.5, -0.12), (1.14 * i, -0.7, -0.06), 0.22, 0.07))
-        parts.append(cone_between((1.06 * i, -0.04, -0.04), (1.28 * i, 0.02, 0.0), 0.18, 0.07))
-        # ears: flattened cones tilted outward
-        ear = cone_between((0.62 * i, 0.55, 0.06), (1.02 * i, 1.72, 0.12), 0.5)
-        ear.data.transform(Matrix.Translation(-R(0.8 * i, 1.1, 0.09)))
-        ear.data.transform(rot_r(0, -10 * i, 0).to_4x4())
-        # squash ear front-to-back (Roblox Z = Blender -Y)
-        ear.data.transform(Matrix.Diagonal((1.0, 0.42, 1.0, 1.0)))
-        ear.data.transform(Matrix.Translation(R(0.8 * i, 1.1, 0.09)))
+        parts.append(ellipsoid((0.56 * i, -0.36, -0.3), (0.5, 0.4, 0.46)))  # full lower cheeks
+        parts.append(cone_between((1.0 * i, -0.32, -0.08), (1.3 * i, -0.46, -0.04), 0.2, 0.07))  # soft cheek tufts
+        parts.append(cone_between((0.92 * i, -0.52, -0.06), (1.14 * i, -0.72, -0.02), 0.17, 0.06))
+        # ears: wide, with rounded tips, squashed front-to-back
+        ear = cone_between((0.54 * i, 0.5, 0.08), (1.02 * i, 1.5, 0.12), 0.52, 0.05)
+        c = R(0.78 * i, 0.98, 0.1)
+        ear.data.transform(Matrix.Translation(-c))
+        ear.data.transform(Matrix.Diagonal((1.0, 0.46, 1.0, 1.0)))
+        ear.data.transform(Matrix.Translation(c))
         parts.append(ear)
-    # top-of-head tuft
-    parts.append(cone_between((0.0, 0.84, -0.08), (0.1, 1.24, -0.18), 0.2, 0.06))
-    parts.append(cone_between((-0.16, 0.8, -0.1), (-0.3, 1.08, -0.16), 0.15, 0.05))
-    head = fuse(parts, "HeadFur", voxel=0.02, smooth=10, tris=8000)
+    parts.append(ellipsoid((0.02, 0.92, -0.1), (0.17, 0.14, 0.15)))  # tiny top tuft
+    head = fuse(parts, "HeadFur", voxel=0.02, smooth=16, tris=8000)
     piece(head, "Head")
     surf = Surface(head)
 
-    # Inner ears (pink) + fluff (accent): on the front face of each ear.
-    inner, fluff = [], []
-    for i in (-1, 1):
-        hit, n = surf.toward((0.86 * i, 1.12, -2), (0, 0, 1))
-        if hit:
-            o = disc(hit, n, 0.2, 0.42, 0.05, 0.0)
-            o.data.transform(Matrix.Translation(-hit))
-            o.data.transform(rot_r(0, 0, -20 * i).to_4x4())
-            o.data.transform(Matrix.Translation(hit))
-            inner.append(o)
-        hit, n = surf.toward((0.72 * i, 0.82, -2), (0, 0, 1))
-        if hit:
-            fluff.append(cone_between(rb(hit - n * 0.02), rb(hit + n * 0.03 + R(0.04 * i, 0.24, 0) - R(0, 0, 0)), 0.09, 0.03))
-            fluff.append(cone_between(rb(hit - n * 0.02 + R(0.09 * i, 0, 0) - R(0, 0, 0)), rb(hit + n * 0.03 + R(0.16 * i, 0.2, 0) - R(0, 0, 0)), 0.08, 0.03))
-    piece(join(inner, "InnerEar"), "Head")
-    finish(bpy.data.objects["InnerEar"])
-    for o in fluff:
-        bpy.data.objects.remove(o)  # pale ear tufts read as fangs at this scale
-
-    # Eyes: layered discs following the head curve.
-    layers = {"EyeWhite": [], "Iris": [], "IrisGlow": [], "Pupil": [], "Shine": []}
-    for i in (-1, 1):
-        hit, n = surf.front(0.5 * i, -0.04)
-        up = Vector((0, 0, 1))
-        layers["EyeWhite"].append(disc(hit, n, 0.34, 0.37, 0.12, -0.075))
-        layers["Iris"].append(disc(hit, n, 0.3, 0.33, 0.045, 0.012))
-        layers["IrisGlow"].append(disc(hit, n, 0.22, 0.13, 0.04, 0.028, yoff=-0.15))
-        layers["Pupil"].append(disc(hit, n, 0.19, 0.22, 0.04, 0.036, yoff=0.02))
-        # frame X points to the viewer's right: big shine upper-left, small lower-right
-        layers["Shine"].append(disc(hit, n, 0.11, 0.12, 0.025, 0.062, xoff=-0.11, yoff=0.13))
-        layers["Shine"].append(disc(hit, n, 0.05, 0.05, 0.02, 0.058, xoff=0.12, yoff=-0.15))
-    for name, objs in layers.items():
+    def add(name, objs, tris=2500):
+        objs = [o for o in objs if o]
+        if not objs:
+            return
         o = join(objs, name)
-        finish(o, 3000)
+        finish(o, tris)
         piece(o, "Head")
 
-    # Brows
+    # Big pink ear insides
+    inner = []
+    for i in (-1, 1):
+        tri = rotated([(-0.42, -0.42), (0.42, -0.42), (0.0, 0.52)], 24 * i)
+        inner.append(decal_toward("ear", tri, surf, head, (0.8 * i, 1.02, -2), (0, 0, 1), 0.01, 0.02))
+    add("InnerEar", inner)
+
+    # Eyes: round, a touch taller than wide. Mostly dark, green glow at the
+    # bottom, big shine upper-left + a small one lower-right (viewer's view;
+    # the viewer's left is +X).
+    EX, EY = 0.5, -0.06
+    layers = {"EyeWhite": [], "Iris": [], "IrisGlow": [], "Pupil": [], "Shine": []}
+    for i in (-1, 1):
+        x = EX * i
+        layers["EyeWhite"].append(decal("rim", ellipse_pts(0.28, 0.31), surf, head, x, EY, 0.006, 0.01))
+        layers["Iris"].append(decal("iris", ellipse_pts(0.25, 0.28), surf, head, x, EY, 0.014, 0.008))
+        layers["IrisGlow"].append(decal("glow", ellipse_pts(0.2, 0.11), surf, head, x, EY - 0.14, 0.02, 0.008))
+        layers["Pupil"].append(decal("pupil", ellipse_pts(0.18, 0.2), surf, head, x, EY + 0.03, 0.026, 0.008))
+        layers["Shine"].append(decal("shine", ellipse_pts(0.095, 0.105), surf, head, x + 0.09, EY + 0.11, 0.034, 0.008))
+        layers["Shine"].append(decal("shine", ellipse_pts(0.045, 0.045), surf, head, x - 0.1, EY - 0.13, 0.034, 0.008))
+    for name, objs in layers.items():
+        add(name, objs)
+
+    # Faint little brows
     brows = []
     for i in (-1, 1):
         pts = []
         for t in (0.0, 0.5, 1.0):
-            x = (0.38 + 0.24 * t) * i
-            y = 0.4 + 0.05 * math.sin(t * math.pi) - 0.04 * t
-            hit, n = surf.front(x, y)
-            pts.append(hit + n * 0.02)
-        brows.append(tube(pts, 0.035, "brow"))
-    o = join(brows, "Brows")
-    finish(o, 1500)
-    piece(o, "Head")
+            hit, n = surf.front((0.4 + 0.18 * t) * i, 0.33 + 0.035 * math.sin(t * math.pi))
+            pts.append(hit + n * 0.012)
+        brows.append(tube(pts, 0.024, "brow"))
+    add("Brows", brows, 1200)
 
-    # Forehead mark: a rounded triangle pointing down, laid on the forehead.
-    hit, n = surf.front(0, 0.5)
-    tri = flat_shape([(-0.2, 0.12), (0.2, 0.12), (0.0, -0.24)], hit, n, subdiv=3)
-    stick(tri, head, offset=0.006, thickness=0.012)
-    tri.name = "ForeheadMark"
-    tri.data.name = "ForeheadMark"
-    finish(tri, 1500)
-    piece(tri, "Head")
+    # Soft forehead mark pointing down
+    add("ForeheadMark", [decal("mark", [(-0.17, 0.12), (0.17, 0.12), (0.0, -0.2)], surf, head, 0, 0.64, 0.006, 0.008, subdiv=3)], 1200)
 
-    # Muzzle puffs + chin (accent)
-    muz = []
-    for i in (-1, 1):
-        hit, n = surf.front(0.12 * i, -0.42)
-        muz.append(disc(hit, n, 0.17, 0.12, 0.1, 0.0))
-    hit, n = surf.front(0, -0.56)
-    muz.append(disc(hit, n, 0.12, 0.06, 0.07, 0.0))
-    piece(fuse(muz, "Muzzle", voxel=0.012, smooth=3, tris=2500), "Head")
-
-    # Nose: small rounded triangle pointing down
-    hit, n = surf.front(0, -0.28)
-    bpy.ops.mesh.primitive_cone_add(vertices=3, radius1=0.24, radius2=0, depth=0.12)
-    nose = bpy.context.active_object
-    nose.data.transform(Matrix.Diagonal((1.3, 1.0, 1.0, 1.0)))
-    nose.data.transform(Matrix.Rotation(math.radians(-90), 4, "Z"))
-    nose.data.transform(frame_at(hit, n).to_4x4())
-    nose.data.transform(Matrix.Translation(hit + n * 0.02))
-    sub = nose.modifiers.new("sub", "SUBSURF")
-    sub.levels = 2
-    apply_mods(nose)
-    nose.name = "Nose"
-    finish(nose)
-    piece(nose, "Head")
-
-    # Mouth ":3" — two little arcs under the nose (sits on the muzzle)
-    msurf = Surface(bpy.data.objects["Muzzle"])
+    # Small pink nose (rounded triangle) + a little smile
+    add("Nose", [decal("nose", [(-0.085, 0.045), (0.085, 0.045), (0.0, -0.065)], surf, head, 0, -0.28, 0.008, 0.035, subdiv=3)], 1000)
     arcs = []
     for i in (-1, 1):
         pts = []
         for k in range(5):
             a = math.pi * k / 4
-            x = 0.06 * i + 0.055 * math.cos(a) * i
-            y = -0.39 - 0.045 * math.sin(a)
-            hit, n = msurf.front(x, y)
-            if hit is None:
-                hit, n = surf.front(x, y)
-            pts.append(hit + n * 0.008)
-        arcs.append(tube(pts, 0.016, "mouth"))
-    o = join(arcs, "Mouth")
-    finish(o, 1500)
-    piece(o, "Head")
+            hit, n = surf.front(0.045 * i + 0.045 * math.cos(a) * i, -0.37 - 0.035 * math.sin(a))
+            pts.append(hit + n * 0.01)
+        arcs.append(tube(pts, 0.013, "mouth"))
+    add("Mouth", arcs, 1200)
 
     # Blush
-    bl = []
-    for i in (-1, 1):
-        hit, n = surf.front(0.78 * i, -0.3)
-        bl.append(disc(hit, n, 0.17, 0.085, 0.03, 0.0))
-    o = join(bl, "Blush")
-    finish(o, 1500)
-    piece(o, "Head")
-
+    add("Blush", [decal("blush", ellipse_pts(0.16, 0.08), surf, head, 0.8 * i, -0.3, 0.008, 0.006) for i in (-1, 1)], 1200)
 
 # ── BODY (root-local) ─────────────────────────────────────────────────────────
 def build_body():
@@ -533,54 +507,45 @@ def build_body():
     piece(o, "Root")
 
     # Hips / shorts seat
-    piece(fuse([ellipsoid((0, -0.7, 0.02), (0.58, 0.24, 0.46))], "Hips", voxel=0.02, smooth=0, tris=2500), "Root")
+    piece(fuse([ellipsoid((0, -0.66, 0.02), (0.52, 0.2, 0.42))], "Hips", voxel=0.02, smooth=0, tris=2500), "Root")
 
 
 # ── ARM (arm-local: the sleeve's centre is the origin, hanging down) ────────
 def build_arm():
-    sleeve = fuse([ellipsoid((0, 0.02, 0), (0.22, 0.34, 0.22)), ellipsoid((0, 0.24, 0), (0.24, 0.16, 0.24))], "Sleeve", voxel=0.014, smooth=2, tris=2500)
+    sleeve = fuse([ellipsoid((0, 0.02, 0), (0.22, 0.34, 0.22)), ellipsoid((0, 0.24, 0), (0.24, 0.16, 0.24))], "Sleeve", voxel=0.014, smooth=4, tris=2500)
     piece(sleeve, "Arm")
-    bpy.ops.mesh.primitive_torus_add(major_radius=0.2, minor_radius=0.04, major_segments=36, minor_segments=12)
-    cuff = bpy.context.active_object
-    cuff.data.transform(Matrix.Translation(R(0, -0.27, 0)))
-    cuff.name = "Cuff"
-    finish(cuff)
-    piece(cuff, "Arm")
+    piece(fuse([ellipsoid((0, -0.26, 0), (0.235, 0.07, 0.235))], "Cuff", voxel=0.012, smooth=3, tris=1500), "Arm")
     hand = [ellipsoid((0, -0.44, -0.02), (0.2, 0.19, 0.2))]
     for k in (-1, 0, 1):
-        hand.append(ellipsoid((0.09 * k, -0.56, -0.1), (0.07, 0.06, 0.07)))
-    piece(fuse(hand, "Hand", voxel=0.012, smooth=3, tris=2500), "Arm")
-    piece(fuse([ellipsoid((0, -0.49, -0.21), (0.09, 0.07, 0.03))], "PawPad", voxel=0.01, smooth=0, tris=800), "Arm")
+        hand.append(ellipsoid((0.08 * k, -0.55, -0.09), (0.06, 0.05, 0.06)))
+    piece(fuse(hand, "Hand", voxel=0.012, smooth=6, tris=2500), "Arm")
 
 
 # ── LEG (leg-local) ───────────────────────────────────────────────────────────
 def build_leg():
     parts = [ellipsoid((0, 0, 0), (0.28, 0.28, 0.28)), ellipsoid((0, -0.26, -0.1), (0.3, 0.17, 0.38))]
     for k in (-1, 0, 1):
-        parts.append(ellipsoid((0.12 * k, -0.28, -0.42), (0.08, 0.08, 0.08)))
-    piece(fuse(parts, "Leg", voxel=0.014, smooth=4, tris=3500), "Leg")
-    shorts = [ellipsoid((0, 0.14, 0), (0.33, 0.17, 0.33)), ellipsoid((0, 0.04, 0), (0.34, 0.08, 0.34))]
-    piece(fuse(shorts, "ShortsLeg", voxel=0.014, smooth=4, tris=2500), "Leg")
+        parts.append(ellipsoid((0.11 * k, -0.29, -0.41), (0.07, 0.07, 0.07)))
+    piece(fuse(parts, "Leg", voxel=0.014, smooth=6, tris=3500), "Leg")
+    piece(fuse([ellipsoid((0, 0.1, 0), (0.33, 0.22, 0.33))], "ShortsLeg", voxel=0.014, smooth=3, tris=2500), "Leg")
 
 
 # ── TAIL (tail-local: relative to the first tail joint) ──────────────────────
+# A small fluffy tail that curves down to the floor behind the cat (viewer's
+# left), tip curling up a little.
 TAIL_POINTS = [
-    (0.14, -0.62, 0.58), (0.46, -0.58, 0.7), (0.8, -0.44, 0.7), (1.06, -0.18, 0.62),
-    (1.18, 0.14, 0.54), (1.16, 0.46, 0.46), (1.04, 0.7, 0.4),
+    (0.1, -0.6, 0.5), (0.32, -0.78, 0.6), (0.54, -0.98, 0.58), (0.72, -1.1, 0.46),
+    (0.84, -1.12, 0.3), (0.9, -1.04, 0.16),
 ]
 
 
 def build_tail():
     p0 = Vector(TAIL_POINTS[0])
-    pts = [R(*(Vector(p) - p0)) for p in TAIL_POINTS[:-1]]
-    taper = [0.85, 1.0, 1.08, 1.1, 1.05, 0.95]
-    t = tube(pts, 0.22, "tail", taper=taper)
-    tail = fuse([t], "Tail", voxel=0.016, smooth=6, tris=3000)
+    pts = [R(*(Vector(p) - p0)) for p in TAIL_POINTS]
+    taper = [0.8, 1.0, 1.1, 1.1, 0.95, 0.7]
+    t = tube(pts, 0.24, "tail", taper=taper)
+    tail = fuse([t], "Tail", voxel=0.016, smooth=8, tris=3000)
     piece(tail, "Tail")
-    q = Vector(TAIL_POINTS[-1]) - p0
-    tip = [ellipsoid((q.x, q.y - 0.02, q.z), (0.21, 0.26, 0.21))]
-    tip.append(cone_between((q.x, q.y + 0.1, q.z), (q.x - 0.06, q.y + 0.36, q.z - 0.02), 0.13, 0.03))
-    piece(fuse(tip, "TailTip", voxel=0.012, smooth=6, tris=1500), "Tail")
 
 
 # ── export ──────────────────────────────────────────────────────────────────
@@ -619,15 +584,15 @@ def export():
     )
 
 
-# ── preview render (assembled, reference colours) ───────────────────────────
+# ── preview render (assembled, reference colours, proper lighting) ─────────
 COLORS = {
-    "HeadFur": (250, 226, 206), "Hand": (250, 226, 206), "Leg": (250, 226, 206), "Tail": (250, 226, 206),
-    "Muzzle": (255, 244, 236), "EarFluff": (255, 244, 236), "TailTip": (255, 244, 236),
-    "ForeheadMark": (240, 190, 158), "InnerEar": (255, 160, 180), "Nose": (255, 136, 160), "PawPad": (255, 160, 180),
-    "Blush": (255, 160, 180), "Mouth": (110, 58, 66), "Brows": (206, 170, 150),
-    "EyeWhite": (22, 16, 26), "Iris": (30, 96, 84), "IrisGlow": (70, 170, 140), "Pupil": (12, 8, 18), "Shine": (255, 255, 255),
-    "Jacket": (42, 40, 58), "Sleeve": (42, 40, 58), "Cuff": (32, 30, 44), "Shirt": (242, 178, 152), "Drawstrings": (246, 246, 250),
-    "Pocket": (214, 140, 72), "DogTag": (214, 218, 228), "Bag": (150, 88, 54), "Hips": (46, 42, 54), "ShortsLeg": (46, 42, 54), "Body": (42, 40, 58),
+    "HeadFur": (255, 236, 224), "Hand": (255, 236, 224), "Leg": (255, 236, 224), "Tail": (255, 236, 224),
+    "TailTip": (255, 246, 240), "ForeheadMark": (246, 206, 180), "InnerEar": (255, 158, 172),
+    "Nose": (255, 140, 160), "Blush": (255, 196, 204), "Mouth": (120, 70, 74), "Brows": (230, 196, 176),
+    "EyeWhite": (18, 16, 22), "Iris": (18, 58, 58), "IrisGlow": (60, 170, 150), "Pupil": (8, 8, 12), "Shine": (255, 255, 255),
+    "Jacket": (58, 48, 70), "Sleeve": (58, 48, 70), "Cuff": (46, 38, 56), "Shirt": (228, 150, 132), "Drawstrings": (246, 246, 250),
+    "DogTag": (236, 238, 242), "Pocket": (214, 140, 80), "Bag": (150, 84, 58), "Hips": (44, 40, 54), "ShortsLeg": (44, 40, 54),
+    "Body": (58, 48, 70),
 }
 
 
@@ -654,12 +619,35 @@ def leg_matrix(i):
     return Matrix.Translation(R(0.3 * i, -0.78, 0)) @ Matrix.Translation(R(0, -0.18, 0))
 
 
+def material(name, rgb):
+    mat = bpy.data.materials.new(name + "_m")
+    mat.diffuse_color = srgb(rgb)
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    if bsdf:
+        bsdf.inputs["Base Color"].default_value = srgb(rgb)
+        bsdf.inputs["Roughness"].default_value = 0.2 if name in ("EyeWhite", "Iris", "Pupil", "Shine", "IrisGlow") else 0.6
+    return mat
+
+
+def light(name, kind, loc_r, energy, size=4.0, color=(1, 1, 1)):
+    ld = bpy.data.lights.new(name, kind)
+    ld.energy = energy
+    ld.color = color
+    if kind == "AREA":
+        ld.size = size
+    lo = bpy.data.objects.new(name, ld)
+    bpy.context.collection.objects.link(lo)
+    lo.location = R(*loc_r)
+    target = R(0, 0.4, 0)
+    lo.rotation_mode = "QUATERNION"
+    lo.rotation_quaternion = (target - lo.location).to_track_quat("-Z", "Y")
+
+
 def preview():
-    placed = []
     for obj, anchor in PIECES:
         if obj.name == "Body":
             continue
-        mats = []
         if anchor == "Arm":
             mats = [arm_matrix(-1), arm_matrix(1)]
         elif anchor == "Leg":
@@ -670,37 +658,53 @@ def preview():
             dup = obj.copy()
             dup.data = obj.data.copy()
             bpy.context.collection.objects.link(dup)
-            local = Matrix.Translation(obj.location)
-            dup.matrix_world = m @ local
-            mat = bpy.data.materials.new(obj.name + "_m")
-            mat.diffuse_color = srgb(COLORS.get(obj.name, (200, 200, 200)))
+            dup.matrix_world = m @ Matrix.Translation(obj.location)
             dup.data.materials.clear()
-            dup.data.materials.append(mat)
-            placed.append(dup)
+            dup.data.materials.append(material(obj.name, COLORS.get(obj.name, (200, 200, 200))))
     for obj, _ in PIECES:
         obj.hide_render = True
 
     scene = bpy.context.scene
-    scene.render.engine = "BLENDER_WORKBENCH"
-    scene.display.shading.light = "STUDIO"
-    scene.display.shading.color_type = "MATERIAL"
-    scene.display.shading.show_cavity = True
-    scene.display.shading.show_shadows = True
+    engine = "BLENDER_WORKBENCH"
+    for e in ("BLENDER_EEVEE", "BLENDER_EEVEE_NEXT"):
+        try:
+            scene.render.engine = e
+            engine = e
+            break
+        except Exception:
+            pass
+    if engine == "BLENDER_WORKBENCH":
+        scene.render.engine = engine
+        scene.display.shading.light = "STUDIO"
+        scene.display.shading.color_type = "MATERIAL"
+    try:
+        scene.view_settings.view_transform = "Standard"
+    except Exception:
+        pass
     scene.render.resolution_x = 700
     scene.render.resolution_y = 900
-    scene.render.film_transparent = False
     world = bpy.data.worlds.new("w")
-    world.color = (0.02, 0.03, 0.06)
+    world.use_nodes = True
+    bg = world.node_tree.nodes.get("Background")
+    if bg:
+        bg.inputs["Color"].default_value = (0.012, 0.018, 0.04, 1)
+        bg.inputs["Strength"].default_value = 1.0
+    world.color = (0.012, 0.018, 0.04)
     scene.world = world
+    light("key", "AREA", (4, 6, -7), 900, 6)
+    light("fill", "AREA", (-6, 2, -5), 350, 6)
+    light("rim", "AREA", (0, 5, 7), 500, 5, (0.8, 0.9, 1.0))
+    light("amb", "SUN", (0, 10, -3), 1.2)
+
     cam_data = bpy.data.cameras.new("cam")
     cam_data.lens = 70
     cam = bpy.data.objects.new("cam", cam_data)
     bpy.context.collection.objects.link(cam)
     scene.camera = cam
     target = R(0, 0.55, 0)
-    for name, yaw in (("front", -15), ("side", -70)):
+    for name, yaw in (("front", -12), ("side", -65)):
         a = math.radians(yaw)
-        pos = target + R(math.sin(a) * 11, 1.2, -math.cos(a) * 11) - R(0, 0, 0)
+        pos = target + R(math.sin(a) * 11, 1.0, -math.cos(a) * 11)
         cam.location = pos
         cam.rotation_mode = "QUATERNION"
         cam.rotation_quaternion = (target - pos).to_track_quat("-Z", "Y")
