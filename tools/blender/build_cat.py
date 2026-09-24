@@ -273,7 +273,13 @@ def build_head():
     parts = [ellipsoid((0, 0.02, 0), HR)]
     for i in (-1, 1):
         parts.append(ellipsoid((0.48 * i, -0.38, -0.16), (0.42, 0.3, 0.38)))  # full, smooth cheeks (below the eyes)
-    head = fuse(parts, "HeadFur", voxel=0.018, smooth=16, tris=9000)
+        # Fluffy cheek fur: overlapping soft tufts along the side of the face,
+        # from eye level down to the jaw, sweeping out and down.
+        for y, rx, reach in ((-0.18, 0.86, 0.2), (-0.38, 0.78, 0.2), (-0.56, 0.6, 0.15)):
+            base = (rx * i, y, -0.08)
+            tip = ((rx + reach) * i, y - 0.13, -0.04)
+            parts.append(cone_between(base, tip, 0.17, 0.06))
+    head = fuse(parts, "HeadFur", voxel=0.016, smooth=11, tris=11000)
     # A little tuft of loose strands on top (kept as strands, not fused).
     surf = Surface(head)
     tuft = [head]
@@ -282,19 +288,19 @@ def build_head():
         if hit:
             tuft.append(strand(hit - n * 0.04, n + R(lean, 0.3, -0.25), ln, 0.065, bend=R(lean * 0.1, 0, -0.03)))
     head = join(tuft, "HeadFur")
-    finish(head, 9500)
+    finish(head, 12000)
     piece(head, "Head", "fur_head")
     surf = Surface(head)
 
     # Ears: cupped like real ears (hollowed front), rounded tip, fur outside.
     ears = []
     for i in (-1, 1):
-        ear = cone_between((0.45 * i, 0.44, 0.08), (0.8 * i, 1.28, 0.12), 0.42, 0.07, verts=40)
+        ear = cone_between((0.44 * i, 0.44, 0.08), (0.84 * i, 1.22, 0.12), 0.5, 0.05, verts=48)
         c = R(0.62 * i, 0.86, 0.1)
         ear.data.transform(Matrix.Translation(-c))
         ear.data.transform(Matrix.Diagonal((1.0, 0.5, 1.0, 1.0)))
         ear.data.transform(Matrix.Translation(c))
-        cutter = ellipsoid((0.66 * i, 0.92, -0.12), (0.26, 0.4, 0.16))
+        cutter = ellipsoid((0.66 * i, 0.9, -0.13), (0.31, 0.44, 0.17))
         cutter.data.transform(Matrix.Translation(-R(0.66 * i, 0.92, -0.12)))
         cutter.data.transform(rot_r(0, 0, -24 * i).to_4x4())
         cutter.data.transform(Matrix.Translation(R(0.66 * i, 0.92, -0.12)))
@@ -305,7 +311,7 @@ def build_head():
         apply_mods(ear)
         bpy.data.objects.remove(cutter)
         ears.append(ear)
-    ears_obj = fuse(ears, "Ears", voxel=0.014, smooth=4, tris=5000)
+    ears_obj = fuse(ears, "Ears", voxel=0.014, smooth=7, tris=5000)
     piece(ears_obj, "Head", "fur_plain")
     esurf = Surface(ears_obj)
 
@@ -314,13 +320,19 @@ def build_head():
     for i in (-1, 1):
         hit, n = esurf.toward((0.64 * i, 0.9, -2), (0, 0, 1))
         if hit:
-            tri = rotated([(-0.26, -0.3), (0.26, -0.3), (0.0, 0.42)], 22 * i)
+            tri = rotated([(-0.33, -0.34), (0.33, -0.34), (0.0, 0.5)], 22 * i)
             o = flat_shape(tri, hit, n, subdiv=3)
             stick(o, ears_obj, offset=0.006, thickness=0.01)
             inner.append(o)
-            for dx, ln in ((-0.05, 0.15), (0.0, 0.19), (0.05, 0.14)):
-                base = hit + R(dx - 0.02 * i, -0.18, 0) - n * 0.01
-                tufts.append(strand(base, R(0.18 * i + dx, 1.0, -0.12), ln, 0.035, bend=R(0.02 * i, 0, -0.02)))
+            # white fur growing from the inner edge of the ear, curling up and out
+            hr = random.Random(5 + i)
+            for k in range(14):
+                t = k / 13
+                dy = -0.3 + t * 0.3
+                base = hit + R((-0.13 + 0.05 * t) * i + hr.uniform(-0.02, 0.02), dy, 0) + n * 0.004
+                lean = 0.15 + 0.45 * t + hr.uniform(-0.08, 0.08)
+                ln = hr.uniform(0.16, 0.26) * (1.1 - 0.35 * t)
+                tufts.append(strand(base, R(lean * i, 1.0, -0.3), ln, hr.uniform(0.014, 0.02), bend=R(0.05 * i, 0.02, -0.04)))
     piece(join(inner, "InnerEar"), "Head")
     finish(bpy.data.objects["InnerEar"], 2000)
     t = join(tufts, "EarTufts")
@@ -359,12 +371,19 @@ def build_head():
     add("Brows", brows, 1200)
 
     add("Nose", [decal([(-0.075, 0.04), (0.075, 0.04), (0.0, -0.06)], surf, head, 0, -0.25, 0.008, 0.032, subdiv=3)], 1000)
-    smile = []
-    for k in range(7):
-        t = -1 + 2 * k / 6
-        hit, n = surf.front(0.09 * t, -0.34 - 0.032 * (1 - t * t))
-        smile.append(hit + n * 0.01)
-    arcs = [tube(smile, 0.013, "mouth")]
+    arcs = []
+    line = []
+    for y in (-0.285, -0.31, -0.335):
+        hit, n = surf.front(0, y)
+        line.append(hit + n * 0.01)
+    arcs.append(tube(line, 0.012, "philtrum"))
+    for i in (-1, 1):
+        pts = []
+        for k in range(6):
+            a = math.pi * k / 5
+            hit, n = surf.front(0.048 * i - 0.048 * math.cos(a) * i, -0.335 - 0.036 * math.sin(a))
+            pts.append(hit + n * 0.01)
+        arcs.append(tube(pts, 0.012, "mouth"))
     add("Mouth", arcs, 1200)
 
 
@@ -1341,6 +1360,13 @@ def preview():
     cam.location = pos
     cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
     scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_bag.png")
+    bpy.ops.render.render(write_still=True)
+    # Close-up of the face
+    tgt = R(0, 1.18, 0)
+    pos = tgt + R(0.45, 0.25, -4.6)
+    cam.location = pos
+    cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
+    scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_face.png")
     bpy.ops.render.render(write_still=True)
 
 
