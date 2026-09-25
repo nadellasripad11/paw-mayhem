@@ -193,11 +193,14 @@ local function startKillFloorLoop()
 		if not PlayerService.MatchActive then
 			return
 		end
+		-- Map events (Volcano's rising lava) can raise the floor.
+		local raised = Workspace:GetAttribute("KillFloorY")
+		local floorY = math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge)
 		for _, player in ipairs(Players:GetPlayers()) do
 			local state = Runtime.Get(player)
 			local char = player.Character
 			if state and state.Alive and char and char.PrimaryPart then
-				if char.PrimaryPart.Position.Y < GameConfig.Character.KillFloorY then
+				if char.PrimaryPart.Position.Y < floorY then
 					PlayerService.HandleElimination(player, true)
 				end
 			end

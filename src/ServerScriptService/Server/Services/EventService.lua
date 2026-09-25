@@ -6,6 +6,10 @@
 --                           applied by each client; bots are nudged here).
 --   Toybox      STAMPEDE  — giant bouncy balls bounce across the islands and
 --                           bowl over anything in their path.
+--   Sky Islands LOW GRAVITY — floaty jumps, and every launch flies further.
+--   Toybox      BOUNCY FLOOR — super jumps for everyone for 10 seconds.
+-- Plus, in the final Mayhem Mode:
+--   Volcano     LAVA RISING — the lava sea climbs and the kill floor with it.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -22,6 +26,7 @@ local PlayerService = require(script.Parent.PlayerService)
 local HazardService = require(script.Parent.HazardService)
 local DropService = require(script.Parent.DropService)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
+local Runtime = require(script.Parent.Runtime)
 
 local EventService = {}
 
@@ -245,35 +250,119 @@ local function stampede()
 	end
 end
 
-local EVENTS: { [string]: () -> () } = {
-	Volcano = eruption,
-	SkyIslands = windGust,
-	Toybox = stampede,
+-- ── Sky Islands: low gravity ─────────────────────────────────────────────────
+local NORMAL_GRAVITY = 196.2
+
+local function lowGravity()
+	announce("LOW GRAVITY!", "Floaty jumps — and every hit sends cats flying further!", Color3.fromRGB(190, 170, 255))
+	Workspace.Gravity = 80
+	task.wait(10)
+	Workspace.Gravity = NORMAL_GRAVITY
+	announce("GRAVITY'S BACK", "", Color3.fromRGB(190, 170, 255))
+end
+
+-- ── Toybox: bouncy floor ─────────────────────────────────────────────────────
+local function setJump(power: number)
+	for _, m in ipairs(HazardService.Cats()) do
+		local hum = m:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.JumpPower = power
+		end
+	end
+end
+
+local function bouncyFloor()
+	announce("BOUNCY FLOOR!", "Super jumps for 10 seconds — reach the high ground!", Color3.fromRGB(120, 230, 170))
+	local untilT = os.clock() + 10
+	while os.clock() < untilT and PlayerService.MatchActive do
+		setJump(GameConfig.Character.JumpPower * 1.75) -- respawned cats join in too
+		task.wait(0.5)
+	end
+	setJump(GameConfig.Character.JumpPower)
+end
+
+-- ── Volcano: the lava rises in Mayhem Mode ───────────────────────────────────
+-- The sea climbs toward the islands over the final seconds; the kill floor
+-- rides with it, so anyone knocked off burns up almost at once.
+local LAVA_FROM, LAVA_TO = -88, -30
+
+local function lavaRise()
+	announce("THE LAVA IS RISING!", "Get knocked off now and you're toast!", LAVA)
+	local tide = newPart("LavaTide", Vector3.new(2, 1300, 1300), CFrame.new(0, LAVA_FROM, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 110, 30), Enum.Material.Neon)
+	tide.Shape = Enum.PartType.Cylinder
+	tide.Transparency = 0.15
+	tide.CastShadow = false
+	CollectionService:AddTag(tide, "LavaHot")
+	local t0, rise = os.clock(), math.max(8, GameConfig.Mayhem.Seconds - 4)
+	while tide.Parent and PlayerService.MatchActive do
+		local k = math.clamp((os.clock() - t0) / rise, 0, 1)
+		local y = LAVA_FROM + (LAVA_TO - LAVA_FROM) * (k * k * (3 - 2 * k))
+		tide.CFrame = CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90))
+		Workspace:SetAttribute("KillFloorY", y - 2)
+		RunService.Heartbeat:Wait()
+	end
+end
+
+-- Undo anything an event changed once the match is over.
+local function resetEvents()
+	Workspace.Gravity = NORMAL_GRAVITY
+	Workspace:SetAttribute("KillFloorY", nil)
+	setJump(GameConfig.Character.JumpPower)
+end
+
+local EVENTS: { [string]: { () -> () } } = {
+	Volcano = { eruption },
+	SkyIslands = { windGust, lowGravity },
+	Toybox = { stampede, bouncyFloor },
+}
+
+-- Once per Mayhem Mode (final seconds), per map.
+local MAYHEM_EVENTS: { [string]: () -> () } = {
+	Volcano = lavaRise,
 }
 
 function EventService.Start()
 	task.spawn(function()
-		local wasActive = false
+		local wasActive, wasMayhem = false, false
 		local nextEvent = 0
+		local last: (() -> ())? = nil
 		while true do
 			task.wait(0.5)
 			local active = PlayerService.MatchActive
 			local now = os.clock()
 			if active and not wasActive then
 				nextEvent = now + GameConfig.Events.FirstDelay
-			elseif not active and wasActive and holder then
-				holder:Destroy()
-				holder = nil
+				resetEvents()
+			elseif not active and wasActive then
+				if holder then
+					holder:Destroy()
+					holder = nil
+				end
+				resetEvents()
 			end
 			wasActive = active
+			local map = ArenaBuilder.CurrentMap
 			if active and now >= nextEvent and #Players:GetPlayers() > 0 then
 				nextEvent = now + GameConfig.Events.Interval
-				local map = ArenaBuilder.CurrentMap
-				local run = map and EVENTS[map.Id]
+				local list = map and EVENTS[map.Id]
+				if list and #list > 0 then
+					-- Mix it up: don't run the same event twice in a row.
+					local pick = list[rng:NextInteger(1, #list)]
+					if pick == last and #list > 1 then
+						pick = list[(table.find(list, pick) :: number) % #list + 1]
+					end
+					last = pick
+					task.spawn(pick)
+				end
+			end
+			local mayhem = active and Runtime.Mayhem == true
+			if mayhem and not wasMayhem then
+				local run = map and MAYHEM_EVENTS[map.Id]
 				if run then
 					task.spawn(run)
 				end
 			end
+			wasMayhem = mayhem
 		end
 	end)
 end

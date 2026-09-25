@@ -661,7 +661,8 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		bot.alive = false
 		bots[botId]      = nil
 		modelToId[model] = nil
-		local ringout = root.Position.Y < GameConfig.Character.KillFloorY + 20
+		local raisedFloor = Workspace:GetAttribute("KillFloorY")
+		local ringout = root.Position.Y < math.max(GameConfig.Character.KillFloorY, typeof(raisedFloor) == "number" and raisedFloor or -math.huge) + 20
 
 		local killer = bot.lastAttacker
 		if killer and Players:FindFirstChild(killer.Name) then
@@ -716,7 +717,8 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 	local floorConn: RBXScriptConnection
 	floorConn = RunService.Heartbeat:Connect(function()
 		if not bot.alive then floorConn:Disconnect(); return end
-		if root.Position.Y < GameConfig.Character.KillFloorY then
+		local raised = Workspace:GetAttribute("KillFloorY")
+		if root.Position.Y < math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge) then
 			-- Let the Died handler run normally so the bot respawns.
 			floorConn:Disconnect()
 			humanoid.Health = 0
