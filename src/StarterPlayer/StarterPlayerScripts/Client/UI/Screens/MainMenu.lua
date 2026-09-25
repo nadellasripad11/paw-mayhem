@@ -594,10 +594,32 @@ function MainMenu.Build()
 				DailyReward.Open()
 			end
 		end
+		-- New players learn in their first match (HUD tips), so no slides up
+		-- front: just point them at PLAY.
 		if Tutorial.ShouldShow() then
-			Tutorial.Open(daily)
-		else
-			daily()
+			local play = gui:FindFirstChild("Play", true)
+			if play and play:IsA("GuiObject") then
+				local arrow = UIUtil.label({
+					Parent = play, Name = "StartHere", Text = "◀ START HERE", Font = Theme.Font.Title, TextSize = 18,
+					TextColor3 = Color3.fromRGB(255, 226, 90), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(1, 12, 0.5, 0),
+					Size = UDim2.fromOffset(150, 30), ZIndex = 20, TextStrokeTransparency = 0.3,
+				})
+				TweenService:Create(arrow, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(1, 24, 0.5, 0) }):Play()
+				task.spawn(function()
+					while arrow.Parent and ClientState.Match.phase ~= "Playing" do
+						task.wait(0.5)
+					end
+					arrow:Destroy()
+				end)
+			end
+		end
+		daily()
+		-- Weekend event banner (Sat/Sun UTC): low gravity + bonus coins.
+		local wday = os.date("!*t").wday
+		if wday == 1 or wday == 7 then
+			task.delay(2, function()
+				showToast("WEEKEND MAYHEM: low gravity + 25% more coins!")
+			end)
 		end
 	end
 	ClientState.ProfileChanged:Connect(greet)

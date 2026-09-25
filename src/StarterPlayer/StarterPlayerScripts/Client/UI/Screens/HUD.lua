@@ -675,6 +675,61 @@ local function showKo(data: any)
 	end)
 end
 
+-- ── first-match tips (new players learn while playing) ────────────────────────
+local tipsShown = false
+
+local function tipList(): { string }
+	if isMobile() then
+		return {
+			"Left stick to move  •  JUMP twice to double jump",
+			"Tap FIRE to blast  •  every hit raises their knockback %",
+			"Knock cats OFF the map to score!",
+			"DASH to dodge  •  POUNCE to leap  •  jump off walls",
+			"Grab fish snacks to heal  •  supply drops give big rewards",
+		}
+	end
+	return {
+		"WASD to move  •  SPACE twice to double jump",
+		"Click to blast  •  every hit raises their knockback %",
+		"Knock cats OFF the map to score!",
+		"Q to dash  •  E to pounce  •  jump off walls",
+		"Grab fish snacks to heal  •  supply drops give big rewards",
+	}
+end
+
+-- Shows the basics one at a time during a new player's first match, then
+-- marks the tutorial done.
+function HUD.StartTips()
+	local p = ClientState.Profile
+	if tipsShown or not gui or not p or p.TutorialDone == true then
+		return
+	end
+	tipsShown = true
+	local tip = UIUtil.label({
+		Parent = gui, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -76),
+		Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X, Text = "", Font = Theme.Font.Heading, TextSize = 18,
+		TextXAlignment = Enum.TextXAlignment.Center, BackgroundTransparency = 0.2, BackgroundColor3 = Theme.Color.PanelDark,
+	})
+	UIUtil.corner(UDim.new(0, 12), tip)
+	UIUtil.stroke(Color3.fromRGB(255, 214, 90), 2, tip)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 16), UDim.new(0, 16)
+	pad.Parent = tip
+	task.spawn(function()
+		task.wait(1.5)
+		for _, text in ipairs(tipList()) do
+			if not tip.Parent then
+				return
+			end
+			tip.Text = text
+			tip.Visible = true
+			task.wait(6)
+		end
+		tip:Destroy()
+		Remotes.Get("TutorialDone"):FireServer()
+	end)
+end
+
 -- ── updates ──────────────────────────────────────────────────────────────────
 local function updateScoreBar(m)
 	if not refs.timer then return end

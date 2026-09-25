@@ -204,6 +204,16 @@ local function updateGamepad(dt: number)
 	end
 end
 
+-- Countdown flyover: a slow orbit over the arena you're about to drop into.
+local flyover = false
+local flyoverAt = 0
+function CameraController.SetFlyover(on: boolean)
+	if on and not flyover then
+		flyoverAt = os.clock()
+	end
+	flyover = on
+end
+
 -- End-of-match shot of the winners' podium (overrides everything else).
 local showcase: CFrame? = nil
 local showcaseAt = 0
@@ -256,6 +266,16 @@ local function step(dt: number)
 		-- Slow push-in toward the stage.
 		local t = os.clock() - showcaseAt
 		camera.CFrame = showcase * CFrame.new(math.sin(t * 0.4) * 2, 0, -math.min(t * 1.4, 12))
+		return
+	end
+	if flyover and Workspace:FindFirstChild("Arena") then
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = 60
+		local t = os.clock() - flyoverAt
+		local a = t * 0.28 + 0.6
+		local r = 150 - math.min(t, 4) * 10
+		local pos = Vector3.new(math.cos(a) * r, 78 - math.min(t, 4) * 6, math.sin(a) * r)
+		camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(pos, Vector3.new(0, 8, 0)), math.clamp(dt * 3, 0, 1))
 		return
 	end
 	if lobbyView then

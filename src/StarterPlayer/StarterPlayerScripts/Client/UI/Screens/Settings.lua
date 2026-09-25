@@ -42,9 +42,38 @@ end
 
 -- ── applying settings that aren't read elsewhere ─────────────────────────────
 local fpsLabel: TextLabel? = nil
+-- Post-processing (local to this player): soft bloom on glows, a touch of
+-- colour grading and sun rays on High; bloom + grading on Medium; none on Low.
+local function effect(className: string, name: string): any
+	local e = Lighting:FindFirstChild(name)
+	if not e then
+		e = Instance.new(className)
+		e.Name = name
+		e.Parent = Lighting
+	end
+	return e
+end
+
+local function applyPostFX(quality: string)
+	local bloom = effect("BloomEffect", "PawBloom")
+	bloom.Intensity, bloom.Size, bloom.Threshold = 0.55, 22, 1.6
+	bloom.Enabled = quality ~= "Low"
+	local grade = effect("ColorCorrectionEffect", "PawGrade")
+	grade.Saturation, grade.Contrast, grade.Brightness = 0.12, 0.08, 0.02
+	grade.TintColor = Color3.fromRGB(255, 250, 244)
+	grade.Enabled = quality ~= "Low"
+	local rays = effect("SunRaysEffect", "PawSunRays")
+	rays.Intensity, rays.Spread = 0.05, 0.6
+	rays.Enabled = quality == "High"
+	Lighting.EnvironmentDiffuseScale = quality == "Low" and 0 or 0.6
+	Lighting.EnvironmentSpecularScale = quality == "Low" and 0 or 0.8 -- metal blasters reflect the sky
+	Lighting.ShadowSoftness = 0.25
+end
+
 local function applyGlobal()
 	local s = ClientState.Settings
 	Lighting.GlobalShadows = s.GraphicsQuality ~= "Low"
+	pcall(applyPostFX, s.GraphicsQuality or "High")
 	pcall(LobbyScene.ApplyQuality, s.GraphicsQuality or "High")
 	if fpsLabel then
 		fpsLabel.Visible = s.ShowFPS == true
@@ -301,7 +330,7 @@ function Settings.Build(parent)
 		toggle(controls, 4, "Invert Camera", "InvertY", "Flip up / down look")
 
 		local graphics = card(root, 3, "GRAPHICS", Color3.fromRGB(190, 120, 255))
-		choice(graphics, 1, "Quality", "GraphicsQuality", { "Low", "Medium", "High" }, nil, "Low turns off shadows + effects")
+		choice(graphics, 1, "Quality", "GraphicsQuality", { "Low", "Medium", "High" }, nil, "Low turns off shadows, glow + effects")
 		choice(graphics, 2, "Crosshair", "Crosshair", { "White", "Green", "Cyan", "Pink", "Yellow" }, {
 			White = Color3.fromRGB(255, 255, 255), Green = Color3.fromRGB(110, 255, 140), Cyan = Color3.fromRGB(90, 230, 255),
 			Pink = Color3.fromRGB(255, 120, 200), Yellow = Color3.fromRGB(255, 230, 90),

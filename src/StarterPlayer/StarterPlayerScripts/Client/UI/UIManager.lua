@@ -123,6 +123,7 @@ local function onCharacter(char)
 		HUD.SetVisible(true)
 		Results.Hide()
 		enableGameplay(true)
+		HUD.StartTips()
 	end
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum then
@@ -151,6 +152,7 @@ local function onPhase(m)
 	end
 	lastPhase = phase
 	playTransition()
+	CameraController.SetFlyover(phase == "Countdown")
 	if phase ~= "Results" then
 		podiumShot = nil
 		CameraController.SetShowcase(nil)
@@ -172,6 +174,7 @@ local function onPhase(m)
 		Results.Hide()
 		HUD.ShowBig("GET READY", Theme.Color.Warn)
 		enableGameplay(false)
+		CameraController.SetLobbyView(false) -- the flyover shows the arena instead
 	elseif phase == "Playing" then
 		if alive then
 			MainMenu.SetVisible(false)
@@ -180,6 +183,7 @@ local function onPhase(m)
 			Results.Hide()
 			HUD.HideBig()
 			enableGameplay(true)
+			HUD.StartTips()
 		else
 			-- The server intentionally waits for the player's Play click when
 			-- they join a live round. Keep the landing/map picker visible.
