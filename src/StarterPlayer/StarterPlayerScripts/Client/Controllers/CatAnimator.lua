@@ -5,6 +5,7 @@
 -- flying from a big hit streaks a speed trail behind it. A cat blasted off
 -- the map goes out with a star twinkle and a ding.
 
+local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -17,6 +18,8 @@ local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local SoundController = require(script.Parent.SoundController)
 
 local CatAnimator = {}
+
+local lastHurtAt = 0
 
 local MAX_DIST = 180
 local TRAIL_ON, TRAIL_OFF = 48, 30 -- studs/s: a launch, not a sprint
@@ -94,6 +97,9 @@ local function trailFor(model: Model, root: BasePart): Trail
 end
 
 function CatAnimator.Start()
+	require(ReplicatedStorage.Shared.Net.Remotes).Get("YouWereHit").OnClientEvent:Connect(function()
+		lastHurtAt = os.clock()
+	end)
 	local t = 0
 	RunService.RenderStepped:Connect(function(dt)
 		t += dt
@@ -117,7 +123,14 @@ function CatAnimator.Start()
 						end
 						local trail = trails[inst :: Model]
 						if speed > TRAIL_ON then
-							trailFor(inst :: Model, root).Enabled = true
+							local tr = trailFor(inst :: Model, root)
+							-- Only real launches thump: going up fast, and for your own cat only
+							-- right after a hit (not your own dash / pounce).
+							local mine = inst == Players.LocalPlayer.Character
+							if not tr.Enabled and v.Y > 12 and inst:GetAttribute("Replay") == nil and (not mine or os.clock() - lastHurtAt < 0.5) then
+								SoundController.Launch(root.Position)
+							end
+							tr.Enabled = true
 						elseif trail and speed < TRAIL_OFF then
 							trail.Enabled = false
 						end

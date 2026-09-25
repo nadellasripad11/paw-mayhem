@@ -143,6 +143,27 @@ local function applyVolumes()
 	musicGroup.Volume = tonumber(st.MusicVolume) or 0.6
 end
 
+-- Muffle the music (knocked out, replays): a low-pass that eases in and out.
+local muffle: EqualizerSoundEffect? = nil
+function SoundController.Muffle(on: boolean)
+	if not muffle then
+		local eq = Instance.new("EqualizerSoundEffect")
+		eq.LowGain, eq.MidGain, eq.HighGain = 0, 0, 0
+		eq.Parent = musicGroup
+		muffle = eq
+	end
+	local TweenService = game:GetService("TweenService")
+	TweenService:Create(muffle :: EqualizerSoundEffect, TweenInfo.new(on and 0.25 or 0.8), {
+		MidGain = on and -12 or 0, HighGain = on and -35 or 0,
+	}):Play()
+end
+
+-- Launched! A low thump and a whoosh where a cat takes off (CatAnimator).
+function SoundController.Launch(position: Vector3)
+	SoundController.PlayAt("Explosion", position, 0.5, 0.35)
+	SoundController.PlayAt("Dash", position, 0.75, 0.7)
+end
+
 -- ── hooks ────────────────────────────────────────────────────────────────────
 local function hookCharacter(char: Model)
 	local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
@@ -197,14 +218,21 @@ function SoundController.Start()
 			SoundController.PlayAt("Pop", data.position)
 		end
 	end)
-	Remotes.Get("HitConfirm").OnClientEvent:Connect(function()
-		SoundController.Play("Hit", 0.95 + math.random() * 0.1)
+	-- The hit sound climbs with the target's knockback %: you can hear when
+	-- they're about to fly.
+	Remotes.Get("HitConfirm").OnClientEvent:Connect(function(data)
+		local acc = typeof(data) == "table" and tonumber(data.accumulated) or 0
+		SoundController.Play("Hit", 0.9 + math.clamp((acc or 0) / 180, 0, 1) * 0.5 + math.random() * 0.05)
 	end)
 	Remotes.Get("YouWereHit").OnClientEvent:Connect(function()
 		SoundController.Play("Hurt")
 	end)
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function()
 		SoundController.Play("Eliminated")
+		SoundController.Muffle(true) -- until you're back in
+	end)
+	player.CharacterAdded:Connect(function()
+		SoundController.Muffle(false)
 	end)
 	Remotes.Get("KillFeed").OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" and data.killer == player.DisplayName then
