@@ -14,6 +14,7 @@ local GameConfig = require(Shared.Config.GameConfig)
 local Scoring = GameConfig.Scoring
 
 local EconomyService = require(script.Parent.EconomyService)
+local DataService = require(script.Parent.DataService)
 local PlayerService = require(script.Parent.PlayerService)
 local Runtime = require(script.Parent.Runtime)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
@@ -442,11 +443,23 @@ function MatchService.EndMatch(winnerTeam: string?)
 		SeasonService.AddXP(player, "MatchPlayed")
 		EconomyService.AddXP(player, Scoring.MatchPlayedXP)
 		local won = (isFFA() and player.Name == state.Winner) or (not isFFA() and s ~= nil and s.Team == state.Winner)
+		local profile = DataService.Get(player)
+		local stats = profile and profile.Stats
 		if won then
 			EconomyService.AddStat(player, "Wins", 1)
 			SeasonService.AddXP(player, "Win")
 			EconomyService.AddXP(player, Scoring.WinBonusXP)
-			EconomyService.AddCoins(player, Scoring.WinBonusCoins)
+			-- Win streaks pay more: a bonus for every win in a row after the first.
+			local streak = 1
+			if stats then
+				stats.WinStreak = (stats.WinStreak or 0) + 1
+				stats.BestWinStreak = math.max(stats.BestWinStreak or 0, stats.WinStreak)
+				streak = stats.WinStreak
+			end
+			local bonus = 1 + Scoring.WinStreakBonus * math.min(streak - 1, Scoring.WinStreakMaxSteps)
+			EconomyService.AddCoins(player, math.floor(Scoring.WinBonusCoins * bonus))
+		elseif stats and s ~= nil then
+			stats.WinStreak = 0
 		end
 		EconomyService.Push(player)
 	end

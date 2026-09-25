@@ -6,6 +6,7 @@
 -- pill hide) with a BACK button that returns to the home screen.
 
 local Players = game:GetService("Players")
+local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -341,7 +342,7 @@ function MainMenu.Build()
 	end
 
 	-- Coins + gems (top right)
-	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(440, 40), ZIndex = 10 })
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(540, 40), ZIndex = 10 })
 	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
 	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
@@ -368,6 +369,34 @@ function MainMenu.Build()
 		if currentPanel ~= "Shop" then
 			switchTo("Shop")
 		end
+	end)
+
+	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
+	local invite = Instance.new("TextButton")
+	invite.Name = "Invite"
+	invite.Text = "INVITE"
+	invite.Font = Theme.Font.Title
+	invite.TextSize = 17
+	invite.TextColor3 = Color3.new(1, 1, 1)
+	invite.Size = UDim2.fromOffset(88, 40)
+	invite.LayoutOrder = -2
+	invite.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
+	invite.BorderSizePixel = 0
+	invite.ZIndex = 10
+	invite.Visible = false
+	invite.Parent = currGroup
+	UIUtil.corner(UDim.new(0, 12), invite)
+	UIUtil.stroke(Color3.fromRGB(200, 236, 255), 1.5, invite)
+	invite.MouseButton1Click:Connect(function()
+		pcall(function()
+			SocialService:PromptGameInvite(player)
+		end)
+	end)
+	task.spawn(function()
+		local ok, can = pcall(function()
+			return SocialService:CanSendGameInviteAsync(player)
+		end)
+		invite.Visible = ok and can == true
 	end)
 
 	-- DAILY rewards button (red dot when today's reward is waiting).

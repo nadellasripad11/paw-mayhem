@@ -38,6 +38,8 @@ local function defaultProfile()
 			Deaths = 0,
 			Matches = 0,
 			Wins = 0,
+			WinStreak = 0, -- wins in a row (pays a coin bonus)
+			BestWinStreak = 0,
 			Ringouts = 0,
 			DamageDealt = 0,
 			PowerupsGrabbed = 0,

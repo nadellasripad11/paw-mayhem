@@ -30,6 +30,10 @@ GameConfig.Scoring = {
 	MatchPlayedXP = 40,
 	WinBonusXP = 120,
 	WinBonusCoins = 60,
+	-- Each win in a row after the first adds this much to the win coins, up to
+	-- WinStreakMaxSteps times (+50%).
+	WinStreakBonus = 0.1,
+	WinStreakMaxSteps = 5,
 }
 
 -- Character / movement -------------------------------------------------------

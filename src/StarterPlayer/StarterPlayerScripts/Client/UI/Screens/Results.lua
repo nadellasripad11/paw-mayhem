@@ -126,6 +126,12 @@ function Results.Show(match)
 		end
 	end
 	statLabel.Text = myStats and string.format("YOUR ROUND:  %d ELIMINATIONS  •  %d SCORE", myStats.Elims or 0, myStats.Score or 0) or "MATCH COMPLETE"
+	-- Win streak (the server has already counted this match).
+	local stats = ClientState.Profile and ClientState.Profile.Stats
+	local streak = stats and tonumber(stats.WinStreak) or 0
+	if won and streak >= 2 then
+		statLabel.Text ..= string.format("   •   WIN STREAK x%d  (+%d%% COINS)", streak, math.min(streak - 1, 5) * 10)
+	end
 	Results.Update(match)
 	gui.Enabled = true
 	if won then
