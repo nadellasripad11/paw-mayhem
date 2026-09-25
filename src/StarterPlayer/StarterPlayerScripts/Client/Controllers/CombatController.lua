@@ -188,6 +188,25 @@ function CombatController.MuzzleFlash(pos: Vector3, weapon)
 	end)
 end
 
+-- Touch auto-fire: the crosshair (camera ray) rests on an enemy in range.
+local function autoFireTarget(): boolean
+	if not ClientState.Settings.AutoFire or UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch then
+		return false
+	end
+	local char = player.Character
+	local weapon = currentWeapon()
+	if not char or not weapon then
+		return false
+	end
+	local origin, dir = CameraController.GetAimRay()
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char }
+	local hit = Workspace:Raycast(origin, dir * (weapon.Range + 15), params)
+	local m = hit and catModel(hit.Instance)
+	return m ~= nil and CombatController.IsEnemy(m)
+end
+
 function CombatController.SetFiring(on: boolean)
 	firing = on
 end
@@ -226,7 +245,7 @@ function CombatController.Start()
 	end)
 
 	RunService.Heartbeat:Connect(function()
-		if firing then
+		if firing or (enabled and autoFireTarget()) then
 			tryFire()
 		end
 	end)

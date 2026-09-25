@@ -54,6 +54,14 @@ local function freeMovement(arena: Instance)
 			if not p.CanCollide or (p.Name == "Guard" and p.Transparency >= 0.95) then
 				p.CanQuery = false
 			end
+			-- Performance (phones): walk-through parts need no touch checks, and
+			-- small props' shadows cost more than they add.
+			if not p.CanCollide then
+				p.CanTouch = false
+			end
+			if math.max(p.Size.X, p.Size.Y, p.Size.Z) < 6 then
+				p.CastShadow = false
+			end
 		end
 	end
 end

@@ -254,6 +254,7 @@ function Settings.Build(parent)
 		toggle(gameplay, 2, "Camera Shake", "CameraShake", "Shake when you're hit or launched")
 		toggle(gameplay, 3, "Damage Effects", "ShowDamage", "Red flash when you take damage")
 		toggle(gameplay, 4, "Show FPS", "ShowFPS", "Frame rate in the corner")
+		toggle(gameplay, 5, "Auto Fire", "AutoFire", "Phones: shoots when your crosshair is on an enemy")
 
 		local controls = card(root, 2, "CONTROLS", Color3.fromRGB(64, 200, 255))
 		slider(controls, 1, "Mouse Sensitivity", "MouseSensitivity", 0, 1, pct)

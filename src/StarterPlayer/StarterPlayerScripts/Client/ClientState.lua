@@ -21,6 +21,7 @@ ClientState.Settings = {
 	FieldOfView = 74,
 	InvertY = false,
 	AutoSprint = false,
+	AutoFire = true, -- touch only: shoot when the crosshair is on an enemy
 	ShowFPS = false,
 	Crosshair = "White",
 }
