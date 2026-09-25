@@ -91,6 +91,9 @@ Copy every red line from the Output window and send it over.
 - [ ] Phone (Studio device emulator): FIRE / JUMP / DASH / POUNCE / RUN buttons, auto-fire.
 - [ ] Results: win streak + trophy change; menu shows tier; TROPHIES leaderboard.
 - [ ] Settings → Codes: PAWMAYHEM works once, a second try says already used.
+- [ ] PRACTICE (menu): island with 3 target cats, their % climbs, they fly off and reset; P / LEAVE goes back; starting a match pulls you out.
+- [ ] Knock someone out, then at match end: slow-mo replay before the podium (click skips).
+- [ ] Sounds: hit pitch rises on high-% targets; thump + whoosh on launches; music muffles while you're knocked out.
 
 ## Dashboard (you)
 - [ ] Import `assets/CatMeshes.glb` (drag the model into ReplicatedStorage → CatMeshes).
