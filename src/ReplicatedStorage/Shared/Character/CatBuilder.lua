@@ -496,6 +496,19 @@ function CatBuilder.HasMeshes(): boolean
 	return meshLibrary() ~= nil
 end
 
+-- Studio's 3D importer turns glTF meshes round 180° (glTF's front is +Z,
+-- Roblox's is -Z). Depending on the importer that turn sits either on the
+-- imported part's orientation or in the mesh itself; keep the part's own turn
+-- when it has one, otherwise turn the piece round ourselves.
+local function meshTurn(src: BasePart): CFrame
+	local holder = src:FindFirstAncestorOfClass("Model")
+	local rel = (holder and holder:GetPivot():ToObjectSpace(src.CFrame) or src.CFrame).Rotation
+	if rel.LookVector.Z < -0.999 and rel.UpVector.Y > 0.999 then
+		return CFrame.Angles(0, math.pi, 0)
+	end
+	return rel
+end
+
 local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color3, chest: Color3, shorts: Color3?, cuff: Color3?)
 	local lib = meshLibrary()
 	if not lib then
@@ -607,7 +620,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 						sa:Destroy() -- no tint support: fall back to the flat colour
 					end
 				end
-				weld(anchor, m, CFrame.new(entry.Center))
+				weld(anchor, m, CFrame.new(entry.Center) * meshTurn(src))
 			end
 		end
 	end
