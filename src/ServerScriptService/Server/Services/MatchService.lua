@@ -25,6 +25,7 @@ local FlagService = require(script.Parent.FlagService)
 local SeasonService = require(script.Parent.SeasonService)
 local Modes = require(game:GetService("ReplicatedStorage").Shared.Config.Modes)
 local Ranks = require(game:GetService("ReplicatedStorage").Shared.Config.Ranks)
+local FloorShape = require(game:GetService("ReplicatedStorage").Shared.Util.FloorShape)
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
 
@@ -46,7 +47,7 @@ local state = {
 	Mode = Modes.Default,
 }
 
-local MAP_IDS = { SkyIslands = true, Volcano = true, Toybox = true }
+local MAP_IDS = { SkyIslands = true, Volcano = true, Toybox = true, Rooftops = true }
 local mapVotes: { [number]: string } = {}
 local modeVotes: { [number]: string } = {}
 
@@ -350,7 +351,7 @@ local function startHill()
 	if not best then
 		return
 	end
-	local pos = best.Position + Vector3.new(0, best.Size.Y / 2, 0)
+	local pos = Vector3.new(best.Position.X, FloorShape.Top(best), best.Position.Z)
 	local function piece(size: Vector3, cf: CFrame, transparency: number): BasePart
 		local p = Instance.new("Part")
 		p.Shape = Enum.PartType.Cylinder

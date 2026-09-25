@@ -23,10 +23,12 @@ local MAPS = {
 	{ id = "SkyIslands", name = "SKY ISLANDS", subtitle = "Floating Village", accent = Color3.fromRGB(95, 205, 255) },
 	{ id = "Volcano", name = "VOLCANO", subtitle = "Lava Foundry", accent = Color3.fromRGB(255, 120, 54) },
 	{ id = "Toybox", name = "TOYBOX", subtitle = "Candy Playground", accent = Color3.fromRGB(255, 133, 190) },
+	{ id = "Rooftops", name = "ROOFTOPS", subtitle = "Neon City at Dusk", accent = Color3.fromRGB(190, 120, 255) },
 }
 
 local W, H = 1000, 560
-local CARD_W, CARD_H, ART_H = 316, 400, 292
+local CARD_W, CARD_H, ART_H = 238, 400, 292
+local CARD_GAP = 16
 
 local root: TextButton
 local cards: { any } = {}
@@ -110,12 +112,25 @@ local function toyArt(art: Instance)
 	end
 end
 
-local ART = { SkyIslands = skyArt, Volcano = volcanoArt, Toybox = toyArt }
+local function roofArt(art: Instance)
+	UIUtil.gradient(Color3.fromRGB(255, 150, 120), Color3.fromRGB(70, 50, 120), 90, box(art, UDim2.fromScale(1, 1), UDim2.new(), Color3.new(1, 1, 1)))
+	local neon = { Color3.fromRGB(255, 90, 200), Color3.fromRGB(80, 220, 255), Color3.fromRGB(255, 200, 80) }
+	for i, b in ipairs({ { 0.1, 0.55, 44 }, { 0.3, 0.4, 56 }, { 0.52, 0.22, 64 }, { 0.74, 0.45, 50 }, { 0.92, 0.6, 40 } }) do
+		local tower = box(art, UDim2.new(0, b[3], 1 - b[2], 0), UDim2.fromScale(b[1], 1), Color3.fromRGB(40, 36, 64), 0.08, Vector2.new(0.5, 1))
+		for row = 1, 5 do
+			local w = box(tower, UDim2.new(0.7, 0, 0, 3), UDim2.new(0.5, 0, 0, 14 + row * 16), neon[(i + row) % #neon + 1], 0.5, Vector2.new(0.5, 0.5))
+			w.BackgroundTransparency = 0.25
+		end
+	end
+end
+
+local ART = { SkyIslands = skyArt, Volcano = volcanoArt, Toybox = toyArt, Rooftops = roofArt }
 -- Backdrop colour behind each map's 3D preview.
 local PREVIEW_SKY = {
 	SkyIslands = Color3.fromRGB(140, 200, 255),
 	Volcano = Color3.fromRGB(86, 34, 44),
 	Toybox = Color3.fromRGB(196, 214, 255),
+	Rooftops = Color3.fromRGB(110, 80, 150),
 }
 
 -- ── state ────────────────────────────────────────────────────────────────────
@@ -217,7 +232,7 @@ local function buildCard(parent: Instance, map, index: number)
 	local card = UIUtil.make("TextButton", {
 		Parent = parent, Text = "", AutoButtonColor = false, BorderSizePixel = 0,
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromOffset((index - 1) * (CARD_W + 26) + CARD_W / 2, CARD_H / 2),
+		Position = UDim2.fromOffset((index - 1) * (CARD_W + CARD_GAP) + CARD_W / 2, CARD_H / 2),
 		Size = UDim2.fromOffset(CARD_W, CARD_H),
 		BackgroundColor3 = Color3.fromRGB(14, 26, 46),
 	}) :: TextButton

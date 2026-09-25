@@ -17,6 +17,7 @@ local Weapons    = require(Shared.Config.Weapons)
 local GameConfig = require(Shared.Config.GameConfig)
 local CatBuilder = require(Shared.Character.CatBuilder)
 local Knockback  = require(Shared.Character.Knockback)
+local FloorShape = require(Shared.Util.FloorShape)
 local Remotes    = require(Shared.Net.Remotes)
 
 local WeaponService   = require(script.Parent.WeaponService)
@@ -457,9 +458,10 @@ local function randomFloorPoint(): Vector3?
 	local floors = CollectionService:GetTagged("DropZone")
 	if #floors == 0 then return nil end
 	local f = floors[math.random(1, #floors)] :: BasePart
-	local r = math.min(f.Size.X, f.Size.Z) * 0.3
+	local r = FloorShape.Radius(f) * 0.6
 	local a = math.random() * math.pi * 2
-	return f.Position + Vector3.new(math.cos(a) * r * math.random(), f.Size.Y / 2 + 2, math.sin(a) * r * math.random())
+	local d = r * math.random()
+	return Vector3.new(f.Position.X + math.cos(a) * d, FloorShape.Top(f) + 2, f.Position.Z + math.sin(a) * d)
 end
 
 -- Face the target while strafing (so the blaster points at it), or hand
@@ -741,7 +743,9 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 	floorConn = RunService.Heartbeat:Connect(function()
 		if not bot.alive then floorConn:Disconnect(); return end
 		local raised = Workspace:GetAttribute("KillFloorY")
-		if root.Position.Y < math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge) then
+		local arena = Workspace:FindFirstChild("Arena")
+		local mapFloor = arena and arena:GetAttribute("KillFloorY")
+		if root.Position.Y < math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge, typeof(mapFloor) == "number" and mapFloor or -math.huge) then
 			-- Let the Died handler run normally so the bot respawns.
 			floorConn:Disconnect()
 			humanoid.Health = 0

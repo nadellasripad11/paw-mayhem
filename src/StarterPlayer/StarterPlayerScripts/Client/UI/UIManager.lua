@@ -70,6 +70,7 @@ local function buildFallbackLanding()
 		{ id = "SkyIslands", name = "SKY ISLANDS", color = Color3.fromRGB(45, 160, 239) },
 		{ id = "Volcano", name = "VOLCANO", color = Color3.fromRGB(221, 84, 64) },
 		{ id = "Toybox", name = "TOYBOX", color = Color3.fromRGB(216, 99, 176) },
+		{ id = "Rooftops", name = "ROOFTOPS", color = Color3.fromRGB(150, 100, 220) },
 	}
 	local row = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(0, 196), Size = UDim2.new(1, 0, 0, 74), BackgroundTransparency = 1 }) :: Frame
 	UIUtil.listLayout(row, 12, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Center

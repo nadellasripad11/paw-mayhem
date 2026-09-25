@@ -318,6 +318,7 @@ local EVENTS: { [string]: { () -> () } } = {
 	Volcano = { eruption },
 	SkyIslands = { windGust, lowGravity },
 	Toybox = { stampede, bouncyFloor },
+	Rooftops = { windGust, lowGravity },
 }
 
 -- Once per Mayhem Mode (final seconds), per map.

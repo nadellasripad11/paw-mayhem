@@ -12,7 +12,7 @@ local ArenaBuilder = require(script.Parent.ArenaBuilder)
 
 local MapPreviews = {}
 
-local MAP_IDS = { "SkyIslands", "Volcano", "Toybox" }
+local MAP_IDS = { "SkyIslands", "Volcano", "Toybox", "Rooftops" }
 local MAX_PARTS = 2600
 -- Scenery that would swamp the preview (sky clutter, the endless lava sea).
 local SKIP_NAMES = { Cloud = true, CloudHigh = true, LavaSea = true, ArenaSky = true }

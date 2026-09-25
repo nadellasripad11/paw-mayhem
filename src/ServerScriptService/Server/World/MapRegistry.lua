@@ -8,6 +8,7 @@ MapRegistry.Maps = {
 	require(script.Parent.Maps.SkyIslands),
 	require(script.Parent.Maps.Volcano),
 	require(script.Parent.Maps.Toybox),
+	require(script.Parent.Maps.Rooftops),
 }
 
 function MapRegistry.GetById(id: string)

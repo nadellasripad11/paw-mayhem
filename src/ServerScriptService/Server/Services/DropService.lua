@@ -19,6 +19,7 @@ local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
 local GameConfig = require(Shared.Config.GameConfig)
 local Weapons = require(Shared.Config.Weapons)
+local FloorShape = require(Shared.Util.FloorShape)
 local CatBuilder = require(Shared.Character.CatBuilder)
 
 local Runtime = require(script.Parent.Runtime)
@@ -124,10 +125,10 @@ function DropService.RandomSpot(): Vector3?
 	params.RespectCanCollide = true
 	for _ = 1, 24 do
 		local z = zones[rng:NextInteger(1, #zones)]
-		-- Floor discs: diameter is Size.Y, thickness (vertical) is Size.X.
-		local r = z.Size.Y / 2 * 0.72
+		-- A spot well inside the floor (island disc or rooftop box).
+		local r = FloorShape.Radius(z) * 0.72
 		local a, d = rng:NextNumber(0, math.pi * 2), math.sqrt(rng:NextNumber()) * r
-		local top = z.Position.Y + z.Size.X / 2
+		local top = FloorShape.Top(z)
 		local p = Vector3.new(z.Position.X + math.cos(a) * d, top, z.Position.Z + math.sin(a) * d)
 		local clear = true
 		for _, s in ipairs(spawns) do

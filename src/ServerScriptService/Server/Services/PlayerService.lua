@@ -232,7 +232,9 @@ local function startKillFloorLoop()
 		end
 		-- Map events (Volcano's rising lava) can raise the floor.
 		local raised = Workspace:GetAttribute("KillFloorY")
-		local floorY = math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge)
+		local arena = Workspace:FindFirstChild("Arena")
+		local mapFloor = arena and arena:GetAttribute("KillFloorY")
+		local floorY = math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge, typeof(mapFloor) == "number" and mapFloor or -math.huge)
 		for _, player in ipairs(Players:GetPlayers()) do
 			local state = Runtime.Get(player)
 			local char = player.Character
