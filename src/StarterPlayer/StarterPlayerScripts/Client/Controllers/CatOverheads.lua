@@ -36,7 +36,7 @@ end
 
 local function attach(model: Model)
 	-- Skip your own cat and the humanoid-less menu mascot.
-	if model == player.Character or model.Name == player.Name or not model:IsDescendantOf(Workspace) then
+	if model == player.Character or model.Name == player.Name or not model:IsDescendantOf(Workspace) or model:GetAttribute("NoOverhead") then
 		return
 	end
 	local head = model:WaitForChild("Head", 5) :: BasePart?

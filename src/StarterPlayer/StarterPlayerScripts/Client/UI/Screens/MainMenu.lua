@@ -312,6 +312,37 @@ local function navButton(parent: Instance, item, order: number)
 	navButtons[item.id] = { button = b, stroke = stroke, baseStroke = stroke.Transparency }
 end
 
+-- Tiny white glyphs for the round top-bar buttons: a podium (three bars)
+-- and a gear (a ring with eight teeth).
+local function smallIcon(kind: string, parent: Instance)
+	local holder = UIUtil.make("Frame", { Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 11 })
+	local white = Color3.new(1, 1, 1)
+	if kind == "Podium" then
+		for i, h in ipairs({ 9, 16, 12 }) do
+			local bar = UIUtil.make("Frame", {
+				Parent = holder, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, (i - 1) * 7, 1, 0), Size = UDim2.fromOffset(6, h),
+				BackgroundColor3 = white, BorderSizePixel = 0, ZIndex = 11,
+			})
+			UIUtil.corner(UDim.new(0, 2), bar)
+		end
+	else
+		local ring = UIUtil.make("Frame", {
+			Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(12, 12),
+			BackgroundTransparency = 1, ZIndex = 12,
+		})
+		UIUtil.corner(UDim.new(1, 0), ring)
+		UIUtil.stroke(white, 3, ring)
+		for k = 0, 7 do
+			local a = k * math.pi / 4
+			local tooth = UIUtil.make("Frame", {
+				Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(a) * 8.5, 0.5, math.sin(a) * 8.5),
+				Size = UDim2.fromOffset(4, 4), Rotation = math.deg(a), BackgroundColor3 = white, BorderSizePixel = 0, ZIndex = 11,
+			})
+			UIUtil.corner(UDim.new(0, 1), tooth)
+		end
+	end
+end
+
 local function glassPill(props): Frame
 	local f = UIUtil.make("Frame", props) :: Frame
 	f.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
@@ -395,7 +426,7 @@ function MainMenu.Build()
 		b.Parent = currGroup
 		UIUtil.corner(UDim.new(1, 0), b)
 		UIUtil.stroke(Color3.new(1, 1, 1), 1, b).Transparency = 0.7
-		Icons.Place(spec[2], b, 22, Color3.new(1, 1, 1), Color3.new(1, 1, 1))
+		smallIcon(spec[2], b)
 		b.MouseButton1Click:Connect(function()
 			switchTo(spec[1])
 		end)
@@ -608,6 +639,20 @@ function MainMenu.Build()
 	-- First visit: the tutorial; after that, the daily reward popup (once per
 	-- session) whenever one is waiting.
 	local dailyOk = pcall(DailyReward.Build)
+	-- Settings -> Intro -> REPLAY runs the intro again (not while a match is on).
+	Settings.OnReplayIntro = function()
+		if ClientState.Match.phase == "Playing" then
+			showToast("You can replay the intro between matches.")
+			return
+		end
+		switchTo(nil)
+		gui.Enabled = false
+		Intro.Run(function()
+			if ClientState.Match.phase ~= "Playing" and not player:GetAttribute("Practicing") then
+				gui.Enabled = true
+			end
+		end)
+	end
 	local greeted = false
 	local function greet()
 		if greeted or not ClientState.Profile or not gui.Enabled then

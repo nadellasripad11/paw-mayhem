@@ -49,6 +49,7 @@ end
 local function actor(custom: any, name: string, weaponId: string?, pos: Vector3, lookAt: Vector3, parent: Instance): Model
 	local m = CatBuilder.Build(custom, name, weaponId and { Id = weaponId } or nil)
 	m.Name = name
+	m:SetAttribute("NoOverhead", true) -- actors: no name / % tag
 	for _, d in ipairs(m:GetDescendants()) do
 		if d:IsA("BasePart") then
 			d.CanCollide = false
@@ -197,9 +198,12 @@ local function cinematic(done: () -> ())
 			end
 			b:PivotTo(base[b] * CFrame.new(math.sin(t * 2) * 1.2, 0, 0))
 			launchFrom = b:GetPivot()
+			-- Over A's right shoulder, looking at B (not through A's head).
 			local ap = (a.PrimaryPart :: BasePart).Position
 			local bp = (b.PrimaryPart :: BasePart).Position
-			want = CFrame.lookAt(ap + (ap - bp).Unit * 6 + Vector3.new(1.5, 2.5, 0), bp)
+			local back = ((ap - bp) * Vector3.new(1, 0, 1)).Unit
+			local right = Vector3.new(-back.Z, 0, back.X)
+			want = CFrame.lookAt(ap + back * 7 + right * 3.5 + Vector3.new(0, 2.2, 0), bp + Vector3.new(0, 0.5, 0))
 		elseif t < 9.5 then
 			if stage == 2 then
 				stage = 3

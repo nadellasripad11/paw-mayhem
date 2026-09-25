@@ -224,6 +224,25 @@ local function choice(parent: Instance, order: number, label: string, key: strin
 	paint()
 end
 
+-- Replay the new-player intro (cinematic + lesson with Mochi).
+Settings.OnReplayIntro = nil :: (() -> ())?
+local function introRow(parent: Instance, order: number)
+	local row = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 58) })
+	UIUtil.label({ Parent = row, Text = "Intro", Font = Theme.Font.Title, TextSize = 18, Size = UDim2.new(0.5, 0, 0, 28), Position = UDim2.fromOffset(0, 4) })
+	UIUtil.label({ Parent = row, Text = "Watch the intro and redo the lesson", TextSize = 12, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(0, 32), Size = UDim2.new(0.6, 0, 0, 16) })
+	local go = UIUtil.make("TextButton", {
+		Parent = row, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.fromOffset(96, 34),
+		Text = "REPLAY", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.new(1, 1, 1),
+		BackgroundColor3 = ACCENT, BorderSizePixel = 0, AutoButtonColor = true,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(0, 10), go)
+	go.MouseButton1Click:Connect(function()
+		if Settings.OnReplayIntro then
+			Settings.OnReplayIntro()
+		end
+	end)
+end
+
 -- Reward codes: type one in, the server checks and pays it (once each).
 local function codesRow(parent: Instance, order: number)
 	local row = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 86) })
@@ -322,6 +341,7 @@ function Settings.Build(parent)
 		toggle(gameplay, 4, "Show FPS", "ShowFPS", "Frame rate in the corner")
 		toggle(gameplay, 5, "Auto Fire", "AutoFire", "Phones: shoots when your crosshair is on an enemy")
 		codesRow(gameplay, 6)
+		introRow(gameplay, 7)
 
 		local controls = card(root, 2, "CONTROLS", Color3.fromRGB(64, 200, 255))
 		slider(controls, 1, "Mouse Sensitivity", "MouseSensitivity", 0, 1, pct)
