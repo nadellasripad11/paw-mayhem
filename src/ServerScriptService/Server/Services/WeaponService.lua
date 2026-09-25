@@ -29,6 +29,8 @@ local WeaponService = {}
 
 -- Set by BotService so raycasts that hit bot models route damage there.
 WeaponService.OnBotHit = nil :: ((shooter: Player, hitModel: Model, weapon: any, dir: Vector3) -> ())?
+-- Set by PracticeService: shots on the practice island's target cats.
+WeaponService.OnDummyHit = nil :: ((shooter: Player, hitModel: Model, weapon: any, dir: Vector3) -> ())?
 
 -- Per-player: last fire time per weapon, for server-side fire-rate gating.
 local lastFire: { [Player]: number } = {}
@@ -128,6 +130,8 @@ local function hitTarget(player: Player, model: Model, weapon, dir: Vector3, kno
 		end
 	elseif model:GetAttribute("IsBot") and WeaponService.OnBotHit then
 		WeaponService.OnBotHit(player, model, weapon, dir)
+	elseif model:GetAttribute("IsDummy") and WeaponService.OnDummyHit then
+		WeaponService.OnDummyHit(player, model, weapon, dir)
 	end
 end
 

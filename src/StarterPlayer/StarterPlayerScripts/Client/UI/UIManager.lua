@@ -125,7 +125,14 @@ local function onCharacter(char)
 		Results.Hide()
 		enableGameplay(true)
 		HUD.StartTips()
+	elseif player:GetAttribute("Practicing") then
+		-- Practice island between matches.
+		MainMenu.SetVisible(false)
+		if fallbackGui then fallbackGui.Enabled = false end
+		HUD.SetVisible(true)
+		enableGameplay(true)
 	end
+	HUD.SetPractice(player:GetAttribute("Practicing") == true)
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.Died:Connect(function()
@@ -266,6 +273,22 @@ function UIManager.Start()
 	player.CharacterRemoving:Connect(function()
 		alive = false
 		enableGameplay(false)
+		-- Leaving the practice island: straight back to the menu.
+		if player:GetAttribute("Practicing") == nil and ClientState.Match.phase == "Intermission" then
+			HUD.SetVisible(false)
+			HUD.SetPractice(false)
+			MainMenu.SetVisible(true)
+		end
+	end)
+	player:GetAttributeChangedSignal("Practicing"):Connect(function()
+		if not player:GetAttribute("Practicing") then
+			HUD.SetPractice(false)
+			if ClientState.Match.phase ~= "Playing" then
+				enableGameplay(false)
+				HUD.SetVisible(false)
+				MainMenu.SetVisible(true)
+			end
+		end
 	end)
 
 	-- apply current state on start

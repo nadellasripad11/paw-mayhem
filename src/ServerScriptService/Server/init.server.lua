@@ -25,6 +25,7 @@ local LeaderboardService = require(Services.LeaderboardService)
 local SeasonService = require(Services.SeasonService)
 local RetentionService = require(Services.RetentionService)
 local CommunityService = require(Services.CommunityService)
+local PracticeService = require(Services.PracticeService)
 local ArenaBuilder = require(World.ArenaBuilder)
 local MapPreviews = require(World.MapPreviews)
 
@@ -51,6 +52,7 @@ local function main()
 	SeasonService.Start()
 	RetentionService.Start()
 	CommunityService.Start()
+	PracticeService.Start()
 
 	-- 4. Push profile to client + ensure daily quests on load.
 	DataService.ProfileLoaded:Connect(function(player)

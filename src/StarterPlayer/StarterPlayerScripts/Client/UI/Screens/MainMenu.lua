@@ -50,6 +50,7 @@ local currentPanel
 
 local NAV = {
 	{ id = "Play", label = "Play", icon = "Play" },
+	{ id = "Practice", label = "Practice", icon = "Reticle" },
 	{ id = "Season", label = "Season Pass", icon = "Trophy" },
 	{ id = "Loadout", label = "Loadout", icon = "Gun" },
 	{ id = "Shop", label = "Shop", icon = "Bag" },
@@ -301,6 +302,10 @@ local function navButton(parent: Instance, item, order: number)
 	b.MouseButton1Click:Connect(function()
 		if item.id == "Play" then
 			onPlay()
+		elseif item.id == "Practice" then
+			-- Off to the practice island (between matches only).
+			switchTo(nil)
+			Remotes.Get("Practice"):FireServer(true)
 		else
 			switchTo(item.id)
 		end

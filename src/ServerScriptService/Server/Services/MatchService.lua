@@ -22,6 +22,7 @@ local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 local BotService = require(script.Parent.BotService)
 local PodiumService = require(script.Parent.PodiumService)
 local FlagService = require(script.Parent.FlagService)
+local PracticeService = require(script.Parent.PracticeService)
 local SeasonService = require(script.Parent.SeasonService)
 local Modes = require(game:GetService("ReplicatedStorage").Shared.Config.Modes)
 local Ranks = require(game:GetService("ReplicatedStorage").Shared.Config.Ranks)
@@ -510,6 +511,7 @@ local function enterIntermission()
 end
 
 local function enterCountdown()
+	PracticeService.EndAll() -- practice ends when a match is about to start
 	-- Lock the vote and rebuild while players are still in the lobby, before
 	-- characters and power-up pickups exist for the next match.
 	buildVotedMap()

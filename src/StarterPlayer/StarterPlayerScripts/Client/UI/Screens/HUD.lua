@@ -817,6 +817,38 @@ local function updateWeapon()
 	end
 end
 
+-- Practice island: a LEAVE button (top left) and the P key; the match score
+-- bar is hidden since there is no match.
+local practiceButton: TextButton? = nil
+function HUD.SetPractice(on: boolean)
+	if not gui then return end
+	if not practiceButton then
+		local b = UIUtil.make("TextButton", {
+			Parent = gui, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 12, 0, UIUtil.topInset() + 8),
+			Size = UDim2.fromOffset(170, 36), Text = "LEAVE PRACTICE  (P)", Font = Theme.Font.Title, TextSize = 14,
+			TextColor3 = Color3.new(1, 1, 1), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0, Visible = false,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(0, 10), b)
+		UIUtil.stroke(Color3.fromRGB(255, 120, 120), 1.5, b)
+		b.MouseButton1Click:Connect(function()
+			Remotes.Get("Practice"):FireServer(false)
+		end)
+		UserInputService.InputBegan:Connect(function(input, gpe)
+			if not gpe and input.KeyCode == Enum.KeyCode.P and b.Visible then
+				Remotes.Get("Practice"):FireServer(false)
+			end
+		end)
+		practiceButton = b
+	end
+	(practiceButton :: TextButton).Visible = on
+	if refs.timer then
+		local bar = refs.timer.Parent and refs.timer.Parent.Parent
+		if bar and bar:IsA("GuiObject") then
+			bar.Visible = not on
+		end
+	end
+end
+
 function HUD.SetVisible(on: boolean)
 	if gui then gui.Enabled = on end
 end
