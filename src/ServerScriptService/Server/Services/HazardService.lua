@@ -47,7 +47,7 @@ function HazardService.Hit(model: Model, damage: number, dV: Vector3)
 		end
 		s.Accumulated += damage
 		s.LastAttackAt = os.clock()
-		hum:TakeDamage(damage * 0.5)
+		hum:TakeDamage(damage * GameConfig.Character.HealthDamageScale)
 		if launch.Magnitude > 0 then
 			WeaponService.ApplyLaunch(player, hum, root, launch * root.AssemblyMass)
 		end

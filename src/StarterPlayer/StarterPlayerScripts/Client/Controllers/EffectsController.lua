@@ -395,6 +395,11 @@ function EffectsController.Start()
 		if type(data) == "table" and typeof(data.position) == "Vector3" and type(data.damage) == "number" then
 			damageNumber(data.position, data.damage)
 		end
+		-- Landing a hit on a cat that's about to fly: punch the view in.
+		local acc = type(data) == "table" and tonumber(data.accumulated) or 0
+		if acc and acc >= 90 then
+			CameraController.Punch(3 + math.min((acc - 90) / 30, 1) * 4)
+		end
 		if EffectsController.OnHitConfirm then
 			EffectsController.OnHitConfirm(data)
 		end

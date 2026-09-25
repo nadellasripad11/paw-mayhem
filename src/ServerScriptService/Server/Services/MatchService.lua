@@ -20,6 +20,7 @@ local Runtime = require(script.Parent.Runtime)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 local BotService = require(script.Parent.BotService)
 local PodiumService = require(script.Parent.PodiumService)
+local FlagService = require(script.Parent.FlagService)
 local SeasonService = require(script.Parent.SeasonService)
 local Modes = require(game:GetService("ReplicatedStorage").Shared.Config.Modes)
 local Workspace = game:GetService("Workspace")
@@ -431,6 +432,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 		end
 	end
 	stopHill()
+	FlagService.Stop()
 	setMayhem(false)
 	state.Phase = PHASE.Results
 	state.TimeLeft = GameConfig.Match.ResultsSeconds
@@ -480,6 +482,7 @@ local function enterIntermission()
 	BotService.DespawnAll()
 	PodiumService.Clear()
 	stopHill()
+	FlagService.Stop()
 	modeVotes = {}
 	setMayhem(false)
 	state.Phase = PHASE.Intermission
@@ -517,6 +520,8 @@ local function enterPlaying()
 	BotService.SpawnBots(queuedCount())
 	if state.Mode == "KOTH" then
 		startHill()
+	elseif state.Mode == "CTF" then
+		FlagService.Start()
 	elseif state.Mode == "Ringout" then
 		announce("RINGOUT", "Blasters do no damage — knock cats off the map!", Color3.fromRGB(190, 120, 255))
 	elseif state.Mode == "FFA" then
@@ -576,6 +581,22 @@ end
 
 function MatchService.Start()
 	PlayerService.OnElimination = onElimination
+
+	-- Capture the Flag: a capture scores for the team and pays the carrier.
+	FlagService.OnCapture = function(team: string, carrier: Model)
+		if state.Phase ~= PHASE.Playing or state.Scores[team] == nil then
+			return
+		end
+		state.Scores[team] += 1
+		local player = Players:GetPlayerFromCharacter(carrier)
+		if player then
+			EconomyService.AddXP(player, Scoring.CaptureXP)
+			EconomyService.AddCoins(player, Scoring.CaptureCoins)
+			EconomyService.Push(player)
+		end
+		broadcastScore()
+		MatchService.CheckWin()
+	end
 
 	-- Award a team point when a bot is eliminated (mirrors onElimination for players).
 	BotService.OnBotEliminated = function(killer: Player, botTeam: string)

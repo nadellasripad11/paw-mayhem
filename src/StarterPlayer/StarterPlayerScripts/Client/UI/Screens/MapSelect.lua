@@ -345,7 +345,7 @@ function MapSelect.Build(parent: Instance)
 	for i, m in ipairs(Modes.List) do
 		local b = UIUtil.make("TextButton", {
 			Parent = modeRow, LayoutOrder = i, Size = UDim2.fromOffset(0, 38), AutomaticSize = Enum.AutomaticSize.X,
-			Text = string.upper(m.Name), Font = Theme.Font.Title, TextSize = 13, AutoButtonColor = true, BorderSizePixel = 0,
+			Text = string.upper(m.Pill or m.Name), Font = Theme.Font.Title, TextSize = 13, AutoButtonColor = true, BorderSizePixel = 0,
 		}) :: TextButton
 		UIUtil.corner(UDim.new(1, 0), b)
 		local pad = Instance.new("UIPadding")

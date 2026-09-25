@@ -30,6 +30,8 @@ GameConfig.Scoring = {
 	MatchPlayedXP = 40,
 	WinBonusXP = 120,
 	WinBonusCoins = 60,
+	CaptureXP = 150, -- Capture the Flag: bringing the flag home
+	CaptureCoins = 40,
 	-- Each win in a row after the first adds this much to the win coins, up to
 	-- WinStreakMaxSteps times (+50%).
 	WinStreakBonus = 0.1,
@@ -42,11 +44,14 @@ GameConfig.Character = {
 	SprintSpeed = 28,
 	JumpPower = 55,
 	Health = 100,
-	RespawnDelay = 3.0,
+	RespawnDelay = 1.5, -- fast, chaotic respawns
 	-- A player is "eliminated" when they fall below this Y in the arena.
 	KillFloorY = -120,
 	-- Ragdoll-ish launch: how long control is reduced after a big hit.
 	LaunchStunSeconds = 0.35,
+	-- Hits mostly build knockback %; only this fraction of a blaster's damage
+	-- comes off HP, so most knockouts are cats sent flying off the map.
+	HealthDamageScale = 0.35,
 }
 
 -- Knockback model (the defining mechanic) ------------------------------------
@@ -54,10 +59,10 @@ GameConfig.Character = {
 -- taken this life, similar to a certain party fighter: the more they've been
 -- hit, the further they fly. This rewards sustained pressure + a finisher.
 GameConfig.Knockback = {
-	BaseImpulse = 45, -- flat impulse floor per hit
+	BaseImpulse = 52, -- flat impulse floor per hit
 	DamageScale = 1.6, -- how much accumulated damage amplifies knockback
 	MaxDamageForScale = 180, -- damage cap used in the scaling curve
-	UpwardBias = 0.35, -- fraction of impulse redirected upward for "launch" feel
+	UpwardBias = 0.5, -- fraction of impulse redirected upward: hits send cats UP and away
 	MassReference = 14, -- normalises impulse against a standard cat mass
 	DecayPerSecond = 0, -- accumulated damage does not decay mid-life
 }
@@ -73,7 +78,7 @@ GameConfig.Camera = {
 
 -- Power-ups ------------------------------------------------------------------
 GameConfig.PowerUps = {
-	SpawnInterval = 18,
+	SpawnInterval = 12,
 	Duration = 10,
 	RespawnAfterPickup = 22,
 }
@@ -81,7 +86,7 @@ GameConfig.PowerUps = {
 -- Sky supply drops + fish snacks (DropService) --------------------------------
 GameConfig.Drops = {
 	FirstDelay = 20, -- seconds into a match before the first crate
-	Interval = 32,
+	Interval = 24,
 	IntervalJitter = 6,
 	MayhemInterval = 8, -- crates rain down in the final Mayhem Mode
 	FallTime = 7, -- seconds from appearing in the sky to landing
@@ -98,8 +103,8 @@ GameConfig.Drops = {
 }
 
 GameConfig.Snacks = {
-	Interval = 22,
-	MaxActive = 3,
+	Interval = 16,
+	MaxActive = 4,
 	Heal = 40,
 	FluffCut = 30, -- knockback damage removed by eating one
 	GrabRadius = 4,

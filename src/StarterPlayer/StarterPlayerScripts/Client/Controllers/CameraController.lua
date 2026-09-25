@@ -33,6 +33,7 @@ local shake = 0 -- decaying shake magnitude
 local fovBoost = 0 -- extra field of view from speed
 local assistUntil = 0 -- aim help runs while you've shot recently
 local kick = 0 -- recoil: upward view kick (radians) that settles back
+local punch = 0 -- big-hit zoom punch (degrees of FOV), settles back
 local parallax = Vector2.zero
 local camDist = 0
 
@@ -68,6 +69,14 @@ function CameraController.AddShake(amount: number)
 end
 
 local MIN_PITCH, MAX_PITCH = -1.2, 1.2
+
+-- A quick zoom-in punch when you land a big hit.
+function CameraController.Punch(degrees: number)
+	local ClientState = require(script.Parent.Parent.ClientState)
+	if ClientState.Settings.CameraShake then
+		punch = math.min(punch + degrees, 10)
+	end
+end
 
 -- Called for every local shot; `kickDeg` is the recoil kick.
 function CameraController.OnShot(kickDeg: number?)
@@ -284,7 +293,8 @@ local function step(dt: number)
 	local walk = GameConfig.Character.WalkSpeed
 	local wantBoost = math.clamp((speed - walk - 1) / 9, 0, 1) * 4 + math.clamp((speed - walk - 12) / 40, 0, 1) * 6
 	fovBoost += (wantBoost - fovBoost) * math.clamp(dt * 6, 0, 1)
-	camera.FieldOfView = (require(script.Parent.Parent.ClientState).Settings.FieldOfView or GameConfig.Camera.FieldOfView) + fovBoost
+	punch *= math.exp(-10 * dt)
+	camera.FieldOfView = (require(script.Parent.Parent.ClientState).Settings.FieldOfView or GameConfig.Camera.FieldOfView) + fovBoost - punch
 
 	local focus = root.Position + Vector3.new(0, 1.5, 0)
 	local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)

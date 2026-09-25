@@ -653,7 +653,7 @@ local function updateScoreBar(m)
 	local scores = m.scores or {}
 	refs.blueScore.Text = tostring(scores.Blue or 0)
 	refs.redScore.Text = tostring(scores.Red or 0)
-	local MODE_TEXT = { TDM = "TEAM DEATHMATCH", FFA = "FREE FOR ALL  •  YOU vs LEADER", KOTH = "KING OF THE HILL  •  HOLD THE HILL", Ringout = "RINGOUT  •  KNOCK THEM OFF" }
+	local MODE_TEXT = { TDM = "TEAM DEATHMATCH", FFA = "FREE FOR ALL  •  YOU vs LEADER", KOTH = "KING OF THE HILL  •  HOLD THE HILL", Ringout = "RINGOUT  •  KNOCK THEM OFF", CTF = "CAPTURE THE FLAG  •  FIRST TO 3" }
 	if refs.modeLabel then
 		refs.modeLabel.Text = MODE_TEXT[m.mode or "TDM"] or ""
 	end

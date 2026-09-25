@@ -25,6 +25,7 @@ local Runtime         = require(script.Parent.Runtime)
 local SeasonService   = require(script.Parent.SeasonService)
 local DropService     = require(script.Parent.DropService)
 local PlayerService   = require(script.Parent.PlayerService)
+local FlagService     = require(script.Parent.FlagService)
 
 local BotService = {}
 
@@ -71,7 +72,8 @@ end
 local BOT_NAMES = {
 	"Whiskers-BOT", "Mittens-BOT", "Pounce-BOT",
 	"Scratch-BOT",  "Nyan-BOT",    "Fuzz-BOT",
-	"Biscuit-BOT",  "Pickle-BOT",
+	"Biscuit-BOT",  "Pickle-BOT",  "Mochi-BOT",
+	"Tofu-BOT",     "Noodle-BOT",  "Pepper-BOT",
 }
 
 -- ── types ───────────────────────────────────────────────────────────────────
@@ -116,7 +118,7 @@ local nextBotId      = 1
 -- Bots reserved but not yet in the world (staggered spawn or respawning).
 local pending:       { [number]: { team: string, name: string } } = {}
 -- Total cats per match; bots fill whatever real players don't.
-local TARGET_CATS    = 8
+local TARGET_CATS    = 12
 -- Eliminations each bot has this match (by name, so respawns keep them).
 local botElims:      { [string]: { elims: number, team: string } } = {}
 local matchActive    = false
@@ -231,7 +233,7 @@ local function botHitBot(shooter: BotState, victim: BotState, weapon: any, dir: 
 	if not victim.alive or victim == shooter or (Runtime.Mode ~= "FFA" and victim.team == shooter.team) then return end
 	victim.accumulated += weapon.Damage
 	if Runtime.Mode ~= "Ringout" then
-		victim.humanoid:TakeDamage(weapon.Damage * 0.5)
+		victim.humanoid:TakeDamage(weapon.Damage * GameConfig.Character.HealthDamageScale)
 	end
 	victim.lastAttacker = nil
 	victim.lastBot = shooter
@@ -303,7 +305,7 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	vState.LastBotAt = os.clock()
 	vState.Accumulated += dmg
 	if Runtime.Mode ~= "Ringout" then
-		vHum:TakeDamage(dmg * 0.5)
+		vHum:TakeDamage(dmg * GameConfig.Character.HealthDamageScale)
 	end
 	vState.LastAttackAt = os.clock()
 
@@ -335,7 +337,7 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 
 	bot.accumulated += weapon.Damage
 	if Runtime.Mode ~= "Ringout" then
-		bot.humanoid:TakeDamage(weapon.Damage * 0.5)
+		bot.humanoid:TakeDamage(weapon.Damage * GameConfig.Character.HealthDamageScale)
 	end
 	bot.lastAttacker = shooter
 	bot.lastBot = nil
@@ -361,7 +363,7 @@ function BotService.EnvironmentHit(model: Model, damage: number, dV: Vector3): b
 	if not bot or not bot.alive then return false end
 	bot.accumulated += damage
 	bot.hitAt = os.clock()
-	bot.humanoid:TakeDamage(damage * 0.5)
+	bot.humanoid:TakeDamage(damage * GameConfig.Character.HealthDamageScale)
 	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
 	if dV.Magnitude > 0 then
 		launchBot(bot, dV)
@@ -534,12 +536,30 @@ local function runBot(bot: BotState)
 		local target, dist, visible = pickTarget(bot)
 		local tRoot = target and target.PrimaryPart
 
-		if snack and (not target or dist > 25) then
+		-- Capture the Flag: carriers run home; odd bots attack the enemy flag;
+		-- everyone goes for the flag when there's nobody to fight.
+		local objective = Runtime.Mode == "CTF" and FlagService.Objective(bot.team, bot.model) or nil
+		local carrying = objective ~= nil and FlagService.IsCarrier(bot.model)
+		local goFlag = objective ~= nil and (carrying or not target or (bot.id % 2 == 1 and dist > 30))
+
+		if snack and not carrying and (not target or dist > 25) then
 			-- Badly hurt: go eat a fish snack (heals, cuts fluff).
 			bot.humanoid.WalkSpeed = CHASE_SPEED
 			faceToward(bot, nil)
 			travel(bot, snack, now)
 			task.wait(0.2)
+		elseif goFlag and objective then
+			bot.humanoid.WalkSpeed = CHASE_SPEED
+			if target ~= bot.target then
+				bot.target = target
+				bot.targetAcquiredAt = now
+			end
+			faceToward(bot, (target and tRoot and visible) and tRoot.Position or nil)
+			travel(bot, objective, now)
+			if target and tRoot and visible and dist <= bot.weapon.Range and now - bot.targetAcquiredAt >= bot.reaction then
+				botFireAt(bot, target, tRoot)
+			end
+			task.wait(0.15)
 		elseif target and tRoot then
 			if target ~= bot.target then
 				bot.target = target

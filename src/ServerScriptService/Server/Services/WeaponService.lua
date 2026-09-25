@@ -230,7 +230,7 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	local dmg = weapon.Damage * (1 - dmgResist)
 	vState.Accumulated += dmg
 	if Runtime.Mode ~= "Ringout" then
-		vHum:TakeDamage(dmg * 0.5) -- HP also ticks so pure damage can eliminate too
+		vHum:TakeDamage(dmg * GameConfig.Character.HealthDamageScale) -- HP ticks a little too
 	end
 	vState.LastAttacker = shooter
 	vState.LastBot = nil
