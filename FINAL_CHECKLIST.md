@@ -77,3 +77,26 @@ Work top to bottom. Boxes you can tick without Studio are marked **[offline]**.
 - Cross-server `OrderedDataStore` leaderboard (hook points in `EconomyService`).
 - Weapon id in the kill feed (track last damaging weapon per victim).
 - Richer emotes / an emote wheel UI.
+
+## Friends playtest (Studio: Test → Clients and Servers → 3+ players, or publish and join together)
+Copy every red line from the Output window and send it over.
+- [ ] Every mode once: Team Deathmatch, Free For All, King of the Hill (someone scores standing in the hill), Ringout, Capture the Flag (grab → carry → capture; knock a carrier off → flag goes home).
+- [ ] Every map once: Sky Islands, Volcano (lava rises in the last 30s), Toybox, Neon Rooftops.
+- [ ] Shots feel instant; hits register on moving cats; recoil on Boom Paw / Void Cannon.
+- [ ] Knockback: launches carry, star twinkle when someone flies off, RING OUT pop.
+- [ ] Movement: double jump, wall-jump, dash (Q), pounce (E), coyote jump off ledges.
+- [ ] Spawns spread over 3 spots per team; nobody spawns inside a crate.
+- [ ] Emotes (B) — friends can see them. Kill feed shows names + weapons.
+- [ ] New player: START HERE arrow on PLAY, tips during the first match, no slides.
+- [ ] Phone (Studio device emulator): FIRE / JUMP / DASH / POUNCE / RUN buttons, auto-fire.
+- [ ] Results: win streak + trophy change; menu shows tier; TROPHIES leaderboard.
+- [ ] Settings → Codes: PAWMAYHEM works once, a second try says already used.
+
+## Dashboard (you)
+- [ ] Import `assets/CatMeshes.glb` (drag the model into ReplicatedStorage → CatMeshes).
+- [ ] Game Settings → Communication → Microphone ON (proximity voice).
+- [ ] Places → Server Size 12–16. Private servers on (cheap).
+- [ ] Create a Roblox group → put its id in `src/ReplicatedStorage/Shared/Config/Community.lua` (GroupId).
+- [ ] Season Pass (R$299), Season Tiers (R$99), 8 badges → send the ids.
+- [ ] Icon, thumbnails, description, Discord link. Publish.
+- [ ] After launch: Analytics → Funnels → onboarding (where new players quit).
