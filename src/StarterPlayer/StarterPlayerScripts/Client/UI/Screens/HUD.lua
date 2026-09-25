@@ -4,7 +4,7 @@
 --   * Center crosshair with shot/hit kick
 --   * Compact health bar, your knockback % and active power-up (bottom left)
 --   * Small weapon + ammo pill (bottom center)
---   * Mobile: FIRE / JUMP / RUN / DASH buttons (bottom right); PC: a Q dash chip
+--   * Mobile: FIRE / JUMP / RUN / DASH / POUNCE buttons (bottom right); PC: Q dash + E pounce chips
 --   * Announcements (supply drops, streaks, events, Mayhem Mode) under the timer
 --   * Transient banners: countdown, Get Ready, Eliminated, notices
 --   * Kill feed (top right) and a KNOCKOUT! / RING OUT! pop with multi-KOs
@@ -371,6 +371,22 @@ local function buildMobile(parent)
 	})
 	refs.dashButton = { lit = dashLit, timer = dashTimer, button = dash }
 
+	local pounce, pounceLit, pouncePressed = touchButton(parent, "PounceButton", UDim2.new(1, -252, 1, -104), 58, Color3.fromRGB(255, 200, 110), "JumpArrow", "POUNCE")
+	pounce.InputBegan:Connect(function(input)
+		if isPress(input) then
+			pouncePressed(true)
+			MovementController.Pounce()
+		end
+	end)
+	pounce.InputEnded:Connect(function(input)
+		if isPress(input) then pouncePressed(false) end
+	end)
+	local pounceTimer = UIUtil.label({
+		Parent = pounce, Text = "", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+		Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, ZIndex = 5,
+	})
+	refs.pounceButton = { lit = pounceLit, timer = pounceTimer }
+
 	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -170, 1, -160), 58, Theme.Color.Warn, "Dash", "RUN")
 	run.InputBegan:Connect(function(input)
 		if isPress(input) then
@@ -492,16 +508,28 @@ local function buildDashChip(parent)
 	UIUtil.corner(UDim.new(1, 0), chip)
 	UIUtil.stroke(Theme.Color.Stroke, 1.5, chip)
 	local key = UIUtil.label({
-		Parent = chip, Text = "Q", Font = Theme.Font.Title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center,
+		Parent = chip, Name = "Key", Text = "Q", Font = Theme.Font.Title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center,
 		Position = UDim2.fromOffset(5, 4), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 0,
 		BackgroundColor3 = Color3.fromRGB(120, 220, 255), TextColor3 = Color3.fromRGB(10, 30, 50),
 	})
 	UIUtil.corner(UDim.new(0, 6), key)
 	local label = UIUtil.label({
-		Parent = chip, Text = "DASH", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim,
+		Parent = chip, Name = "Label", Text = "DASH", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim,
 		Position = UDim2.fromOffset(29, 0), Size = UDim2.new(1, -32, 1, 0),
 	})
 	refs.dashChip = { key = key, label = label }
+
+	-- E: pounce, just left of the dash chip.
+	local pchip = chip:Clone()
+	pchip.Position = UDim2.new(0.5, -178, 1, -10)
+	pchip.Size = UDim2.fromOffset(76, 28)
+	pchip.Parent = parent
+	local pkey = pchip:FindFirstChild("Key") :: TextLabel
+	local pl = pchip:FindFirstChild("Label") :: TextLabel
+	pkey.Text = "E"
+	pkey.BackgroundColor3 = Color3.fromRGB(255, 200, 110)
+	pl.Text = "POUNCE"
+	refs.pounceChip = { key = pkey, label = pl }
 end
 
 -- ── Mayhem Mode: pulsing red glow around the screen edge ─────────────────────
@@ -707,6 +735,16 @@ local function updateDash()
 	if refs.dashChip then
 		refs.dashChip.key.BackgroundTransparency = ready and 0 or 0.7
 		refs.dashChip.label.Text = ready and "DASH" or string.format("%.1f", cd)
+	end
+	local pcd = MovementController.PounceCooldown()
+	local pready = pcd <= 0
+	if refs.pounceButton then
+		refs.pounceButton.lit(pready)
+		refs.pounceButton.timer.Text = pready and "" or string.format("%.1f", pcd)
+	end
+	if refs.pounceChip then
+		refs.pounceChip.key.BackgroundTransparency = pready and 0 or 0.7
+		refs.pounceChip.label.Text = pready and "POUNCE" or string.format("%.1f", pcd)
 	end
 end
 

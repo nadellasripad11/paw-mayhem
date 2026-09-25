@@ -122,6 +122,11 @@ GameConfig.Movement = {
 	DashTime = 0.18,
 	DashCooldown = 2.5,
 	DoubleJumpSpeed = 50,
+	WallJumpUp = 52, -- kick off a wall: up speed ...
+	WallJumpOut = 40, -- ... and speed away from the wall
+	PounceUp = 38, -- pounce: a low forward leap
+	PounceSpeed = 58,
+	PounceCooldown = 3,
 	-- Airborne momentum after a hit's burst / an air dash: how much of the
 	-- velocity carries on, and how fast it eases off (per second).
 	KnockbackCarry = 0.75,

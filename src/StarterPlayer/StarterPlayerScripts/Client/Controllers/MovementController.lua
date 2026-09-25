@@ -9,6 +9,9 @@
 --     the air it carries you, so a big blaster can nudge you across a gap)
 --   * forgiving jumps: a short grace after walking off a ledge, and a jump
 --     pressed just before landing goes off as you land
+--   * wall-jump: jump in the air next to a wall to kick off it (doesn't use
+--     up the double jump; not the same wall twice in a row)
+--   * pounce (E / gamepad X / mobile button): a cat leap forward and up
 --   * jump pads (fling you along an arc to their target)
 --   * map-event wind that pushes you while you keep steering
 -- Airborne horizontal speed is held with a Plane LinearVelocity, because the
@@ -41,6 +44,8 @@ local pads: { [BasePart]: boolean } = {}
 local lastGroundAt = 0
 local jumpedSinceGround = false
 local jumpBufferUntil = 0
+local lastWallNormal: Vector3? = nil
+local pounceReadyAt = 0
 local carryVel = Vector3.zero -- airborne momentum left over from a hit or dash
 local carryStart = 0
 local carryMover: LinearVelocity? = nil
@@ -286,6 +291,42 @@ local function tryDoubleJump()
 	ringFx(root.Position - Vector3.new(0, 1.4, 0), Color3.new(1, 1, 1), 5)
 end
 
+-- The wall you're hugging in the air (its flat outward normal), if any.
+local function wallNormal(root: BasePart): Vector3?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { player.Character :: Model }
+	params.RespectCanCollide = true
+	local best: RaycastResult? = nil
+	for k = 0, 7 do
+		local a = k * math.pi / 4
+		local hit = Workspace:Raycast(root.Position, Vector3.new(math.cos(a), 0, math.sin(a)) * 2.8, params)
+		if hit and math.abs(hit.Normal.Y) < 0.35 and (not best or hit.Distance < best.Distance) then
+			best = hit
+		end
+	end
+	if not best then
+		return nil
+	end
+	return Vector3.new(best.Normal.X, 0, best.Normal.Z).Unit
+end
+
+local function tryWallJump(root: BasePart, hum: Humanoid): boolean
+	local n = wallNormal(root)
+	if not n or (lastWallNormal and n:Dot(lastWallNormal) > 0.7) then
+		return false
+	end
+	lastWallNormal = n
+	local cfg = GameConfig.Movement
+	local v = root.AssemblyLinearVelocity
+	root.AssemblyLinearVelocity = Vector3.new(v.X, cfg.WallJumpUp, v.Z)
+	startCarry(n * cfg.WallJumpOut)
+	hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	ringFx(root.Position - n * 1.2, Color3.new(1, 1, 1), 4)
+	require(script.Parent.SoundController).Play("Jump")
+	return true
+end
+
 local COYOTE = 0.14 -- seconds after leaving a ledge you can still jump normally
 local BUFFER = 0.16 -- a jump pressed this long before landing still counts
 
@@ -303,11 +344,40 @@ local function airJump()
 		hum:ChangeState(Enum.HumanoidStateType.Jumping)
 		return
 	end
+	if os.clock() - airborneSince > 0.08 and tryWallJump(root, hum) then
+		return
+	end
 	if doubleUsed then
 		jumpBufferUntil = os.clock() + BUFFER
 		return
 	end
 	tryDoubleJump()
+end
+
+-- Seconds until the pounce is ready again (0 when ready).
+function MovementController.PounceCooldown(): number
+	return math.max(0, pounceReadyAt - os.clock())
+end
+
+-- Pounce: a cat leap forward and up (ground only).
+function MovementController.Pounce()
+	local root, hum = parts()
+	if not root or not hum or os.clock() < pounceReadyAt or isAirborne(hum) then
+		return
+	end
+	local cfg = GameConfig.Movement
+	local dir = Vector3.new(hum.MoveDirection.X, 0, hum.MoveDirection.Z)
+	if dir.Magnitude < 0.1 then
+		dir = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
+	end
+	dir = dir.Unit
+	pounceReadyAt = os.clock() + cfg.PounceCooldown
+	local v = root.AssemblyLinearVelocity
+	root.AssemblyLinearVelocity = Vector3.new(v.X, cfg.PounceUp, v.Z)
+	hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	startCarry(dir * cfg.PounceSpeed)
+	ringFx(root.Position - Vector3.new(0, 1.4, 0), Color3.fromRGB(255, 214, 120), 7)
+	require(script.Parent.SoundController).Play("Dash", 0.8)
 end
 
 -- Jump from the mobile button: a normal jump on the ground, a double jump in the air.
@@ -343,6 +413,7 @@ local function hookCharacter(char: Model)
 			airborneSince = 0
 			doubleUsed = false
 			jumpedSinceGround = false
+			lastWallNormal = nil
 			if os.clock() < jumpBufferUntil then
 				jumpBufferUntil = 0
 				task.defer(function()
@@ -510,6 +581,8 @@ function MovementController.Start()
 			MovementController.ToggleSprint()
 		elseif key == Enum.KeyCode.Q or key == Enum.KeyCode.ButtonB then
 			MovementController.Dash()
+		elseif key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonX then
+			MovementController.Pounce()
 		elseif key == Enum.KeyCode.Space or key == Enum.KeyCode.ButtonA then
 			airJump()
 		end

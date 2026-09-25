@@ -31,6 +31,7 @@ local function steps()
 		{ title = "BLAST THEM", body = m and "Tap FIRE to shoot your blaster. Every hit raises the enemy's knockback %." or "Click to shoot your blaster. Every hit raises the enemy's knockback %.", pose = "Flex" },
 		{ title = "KNOCK THEM OFF", body = "The higher someone's %, the further they fly. Blast them off the island for a RINGOUT!", pose = "Celebrate" },
 		{ title = "DASH TO SURVIVE", body = m and "Tap DASH to zip out of danger. Getting knocked off? Dash + double jump back!" or "Press Q to dash out of danger. Getting knocked off? Dash + double jump back!", pose = "Spin" },
+		{ title = "POUNCE + WALL-JUMP", body = m and "Tap POUNCE to leap forward like a cat. Jump next to a wall in mid-air to kick off it!" or "Press E to POUNCE forward. Jump next to a wall in mid-air to kick off it!", pose = "Flex" },
 		{ title = "GRAB THE GOODIES", body = "Supply drops fall from the sky, jump pads launch you across the map, and healing pickups keep you in the fight.", pose = "Dance" },
 		{ title = "YOU'RE READY!", body = "Every match earns coins, XP and Season Pass rewards. Customize your cat and pick a map to play!", pose = "Celebrate" },
 	}
