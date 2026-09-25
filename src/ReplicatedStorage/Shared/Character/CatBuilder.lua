@@ -469,7 +469,7 @@ local MESH_REPLACES = {
 	Drawstring = true, Aglet = true, TagChain = true, DogTag = true, JacketHem = true, Pocket = true,
 	PocketFlap = true, Strap = true, StrapBack = true, Satchel = true, SatchelFlap = true, Buckle = true,
 	Cuff = true, PawPad = true, ShortsLeg = true, Foot = true, Toe = true,
-	Tail2 = true, Tail3 = true, Tail4 = true, Tail5 = true, Tail6 = true, Tail7 = true,
+	Tail2 = true, Tail3 = true, Tail4 = true, Tail5 = true, Tail6 = true, Tail7 = true, Tail8 = true,
 	TigerStripe = true, CheekStripe = true, CalicoPatch = true,
 }
 -- Hats / glasses were sized for the primitive head; the mesh head is smaller.
