@@ -535,11 +535,10 @@ function LobbyService.Start()
 			end
 		end)
 	end
-	refreshBoard()
 	task.spawn(function()
 		while true do
-			task.wait(60)
 			refreshBoard()
+			task.wait(60)
 		end
 	end)
 

@@ -393,7 +393,34 @@ function MovementController.Jump()
 	end
 end
 
+-- A new cat can arrive before the ground under it has loaded (far-off lobby
+-- and duel maps): hold it still until there's something to stand on.
+local function holdUntilGround(char: Model)
+	local root = char:WaitForChild("HumanoidRootPart", 10) :: BasePart?
+	if not root then
+		return
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { char }
+	local function ground(): boolean
+		return Workspace:Raycast(root.Position, Vector3.new(0, -40, 0), params) ~= nil
+	end
+	if ground() then
+		return
+	end
+	root.Anchored = true
+	local t0 = os.clock()
+	while char.Parent and not ground() and os.clock() - t0 < 10 do
+		task.wait(0.1)
+	end
+	if root.Parent then
+		root.Anchored = false
+	end
+end
+
 local function hookCharacter(char: Model)
+	task.spawn(holdUntilGround, char)
 	local hum = char:WaitForChild("Humanoid", 10) :: Humanoid?
 	if not hum then
 		return

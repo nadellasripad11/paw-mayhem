@@ -43,7 +43,8 @@
       "$className": "Workspace",
       "$properties": {
         "FilteringEnabled": true,
-        "Gravity": 120
+        "Gravity": 120,
+        "StreamingEnabled": false
       }
     },
 

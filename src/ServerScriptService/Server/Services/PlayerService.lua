@@ -152,6 +152,15 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	local profile = DataService.Get(player)
 	local cat = profile and profile.Loadout.Cat or nil
 	local teamId = (opts and opts.team) or (context == "Match" and PlayerService.AssignTeam(player)) or "Lobby"
+	local spawnAt: CFrame = (opts and opts.cframe) or PlayerService.PickSpawn(teamId)
+	-- If streaming is on, send the player the ground there before the cat
+	-- lands on it (the lobby and duels are far from where they joined).
+	pcall(function()
+		player:RequestStreamAroundAsync(spawnAt.Position, 5)
+	end)
+	if not player.Parent then
+		return nil
+	end
 
 	-- Clean up previous character.
 	if player.Character then
@@ -184,7 +193,7 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	ring.Parent = context ~= "Lobby" and model or nil
 
 	model:SetAttribute("Team", teamId)
-	model:PivotTo((opts and opts.cframe) or PlayerService.PickSpawn(teamId))
+	model:PivotTo(spawnAt)
 	model.Parent = Workspace
 
 	player.Character = model
