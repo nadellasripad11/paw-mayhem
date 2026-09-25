@@ -87,7 +87,8 @@ Copy every red line from the Output window and send it over.
 - [ ] Movement: double jump, wall-jump, dash (Q), pounce (E), coyote jump off ledges.
 - [ ] Spawns spread over 3 spots per team; nobody spawns inside a crate.
 - [ ] Emotes (B) — friends can see them. Kill feed shows names + weapons.
-- [ ] New player: START HERE arrow on PLAY, tips during the first match, no slides.
+- [ ] New player (fresh account or reset data): intro cinematic (skippable) → lesson with Mochi on the practice island (ring, jump, double jump, shoot, knock one off, dash, pounce) → menu with START HERE on PLAY. If a match is already running, the lesson is skipped and first-match tips show instead.
+- [ ] Menu: Settings and Leaderboard are the round icons at the top right.
 - [ ] Phone (Studio device emulator): FIRE / JUMP / DASH / POUNCE / RUN buttons, auto-fire.
 - [ ] Results: win streak + trophy change; menu shows tier; TROPHIES leaderboard.
 - [ ] Settings → Codes: PAWMAYHEM works once, a second try says already used.

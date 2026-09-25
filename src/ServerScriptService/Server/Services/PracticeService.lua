@@ -50,6 +50,9 @@ end
 local function buildIsland()
 	local folder = Instance.new("Folder")
 	folder.Name = "PracticeIsland"
+	-- The intro cinematic and the mentor lesson (client) stage themselves here.
+	folder:SetAttribute("Center", CENTER)
+	folder:SetAttribute("Surface", SURFACE_Y)
 	folder.Parent = Workspace
 	ArenaKit.MakeIslandBase(CENTER, RADIUS, "Island", PALETTE, Enum.Material.Grass, folder)
 	-- Three target cats on glowing pads, spread round the far side.

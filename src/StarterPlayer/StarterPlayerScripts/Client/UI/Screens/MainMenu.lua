@@ -31,6 +31,7 @@ local MapSelect = require(script.Parent.MapSelect)
 local SeasonPass = require(script.Parent.SeasonPass)
 local DailyReward = require(script.Parent.DailyReward)
 local Tutorial = require(script.Parent.Tutorial)
+local Intro = require(script.Parent.Intro)
 
 local MainMenu = {}
 local player = Players.LocalPlayer
@@ -55,8 +56,6 @@ local NAV = {
 	{ id = "Loadout", label = "Loadout", icon = "Gun" },
 	{ id = "Shop", label = "Shop", icon = "Bag" },
 	{ id = "Customize", label = "Customize", icon = "CatFace" },
-	{ id = "Leaderboard", label = "Leaderboard", icon = "Podium" },
-	{ id = "Settings", label = "Settings", icon = "Gear" },
 }
 
 local NAV_BG = Color3.fromRGB(16, 22, 30)
@@ -352,7 +351,7 @@ function MainMenu.Build()
 	end
 
 	-- Coins + gems (top right)
-	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(540, 40), ZIndex = 10 })
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(640, 40), ZIndex = 10 })
 	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
 	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
@@ -380,6 +379,27 @@ function MainMenu.Build()
 			switchTo("Shop")
 		end
 	end)
+
+	-- Leaderboard + Settings: small round icons at the far right of the top bar.
+	for i, spec in ipairs({ { "Leaderboard", "Podium" }, { "Settings", "Gear" } }) do
+		local b = Instance.new("TextButton")
+		b.Name = spec[1] .. "Icon"
+		b.Text = ""
+		b.AutoButtonColor = false
+		b.Size = UDim2.fromOffset(40, 40)
+		b.LayoutOrder = 10 + i
+		b.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
+		b.BackgroundTransparency = 0.25
+		b.BorderSizePixel = 0
+		b.ZIndex = 10
+		b.Parent = currGroup
+		UIUtil.corner(UDim.new(1, 0), b)
+		UIUtil.stroke(Color3.new(1, 1, 1), 1, b).Transparency = 0.7
+		Icons.Place(spec[2], b, 22, Color3.new(1, 1, 1), Color3.new(1, 1, 1))
+		b.MouseButton1Click:Connect(function()
+			switchTo(spec[1])
+		end)
+	end
 
 	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
 	local invite = Instance.new("TextButton")
@@ -599,9 +619,8 @@ function MainMenu.Build()
 				DailyReward.Open()
 			end
 		end
-		-- New players learn in their first match (HUD tips), so no slides up
-		-- front: just point them at PLAY.
-		if Tutorial.ShouldShow() then
+		-- Point new players at PLAY.
+		local function pointAtPlay()
 			local play = gui:FindFirstChild("Play", true)
 			if play and play:IsA("GuiObject") then
 				local arrow = UIUtil.label({
@@ -618,7 +637,20 @@ function MainMenu.Build()
 				end)
 			end
 		end
-		daily()
+		-- Brand-new players get the intro: a short cinematic, then a hands-on
+		-- lesson with Mochi on the practice island. Then PLAY is pointed out.
+		if Tutorial.ShouldShow() then
+			gui.Enabled = false
+			Intro.Run(function()
+				if ClientState.Match.phase ~= "Playing" and not player:GetAttribute("Practicing") then
+					gui.Enabled = true
+				end
+				pointAtPlay()
+				daily()
+			end)
+		else
+			daily()
+		end
 		-- Weekend event banner (Sat/Sun UTC): low gravity + bonus coins.
 		local wday = os.date("!*t").wday
 		if wday == 1 or wday == 7 then
