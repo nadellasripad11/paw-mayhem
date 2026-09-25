@@ -158,8 +158,8 @@ local function tryFire()
 
 	-- local muzzle flash, bolts and sound (no waiting on the server)
 	CombatController.MuzzleFlash(muzzle, weapon)
-	EffectsController.Tracers(muzzle, tos, weapon.TrailColor)
-	SoundController.PlayAt("Shoot", muzzle, 0.9 + math.random() * 0.2)
+	EffectsController.Tracers(muzzle, tos, weapon.TrailColor, weapon.Id)
+	SoundController.PlayShot(weapon.Id, muzzle)
 	CameraController.OnShot()
 	if CombatController.OnLocalShot then
 		CombatController.OnLocalShot(weapon.Id)

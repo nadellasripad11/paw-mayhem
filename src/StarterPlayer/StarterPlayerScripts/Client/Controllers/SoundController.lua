@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Sounds = require(ReplicatedStorage.Shared.Config.Sounds)
+local WeaponFX = require(ReplicatedStorage.Shared.Config.WeaponFX)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local ClientState = require(script.Parent.Parent.ClientState)
 
@@ -71,7 +72,7 @@ function SoundController.Play(name: string, pitch: number?)
 end
 
 -- Play a sound in the world at a position (falls off with distance).
-function SoundController.PlayAt(name: string, position: Vector3, pitch: number?)
+function SoundController.PlayAt(name: string, position: Vector3, pitch: number?, volume: number?)
 	local def = Sounds.SFX[name]
 	if not def then
 		return
@@ -81,7 +82,7 @@ function SoundController.PlayAt(name: string, position: Vector3, pitch: number?)
 	anchor.Parent = Workspace.Terrain
 	local s = Instance.new("Sound")
 	s.SoundId = def.id
-	s.Volume = def.volume
+	s.Volume = def.volume * (volume or 1)
 	s.PlaybackSpeed = def.pitch * (pitch or 1)
 	s.RollOffMinDistance = 12
 	s.RollOffMaxDistance = 160
@@ -91,6 +92,13 @@ function SoundController.PlayAt(name: string, position: Vector3, pitch: number?)
 	task.delay(4, function()
 		anchor:Destroy()
 	end)
+end
+
+-- A blaster shot, pitched and weighted for its weapon class (a deep boom
+-- for Boom Paw, a high zip for Rapid Paw...).
+function SoundController.PlayShot(weaponId: string?, position: Vector3)
+	local style = WeaponFX.Style(weaponId)
+	SoundController.PlayAt("Shoot", position, style.pitch / Sounds.SFX.Shoot.pitch * (0.95 + math.random() * 0.1), style.volume)
 end
 
 -- ── music ────────────────────────────────────────────────────────────────────
@@ -180,7 +188,7 @@ function SoundController.Start()
 			return
 		end
 		if (data.kind == "Tracer" or data.kind == "Tracers") and typeof(data.from) == "Vector3" then
-			SoundController.PlayAt("Shoot", data.from, 0.9 + math.random() * 0.2)
+			SoundController.PlayShot(typeof(data.weapon) == "string" and data.weapon or nil, data.from)
 		elseif data.kind == "Burst" and typeof(data.position) == "Vector3" then
 			SoundController.PlayAt("Explosion", data.position)
 		elseif data.kind == "CoinRain" then

@@ -7,6 +7,7 @@
 --   * Mobile: FIRE / JUMP / RUN / DASH buttons (bottom right); PC: a Q dash chip
 --   * Announcements (supply drops, streaks, events, Mayhem Mode) under the timer
 --   * Transient banners: countdown, Get Ready, Eliminated, notices
+--   * Kill feed (top right) and a KNOCKOUT! / RING OUT! pop with multi-KOs
 -- Roblox's player list, health bar, backpack and mobile jump button are hidden
 -- so they don't duplicate or clutter it.
 
@@ -514,6 +515,138 @@ local function buildMayhemEdge(parent)
 	refs.mayhemEdge = edge
 end
 
+-- ── kill feed (top right) ────────────────────────────────────────────────────
+local TEAM_TEXT = { Blue = Color3.fromRGB(110, 185, 255), Red = Color3.fromRGB(255, 120, 130) }
+
+local function buildKillFeed(parent)
+	local list = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, UIUtil.topInset() + 8),
+		Size = UDim2.fromOffset(300, 160), BackgroundTransparency = 1,
+	})
+	local layout = Instance.new("UIListLayout")
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	layout.Padding = UDim.new(0, 4)
+	layout.Parent = list
+	refs.killFeed = { list = list, order = 0 }
+end
+
+local function addKillRow(data: any)
+	local kf = refs.killFeed
+	if not kf then return end
+	kf.order -= 1 -- newest on top
+	local mine = data.killer == player.DisplayName or data.victim == player.DisplayName
+	local row = UIUtil.make("Frame", {
+		Parent = kf.list, Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.2, BorderSizePixel = 0, LayoutOrder = kf.order,
+	})
+	UIUtil.corner(UDim.new(0, 8), row)
+	if mine then
+		UIUtil.stroke(Color3.fromRGB(255, 214, 90), 2, row)
+	end
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+	pad.Parent = row
+	local h = Instance.new("UIListLayout")
+	h.FillDirection = Enum.FillDirection.Horizontal
+	h.VerticalAlignment = Enum.VerticalAlignment.Center
+	h.SortOrder = Enum.SortOrder.LayoutOrder
+	h.Padding = UDim.new(0, 6)
+	h.Parent = row
+	local function name(text: string, team: any, order: number)
+		UIUtil.label({
+			Parent = row, Text = text, Font = Theme.Font.Bold, TextSize = 14, LayoutOrder = order,
+			TextColor3 = TEAM_TEXT[team] or Color3.new(1, 1, 1), Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X,
+			TextStrokeTransparency = 0.6,
+		})
+	end
+	name(tostring(data.killer or "—"), data.killerTeam, 1)
+	if data.ringout then
+		local tag = UIUtil.label({
+			Parent = row, Text = " RING OUT ", Font = Theme.Font.Heading, TextSize = 11, LayoutOrder = 2,
+			TextColor3 = Color3.fromRGB(40, 20, 10), BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(255, 170, 70),
+			Size = UDim2.fromOffset(0, 16), AutomaticSize = Enum.AutomaticSize.X, TextXAlignment = Enum.TextXAlignment.Center,
+		})
+		UIUtil.corner(UDim.new(0, 4), tag)
+	else
+		local slot = UIUtil.make("Frame", { Parent = row, Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, LayoutOrder = 2 })
+		local w = typeof(data.weaponId) == "string" and Weapons.Get(data.weaponId)
+		Icons.Place(w and w.Icon or "Gun", slot, 18, w and w.TrailColor or Color3.new(1, 1, 1), w and w.MuzzleColor or nil)
+	end
+	name(tostring(data.victim or "?"), data.victimTeam, 3)
+	-- Keep the feed short: oldest rows drop off.
+	local rows = {}
+	for _, c in ipairs(kf.list:GetChildren()) do
+		if c:IsA("Frame") then
+			table.insert(rows, c)
+		end
+	end
+	table.sort(rows, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
+	for i = 6, #rows do
+		rows[i]:Destroy()
+	end
+	task.delay(6, function()
+		if row.Parent then
+			UIUtil.tween(row, 0.3, { BackgroundTransparency = 1 })
+			for _, d in ipairs(row:GetDescendants()) do
+				if d:IsA("TextLabel") then
+					UIUtil.tween(d, 0.3, { TextTransparency = 1, TextStrokeTransparency = 1 })
+				end
+			end
+			task.delay(0.32, function()
+				row:Destroy()
+			end)
+		end
+	end)
+end
+
+-- ── your knockouts: KNOCKOUT! / RING OUT! with multi-KO chains ───────────────
+local KO_CHAIN = { "", "DOUBLE KO!", "TRIPLE KO!", "QUAD KO!" }
+local koChain, koLastAt = 0, 0
+
+local function buildKoPop(parent)
+	local holder = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.33),
+		Size = UDim2.fromOffset(520, 90), BackgroundTransparency = 1, Visible = false,
+	})
+	local scale = Instance.new("UIScale")
+	scale.Parent = holder
+	local title = UIUtil.label({
+		Parent = holder, Text = "", Font = Theme.Font.Title, TextSize = 46, TextXAlignment = Enum.TextXAlignment.Center,
+		Size = UDim2.new(1, 0, 0, 54),
+	})
+	UIUtil.stroke(Color3.fromRGB(30, 16, 10), 3, title)
+	local sub = UIUtil.label({
+		Parent = holder, Text = "", Font = Theme.Font.Heading, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+		Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 26), TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.4,
+	})
+	refs.koPop = { holder = holder, scale = scale, title = title, sub = sub, token = 0 }
+end
+
+local function showKo(data: any)
+	local k = refs.koPop
+	if not k then return end
+	local now = os.clock()
+	koChain = (now - koLastAt < 4) and koChain + 1 or 1
+	koLastAt = now
+	k.token += 1
+	local token = k.token
+	k.title.Text = data.ringout and "RING OUT!" or "KNOCKOUT!"
+	k.title.TextColor3 = data.ringout and Color3.fromRGB(255, 170, 70) or Color3.fromRGB(255, 220, 90)
+	k.sub.Text = koChain >= 2 and (KO_CHAIN[math.min(koChain, #KO_CHAIN)] ~= "" and KO_CHAIN[math.min(koChain, #KO_CHAIN)] or "MAYHEM!") or ("you got " .. tostring(data.victim or "them"))
+	if koChain > #KO_CHAIN then
+		k.sub.Text = "UNSTOPPABLE x" .. koChain
+	end
+	k.holder.Visible = true
+	k.scale.Scale = 1.6
+	TweenService:Create(k.scale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(1.4, function()
+		if token == k.token then
+			k.holder.Visible = false
+		end
+	end)
+end
+
 -- ── updates ──────────────────────────────────────────────────────────────────
 local function updateScoreBar(m)
 	if not refs.timer then return end
@@ -612,6 +745,8 @@ function HUD.Build()
 	buildDashChip(gui)
 	buildBanners(gui)
 	buildMobile(gui)
+	buildKillFeed(gui)
+	buildKoPop(gui)
 
 	ClientState.ProfileChanged:Connect(updateWeapon)
 	ClientState.MatchChanged:Connect(updateScoreBar)
@@ -626,6 +761,13 @@ function HUD.Build()
 	player.CharacterAdded:Connect(watchCharacter)
 
 	Remotes.Get("Announce").OnClientEvent:Connect(HUD.Announce)
+	Remotes.Get("KillFeed").OnClientEvent:Connect(function(data)
+		if typeof(data) ~= "table" then return end
+		addKillRow(data)
+		if data.killer == player.DisplayName and data.victim ~= player.DisplayName then
+			showKo(data)
+		end
+	end)
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
 	end)

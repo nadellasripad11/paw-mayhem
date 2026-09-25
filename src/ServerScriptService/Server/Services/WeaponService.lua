@@ -182,8 +182,8 @@ local function firePellet(player: Player, weapon, origin: Vector3, dir: Vector3,
 end
 
 -- Everyone but the shooter draws the bolts (the shooter already drew them).
-local function broadcastTracers(shooter: Player, origin: Vector3, tos: { Vector3 }, color: Color3)
-	local data = { kind = "Tracers", from = origin, tos = tos, color = color }
+local function broadcastTracers(shooter: Player, origin: Vector3, tos: { Vector3 }, weapon)
+	local data = { kind = "Tracers", from = origin, tos = tos, color = weapon.TrailColor, weapon = weapon.Id }
 	local remote = Remotes.Get("PlayEffect")
 	for _, other in ipairs(Players:GetPlayers()) do
 		if other ~= shooter then
@@ -337,7 +337,7 @@ function WeaponService.HandleFire(player: Player, payload)
 		dir = dir or directionWithSpread(baseDir, weapon.Spread + spreadAdd)
 		table.insert(tos, firePellet(player, weapon, origin, dir, knockbackMult, claimed))
 	end
-	broadcastTracers(player, origin, tos, weapon.TrailColor)
+	broadcastTracers(player, origin, tos, weapon)
 end
 
 function WeaponService.Start()

@@ -11,10 +11,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
+local CollectionService = game:GetService("CollectionService")
 local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
+local Weapons = require(Shared.Config.Weapons)
+local WeaponFX = require(Shared.Config.WeaponFX)
 
 local CameraController = require(script.Parent.CameraController)
 local ClientState = require(script.Parent.Parent.ClientState)
@@ -62,51 +65,121 @@ local function flashHurt()
 	end)
 end
 
-local function drawTracer(from: Vector3, to: Vector3, color: Color3)
+local function fxPart(shape: Enum.PartType?, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): Part
+	local p = Instance.new("Part")
+	if shape then
+		p.Shape = shape
+	end
+	p.Anchored = true
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Material = material or Enum.Material.Neon
+	p.Color = color
+	p.Size = size
+	p.CFrame = cf
+	p.Parent = workspace
+	return p
+end
+
+-- The cat a shot landed on (its body is within reach of the impact), if any.
+local function catAt(pos: Vector3): Model?
+	for _, m in ipairs(CollectionService:GetTagged("PawCat")) do
+		local r = m:IsA("Model") and m.PrimaryPart
+		if r and m:IsDescendantOf(workspace) and (r.Position - pos).Magnitude < 3.6 then
+			return m
+		end
+	end
+	return nil
+end
+
+-- A burst of fur tufts in the struck cat's colour.
+local function fluffPuff(pos: Vector3, cat: Model, amount: number)
+	local fur = cat:FindFirstChild("HeadFur", true) or cat:FindFirstChild("Head")
+	local color = fur and fur:IsA("BasePart") and fur.Color or Color3.fromRGB(255, 240, 225)
+	local anchor = fxPart(nil, Vector3.one * 0.2, CFrame.new(pos), color)
+	anchor.Transparency = 1
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Color = ColorSequence.new(color:Lerp(Color3.new(1, 1, 1), 0.25), color)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1.3) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.35, 0.6)
+	e.Speed = NumberRange.new(6, 13)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 6
+	e.Acceleration = Vector3.new(0, -8, 0)
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-120, 120)
+	e.Enabled = false
+	e.Parent = anchor
+	e:Emit(amount)
+	Debris:AddItem(anchor, 1)
+end
+
+-- One shot's bolt from `from` to `to`, drawn in its blaster's style.
+local function drawTracer(from: Vector3, to: Vector3, color: Color3, weaponId: string?)
 	local dist = (to - from).Magnitude
 	if dist < 0.1 then
 		return
 	end
-	-- Two layered beams make every shot read at a distance: a soft glowing
-	-- silhouette first, then a crisp bright core, like the reference blasters.
-	local glow = Instance.new("Part")
-	glow.Anchored = true
-	glow.CanCollide = false
-	glow.CanQuery = false
-	glow.Material = Enum.Material.Neon
-	glow.Color = color
-	glow.Transparency = 0.5
-	glow.Size = Vector3.new(0.72, 0.72, dist)
-	glow.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -dist / 2)
-	glow.Parent = workspace
-	Debris:AddItem(glow, 0.13)
+	local style = WeaponFX.Style(weaponId)
+	local look = CFrame.lookAt(from, to)
 
-	local bolt = Instance.new("Part")
-	bolt.Anchored = true
-	bolt.CanCollide = false
-	bolt.CanQuery = false
-	bolt.Material = Enum.Material.Neon
-	bolt.Color = color
-	bolt.Size = Vector3.new(0.22, 0.22, dist)
-	bolt.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -dist / 2)
-	bolt.Parent = workspace
-	Debris:AddItem(bolt, 0.12)
+	if style.bubbles then
+		-- A stream of soapy bubbles drifting along the shot.
+		local n = math.clamp(math.floor(dist / 6), 3, 10)
+		for i = 1, n do
+			local pos = from:Lerp(to, i / n)
+			local d = 0.45 + math.random() * 0.45
+			local b = fxPart(Enum.PartType.Ball, Vector3.one * d, CFrame.new(pos), color:Lerp(Color3.new(1, 1, 1), 0.4), Enum.Material.Glass)
+			b.Transparency = 0.45
+			TweenService:Create(b, TweenInfo.new(style.life + i * 0.03), {
+				Position = pos + Vector3.new(math.random() - 0.5, 1 + math.random(), math.random() - 0.5),
+				Size = Vector3.one * d * 1.5, Transparency = 1,
+			}):Play()
+			Debris:AddItem(b, style.life + i * 0.03 + 0.05)
+		end
+	else
+		-- A soft glow around a crisp bright core.
+		if style.glow > 0 then
+			local glow = fxPart(nil, Vector3.new(style.glow, style.glow, dist), look * CFrame.new(0, 0, -dist / 2), color)
+			glow.Transparency = 0.5
+			TweenService:Create(glow, TweenInfo.new(style.life), { Transparency = 1, Size = Vector3.new(style.glow * 0.3, style.glow * 0.3, dist) }):Play()
+			Debris:AddItem(glow, style.life + 0.02)
+		end
+		local core = fxPart(nil, Vector3.new(style.core, style.core, dist), look * CFrame.new(0, 0, -dist / 2), color:Lerp(Color3.new(1, 1, 1), 0.35))
+		Debris:AddItem(core, style.life)
+	end
 
-	-- A short radial hit burst keeps impacts visible without adding gameplay
-	-- objects or physics load.
-	for i = 1, 5 do
-		local spark = Instance.new("Part")
-		spark.Shape = Enum.PartType.Ball
-		spark.Anchored = true
-		spark.CanCollide = false
-		spark.CanQuery = false
-		spark.Material = Enum.Material.Neon
-		spark.Color = color
-		spark.Size = Vector3.new(0.65, 0.65, 0.65)
-		local angle = (math.pi * 2 / 5) * i
-		spark.Position = to + Vector3.new(math.cos(angle), math.sin(angle * 2) * 0.45, math.sin(angle)) * 0.4
-		spark.Parent = workspace
-		Debris:AddItem(spark, 0.16)
+	-- Impact: sparks, a shock ring for heavy hitters, ice shards for frost.
+	for i = 1, style.sparks do
+		local angle = (math.pi * 2 / style.sparks) * i
+		local spark = fxPart(Enum.PartType.Ball, Vector3.one * 0.55, CFrame.new(to), color)
+		local out = Vector3.new(math.cos(angle), math.sin(angle * 2) * 0.45 + 0.3, math.sin(angle)) * (1.2 + math.random())
+		TweenService:Create(spark, TweenInfo.new(0.18), { Position = to + out, Size = Vector3.one * 0.1 }):Play()
+		Debris:AddItem(spark, 0.2)
+	end
+	if style.ring then
+		local ring = fxPart(Enum.PartType.Ball, Vector3.one * 1, CFrame.new(to), color)
+		ring.Transparency = 0.3
+		TweenService:Create(ring, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * style.ring, Transparency = 1 }):Play()
+		Debris:AddItem(ring, 0.27)
+	end
+	if style.shards then
+		for i = 1, 5 do
+			local shard = fxPart(nil, Vector3.new(0.18, 0.18, 0.9), CFrame.lookAt(to, to + Vector3.new(math.random() - 0.5, math.random(), math.random() - 0.5)), Color3.fromRGB(210, 245, 255), Enum.Material.Ice)
+			shard.Transparency = 0.2
+			TweenService:Create(shard, TweenInfo.new(0.4), { Transparency = 1, Position = shard.Position + shard.CFrame.LookVector * 1.4 }):Play()
+			Debris:AddItem(shard, 0.42)
+		end
+	end
+
+	local cat = catAt(to)
+	if cat then
+		local w = weaponId and Weapons.Get(weaponId)
+		fluffPuff(to, cat, math.clamp(math.floor((w and w.Damage or 14) / 2.5), 4, 16))
 	end
 end
 
@@ -276,9 +349,9 @@ local function confetti(pos: Vector3)
 end
 
 -- Draw one shot's bolts (all its pellets) from the muzzle.
-function EffectsController.Tracers(from: Vector3, tos: { Vector3 }, color: Color3)
+function EffectsController.Tracers(from: Vector3, tos: { Vector3 }, color: Color3, weaponId: string?)
 	for _, to in ipairs(tos) do
-		drawTracer(from, to, color)
+		drawTracer(from, to, color, weaponId)
 	end
 end
 
@@ -296,7 +369,7 @@ function EffectsController.Start()
 					table.insert(tos, to)
 				end
 			end
-			EffectsController.Tracers(data.from, tos, data.color or Color3.fromRGB(180, 120, 255))
+			EffectsController.Tracers(data.from, tos, data.color or Color3.fromRGB(180, 120, 255), typeof(data.weapon) == "string" and data.weapon or nil)
 		elseif data.kind == "Burst" and typeof(data.position) == "Vector3" then
 			burst(data.position, data.color or Color3.fromRGB(255, 204, 64))
 		elseif data.kind == "CoinRain" then
@@ -307,7 +380,9 @@ function EffectsController.Start()
 	end)
 
 	Remotes.Get("YouWereHit").OnClientEvent:Connect(function(data)
-		CameraController.AddShake(0.35)
+		-- The more fluff you carry, the harder each hit rocks the screen.
+		local acc = type(data) == "table" and tonumber(data.accumulated) or 0
+		CameraController.AddShake(0.3 + math.min((acc or 0) / 150, 1) * 0.7)
 		if ClientState.Settings.ShowDamage then
 			flashHurt()
 		end

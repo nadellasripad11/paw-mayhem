@@ -285,6 +285,7 @@ local function botFireAt(bot: BotState, target: Model, tRoot: BasePart)
 		from  = from,
 		tos   = tos,
 		color = weapon.TrailColor,
+		weapon = weapon.Id,
 	})
 end
 
@@ -660,6 +661,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		bot.alive = false
 		bots[botId]      = nil
 		modelToId[model] = nil
+		local ringout = root.Position.Y < GameConfig.Character.KillFloorY + 20
 
 		local killer = bot.lastAttacker
 		if killer and Players:FindFirstChild(killer.Name) then
@@ -679,7 +681,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 			end
 			Remotes.Get("KillFeed"):FireAllClients({
 				killer = killer.DisplayName, killerTeam = kState.Team,
-				victim = botName, victimTeam = teamId, ringout = false,
+				victim = botName, victimTeam = teamId, ringout = ringout,
 			})
 		elseif bot.lastBot and bot.lastBot ~= bot and (Runtime.Mode == "FFA" or bot.lastBot.team ~= teamId) then
 			local kb = bot.lastBot
@@ -689,11 +691,11 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 			end
 			Remotes.Get("KillFeed"):FireAllClients({
 				killer = kb.name, killerTeam = kb.team,
-				victim = botName, victimTeam = teamId, ringout = false,
+				victim = botName, victimTeam = teamId, ringout = ringout,
 			})
 		else
 			Remotes.Get("KillFeed"):FireAllClients({
-				killer = "—", victim = botName, victimTeam = teamId, ringout = false,
+				killer = ringout and "☠" or "—", victim = botName, victimTeam = teamId, ringout = ringout,
 			})
 		end
 

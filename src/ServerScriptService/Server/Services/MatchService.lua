@@ -233,6 +233,8 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		EconomyService.AddStat(victim, "Deaths", 1)
 	end
 	endStreak(victim, killer ~= victim and killer or nil)
+	local feedKiller: string? = killer and killer ~= victim and killer.DisplayName or nil
+	local feedTeam: string? = killer and killer ~= victim and (Runtime.Get(killer) and Runtime.Get(killer).Team) or nil
 
 	if killer and killer ~= victim then
 		addStreak(killer)
@@ -262,6 +264,7 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		local kb = vState.LastBot
 		vState.LastBot = nil
 		BotService.CreditKill(kb.name, kb.team)
+		feedKiller, feedTeam = kb.name, kb.team
 		if not isFFA() and state.Scores[kb.team] ~= nil then
 			state.Scores[kb.team] += Scoring.EliminationTeamPoints * currentMode().KillPoints
 		end
@@ -272,8 +275,8 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 
 	-- Kill feed to everyone.
 	Remotes.Get("KillFeed"):FireAllClients({
-		killer = killer and killer.DisplayName or (ringout and "☠" or "—"),
-		killerTeam = killer and (Runtime.Get(killer) and Runtime.Get(killer).Team) or nil,
+		killer = feedKiller or (ringout and "☠" or "—"),
+		killerTeam = feedTeam,
 		victim = victim.DisplayName,
 		victimTeam = vState and vState.Team or nil,
 		weaponId = weaponId,
