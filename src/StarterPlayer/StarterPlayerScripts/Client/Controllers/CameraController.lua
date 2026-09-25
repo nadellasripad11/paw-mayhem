@@ -204,6 +204,12 @@ local function updateGamepad(dt: number)
 	end
 end
 
+-- Scripted shot that overrides everything (the knockout replay drives it).
+local override: CFrame? = nil
+function CameraController.SetOverride(cf: CFrame?)
+	override = cf
+end
+
 -- Countdown flyover: a slow orbit over the arena you're about to drop into.
 local flyover = false
 local flyoverAt = 0
@@ -242,6 +248,12 @@ local function livingCat(): Model?
 end
 
 local function step(dt: number)
+	if override then
+		camera.CameraType = Enum.CameraType.Scriptable
+		camera.FieldOfView = 62
+		camera.CFrame = override
+		return
+	end
 	if spectating and not showcase then
 		local hum = spectating:FindFirstChildOfClass("Humanoid")
 		if not spectating.Parent or (hum and hum.Health <= 0 and os.clock() - spectateAt > 1.5) then

@@ -17,6 +17,7 @@ local HUD = require(script.Parent.Screens.HUD)
 local Results = require(script.Parent.Screens.Results)
 
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
+local ReplayController = require(script.Parent.Parent.Controllers.ReplayController)
 local CombatController = require(script.Parent.Parent.Controllers.CombatController)
 local LobbyScene = require(script.Parent.Parent.Lobby.LobbyScene)
 
@@ -167,6 +168,8 @@ local function onPhase(m)
 	end
 	if phase ~= "Playing" then
 		CameraController.SetSpectate(nil)
+	else
+		ReplayController.Clear() -- a fresh match: only this match's knockouts replay
 	end
 
 	if phase == "Intermission" then
@@ -205,11 +208,23 @@ local function onPhase(m)
 		if fallbackGui then fallbackGui.Enabled = false end
 		HUD.SetVisible(false)
 		enableGameplay(false)
-		if podiumShot then
-			CameraController.SetLobbyView(false)
-			CameraController.SetShowcase(podiumShot)
+		local function showResults()
+			if lastPhase ~= "Results" then
+				return
+			end
+			if podiumShot then
+				CameraController.SetLobbyView(false)
+				CameraController.SetShowcase(podiumShot)
+			end
+			Results.Show(ClientState.Match)
 		end
-		Results.Show(m)
+		-- Your last knockout first (if you got one), then the podium.
+		if ReplayController.HasClip() then
+			CameraController.SetLobbyView(false)
+			ReplayController.Play(showResults)
+		else
+			showResults()
+		end
 	end
 end
 
