@@ -26,6 +26,7 @@ local SeasonService = require(Services.SeasonService)
 local RetentionService = require(Services.RetentionService)
 local CommunityService = require(Services.CommunityService)
 local LobbyService = require(Services.LobbyService)
+local DuelService = require(Services.DuelService)
 local ArenaBuilder = require(World.ArenaBuilder)
 local MapPreviews = require(World.MapPreviews)
 
@@ -53,6 +54,7 @@ local function main()
 	RetentionService.Start()
 	CommunityService.Start()
 	LobbyService.Start()
+	DuelService.Start() -- its pads stand in the lobby
 
 	-- 4. Push profile to client + ensure daily quests on load, then put the
 	--    player in the lobby (they join matches and duels from there).

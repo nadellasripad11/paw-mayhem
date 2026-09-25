@@ -56,7 +56,8 @@ function CombatController.IsEnemy(model: Model): boolean
 	if not hum or hum.Health <= 0 then
 		return false
 	end
-	if ClientState.Match and ClientState.Match.mode == "FFA" then
+	-- (FFA is the match mode; duels and the lobby always go by team.)
+	if ClientState.Match and ClientState.Match.mode == "FFA" and player:GetAttribute("Context") == "Match" then
 		return true
 	end
 	local mine = char and char:GetAttribute("Team")

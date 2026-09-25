@@ -98,7 +98,7 @@ local function isEnemy(model: Model, char: Model): boolean
 		return false
 	end
 	local match = require(script.Parent.Parent.ClientState).Match
-	if match and match.mode == "FFA" then
+	if match and match.mode == "FFA" and player:GetAttribute("Context") == "Match" then
 		return true
 	end
 	local mine = char:GetAttribute("Team")

@@ -1,6 +1,7 @@
 --!strict
 -- HUD: in-match heads-up display, kept deliberately minimal:
---   * Small team scores + match timer (top center)
+--   * Small team scores + match timer (top center); in a duel, your side's
+--     knockouts, the clock and theirs
 --   * Center crosshair with shot/hit kick
 --   * Compact health bar, your knockback % and active power-up (bottom left)
 --   * Small weapon + ammo pill (bottom center)
@@ -456,6 +457,69 @@ local function buildScoreBar(parent)
 	})
 end
 
+-- ── top center (duels): your side's KOs, the clock, theirs ───────────────────
+local function buildDuelBar(parent)
+	local bar = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8),
+		Size = UDim2.fromOffset(172, 30), BackgroundTransparency = 1, Visible = false,
+	})
+	bar:SetAttribute("HudPart", "Duel")
+	local function tile(x: number, w: number, font: Enum.Font, size: number): (Frame, TextLabel)
+		local t = UIUtil.make("Frame", {
+			Parent = bar, Position = UDim2.fromOffset(x, 0), Size = UDim2.fromOffset(w, 30),
+			BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.1, BorderSizePixel = 0,
+		}) :: Frame
+		UIUtil.corner(UDim.new(0, 8), t)
+		local l = UIUtil.label({
+			Parent = t, Text = "0", Font = font, TextSize = size,
+			TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1),
+		})
+		return t, l
+	end
+	local mineTile, mine = tile(0, 48, Theme.Font.Number, 18)
+	local _, clock = tile(53, 66, Theme.Font.Heading, 16)
+	local theirTile, theirs = tile(124, 48, Theme.Font.Number, 18)
+	local sub = UIUtil.label({
+		Parent = bar, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(-90, 32), Size = UDim2.new(1, 180, 0, 14),
+		TextStrokeTransparency = 0.4,
+	})
+	refs.duel = { mineTile = mineTile, mine = mine, clock = clock, theirTile = theirTile, theirs = theirs, sub = sub }
+end
+
+-- Duel updates from the server: the score, the clock, and the start / end.
+local function onDuelState(d: any)
+	local r = refs.duel
+	if not r or typeof(d) ~= "table" then return end
+	local mine = d.myTeam == "Red" and "Red" or "Blue"
+	local theirs = mine == "Blue" and "Red" or "Blue"
+	r.mineTile.BackgroundColor3 = mine == "Blue" and Theme.Color.Blue or Theme.Color.Red
+	r.theirTile.BackgroundColor3 = theirs == "Blue" and Theme.Color.Blue or Theme.Color.Red
+	if typeof(d.score) == "table" then
+		r.mine.Text = tostring(d.score[mine] or 0)
+		r.theirs.Text = tostring(d.score[theirs] or 0)
+	end
+	local left = tonumber(d.timeLeft)
+	if left then
+		r.clock.Text = string.format("%d:%02d", left // 60, left % 60)
+	end
+	local foes = typeof(d.teams) == "table" and d.teams[theirs]
+	if d.target and typeof(foes) == "table" then
+		r.sub.Text = "FIRST TO " .. tostring(d.target) .. "  ·  VS " .. string.upper(table.concat(foes, " & "))
+	end
+	if d.started then
+		HUD.ShowBig(tostring(d.map or "DUEL"), Theme.Color.Text, 1.6)
+		task.delay(1.7, function()
+			HUD.ShowBig("FIGHT!", Theme.Color.Warn, 1.2)
+		end)
+	elseif d.over then
+		local text = d.draw and "DRAW" or d.won and "VICTORY" or "DEFEAT"
+		HUD.ShowBig(text, d.draw and Theme.Color.Text or d.won and Theme.Color.Coin or Theme.Color.Danger, 3.5)
+		local t = tonumber(d.trophies) or 0
+		HUD.ShowElim((d.forfeit and "They left  ·  " or "") .. (t >= 0 and "+" or "") .. tostring(t) .. " TROPHIES")
+	end
+end
+
 -- ── announcements (below the timer) ──────────────────────────────────────────
 local function buildAnnouncer(parent)
 	local holder = UIUtil.make("Frame", {
@@ -831,7 +895,7 @@ end
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
 	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
-	Duel = { Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
+	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
 	Range = { Aim = true, Weapon = true, Moves = true },
 	Lobby = { Moves = true },
 }
@@ -861,6 +925,7 @@ function HUD.Build()
 
 	buildMayhemEdge(gui)
 	buildScoreBar(gui)
+	buildDuelBar(gui)
 	buildAnnouncer(gui)
 	buildCrosshair(gui)
 	buildHealth(gui)
@@ -895,6 +960,7 @@ function HUD.Build()
 			showKo(data)
 		end
 	end)
+	Remotes.Get("DuelState").OnClientEvent:Connect(onDuelState)
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
 	end)

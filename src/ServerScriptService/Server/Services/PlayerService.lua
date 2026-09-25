@@ -27,7 +27,7 @@ local spawnsFolder: Folder? = nil
 -- MatchService sets this so we only ringout-eliminate during live play.
 PlayerService.MatchActive = false
 -- Set by DuelService: a knockout inside a duel (not a match elimination).
-PlayerService.OnDuelKO = nil :: ((victim: Player, killer: Player?) -> ())?
+PlayerService.OnDuelKO = nil :: ((victim: Player, killer: Player?, ringout: boolean) -> ())?
 -- Set by LobbyService: someone reset in the lobby.
 PlayerService.OnLobbyDeath = nil :: ((player: Player) -> ())?
 -- Set by MatchService to award team points on elimination.
@@ -224,7 +224,7 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 	-- just puts you back).
 	if state.Context == "Duel" then
 		if PlayerService.OnDuelKO then
-			PlayerService.OnDuelKO(victim, killer)
+			PlayerService.OnDuelKO(victim, killer, ringout)
 		end
 		return
 	elseif state.Context ~= "Match" then

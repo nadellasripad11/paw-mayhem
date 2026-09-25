@@ -45,6 +45,7 @@ Remotes.Definitions = {
 	Announce = "Event", -- {title, sub, color} big centre banner for everyone
 	MapEvent = "Event", -- {kind, dir, duration, strength} client-side event effects
 	Podium = "Event", -- {top = {{userId?, name, elims, isBot}}} end-of-match winners stage
+	DuelState = "Event", -- {teams, score, target, timeLeft, myTeam, started?, ko?, over?, won?, trophies?} to duelists
 }
 
 local FOLDER_NAME = "PawMayhemRemotes"

@@ -264,7 +264,9 @@ function ReplayController.Start()
 		end
 	end)
 	Remotes.Get("KillFeed").OnClientEvent:Connect(function(data)
-		if typeof(data) == "table" and data.killer == player.DisplayName and typeof(data.victim) == "string" and data.victim ~= player.DisplayName then
+		-- (Match knockouts only: the replay plays at the end of a match.)
+		if typeof(data) == "table" and data.killer == player.DisplayName and typeof(data.victim) == "string" and data.victim ~= player.DisplayName
+			and player:GetAttribute("Context") == "Match" then
 			capture(data.victim)
 		end
 	end)
