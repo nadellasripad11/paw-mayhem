@@ -29,6 +29,19 @@ Work top to bottom. Boxes you can tick without Studio are marked **[offline]**.
 - [ ] Score cap ends the match early; timer expiry ends it too.
 - [ ] Results overlay shows the correct VICTORY/DEFEAT + score.
 
+## Lobby + duels (test with 2-4 friends)
+- [ ] You spawn in the lobby facing the duel pads; practice range behind, armory on the left, boutique on the right, trophy board front-right.
+- [ ] You can't get out: railings + invisible wall; fall off the open edge behind the range and you're put back.
+- [ ] Walking: cursor free, hold right mouse to turn; inside the practice range you aim and shoot, targets fly off the back.
+- [ ] F at a pedestal opens Loadout, F at a boutique stage opens the Shop.
+- [ ] PLAY -> pick a mode + map -> QUEUED under the button -> countdown flyover -> you drop in; people who didn't queue stay in the lobby.
+- [ ] After the match everyone who played is back in the lobby; the menu comes back.
+- [ ] 1v1 pad: two players on the slots -> 3, 2, 1 -> duel on a random map; first to 5; VICTORY / DEFEAT with the trophy change; back to the lobby.
+- [ ] 2v2 pad with 4 players; teammates can't hurt each other.
+- [ ] Alone on a pad for 15 s -> a bot fills the other slot; bot duels say NO TROPHIES.
+- [ ] Leaving mid-duel gives the other side the win.
+- [ ] In a match, B (or the top-left button) opens Loadout over the game; a blaster picked in the first 5 s is in your paws at once, later ones from your next respawn.
+
 ## Economy / progression
 - [ ] Eliminations grant XP + coins; match end grants XP (+win bonus).
 - [ ] Level-up toast + bonus coins fire at the right thresholds.
