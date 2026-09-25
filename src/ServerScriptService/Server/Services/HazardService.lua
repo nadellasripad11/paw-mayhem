@@ -37,7 +37,7 @@ function HazardService.Hit(model: Model, damage: number, dV: Vector3)
 	local player = Players:GetPlayerFromCharacter(model)
 	if player then
 		local s = Runtime.Get(player)
-		if not s or not s.Alive or os.clock() < (s.SpawnProtectUntil or 0) then
+		if not s or not s.Alive or s.Context == "Lobby" or os.clock() < (s.SpawnProtectUntil or 0) then
 			return
 		end
 		local hum = model:FindFirstChildOfClass("Humanoid")

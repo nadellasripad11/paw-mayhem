@@ -172,7 +172,7 @@ local function grabber(pos: Vector3, radius: number): Player?
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
 		local root = player.Character and player.Character.PrimaryPart
-		if s and s.Alive and root then
+		if s and s.Alive and s.Context == "Match" and root then
 			local off = root.Position - pos
 			if Vector3.new(off.X, 0, off.Z).Magnitude <= radius and math.abs(off.Y) < 6 then
 				return player

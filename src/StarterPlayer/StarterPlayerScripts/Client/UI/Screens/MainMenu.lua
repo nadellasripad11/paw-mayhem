@@ -1,17 +1,21 @@
 --!strict
--- MainMenu: the Paw Mayhem home screen. The background is the real 3D
--- LobbyScene (mascot + floating islands) seen through the menu camera; this
--- overlay adds the logo, the left nav, coins/gems top-right and the level pill
--- bottom-left. Each nav button opens its own full screen (logo, nav and level
--- pill hide) with a BACK button that returns to the home screen.
+-- MainMenu: the overlay while you walk round the lobby (like Rivals): square
+-- icon buttons on the left (Shop, Customize, Loadout, Season Pass), a big PLAY
+-- button at the bottom (pick a mode and vote a map; it shows when you're
+-- queued), your level top-left, and coins/gems plus the Leaderboard and
+-- Settings icons top-right. Each icon opens its own full screen with a BACK
+-- button. The lobby's showcases open screens too (their prompts carry an
+-- OpenPanel attribute).
 
 local Players = game:GetService("Players")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local SocialService = game:GetService("SocialService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
+local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Ranks = require(ReplicatedStorage.Shared.Config.Ranks)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
@@ -50,17 +54,14 @@ local navButtons = {}
 local currentPanel
 
 local NAV = {
-	{ id = "Play", label = "Play", icon = "Play" },
-	{ id = "Practice", label = "Practice", icon = "Reticle" },
-	{ id = "Season", label = "Season Pass", icon = "Trophy" },
-	{ id = "Loadout", label = "Loadout", icon = "Gun" },
-	{ id = "Shop", label = "Shop", icon = "Bag" },
-	{ id = "Customize", label = "Customize", icon = "CatFace" },
+	{ id = "Shop", label = "SHOP", icon = "Bag" },
+	{ id = "Customize", label = "CUSTOMIZE", icon = "CatFace" },
+	{ id = "Loadout", label = "LOADOUT", icon = "Gun" },
+	{ id = "Season", label = "SEASON", icon = "Trophy" },
 }
 
 local NAV_BG = Color3.fromRGB(16, 22, 30)
 local NAV_BG_T = 0.32
-local LOGO_NAVY = Color3.fromRGB(28, 40, 84)
 
 -- Open a full screen (id) or return to the home screen (nil). Opening the
 -- screen that's already open goes back home.
@@ -84,10 +85,8 @@ local function switchTo(id: string?)
 	end
 	for pid, entry in pairs(navButtons) do
 		local on = pid == id
-		if pid ~= "Play" then
-			entry.button.BackgroundColor3 = on and Theme.Color.Accent or NAV_BG
-			entry.button.BackgroundTransparency = on and 0.1 or NAV_BG_T
-		end
+		entry.button.BackgroundColor3 = on and Theme.Color.Accent or NAV_BG
+		entry.button.BackgroundTransparency = on and 0.1 or NAV_BG_T
 		entry.stroke.Transparency = on and 0.05 or entry.baseStroke
 	end
 	if id and panels[id] and id ~= currentPanel then
@@ -101,6 +100,11 @@ end
 
 MainMenu.Open = function(id: string?)
 	switchTo(id)
+end
+
+-- A screen or the map picker is up (the lobby frees the mouse and stops aiming).
+function MainMenu.Busy(): boolean
+	return currentPanel ~= nil or MapSelect.IsOpen()
 end
 
 local function textStroke(label: Instance, color: Color3, thickness: number): UIStroke
@@ -172,8 +176,9 @@ function MainMenu.SetVisible(on: boolean)
 	if gui then
 		gui.Enabled = on
 	end
-	if not on then
+	if not on and panels then
 		MapSelect.Close()
+		switchTo(nil)
 	end
 end
 
@@ -192,122 +197,49 @@ local function onPlay()
 	end
 end
 
--- ── logo: chunky white PAW with cat ears + gold "MAYHEM" ────────────────────
-local function buildLogo(parent: Instance): Frame
-	local g = UIUtil.make("Frame", { Parent = parent, Name = "Logo", BackgroundTransparency = 1, Size = UDim2.fromOffset(340, 176), ZIndex = 10 }) :: Frame
-
-	for _, ex in ipairs({ 92, 286 }) do
-		local ear = UIUtil.make("Frame", {
-			Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(ex, 30),
-			Size = UDim2.fromOffset(34, 34), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 10,
-		})
-		UIUtil.corner(UDim.new(0, 7), ear)
-		UIUtil.stroke(LOGO_NAVY, 4, ear)
-		local inner = UIUtil.make("Frame", {
-			Parent = ear, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.4, 0.4),
-			Size = UDim2.fromScale(0.44, 0.44), BackgroundColor3 = Color3.fromRGB(255, 176, 192), BorderSizePixel = 0, ZIndex = 10,
-		})
-		UIUtil.corner(UDim.new(0, 4), inner)
-	end
-	-- little sparkle dashes beside the right ear
-	for i, spec in ipairs({ { 318, 16, 30 }, { 330, 34, 70 }, { 304, 4, -10 } }) do
-		local dash = UIUtil.make("Frame", {
-			Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(spec[1], spec[2]),
-			Size = UDim2.fromOffset(4, i == 2 and 9 or 11), Rotation = spec[3], BackgroundColor3 = LOGO_NAVY, BorderSizePixel = 0, ZIndex = 10,
-		})
-		UIUtil.corner(UDim.new(1, 0), dash)
-	end
-
-	local function word(text: string, font: Enum.Font, size: number, x: number, y: number, rot: number, strokeColor: Color3, strokeT: number, gold: boolean)
-		local shadow = UIUtil.label({
-			Parent = g, Text = text, Font = font, TextSize = size, TextColor3 = strokeColor,
-			Position = UDim2.fromOffset(x, y + 7), Size = UDim2.fromOffset(336, size + 10), Rotation = rot, ZIndex = 11,
-		})
-		textStroke(shadow, strokeColor, strokeT)
-		local main = UIUtil.label({
-			Parent = g, Text = text, Font = font, TextSize = size, TextColor3 = Color3.new(1, 1, 1),
-			Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(336, size + 10), Rotation = rot, ZIndex = 12,
-		})
-		textStroke(main, strokeColor, strokeT)
-		if gold then
-			local grad = Instance.new("UIGradient")
-			grad.Color = ColorSequence.new(Color3.fromRGB(255, 236, 120), Color3.fromRGB(255, 166, 30))
-			grad.Rotation = 90
-			grad.Parent = main
-		end
-	end
-	word("PAW", Enum.Font.FredokaOne, 100, 0, 22, 0, LOGO_NAVY, 6, false)
-	word("MAYHEM", Enum.Font.Bangers, 62, 52, 112, -5, Color3.fromRGB(70, 42, 26), 3.5, true)
-	return g
-end
-
--- ── left nav buttons (green Play + dark glass buttons) ───────────────────────
+-- ── left icon buttons: square glass tiles, icon over a small label ───────────
 local function navButton(parent: Instance, item, order: number)
-	local isPlay = item.id == "Play"
 	local b = Instance.new("TextButton")
 	b.Name = item.id
 	b.AutoButtonColor = false
 	b.Text = ""
-	b.Size = UDim2.new(1, 0, 0, isPlay and 50 or 44)
+	b.Size = UDim2.fromOffset(74, 74)
 	b.LayoutOrder = order
 	b.BorderSizePixel = 0
 	b.ZIndex = 11
-	b.BackgroundColor3 = isPlay and Color3.new(1, 1, 1) or NAV_BG
-	b.BackgroundTransparency = isPlay and 0 or NAV_BG_T
+	b.BackgroundColor3 = NAV_BG
+	b.BackgroundTransparency = NAV_BG_T
 	b.Parent = parent
-	UIUtil.corner(UDim.new(0, 10), b)
+	UIUtil.corner(UDim.new(0, 14), b)
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = isPlay and Color3.fromRGB(198, 255, 150) or Color3.new(1, 1, 1)
-	stroke.Thickness = isPlay and 2 or 1
-	stroke.Transparency = isPlay and 0.15 or 0.82
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Thickness = 1
+	stroke.Transparency = 0.82
 	stroke.Parent = b
-	if isPlay then
-		UIUtil.gradient(Color3.fromRGB(132, 228, 76), Color3.fromRGB(54, 170, 50), 90, b)
-		local gloss = UIUtil.make("Frame", {
-			Parent = b, Position = UDim2.fromOffset(5, 3), Size = UDim2.new(1, -10, 0.42, 0),
-			BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 11,
-		})
-		UIUtil.corner(UDim.new(0, 8), gloss)
-	end
 
 	local slot = UIUtil.make("Frame", {
-		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 30, 0.5, 0),
-		Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, ZIndex = 12,
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 30),
+		Size = UDim2.fromOffset(32, 32), BackgroundTransparency = 1, ZIndex = 12,
 	})
 	local white = Color3.new(1, 1, 1)
-	if item.icon == "Gear" then
-		Icons.Place("Gear", slot, 24, white, NAV_BG)
-	else
-		Icons.Place(item.icon, slot, isPlay and 24 or 26, white, white)
-	end
-
-	local label = UIUtil.label({
-		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = isPlay and 25 or 19,
-		TextColor3 = white, Position = UDim2.fromOffset(isPlay and 60 or 58, 0), Size = UDim2.new(1, -64, 1, 0), ZIndex = 12,
+	Icons.Place(item.icon, slot, 32, white, white)
+	UIUtil.label({
+		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = 12,
+		TextColor3 = white, TextXAlignment = Enum.TextXAlignment.Center,
+		Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 16), ZIndex = 12,
 	})
-	if isPlay then
-		textStroke(label, Color3.fromRGB(36, 112, 34), 1.5)
-	end
 
 	local pop = Instance.new("UIScale")
 	pop.Parent = b
 	b.MouseEnter:Connect(function()
-		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.04 }):Play()
+		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.06 }):Play()
 	end)
 	b.MouseLeave:Connect(function()
 		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
 	end)
 	b.MouseButton1Click:Connect(function()
-		if item.id == "Play" then
-			onPlay()
-		elseif item.id == "Practice" then
-			-- Off to the practice island (between matches only).
-			switchTo(nil)
-			Remotes.Get("Practice"):FireServer(true)
-		else
-			switchTo(item.id)
-		end
+		switchTo(item.id)
 	end)
 	navButtons[item.id] = { button = b, stroke = stroke, baseStroke = stroke.Transparency }
 end
@@ -370,16 +302,72 @@ function MainMenu.Build()
 		return f, sc
 	end
 
-	-- Logo (top left)
-	local logoGroup, logoScale = scaled({ Parent = gui, Name = "LogoGroup", Size = UDim2.fromOffset(340, 176), ZIndex = 10 })
-	buildLogo(logoGroup)
-
-	-- Left nav
-	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", Size = UDim2.fromOffset(190, 390), ZIndex = 10 })
-	UIUtil.listLayout(navGroup, 7)
+	-- Icon buttons down the left side
+	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(74, 4 * 74 + 3 * 10), ZIndex = 10 })
+	UIUtil.listLayout(navGroup, 10)
 	for i, item in ipairs(NAV) do
 		navButton(navGroup, item, i)
 	end
+
+	-- PLAY (bottom centre): pick a mode and vote a map for the next match, or
+	-- drop straight into one that's running. The line under it says where you are.
+	local playGroup, playScale = scaled({ Parent = gui, Name = "PlayGroup", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(260, 88), ZIndex = 10 })
+	local play = Instance.new("TextButton")
+	play.Name = "Play"
+	play.AutoButtonColor = false
+	play.Text = ""
+	play.Size = UDim2.fromOffset(260, 62)
+	play.BackgroundColor3 = Color3.new(1, 1, 1)
+	play.BorderSizePixel = 0
+	play.ZIndex = 11
+	play.Parent = playGroup
+	UIUtil.corner(UDim.new(0, 16), play)
+	UIUtil.gradient(Color3.fromRGB(132, 228, 76), Color3.fromRGB(54, 170, 50), 90, play)
+	UIUtil.stroke(Color3.fromRGB(198, 255, 150), 2, play).Transparency = 0.15
+	local gloss = UIUtil.make("Frame", {
+		Parent = play, Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0.42, 0),
+		BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 11,
+	})
+	UIUtil.corner(UDim.new(0, 12), gloss)
+	local playLabel = UIUtil.label({
+		Parent = play, Text = "PLAY", Font = Theme.Font.Title, TextSize = 34, TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 12,
+	})
+	textStroke(playLabel, Color3.fromRGB(36, 112, 34), 2)
+	local playSub = UIUtil.label({
+		Parent = playGroup, Text = "", Font = Theme.Font.Bold, TextSize = 14, TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 20),
+		TextStrokeTransparency = 0.5, ZIndex = 11,
+	})
+	local playPop = Instance.new("UIScale")
+	playPop.Parent = play
+	play.MouseEnter:Connect(function()
+		TweenService:Create(playPop, TweenInfo.new(0.12), { Scale = 1.04 }):Play()
+	end)
+	play.MouseLeave:Connect(function()
+		TweenService:Create(playPop, TweenInfo.new(0.12), { Scale = 1 }):Play()
+	end)
+	play.MouseButton1Click:Connect(onPlay)
+	local function clock(sec: number): string
+		sec = math.max(0, math.floor(sec))
+		return string.format("%d:%02d", sec // 60, sec % 60)
+	end
+	task.spawn(function()
+		while gui.Parent do
+			local m = ClientState.Match
+			if player:GetAttribute("Queued") == true then
+				playLabel.Text = "QUEUED"
+				local left = (m.timeLeft or 0) + (m.phase == "Intermission" and GameConfig.Match.CountdownSeconds or 0)
+				playSub.Text = m.phase == "Countdown" and "Dropping in..." or ("Match starts in " .. clock(left) .. "  ·  click to change vote")
+			else
+				playLabel.Text = "PLAY"
+				playSub.Text = m.phase == "Playing" and "Match in progress  ·  jump in"
+					or m.phase == "Results" and "Next match soon"
+					or ""
+			end
+			task.wait(0.5)
+		end
+	end)
 
 	-- Coins + gems (top right)
 	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(640, 40), ZIndex = 10 })
@@ -512,11 +500,11 @@ function MainMenu.Build()
 	player:GetAttributeChangedSignal("VIP"):Connect(refreshVip)
 	refreshVip()
 
-	-- Toast (bottom centre) for purchase messages while in the menu.
+	-- Toast (top centre) for notices and purchase messages in the lobby.
 	local toast = UIUtil.label({
 		Parent = gui, Name = "Toast", Text = "", Font = Theme.Font.Title, TextSize = 20,
-		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1),
-		Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X,
+		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 16), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundTransparency = 0.15, BackgroundColor3 = Color3.fromRGB(20, 26, 40), Visible = false, ZIndex = 30,
 	})
 	UIUtil.corner(UDim.new(0, 12), toast)
@@ -543,8 +531,8 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- Level pill (bottom left)
-	local lvlGroup, lvlScale = scaled({ Parent = gui, Name = "LevelGroup", AnchorPoint = Vector2.new(0, 1), Size = UDim2.fromOffset(232, 58), ZIndex = 10 })
+	-- Level pill (top left)
+	local lvlGroup, lvlScale = scaled({ Parent = gui, Name = "LevelGroup", Size = UDim2.fromOffset(232, 58), ZIndex = 10 })
 	local pill = glassPill({ Parent = lvlGroup, Size = UDim2.fromScale(1, 1), ZIndex = 10 })
 	local avatarRing = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Color3.fromRGB(255, 244, 236), BorderSizePixel = 0, ZIndex = 11 })
 	UIUtil.corner(UDim.new(0.5, 0), avatarRing)
@@ -579,7 +567,7 @@ function MainMenu.Build()
 		Position = UDim2.fromOffset(140, 0), Size = UDim2.new(1, -140, 1, 0), ZIndex = 12,
 	})
 	panelBackdrop = backdrop
-	homeGroups = { logoGroup, navGroup, lvlGroup }
+	homeGroups = { navGroup, lvlGroup, playGroup }
 	content = UIUtil.make("Frame", { Parent = gui, Name = "Content", BackgroundTransparency = 1, ZIndex = 10 })
 
 	local camera = Workspace.CurrentCamera
@@ -587,15 +575,14 @@ function MainMenu.Build()
 		local vp = camera.ViewportSize
 		local s = math.clamp(vp.Y / 640, 0.72, 1.75)
 		local inset = UIUtil.topInset()
-		local logoY = math.max(inset - 10 * s, 4)
-		logoScale.Scale = s
-		logoGroup.Position = UDim2.fromOffset(22 * s, logoY)
 		navScale.Scale = s
-		navGroup.Position = UDim2.fromOffset(42 * s, logoY + 168 * s)
+		navGroup.Position = UDim2.new(0, 16 * s, 0.5, 0)
 		currScale.Scale = s
 		currGroup.Position = UDim2.new(1, -16 * s, 0, 12 * s)
 		lvlScale.Scale = s
-		lvlGroup.Position = UDim2.new(0, 22 * s, 1, -16 * s)
+		lvlGroup.Position = UDim2.fromOffset(16 * s, math.max(inset, 12 * s))
+		playScale.Scale = s
+		playGroup.Position = UDim2.new(0.5, 0, 1, -46 * s)
 
 		-- Screens fill the display under the header bar.
 		local side = 24 * s
@@ -636,21 +623,27 @@ function MainMenu.Build()
 		refreshCurrency()
 	end
 
+	-- Lobby showcases: the armory opens Loadout, the boutique the Shop.
+	ProximityPromptService.PromptTriggered:Connect(function(prompt)
+		local id = prompt:GetAttribute("OpenPanel")
+		if typeof(id) == "string" and panels[id] and gui.Enabled and currentPanel ~= id then
+			switchTo(id)
+		end
+	end)
+
 	-- First visit: the tutorial; after that, the daily reward popup (once per
 	-- session) whenever one is waiting.
 	local dailyOk = pcall(DailyReward.Build)
 	-- Settings -> Intro -> REPLAY runs the intro again (not while a match is on).
 	Settings.OnReplayIntro = function()
-		if ClientState.Match.phase == "Playing" then
-			showToast("You can replay the intro between matches.")
+		if player:GetAttribute("Context") ~= "Lobby" then
+			showToast("You can replay the intro from the lobby.")
 			return
 		end
 		switchTo(nil)
 		gui.Enabled = false
 		Intro.Run(function()
-			if ClientState.Match.phase ~= "Playing" and not player:GetAttribute("Practicing") then
-				gui.Enabled = true
-			end
+			gui.Enabled = player:GetAttribute("Context") == "Lobby"
 		end)
 	end
 	local greeted = false
@@ -669,13 +662,14 @@ function MainMenu.Build()
 			local play = gui:FindFirstChild("Play", true)
 			if play and play:IsA("GuiObject") then
 				local arrow = UIUtil.label({
-					Parent = play, Name = "StartHere", Text = "◀ START HERE", Font = Theme.Font.Title, TextSize = 18,
-					TextColor3 = Color3.fromRGB(255, 226, 90), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(1, 12, 0.5, 0),
+					Parent = play, Name = "StartHere", Text = "▼ START HERE", Font = Theme.Font.Title, TextSize = 18,
+					TextColor3 = Color3.fromRGB(255, 226, 90), TextXAlignment = Enum.TextXAlignment.Center,
+					AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8),
 					Size = UDim2.fromOffset(150, 30), ZIndex = 20, TextStrokeTransparency = 0.3,
 				})
-				TweenService:Create(arrow, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(1, 24, 0.5, 0) }):Play()
+				TweenService:Create(arrow, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 0, 0, -18) }):Play()
 				task.spawn(function()
-					while arrow.Parent and ClientState.Match.phase ~= "Playing" do
+					while arrow.Parent and not player:GetAttribute("Queued") and player:GetAttribute("Context") ~= "Match" do
 						task.wait(0.5)
 					end
 					arrow:Destroy()
@@ -683,13 +677,11 @@ function MainMenu.Build()
 			end
 		end
 		-- Brand-new players get the intro: a short cinematic, then a hands-on
-		-- lesson with Mochi on the practice island. Then PLAY is pointed out.
+		-- lesson with Mochi in the lobby. Then PLAY is pointed out.
 		if Tutorial.ShouldShow() then
 			gui.Enabled = false
 			Intro.Run(function()
-				if ClientState.Match.phase ~= "Playing" and not player:GetAttribute("Practicing") then
-					gui.Enabled = true
-				end
+				gui.Enabled = player:GetAttribute("Context") == "Lobby"
 				pointAtPlay()
 				daily()
 			end)

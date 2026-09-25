@@ -25,7 +25,7 @@ local LeaderboardService = require(Services.LeaderboardService)
 local SeasonService = require(Services.SeasonService)
 local RetentionService = require(Services.RetentionService)
 local CommunityService = require(Services.CommunityService)
-local PracticeService = require(Services.PracticeService)
+local LobbyService = require(Services.LobbyService)
 local ArenaBuilder = require(World.ArenaBuilder)
 local MapPreviews = require(World.MapPreviews)
 
@@ -52,12 +52,14 @@ local function main()
 	SeasonService.Start()
 	RetentionService.Start()
 	CommunityService.Start()
-	PracticeService.Start()
+	LobbyService.Start()
 
-	-- 4. Push profile to client + ensure daily quests on load.
+	-- 4. Push profile to client + ensure daily quests on load, then put the
+	--    player in the lobby (they join matches and duels from there).
 	DataService.ProfileLoaded:Connect(function(player)
 		QuestService.EnsureDaily(player)
 		EconomyService.Push(player)
+		LobbyService.Spawn(player)
 	end)
 
 	-- 5. Finally start data (fires ProfileLoaded for joiners).

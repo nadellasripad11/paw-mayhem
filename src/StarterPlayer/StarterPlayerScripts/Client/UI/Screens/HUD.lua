@@ -10,6 +10,8 @@
 --   * Kill feed (top right) and a KNOCKOUT! / RING OUT! pop with multi-KOs
 -- Roblox's player list, health bar, backpack and mobile jump button are hidden
 -- so they don't duplicate or clutter it.
+-- Outside a match it shrinks (HUD.SetMode): the practice range keeps the
+-- crosshair and weapon, the rest of the lobby only the movement buttons.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -36,6 +38,7 @@ local player = Players.LocalPlayer
 
 local gui: ScreenGui
 local refs: any = {}
+local hudMode = "Match" -- see HUD.SetMode
 local POWERUP_ICON = { RapidFire = "Bolt", MegaKnockback = "Burst", Shield = "Shield", SpeedBoost = "Bolt", MultiShot = "MultiShot", Overdrive = "Sparkle" }
 
 local function isMobile()
@@ -88,6 +91,7 @@ local function buildCrosshair(parent)
 	})
 	UIUtil.corner(UDim.new(1, 0), dot)
 	refs.crosshair = center
+	center:SetAttribute("HudPart", "Aim")
 
 	-- Hitmarker: four angled ticks that flash on a confirmed hit.
 	local marker = UIUtil.make("Frame", {
@@ -138,6 +142,7 @@ local function buildHealth(parent)
 		Size = UDim2.fromOffset(250, 28),
 		BackgroundTransparency = 1,
 	})
+	wrap:SetAttribute("HudPart", "Health")
 	local badge = UIUtil.make("Frame", {
 		Parent = wrap, Size = UDim2.fromOffset(28, 28),
 		BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0,
@@ -191,6 +196,7 @@ local function buildAmmo(parent)
 		BackgroundTransparency = 0.15,
 		BorderSizePixel = 0,
 	})
+	pill:SetAttribute("HudPart", "Weapon")
 	UIUtil.corner(UDim.new(1, 0), pill)
 	UIUtil.stroke(Theme.Color.Stroke, 1.5, pill)
 	local pad = Instance.new("UIPadding")
@@ -272,6 +278,7 @@ local function touchButton(parent, name: string, pos: UDim2, d: number, color: C
 	b.BackgroundColor3 = Color3.fromRGB(16, 22, 40)
 	b.BackgroundTransparency = 0.3
 	b.BorderSizePixel = 0
+	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or "Moves")
 	b.Parent = parent
 	UIUtil.corner(UDim.new(1, 0), b)
 	local ring = UIUtil.stroke(color, 3, b)
@@ -422,6 +429,7 @@ local function buildScoreBar(parent)
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8),
 		Size = UDim2.fromOffset(172, 30), BackgroundTransparency = 1,
 	})
+	bar:SetAttribute("HudPart", "Score")
 	local function tile(x: number, w: number, color: Color3, font: Enum.Font, size: number): (TextLabel, UIStroke)
 		local t = UIUtil.make("Frame", {
 			Parent = bar, Position = UDim2.fromOffset(x, 0), Size = UDim2.fromOffset(w, 30),
@@ -505,6 +513,7 @@ local function buildDashChip(parent)
 		Parent = parent, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -110, 1, -10),
 		Size = UDim2.fromOffset(62, 28), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	})
+	chip:SetAttribute("HudPart", "Moves")
 	UIUtil.corner(UDim.new(1, 0), chip)
 	UIUtil.stroke(Theme.Color.Stroke, 1.5, chip)
 	local key = UIUtil.label({
@@ -551,6 +560,7 @@ local function buildKillFeed(parent)
 		Parent = parent, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, UIUtil.topInset() + 8),
 		Size = UDim2.fromOffset(300, 160), BackgroundTransparency = 1,
 	})
+	list:SetAttribute("HudPart", "Feed")
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
@@ -756,7 +766,7 @@ local function updateScoreBar(m)
 	local mayhem = m.mayhem == true and m.phase == "Playing"
 	refs.timer.TextColor3 = mayhem and Color3.fromRGB(255, 90, 100) or Theme.Color.Text
 	if refs.mayhemEdge then
-		refs.mayhemEdge.Visible = mayhem
+		refs.mayhemEdge.Visible = mayhem and hudMode == "Match"
 	end
 	local char = player.Character
 	local team = char and char:GetAttribute("Team")
@@ -817,34 +827,22 @@ local function updateWeapon()
 	end
 end
 
--- Practice island: a LEAVE button (top left) and the P key; the match score
--- bar is hidden since there is no match.
-local practiceButton: TextButton? = nil
-function HUD.SetPractice(on: boolean)
+-- Which parts each place shows: the whole HUD in a match, the crosshair and
+-- weapon at the practice range, only the movement buttons elsewhere in the lobby.
+local PARTS = {
+	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
+	Duel = { Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
+	Range = { Aim = true, Weapon = true, Moves = true },
+	Lobby = { Moves = true },
+}
+function HUD.SetMode(mode: string)
+	hudMode = mode
 	if not gui then return end
-	if not practiceButton then
-		local b = UIUtil.make("TextButton", {
-			Parent = gui, AnchorPoint = Vector2.new(0, 0), Position = UDim2.new(0, 12, 0, UIUtil.topInset() + 8),
-			Size = UDim2.fromOffset(170, 36), Text = "LEAVE PRACTICE  (P)", Font = Theme.Font.Title, TextSize = 14,
-			TextColor3 = Color3.new(1, 1, 1), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0, Visible = false,
-		}) :: TextButton
-		UIUtil.corner(UDim.new(0, 10), b)
-		UIUtil.stroke(Color3.fromRGB(255, 120, 120), 1.5, b)
-		b.MouseButton1Click:Connect(function()
-			Remotes.Get("Practice"):FireServer(false)
-		end)
-		UserInputService.InputBegan:Connect(function(input, gpe)
-			if not gpe and input.KeyCode == Enum.KeyCode.P and b.Visible then
-				Remotes.Get("Practice"):FireServer(false)
-			end
-		end)
-		practiceButton = b
-	end
-	(practiceButton :: TextButton).Visible = on
-	if refs.timer then
-		local bar = refs.timer.Parent and refs.timer.Parent.Parent
-		if bar and bar:IsA("GuiObject") then
-			bar.Visible = not on
+	local show = PARTS[mode] or PARTS.Match
+	for _, c in ipairs(gui:GetChildren()) do
+		local part = c:GetAttribute("HudPart")
+		if part and c:IsA("GuiObject") then
+			c.Visible = show[part] == true
 		end
 	end
 end
@@ -885,7 +883,11 @@ function HUD.Build()
 	end
 	player.CharacterAdded:Connect(watchCharacter)
 
-	Remotes.Get("Announce").OnClientEvent:Connect(HUD.Announce)
+	Remotes.Get("Announce").OnClientEvent:Connect(function(data)
+		if hudMode == "Match" or hudMode == "Duel" then
+			HUD.Announce(data)
+		end
+	end)
 	Remotes.Get("KillFeed").OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
 		addKillRow(data)
@@ -897,7 +899,10 @@ function HUD.Build()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
 	end)
 	Remotes.Get("Notify").OnClientEvent:Connect(function(data)
-		HUD.ShowElim(data.text or "")
+		-- (In the lobby the menu's toast shows notices.)
+		if hudMode == "Match" or hudMode == "Duel" then
+			HUD.ShowElim(data.text or "")
+		end
 	end)
 	Remotes.Get("PowerUpActive").OnClientEvent:Connect(function(data)
 		local p = Progression.PowerUpById[data.powerId]

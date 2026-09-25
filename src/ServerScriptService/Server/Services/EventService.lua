@@ -185,7 +185,12 @@ local function windGust()
 	local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 	local duration, strength = 6, 6
 	announce("WIND GUST!", "A breeze is nudging everyone sideways!", Color3.fromRGB(170, 230, 255))
-	Remotes.Get("MapEvent"):FireAllClients({ kind = "Wind", dir = dir, duration = duration, strength = strength })
+	-- Only cats in the match feel it (not the lobby or duels).
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p:GetAttribute("Context") == "Match" then
+			Remotes.Get("MapEvent"):FireClient(p, { kind = "Wind", dir = dir, duration = duration, strength = strength })
+		end
+	end
 	-- Bots are simulated here, so push them directly.
 	local untilT = os.clock() + duration
 	while os.clock() < untilT do

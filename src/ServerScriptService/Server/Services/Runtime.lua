@@ -21,6 +21,9 @@ export type PlayerState = {
 	SpawnProtectUntil: number, -- brief invuln after spawn
 	Streak: number, -- eliminations since last death (kill streak)
 	WeaponOverride: string?, -- supply-drop weapon held for the rest of this life
+	Context: string?, -- where the cat is: "Lobby" | "Match" | "Duel"
+	DuelId: number?, -- which duel (Context "Duel")
+	DuelTeam: string?, -- side in that duel
 }
 
 Runtime.States = {} :: { [Player]: PlayerState }
@@ -45,6 +48,9 @@ function Runtime.Ensure(player: Player): PlayerState
 			SpawnProtectUntil = 0,
 			Streak = 0,
 			WeaponOverride = nil,
+			Context = nil,
+			DuelId = nil,
+			DuelTeam = nil,
 		}
 		Runtime.States[player] = s
 	end
@@ -58,6 +64,29 @@ Runtime.Mode = "TDM"
 Runtime.HillPos = nil :: Vector3?
 
 return Runtime.States[player]
+end
+
+-- Where a player is now (mirrored as the player's "Context" attribute so the
+-- client can switch between lobby and match screens).
+function Runtime.SetContext(player: Player, context: string?, duelId: number?, duelTeam: string?)
+	local s = Runtime.Ensure(player)
+	s.Context = context
+	s.DuelId = duelId
+	s.DuelTeam = duelTeam
+	player:SetAttribute("Context", context)
+end
+
+-- Same place and able to hurt each other: same match, or opposite sides of
+-- the same duel. Nobody gets hurt in the lobby.
+function Runtime.CanHit(a: Player, b: Player): boolean
+	local sa, sb = Runtime.Get(a), Runtime.Get(b)
+	if not sa or not sb or sa.Context ~= sb.Context then
+		return false
+	end
+	if sa.Context == "Duel" then
+		return sa.DuelId == sb.DuelId and sa.DuelTeam ~= sb.DuelTeam
+	end
+	return sa.Context == "Match"
 end
 
 function Runtime.Remove(player: Player)

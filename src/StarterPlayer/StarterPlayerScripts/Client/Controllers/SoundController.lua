@@ -239,8 +239,16 @@ function SoundController.Start()
 			SoundController.Play("Knockout")
 		end
 	end)
+	-- Match sounds and music are for the cats in the match (or queued for it),
+	-- not everyone walking round the lobby.
+	local function playing(): boolean
+		local ctx = player:GetAttribute("Context")
+		return ctx == "Match" or ctx == "Duel"
+	end
 	Remotes.Get("Announce").OnClientEvent:Connect(function()
-		SoundController.Play("Alert")
+		if playing() then
+			SoundController.Play("Alert")
+		end
 	end)
 	Remotes.Get("PowerUpActive").OnClientEvent:Connect(function()
 		SoundController.Play("Pop")
@@ -253,15 +261,24 @@ function SoundController.Start()
 
 	-- Round flow + music.
 	local lastPhase, lastTime = nil, -1
+	local queued = false -- queued for the match that's counting down
+	local function music()
+		local phase = ClientState.Match.phase
+		local dropping = queued and phase == "Countdown"
+		playMusic((playing() or dropping) and phase ~= "Results" and "Match" or "Lobby")
+	end
 	ClientState.MatchChanged:Connect(function(m)
 		local phase = m.phase
-		if phase == "Countdown" and m.timeLeft ~= lastTime and (m.timeLeft or 0) > 0 then
+		if phase == "Countdown" then
+			queued = player:GetAttribute("Queued") == true
+		end
+		if phase == "Countdown" and queued and m.timeLeft ~= lastTime and (m.timeLeft or 0) > 0 then
 			SoundController.Play("Tick")
 		end
 		if phase ~= lastPhase then
-			if phase == "Playing" and lastPhase == "Countdown" then
+			if phase == "Playing" and lastPhase == "Countdown" and queued then
 				SoundController.Play("Go")
-			elseif phase == "Results" then
+			elseif phase == "Results" and player:GetAttribute("Context") == "Match" then
 				local won
 				if m.mode == "FFA" then
 					won = m.winner == player.Name
@@ -272,13 +289,17 @@ function SoundController.Start()
 			end
 		end
 		lastPhase, lastTime = phase, m.timeLeft
-		playMusic((phase == "Playing" or phase == "Countdown") and "Match" or "Lobby")
+		if phase ~= "Countdown" and phase ~= "Playing" then
+			queued = false
+		end
+		music()
 		local match = tracks.Match
 		if match then
 			match.PlaybackSpeed = (m.mayhem and phase == "Playing") and 1.12 or 1
 		end
 	end)
 	playMusic("Lobby")
+	player:GetAttributeChangedSignal("Context"):Connect(music)
 
 	if player.Character then
 		task.spawn(hookCharacter, player.Character)

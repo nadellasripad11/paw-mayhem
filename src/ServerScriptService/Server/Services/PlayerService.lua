@@ -26,6 +26,10 @@ local spawnsFolder: Folder? = nil
 
 -- MatchService sets this so we only ringout-eliminate during live play.
 PlayerService.MatchActive = false
+-- Set by DuelService: a knockout inside a duel (not a match elimination).
+PlayerService.OnDuelKO = nil :: ((victim: Player, killer: Player?) -> ())?
+-- Set by LobbyService: someone reset in the lobby.
+PlayerService.OnLobbyDeath = nil :: ((player: Player) -> ())?
 -- Set by MatchService to award team points on elimination.
 PlayerService.OnElimination = nil :: ((victim: Player, killer: Player?, weaponId: string?, ringout: boolean) -> ())?
 
@@ -138,13 +142,16 @@ local function teamColor(teamId: string?): Color3
 end
 
 -- Build + spawn a cat for the player using their saved loadout.
-function PlayerService.Spawn(player: Player)
-	if PlayerService.MatchActive then
+--   opts.context: "Match" (default: the arena, on their team), "Lobby" or
+--   "Duel"; opts.team / opts.cframe place lobby and duel cats.
+function PlayerService.Spawn(player: Player, opts: any?)
+	local context = (opts and opts.context) or "Match"
+	if context == "Match" and PlayerService.MatchActive then
 		Analytics.Step(player, "FirstMatchStarted")
 	end
 	local profile = DataService.Get(player)
 	local cat = profile and profile.Loadout.Cat or nil
-	local teamId = PlayerService.AssignTeam(player)
+	local teamId = (opts and opts.team) or (context == "Match" and PlayerService.AssignTeam(player)) or "Lobby"
 
 	-- Clean up previous character.
 	if player.Character then
@@ -157,7 +164,7 @@ function PlayerService.Spawn(player: Player)
 	local model = CatBuilder.Build(cat, player.DisplayName, weapon)
 	model.Name = player.Name
 
-	-- Team accent ring under the cat for readability.
+	-- Team accent ring under the cat for readability (not in the lobby).
 	local root = model.PrimaryPart :: BasePart
 	local ring = Instance.new("Part")
 	ring.Name = "TeamRing"
@@ -174,16 +181,17 @@ function PlayerService.Spawn(player: Player)
 	weld.Part1 = ring
 	weld.C0 = CFrame.new(0, -1.6, 0) * CFrame.Angles(0, 0, math.rad(90))
 	weld.Parent = ring
-	ring.Parent = model
+	ring.Parent = context ~= "Lobby" and model or nil
 
 	model:SetAttribute("Team", teamId)
-	model:PivotTo(PlayerService.PickSpawn(teamId))
+	model:PivotTo((opts and opts.cframe) or PlayerService.PickSpawn(teamId))
 	model.Parent = Workspace
 
 	player.Character = model
 
 	local humanoid = model:FindFirstChildOfClass("Humanoid") :: Humanoid
 	Runtime.ResetLife(player)
+	Runtime.SetContext(player, context, opts and opts.duelId, opts and opts.team)
 	local state = Runtime.Ensure(player)
 	state.Alive = true
 	state.SpawnProtectUntil = os.clock() + 2.0
@@ -212,13 +220,28 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 		killer = nil
 	end
 
+	-- Duels score their own knockouts; the lobby has none (a reset there
+	-- just puts you back).
+	if state.Context == "Duel" then
+		if PlayerService.OnDuelKO then
+			PlayerService.OnDuelKO(victim, killer)
+		end
+		return
+	elseif state.Context ~= "Match" then
+		if PlayerService.OnLobbyDeath then
+			PlayerService.OnLobbyDeath(victim)
+		end
+		return
+	end
+
 	if PlayerService.OnElimination then
 		PlayerService.OnElimination(victim, killer, weaponId, ringout)
 	end
 
-	-- Respawn after delay if match still active.
+	-- Respawn after delay if match still active (and they're still in it).
 	task.delay(GameConfig.Character.RespawnDelay, function()
-		if Players:FindFirstChild(victim.Name) and PlayerService.MatchActive then
+		local s = Runtime.Get(victim)
+		if Players:FindFirstChild(victim.Name) and PlayerService.MatchActive and s and s.Context == "Match" then
 			PlayerService.Spawn(victim)
 		end
 	end)
@@ -238,7 +261,7 @@ local function startKillFloorLoop()
 		for _, player in ipairs(Players:GetPlayers()) do
 			local state = Runtime.Get(player)
 			local char = player.Character
-			if state and state.Alive and char and char.PrimaryPart then
+			if state and state.Alive and state.Context == "Match" and char and char.PrimaryPart then
 				if char.PrimaryPart.Position.Y < floorY then
 					PlayerService.HandleElimination(player, true)
 				end
@@ -289,11 +312,13 @@ local function startStatusLoop()
 end
 
 function PlayerService.DespawnAll()
+	-- Only the match's cats: people in the lobby or a duel stay put.
 	for _, player in ipairs(Players:GetPlayers()) do
 		local state = Runtime.Get(player)
-		if state then
-			state.Alive = false
+		if not state or state.Context ~= "Match" then
+			continue
 		end
+		state.Alive = false
 		if player.Character then
 			player.Character:Destroy()
 			player.Character = nil
@@ -312,7 +337,7 @@ function PlayerService.Start()
 
 	Remotes.Get("RequestRespawn").OnServerEvent:Connect(function(player)
 		local state = Runtime.Get(player)
-		if PlayerService.MatchActive and state and not state.Alive then
+		if PlayerService.MatchActive and state and not state.Alive and state.Context == "Match" then
 			-- allow manual respawn only after death, throttled by delay handled elsewhere
 			PlayerService.Spawn(player)
 		end

@@ -6,6 +6,9 @@
 -- Speed widens the view a little (sprint, dash, getting launched), and on
 -- touch / gamepad your aim eases onto a visible enemy near the crosshair
 -- while you're shooting.
+-- Walking round the lobby it runs in "free mouse" mode: the cursor stays free
+-- for the on-screen buttons, holding right mouse turns the view, and the cat
+-- faces where it walks instead of where you aim.
 -- Movement stays on Roblox's default control module, which follows this camera.
 
 local Players = game:GetService("Players")
@@ -27,6 +30,8 @@ local yaw, pitch = 0, 0.15
 local distance = GameConfig.Camera.ThirdPersonDistance
 local enabled = false
 local lobbyView = false
+local freeMouse = false -- lobby: cursor free, right mouse turns the view
+local turning = false -- right mouse held in free mouse mode
 local lookTouch: InputObject? = nil
 local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
@@ -145,10 +150,28 @@ local function isMobile()
 	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 end
 
+-- Lock the cursor to the centre (aiming) or leave it free (lobby, menus).
+local function applyMouse()
+	if not enabled or isMobile() or not UserInputService.MouseEnabled then
+		return
+	end
+	if freeMouse then
+		UserInputService.MouseBehavior = turning and Enum.MouseBehavior.LockCurrentPosition or Enum.MouseBehavior.Default
+		UserInputService.MouseIconEnabled = true
+	else
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		UserInputService.MouseIconEnabled = false
+	end
+end
+
 -- A touch that starts on free screen space (not the joystick or a HUD button)
 -- becomes the look drag. Only that finger turns the camera, so moving the
 -- joystick while holding Fire can't swing the view.
 local function onInputBegan(input: InputObject, gpe: boolean)
+	if input.UserInputType == Enum.UserInputType.MouseButton2 and not gpe then
+		turning = true
+		applyMouse()
+	end
 	if input.UserInputType == Enum.UserInputType.Touch and enabled and not gpe and not lookTouch then
 		if input.Position.X > camera.ViewportSize.X * 0.4 then
 			lookTouch = input
@@ -162,7 +185,7 @@ local function onInputChanged(input: InputObject, gpe: boolean)
 		return
 	end
 	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		if UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter or (freeMouse and turning) then
 			local d = input.Delta
 			local settings = require(script.Parent.Parent.ClientState).Settings
 			local sens = 0.004 * ((settings.MouseSensitivity or GameConfig.Camera.Sensitivity) + 0.2)
@@ -185,6 +208,10 @@ local function onInputChanged(input: InputObject, gpe: boolean)
 end
 
 local function onInputEnded(input: InputObject)
+	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+		turning = false
+		applyMouse()
+	end
 	if input == lookTouch then
 		lookTouch = nil
 		touchLastPos = nil
@@ -367,8 +394,11 @@ local function step(dt: number)
 
 	-- Face where you aim, shooter-style, so the held blaster points at the
 	-- crosshair (the cat's front is its -Z, same as the camera's look).
+	-- (Walking round the lobby it faces where it walks instead.)
 	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum and hum.Health > 0 and not char:GetAttribute("Emoting") then
+	if hum and freeMouse then
+		hum.AutoRotate = true
+	elseif hum and hum.Health > 0 and not char:GetAttribute("Emoting") then
 		hum.AutoRotate = false
 		local want = CFrame.Angles(0, yaw, 0)
 		if root.CFrame.LookVector:Dot(want.LookVector) < 0.9999 then
@@ -399,6 +429,9 @@ function CameraController.GetShootDirection(muzzlePos: Vector3): Vector3
 end
 
 function CameraController.SetEnabled(on: boolean)
+	if on == enabled then
+		return
+	end
 	enabled = on
 	lookTouch = nil
 	touchLastPos = nil
@@ -412,10 +445,7 @@ function CameraController.SetEnabled(on: boolean)
 		lobbyView = false
 	end
 	if on then
-		if not isMobile() and UserInputService.MouseEnabled then
-			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-			UserInputService.MouseIconEnabled = false
-		end
+		applyMouse()
 	else
 		if not lobbyView then
 			camera.CameraType = Enum.CameraType.Custom
@@ -423,6 +453,16 @@ function CameraController.SetEnabled(on: boolean)
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
 	end
+end
+
+-- Free mouse (lobby walking, menus open) or aiming (matches, practice range).
+function CameraController.SetFreeMouse(on: boolean)
+	if freeMouse == on then
+		return
+	end
+	freeMouse = on
+	turning = on and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+	applyMouse()
 end
 
 function CameraController.SetLobbyView(on: boolean)
@@ -450,9 +490,7 @@ function CameraController.Start()
 
 	-- Re-assert lock when window regains focus.
 	UserInputService.WindowFocused:Connect(function()
-		if enabled and UserInputService.MouseEnabled then
-			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-		end
+		applyMouse()
 	end)
 end
 

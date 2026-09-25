@@ -29,7 +29,7 @@ local WeaponService = {}
 
 -- Set by BotService so raycasts that hit bot models route damage there.
 WeaponService.OnBotHit = nil :: ((shooter: Player, hitModel: Model, weapon: any, dir: Vector3) -> ())?
--- Set by PracticeService: shots on the practice island's target cats.
+-- Set by LobbyService: shots on the practice range's target cats.
 WeaponService.OnDummyHit = nil :: ((shooter: Player, hitModel: Model, weapon: any, dir: Vector3) -> ())?
 
 -- Per-player: last fire time per weapon, for server-side fire-rate gating.
@@ -212,9 +212,14 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	if not vState or not vState.Alive then
 		return
 	end
-	-- Friendly fire off + spawn protection.
+	-- Only cats that can hurt each other (same match / opposite duel sides),
+	-- friendly fire off, spawn protection.
+	if not Runtime.CanHit(shooter, victim) then
+		return
+	end
+	local inMatch = vState.Context == "Match"
 	local sState = Runtime.Get(shooter)
-	if Runtime.Mode ~= "FFA" and sState and vState.Team and sState.Team == vState.Team then
+	if inMatch and Runtime.Mode ~= "FFA" and sState and vState.Team and sState.Team == vState.Team then
 		return
 	end
 	if os.clock() < (vState.SpawnProtectUntil or 0) then
@@ -233,7 +238,7 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	-- Damage (fluff) accumulation drives future knockback.
 	local dmg = weapon.Damage * (1 - dmgResist)
 	vState.Accumulated += dmg
-	if Runtime.Mode ~= "Ringout" then
+	if not (inMatch and Runtime.Mode == "Ringout") then
 		vHum:TakeDamage(dmg * GameConfig.Character.HealthDamageScale) -- HP ticks a little too
 	end
 	vState.LastAttacker = shooter
@@ -241,8 +246,8 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	vState.LastAttackAt = os.clock()
 
 	-- Knockback impulse (mass-correct), applied by the victim's own client.
-	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
-	local ringout = Runtime.Mode == "Ringout" and 1.3 or 1
+	local mayhem = (inMatch and Runtime.Mayhem) and GameConfig.Mayhem.KnockbackMult or 1
+	local ringout = (inMatch and Runtime.Mode == "Ringout") and 1.3 or 1
 	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * mayhem * ringout * (1 - knockResist))
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)

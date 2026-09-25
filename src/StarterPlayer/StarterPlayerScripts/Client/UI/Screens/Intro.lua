@@ -1,12 +1,13 @@
 --!strict
 -- Intro: what a brand-new player sees first.
---   1. A short cinematic on the practice island: cats trading shots until one
---      gets blasted off the edge (letterboxed, skippable).
---   2. A hands-on lesson on that island with Mochi, a mentor cat who talks you
---      through each move and demonstrates it: walk to the ring, jump, double
---      jump, shoot a target, knock one off, dash, pounce. Each step completes
---      when you actually do it. Skippable; finishing marks the tutorial done.
--- Everything here is local to the new player (the island itself is shared).
+--   1. A short cinematic in the lobby: cats trading shots until one gets
+--      blasted off the edge (letterboxed, skippable).
+--   2. A hands-on lesson at the lobby's practice range with Mochi, a mentor
+--      cat who talks you through each move and demonstrates it: walk to the
+--      ring, jump, double jump, shoot a target, knock one off, dash, pounce.
+--      Each step completes when you actually do it. Skippable; finishing marks
+--      the tutorial done.
+-- Everything here is local to the new player (the lobby itself is shared).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -20,7 +21,6 @@ local CatBuilder = require(ReplicatedStorage.Shared.Character.CatBuilder)
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
-local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local Controllers = script.Parent.Parent.Parent.Controllers
 local CameraController = require(Controllers.CameraController)
 local EffectsController = require(Controllers.EffectsController)
@@ -28,6 +28,7 @@ local SoundController = require(Controllers.SoundController)
 local MovementController = require(Controllers.MovementController)
 
 local Intro = {}
+Intro.Running = false -- the lobby UI leaves the screen alone while it's on
 
 local player = Players.LocalPlayer
 
@@ -35,9 +36,11 @@ local function isMobile(): boolean
 	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 end
 
-local function island(): (Folder?, Vector3, number)
-	local f = Workspace:FindFirstChild("PracticeIsland") :: Folder?
-	local c = f and f:GetAttribute("Center")
+-- The lobby folder and one of its staging points ("Stage" for the
+-- cinematic, "Range" for the lesson), plus the ground height.
+local function lobby(point: string): (Folder?, Vector3, number)
+	local f = Workspace:FindFirstChild("Lobby") :: Folder?
+	local c = f and f:GetAttribute(point)
 	local s = f and f:GetAttribute("Surface")
 	if not f or typeof(c) ~= "Vector3" or typeof(s) ~= "number" then
 		return nil, Vector3.zero, 0
@@ -116,7 +119,7 @@ end
 
 -- ── 1. cinematic ─────────────────────────────────────────────────────────────
 local function cinematic(done: () -> ())
-	local _, c, s = island()
+	local _, c, s = lobby("Stage")
 	if c == Vector3.zero then
 		done()
 		return
@@ -212,7 +215,7 @@ local function cinematic(done: () -> ())
 				SoundController.Launch(broot.Position)
 				shoot(a, b, "BoomPaw")
 			end
-			-- An arc up and away from A, off the island's edge.
+			-- An arc up and away from A, off the edge.
 			local u = t - 6
 			local away = (launchFrom.Position - (a.PrimaryPart :: BasePart).Position) * Vector3.new(1, 0, 1)
 			away = away.Magnitude > 0.1 and away.Unit or Vector3.xAxis
@@ -236,16 +239,18 @@ end
 type Step = { text: string, done: () -> boolean, demo: (() -> ())? }
 
 local function lesson(done: (finished: boolean) -> ())
-	local isl, c, s = island()
-	if not isl or ClientState.Match.phase ~= "Intermission" then
+	local isl, c, s = lobby("Range")
+	if not isl then
 		done(false)
 		return
 	end
-	Remotes.Get("Practice"):FireServer(true)
-	-- Wait for our cat on the island.
+	-- Wait for our cat in the lobby.
+	local function inLobby(): boolean
+		return player:GetAttribute("Context") == "Lobby" and player.Character ~= nil and player.Character.PrimaryPart ~= nil
+	end
 	local t0 = os.clock()
-	while not (player:GetAttribute("Practicing") and player.Character and player.Character.PrimaryPart) do
-		if os.clock() - t0 > 8 then
+	while not inLobby() do
+		if os.clock() - t0 > 15 then
 			done(false)
 			return
 		end
@@ -257,8 +262,8 @@ local function lesson(done: (finished: boolean) -> ())
 	folder.Name = "Lesson"
 	folder.Parent = Workspace
 	local y = s + 1.9
-	local mentorPos = c + Vector3.new(5, y - c.Y, -6)
-	local mentor = actor({ Fur = "White", Outfit = "Hoodie", Hat = "Cap" }, "Mochi", "PawBlaster", mentorPos, c + Vector3.new(0, 0, -12), folder)
+	local mentorPos = c + Vector3.new(5, y - c.Y, 6)
+	local mentor = actor({ Fur = "White", Outfit = "Hoodie", Hat = "Cap" }, "Mochi", "PawBlaster", mentorPos, c + Vector3.new(-6, 0, 14), folder)
 	local mentorBase = mentor:GetPivot()
 
 	-- Dialogue panel (bottom): name + text, typed out.
@@ -340,7 +345,7 @@ local function lesson(done: (finished: boolean) -> ())
 	ring.Material = Enum.Material.Neon
 	ring.Color = Color3.fromRGB(255, 214, 90)
 	ring.Transparency = 0.35
-	ring.CFrame = CFrame.new(c.X - 8, s + 0.1, c.Z + 2) * CFrame.Angles(0, 0, math.rad(90))
+	ring.CFrame = CFrame.new(c.X - 5, s + 0.1, c.Z + 6) * CFrame.Angles(0, 0, math.rad(90))
 	ring.Parent = folder
 
 	local jumps, airJumps, hit, knocked = 0, 0, false, false
@@ -384,7 +389,7 @@ local function lesson(done: (finished: boolean) -> ())
 
 	local m = isMobile()
 	local steps: { Step } = {
-		{ text = "Hey, I'm Mochi! Let's get you ready to fight. " .. (m and "Use the stick" or "Use WASD") .. " to walk into the gold ring.", done = nearRing },
+		{ text = "Hey, I'm Mochi! Come to the practice range - " .. (m and "use the stick" or "use WASD") .. " to walk into the gold ring.", done = nearRing },
 		{ text = "Nice! Now jump" .. (m and " (JUMP)." or " (SPACE)."), done = function() return jumps > 0 end, demo = hop },
 		{ text = "Jump again while you're in the air - that's a double jump.", done = function() return airJumps > 0 end, demo = hop },
 		{ text = (m and "Tap FIRE" or "Click") .. " to blast one of the target cats over there.", done = function() return hit end, demo = demoShots },
@@ -414,7 +419,7 @@ local function lesson(done: (finished: boolean) -> ())
 			end
 			ring.Transparency = i == 1 and 0.35 or 1
 			while not step.done() do
-				if skipped or not player:GetAttribute("Practicing") then
+				if skipped or not inLobby() then
 					cleanup()
 					done(false)
 					return
@@ -424,22 +429,23 @@ local function lesson(done: (finished: boolean) -> ())
 			SoundController.Play("Pop")
 			task.wait(0.6)
 		end
-		speak("That's everything! Now go knock some cats off the map. Hit PLAY when you're ready.")
+		speak("That's everything! Hit PLAY when you're ready, or take on someone at the duel pads.")
 		progress.Text = ""
 		task.wait(3.5)
 		cleanup()
-		Remotes.Get("Practice"):FireServer(false)
 		done(true)
 	end)
 end
 
 -- Run the whole intro; `after` runs once it's over (or skipped).
 function Intro.Run(after: () -> ())
+	Intro.Running = true
 	cinematic(function()
 		lesson(function(finished)
 			if finished then
 				Remotes.Get("TutorialDone"):FireServer()
 			end
+			Intro.Running = false
 			after()
 		end)
 	end)

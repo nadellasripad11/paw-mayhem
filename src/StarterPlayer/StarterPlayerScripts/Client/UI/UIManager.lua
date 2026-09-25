@@ -1,11 +1,18 @@
 --!strict
--- UIManager: builds the screens and switches between lobby / HUD / results based
--- on the match phase, and enables the camera + combat controllers only while the
--- local cat is alive in a live match.
+-- UIManager: builds the screens and switches between them by where your cat
+-- is (the player's "Context" attribute) and the match phase:
+--   * Lobby: the menu overlay (icons + PLAY) while you walk round with a free
+--     mouse; step into the practice range and you aim and shoot like in a
+--     match. Once you're queued, the countdown flies over the arena.
+--   * Match: the in-match HUD; at the end your last knockout replays, then
+--     the podium and results. Then everyone who played is back in the lobby.
+--   * Duel: the match HUD without the team scores.
+-- Before your cat first spawns, the menu camera shows the 3D lobby scene.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local Theme = require(script.Parent.Theme)
 local UIUtil = require(script.Parent.UIUtil)
@@ -15,6 +22,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local MainMenu = require(script.Parent.Screens.MainMenu)
 local HUD = require(script.Parent.Screens.HUD)
 local Results = require(script.Parent.Screens.Results)
+local Intro = require(script.Parent.Screens.Intro)
 
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
 local ReplayController = require(script.Parent.Parent.Controllers.ReplayController)
@@ -27,6 +35,12 @@ local lastPhase = nil
 local alive = false
 local transitionFrame: Frame? = nil
 local fallbackGui: ScreenGui? = nil
+
+-- The practice range: a box round the lobby's "Range" point (behind spawn).
+local RANGE_HALF_X, RANGE_BACK, RANGE_FRONT = 22, 20, 14
+-- The countdown flyover stays up until the server has dropped you into the
+-- arena (a few seconds at most), so the lobby doesn't flash in between.
+local flyoverUntil = 0
 
 -- A real, clickable launch surface kept outside the large decorative menu.
 -- If a future art/card change ever fails during startup, players still get
@@ -109,36 +123,123 @@ local function buildTransitionLayer()
 	transitionFrame.Parent = fadeGui
 end
 
-local function enableGameplay(on: boolean)
-	CameraController.SetLobbyView(not on)
-	CameraController.SetEnabled(on)
-	CombatController.SetEnabled(on)
+local function context(): string?
+	local c = player:GetAttribute("Context")
+	return typeof(c) == "string" and c or nil
+end
+
+local function queuedCountdown(): boolean
+	return context() == "Lobby" and player:GetAttribute("Queued") == true and ClientState.Match.phase == "Countdown"
+end
+
+local function inPracticeRange(): boolean
+	local lobby = Workspace:FindFirstChild("Lobby")
+	local c = lobby and lobby:GetAttribute("Range")
+	local root = player.Character and player.Character.PrimaryPart
+	if typeof(c) ~= "Vector3" or not root then
+		return false
+	end
+	local d = root.Position - c
+	return math.abs(d.X) < RANGE_HALF_X and d.Z > -RANGE_BACK and d.Z < RANGE_FRONT and math.abs(d.Y) < 25
+end
+
+-- In the lobby: aim + shoot inside the practice range (no screen open), a free
+-- mouse everywhere else. Checked a few times a second.
+local lobbyAim: boolean? = nil
+local function updateLobbyAim(force: boolean?)
+	if context() ~= "Lobby" or not alive or queuedCountdown() then
+		lobbyAim = nil
+		return
+	end
+	local aim = inPracticeRange() and not MainMenu.Busy()
+	if aim == lobbyAim and not force then
+		return
+	end
+	lobbyAim = aim
+	CameraController.SetFreeMouse(not aim)
+	CombatController.SetEnabled(aim)
+	HUD.SetMode(aim and "Range" or "Lobby")
+end
+
+-- Put the screen in the right state for where the cat is and the phase.
+local function refresh()
+	local ctx = context()
+	local phase = ClientState.Match.phase
+	if not (ctx == "Lobby" and (queuedCountdown() or os.clock() < flyoverUntil)) then
+		CameraController.SetFlyover(false)
+	end
+	if ctx == "Match" or ctx == "Duel" then
+		flyoverUntil = 0
+		if fallbackGui then fallbackGui.Enabled = false end
+		MainMenu.SetVisible(false)
+		if phase == "Results" and ctx == "Match" then
+			return -- the replay and podium have the screen (see onPhase)
+		end
+		CameraController.SetLobbyView(false)
+		CameraController.SetFreeMouse(false)
+		HUD.SetMode(ctx)
+		HUD.SetVisible(alive)
+		Results.Hide()
+		if alive then
+			CameraController.SetEnabled(true)
+			CombatController.SetEnabled(true)
+		end
+	elseif ctx == "Lobby" and alive then
+		if fallbackGui then fallbackGui.Enabled = false end
+		Results.Hide()
+		CameraController.SetShowcase(nil)
+		CameraController.SetLobbyView(false)
+		if queuedCountdown() or os.clock() < flyoverUntil then
+			-- Queued and about to drop in: fly over the arena.
+			if queuedCountdown() then
+				flyoverUntil = math.huge
+			end
+			MainMenu.SetVisible(false)
+			CameraController.SetEnabled(false)
+			CombatController.SetEnabled(false)
+			HUD.SetMode("Lobby")
+			HUD.SetVisible(true)
+			CameraController.SetFlyover(true)
+			return
+		end
+		flyoverUntil = 0
+		CameraController.SetFlyover(false)
+		if not Intro.Running then
+			MainMenu.SetVisible(true)
+		end
+		HUD.HideBig()
+		HUD.SetVisible(true)
+		CameraController.SetEnabled(true)
+		updateLobbyAim(true)
+	else
+		-- Not spawned yet: the menu over the 3D lobby scene.
+		HUD.SetVisible(false)
+		CameraController.SetEnabled(false)
+		CombatController.SetEnabled(false)
+		CameraController.SetLobbyView(true)
+		if not Intro.Running then
+			MainMenu.SetVisible(true)
+		end
+	end
 end
 
 local function onCharacter(char)
 	alive = true
 	CameraController.SetSpectate(nil)
-	-- wait a beat for parts to settle
+	-- wait a beat for parts (and the Context attribute) to settle
 	task.wait(0.2)
-	if ClientState.Match.phase == "Playing" then
-		MainMenu.SetVisible(false)
-		HUD.SetVisible(true)
-		Results.Hide()
-		enableGameplay(true)
-		HUD.StartTips()
-	elseif player:GetAttribute("Practicing") then
-		-- Practice island between matches.
-		MainMenu.SetVisible(false)
-		if fallbackGui then fallbackGui.Enabled = false end
-		HUD.SetVisible(true)
-		enableGameplay(true)
+	if char ~= player.Character then
+		return
 	end
-	HUD.SetPractice(player:GetAttribute("Practicing") == true)
+	if context() == "Match" and ClientState.Match.phase == "Playing" then
+		HUD.StartTips()
+	end
+	refresh()
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum then
 		hum.Died:Connect(function()
 			alive = false
-			-- Stay in the arena for the kill-cam (no lobby view while dead).
+			-- Stay where you are for the kill-cam (no lobby view while dead).
 			CameraController.SetEnabled(false)
 			CombatController.SetEnabled(false)
 		end)
@@ -152,16 +253,14 @@ local function onPhase(m)
 	local phase = m.phase
 	if phase == lastPhase then
 		-- still update sub-states (e.g. countdown numbers handled by screens)
-		if phase == "Countdown" then
+		if phase == "Countdown" and queuedCountdown() then
 			HUD.ShowBig(tostring(m.timeLeft or 0), Theme.Color.Text)
-		elseif phase == "Results" then
+		elseif phase == "Results" and context() == "Match" then
 			Results.Update(m)
 		end
 		return
 	end
 	lastPhase = phase
-	playTransition()
-	CameraController.SetFlyover(phase == "Countdown")
 	if phase ~= "Results" then
 		podiumShot = nil
 		CameraController.SetShowcase(nil)
@@ -171,43 +270,27 @@ local function onPhase(m)
 	else
 		ReplayController.Clear() -- a fresh match: only this match's knockouts replay
 	end
+	if phase == "Playing" and flyoverUntil == math.huge then
+		-- Dropping in now: hold the flyover until our arena cat arrives.
+		flyoverUntil = os.clock() + 4
+		task.delay(4.1, refresh)
+	elseif phase ~= "Countdown" and phase ~= "Playing" then
+		flyoverUntil = 0
+	end
 
-	if phase == "Intermission" then
-		MainMenu.SetVisible(true)
-		if fallbackGui then fallbackGui.Enabled = true end
-		HUD.SetVisible(false)
-		Results.Hide()
-		enableGameplay(false)
-	elseif phase == "Countdown" then
-		MainMenu.SetVisible(false)
-		if fallbackGui then fallbackGui.Enabled = false end
-		HUD.SetVisible(true)
-		Results.Hide()
+	if phase == "Countdown" and queuedCountdown() then
+		playTransition()
+		refresh()
 		HUD.ShowBig("GET READY", Theme.Color.Warn)
-		enableGameplay(false)
-		CameraController.SetLobbyView(false) -- the flyover shows the arena instead
-	elseif phase == "Playing" then
-		if alive then
-			MainMenu.SetVisible(false)
-			if fallbackGui then fallbackGui.Enabled = false end
-			HUD.SetVisible(true)
-			Results.Hide()
-			HUD.HideBig()
-			enableGameplay(true)
-			HUD.StartTips()
-		else
-			-- The server intentionally waits for the player's Play click when
-			-- they join a live round. Keep the landing/map picker visible.
-			MainMenu.SetVisible(true)
-			if fallbackGui then fallbackGui.Enabled = true end
-			HUD.SetVisible(false)
-			Results.Hide()
-			enableGameplay(false)
-		end
-	elseif phase == "Results" then
-		if fallbackGui then fallbackGui.Enabled = false end
+	elseif phase == "Playing" and context() == "Match" then
+		playTransition()
+		HUD.HideBig()
+		refresh()
+	elseif phase == "Results" and context() == "Match" then
+		playTransition()
 		HUD.SetVisible(false)
-		enableGameplay(false)
+		CameraController.SetEnabled(false)
+		CombatController.SetEnabled(false)
 		local function showResults()
 			if lastPhase ~= "Results" then
 				return
@@ -225,6 +308,8 @@ local function onPhase(m)
 		else
 			showResults()
 		end
+	else
+		refresh()
 	end
 end
 
@@ -251,7 +336,7 @@ function UIManager.Start()
 	Remotes.Get("Podium").OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" and typeof(data.camera) == "CFrame" then
 			podiumShot = data.camera
-			if ClientState.Match.phase == "Results" then
+			if ClientState.Match.phase == "Results" and context() == "Match" and not ReplayController.HasClip() then
 				CameraController.SetLobbyView(false)
 				CameraController.SetShowcase(podiumShot)
 			end
@@ -287,22 +372,19 @@ function UIManager.Start()
 	end)
 	player.CharacterRemoving:Connect(function()
 		alive = false
-		enableGameplay(false)
-		-- Leaving the practice island: straight back to the menu.
-		if player:GetAttribute("Practicing") == nil and ClientState.Match.phase == "Intermission" then
-			HUD.SetVisible(false)
-			HUD.SetPractice(false)
-			MainMenu.SetVisible(true)
-		end
+		CameraController.SetEnabled(false)
+		CombatController.SetEnabled(false)
 	end)
-	player:GetAttributeChangedSignal("Practicing"):Connect(function()
-		if not player:GetAttribute("Practicing") then
-			HUD.SetPractice(false)
-			if ClientState.Match.phase ~= "Playing" then
-				enableGameplay(false)
-				HUD.SetVisible(false)
-				MainMenu.SetVisible(true)
-			end
+	-- Lobby <-> match <-> duel, and joining / leaving the queue.
+	player:GetAttributeChangedSignal("Context"):Connect(function()
+		playTransition()
+		refresh()
+	end)
+	player:GetAttributeChangedSignal("Queued"):Connect(refresh)
+	task.spawn(function()
+		while true do
+			task.wait(0.15)
+			updateLobbyAim()
 		end
 	end)
 

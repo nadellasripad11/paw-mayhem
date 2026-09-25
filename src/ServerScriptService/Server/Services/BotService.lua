@@ -75,6 +75,8 @@ local BOT_NAMES = {
 	"Scratch-BOT",  "Nyan-BOT",    "Fuzz-BOT",
 	"Biscuit-BOT",  "Pickle-BOT",  "Mochi-BOT",
 	"Tofu-BOT",     "Noodle-BOT",  "Pepper-BOT",
+	"Sushi-BOT",    "Boba-BOT",    "Waffles-BOT",
+	"Maple-BOT",
 }
 
 -- ── types ───────────────────────────────────────────────────────────────────
@@ -119,7 +121,7 @@ local nextBotId      = 1
 -- Bots reserved but not yet in the world (staggered spawn or respawning).
 local pending:       { [number]: { team: string, name: string } } = {}
 -- Total cats per match; bots fill whatever real players don't.
-local TARGET_CATS    = 12
+local TARGET_CATS    = 16
 -- Eliminations each bot has this match (by name, so respawns keep them).
 local botElims:      { [string]: { elims: number, team: string } } = {}
 local matchActive    = false
@@ -195,7 +197,7 @@ local function pickTarget(bot: BotState): (Model?, number, boolean)
 		local s    = Runtime.Get(p)
 		local char = p.Character
 		local root = char and (char.PrimaryPart :: BasePart?)
-		if s and s.Alive and (Runtime.Mode == "FFA" or s.Team ~= bot.team) and root and char then
+		if s and s.Alive and s.Context == "Match" and (Runtime.Mode == "FFA" or s.Team ~= bot.team) and root and char then
 			consider(char, root, s.Accumulated or 0)
 		end
 	end
@@ -293,7 +295,7 @@ end
 -- Apply a bot's shot to a real player.
 function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: any, dir: Vector3)
 	local vState = Runtime.Get(victim)
-	if not vState or not vState.Alive then return end
+	if not vState or not vState.Alive or vState.Context ~= "Match" then return end
 	if os.clock() < (vState.SpawnProtectUntil or 0) then return end
 
 	local vChar = victim.Character

@@ -118,6 +118,12 @@ local function fetch(scope: string, metric: string): { any }?
 	return entries
 end
 
+-- Top of the global board (falls back to this server's players when data
+-- stores are off, e.g. in Studio). For the lobby's leaderboard board.
+function LeaderboardService.Top(metric: string): { any }
+	return fetch("Global", metric) or serverBoard(metric, nil)
+end
+
 function LeaderboardService.Start()
 	Players.PlayerAdded:Connect(function(player)
 		task.spawn(function()

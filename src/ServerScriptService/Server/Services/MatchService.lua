@@ -22,7 +22,7 @@ local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
 local BotService = require(script.Parent.BotService)
 local PodiumService = require(script.Parent.PodiumService)
 local FlagService = require(script.Parent.FlagService)
-local PracticeService = require(script.Parent.PracticeService)
+local LobbyService = require(script.Parent.LobbyService)
 local SeasonService = require(script.Parent.SeasonService)
 local Modes = require(game:GetService("ReplicatedStorage").Shared.Config.Modes)
 local Ranks = require(game:GetService("ReplicatedStorage").Shared.Config.Ranks)
@@ -133,6 +133,10 @@ local function buildBoard()
 	local board = {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
+		-- Only cats in this match (not the lobby or a duel).
+		if not (s and s.Context == "Match") and not queuedPlayers[player.UserId] then
+			continue
+		end
 		table.insert(board, {
 			Name = player.Name,
 			Display = player.DisplayName,
@@ -391,7 +395,7 @@ local function tickHill()
 	for _, p in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(p)
 		local root = p.Character and p.Character.PrimaryPart
-		if s and s.Alive and s.Team and root and inHill(root.Position) then
+		if s and s.Alive and s.Context == "Match" and s.Team and root and inHill(root.Position) then
 			present[s.Team] = (present[s.Team] or 0) + 1
 		end
 	end
@@ -443,9 +447,12 @@ function MatchService.EndMatch(winnerTeam: string?)
 	state.TimeLeft = GameConfig.Match.ResultsSeconds
 	PlayerService.MatchActive = false
 
-	-- Match payouts.
+	-- Match payouts (only for the cats who played it).
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
+		if not (s and s.Context == "Match") then
+			continue
+		end
 		EconomyService.AddStat(player, "Matches", 1)
 		SeasonService.AddXP(player, "MatchPlayed")
 		EconomyService.AddXP(player, Scoring.MatchPlayedXP)
@@ -507,11 +514,18 @@ local function enterIntermission()
 	mapVotes = {}
 	queuedPlayers = {}
 	PlayerService.MatchActive = false
+	-- Everyone who played goes back to the lobby.
+	for _, p in ipairs(Players:GetPlayers()) do
+		p:SetAttribute("Queued", nil)
+		local s = Runtime.Get(p)
+		if (s and s.Context == "Match") or (not p.Character and DataService.Get(p)) then
+			task.spawn(LobbyService.Spawn, p)
+		end
+	end
 	broadcastState()
 end
 
 local function enterCountdown()
-	PracticeService.EndAll() -- practice ends when a match is about to start
 	-- Lock the vote and rebuild while players are still in the lobby, before
 	-- characters and power-up pickups exist for the next match.
 	buildVotedMap()
@@ -519,9 +533,11 @@ local function enterCountdown()
 	Runtime.Mode = state.Mode
 	state.Phase = PHASE.Countdown
 	state.TimeLeft = GameConfig.Match.CountdownSeconds
-	-- Reset per-match runtime + spawn everyone.
+	-- Fresh match stats for everyone about to drop in (not duelists).
 	for _, player in ipairs(Players:GetPlayers()) do
-		Runtime.ResetMatch(player)
+		if queuedPlayers[player.UserId] then
+			Runtime.ResetMatch(player)
+		end
 	end
 	broadcastState()
 end
@@ -531,7 +547,13 @@ local function enterPlaying()
 	state.Phase = PHASE.Playing
 	state.TimeLeft = GameConfig.Match.MatchSeconds
 	PlayerService.MatchActive = true
-	PlayerService.SpawnAll()
+	-- Only the players who queued leave the lobby for the arena.
+	for _, p in ipairs(Players:GetPlayers()) do
+		if queuedPlayers[p.UserId] then
+			p:SetAttribute("Queued", nil)
+			task.spawn(PlayerService.Spawn, p)
+		end
+	end
 	-- Bots fill the teams up to the target size around the players who queued.
 	BotService.SpawnBots(queuedCount())
 	if state.Mode == "KOTH" then
@@ -647,13 +669,17 @@ function MatchService.Start()
 		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then
 			return
 		end
+		if player:GetAttribute("Context") == "Duel" then
+			Remotes.Get("Notify"):FireClient(player, { text = "Finish your duel first!", kind = "info" })
+			return
+		end
 		Analytics.Step(player, "PressedPlay")
 		-- A late joiner must still opt in from the landing screen. Once they
 		-- press Play, put them into the current round without forcing every
 		-- existing player through a new countdown.
 		if state.Phase == PHASE.Playing then
 			local rs = Runtime.Get(player)
-			if rs and rs.Alive then
+			if rs and rs.Alive and rs.Context == "Match" then
 				return
 			end
 			queuedPlayers[player.UserId] = true
@@ -669,6 +695,7 @@ function MatchService.Start()
 		-- The map is already locked in; everyone is spawned when the round starts.
 		if state.Phase == PHASE.Countdown then
 			queuedPlayers[player.UserId] = true
+			player:SetAttribute("Queued", true)
 			return
 		end
 		if state.Phase ~= PHASE.Intermission then
@@ -676,6 +703,7 @@ function MatchService.Start()
 			return
 		end
 		mapVotes[player.UserId] = mapId
+		player:SetAttribute("Queued", true)
 		local modeId = typeof(payload) == "table" and payload.modeId or nil
 		if typeof(modeId) == "string" and Modes.ById[modeId] then
 			modeVotes[player.UserId] = modeId
