@@ -104,6 +104,11 @@ function EconomyService.AddCoins(player: Player, amount: number, raw: boolean?)
 				amount *= mult
 			end
 		end
+		-- Weekend Mayhem bonus (CommunityService).
+		local boost = workspace:GetAttribute("CoinBoost")
+		if typeof(boost) == "number" then
+			amount *= boost
+		end
 		amount = math.floor(amount + 0.5)
 	end
 	profile.Coins = math.max(0, profile.Coins + amount)

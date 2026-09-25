@@ -251,13 +251,17 @@ local function stampede()
 end
 
 -- ── Sky Islands: low gravity ─────────────────────────────────────────────────
-local NORMAL_GRAVITY = 196.2
+-- Gravity outside events: normal, or lower during Weekend Mayhem.
+local function baseGravity(): number
+	local g = Workspace:GetAttribute("BaseGravity")
+	return typeof(g) == "number" and g or 196.2
+end
 
 local function lowGravity()
 	announce("LOW GRAVITY!", "Floaty jumps — and every hit sends cats flying further!", Color3.fromRGB(190, 170, 255))
 	Workspace.Gravity = 80
 	task.wait(10)
-	Workspace.Gravity = NORMAL_GRAVITY
+	Workspace.Gravity = baseGravity()
 	announce("GRAVITY'S BACK", "", Color3.fromRGB(190, 170, 255))
 end
 
@@ -305,7 +309,7 @@ end
 
 -- Undo anything an event changed once the match is over.
 local function resetEvents()
-	Workspace.Gravity = NORMAL_GRAVITY
+	Workspace.Gravity = baseGravity()
 	Workspace:SetAttribute("KillFloorY", nil)
 	setJump(GameConfig.Character.JumpPower)
 end

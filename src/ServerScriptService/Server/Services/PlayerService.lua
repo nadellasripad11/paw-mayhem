@@ -18,6 +18,7 @@ local Progression = require(Shared.Config.Progression)
 local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local Runtime = require(script.Parent.Runtime)
+local Analytics = require(script.Parent.Analytics)
 
 local PlayerService = {}
 
@@ -138,6 +139,9 @@ end
 
 -- Build + spawn a cat for the player using their saved loadout.
 function PlayerService.Spawn(player: Player)
+	if PlayerService.MatchActive then
+		Analytics.Step(player, "FirstMatchStarted")
+	end
 	local profile = DataService.Get(player)
 	local cat = profile and profile.Loadout.Cat or nil
 	local teamId = PlayerService.AssignTeam(player)

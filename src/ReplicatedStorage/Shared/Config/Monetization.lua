@@ -21,7 +21,8 @@ Monetization.Passes = {
 } :: { [string]: Pass }
 
 -- Coin reward multipliers granted by passes (they stack).
-Monetization.CoinMult = { VIP = 1.25, DoubleCoins = 2 }
+-- Coin multipliers by player attribute (GroupMember: Config.Community).
+Monetization.CoinMult = { VIP = 1.25, DoubleCoins = 2, GroupMember = 1.1 }
 
 -- Developer Products (can be bought again and again).
 Monetization.Products = {

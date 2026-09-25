@@ -15,6 +15,7 @@ local Scoring = GameConfig.Scoring
 
 local EconomyService = require(script.Parent.EconomyService)
 local DataService = require(script.Parent.DataService)
+local Analytics = require(script.Parent.Analytics)
 local PlayerService = require(script.Parent.PlayerService)
 local Runtime = require(script.Parent.Runtime)
 local ArenaBuilder = require(script.Parent.Parent.World.ArenaBuilder)
@@ -240,6 +241,7 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 	local feedTeam: string? = killer and killer ~= victim and (Runtime.Get(killer) and Runtime.Get(killer).Team) or nil
 
 	if killer and killer ~= victim then
+		Analytics.Step(killer, "FirstKnockout")
 		addStreak(killer)
 		local vRoot = victim.Character and victim.Character.PrimaryPart
 		if killer:GetAttribute("TrailPack") and vRoot then
@@ -464,6 +466,10 @@ function MatchService.EndMatch(winnerTeam: string?)
 		elseif stats and s ~= nil then
 			stats.WinStreak = 0
 		end
+		if s ~= nil then
+			local played = stats and stats.Matches or 0
+			Analytics.Step(player, played >= 2 and "SecondMatchFinished" or "FirstMatchFinished")
+		end
 		-- Trophy ranking: everyone who played moves up or down.
 		if stats and s ~= nil then
 			local before = stats.Trophies or 0
@@ -533,6 +539,9 @@ local function enterPlaying()
 		announce("RINGOUT", "Blasters do no damage — knock cats off the map!", Color3.fromRGB(190, 120, 255))
 	elseif state.Mode == "FFA" then
 		announce("FREE FOR ALL", "Everyone is an enemy. First to " .. scoreToWin() .. " KOs wins!", Color3.fromRGB(255, 120, 90))
+	end
+	if Workspace:GetAttribute("Weekend") == true then
+		task.delay(4, announce, "WEEKEND MAYHEM", "Low gravity and 25% more coins all weekend!", Color3.fromRGB(190, 170, 255))
 	end
 	broadcastState()
 end
@@ -635,6 +644,7 @@ function MatchService.Start()
 		if typeof(mapId) ~= "string" or not MAP_IDS[mapId] then
 			return
 		end
+		Analytics.Step(player, "PressedPlay")
 		-- A late joiner must still opt in from the landing screen. Once they
 		-- press Play, put them into the current round without forcing every
 		-- existing player through a new countdown.
