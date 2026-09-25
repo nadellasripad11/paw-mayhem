@@ -14,7 +14,8 @@
         "$path": "src/ReplicatedStorage/Shared"
       },
       "CatMeshes": {
-        "$path": "assets/CatMeshes"
+        "$path": "assets/CatMeshes",
+        "$ignoreUnknownInstances": true
       }
     },
 
