@@ -247,8 +247,11 @@ function Toybox.Build(): Folder
 		local edgeB = centerPos + Vector3.new(0, 1.6, 0) - dir.Unit * (centerR - 2)
 		ArenaKit.MakeBridge(edgeA, edgeB, arena, PALETTE)
 		if o.team == "Blue" or o.team == "Red" then
-			ArenaKit.AddTeamTriangleSpawns(o.pos, o.r, o.team, spawns)
-			ArenaKit.AddTeamSpawnBeacons(o.pos, o.r, o.team, isl)
+			-- Three spawns spread wide across the team island.
+			for _, deg in ipairs({ 30, 150, 270 }) do
+				local a = math.rad(deg)
+				ArenaKit.AddTeamSpawnPoint(o.pos + Vector3.new(math.cos(a), 0, math.sin(a)) * o.r * 0.6, o.team, spawns, isl)
+			end
 		end
 		if not o.team then
 			ArenaKit.AddPowerPad(o.pos, powerPads)

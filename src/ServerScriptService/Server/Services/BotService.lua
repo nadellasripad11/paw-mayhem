@@ -24,6 +24,7 @@ local EconomyService  = require(script.Parent.EconomyService)
 local Runtime         = require(script.Parent.Runtime)
 local SeasonService   = require(script.Parent.SeasonService)
 local DropService     = require(script.Parent.DropService)
+local PlayerService   = require(script.Parent.PlayerService)
 
 local BotService = {}
 
@@ -104,6 +105,7 @@ type BotState = {
 	fireDelay:       number,
 	hitAt:           number,
 	dodgeAt:         number,
+	flyUntil:        number,
 	align:           AlignOrientation,
 }
 
@@ -125,23 +127,6 @@ BotService.OnBotEliminated = nil :: ((killer: Player, botTeam: string) -> ())?
 BotService.OnTeamPoint = nil :: ((teamId: string) -> ())?
 
 -- ── helpers ──────────────────────────────────────────────────────────────────
-local function getSpawnCFrame(teamId: string): CFrame
-	local arena  = Workspace:FindFirstChild("Arena")
-	local spawns = arena  and arena:FindFirstChild("Spawns")
-	if not spawns then return CFrame.new(0, 30, 0) end
-	local candidates = {}
-	for _, s in ipairs(spawns:GetChildren()) do
-		if s:IsA("BasePart") then
-			local tag = s:GetAttribute("Team")
-			if tag == nil or tag == teamId then
-				table.insert(candidates, s)
-			end
-		end
-	end
-	if #candidates == 0 then return CFrame.new(0, 30, 0) end
-	return candidates[math.random(1, #candidates)].CFrame + Vector3.new(0, 1.25, 0)
-end
-
 local function pickTeam(): string
 	local counts = { Blue = 0, Red = 0 }
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -229,6 +214,18 @@ local function addAimError(dir: Vector3, degrees: number): Vector3
 	return (dir.Unit + right * math.tan(a) + realUp * math.tan(b)).Unit
 end
 
+-- Knock a bot away. Its AI lets go of the controls for the flight, so the
+-- launch carries instead of being braked by it walking to its next goal.
+local function launchBot(bot: BotState, dV: Vector3)
+	bot.root:ApplyImpulse(dV * bot.root.AssemblyMass)
+	if dV.Y > 2 then
+		bot.humanoid:ChangeState(Enum.HumanoidStateType.Freefall)
+	end
+	bot.flyUntil = os.clock() + 0.25 + dV.Magnitude / 200
+	bot.waypoints = nil
+	bot.humanoid:MoveTo(bot.root.Position)
+end
+
 -- A bot's shot landing on another (enemy) bot.
 local function botHitBot(shooter: BotState, victim: BotState, weapon: any, dir: Vector3)
 	if not victim.alive or victim == shooter or (Runtime.Mode ~= "FFA" and victim.team == shooter.team) then return end
@@ -242,7 +239,7 @@ local function botHitBot(shooter: BotState, victim: BotState, weapon: any, dir: 
 	victim.model:SetAttribute("Fluff", math.floor(victim.accumulated))
 	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
 	local dV = Knockback.ComputeDeltaV(dir, victim.accumulated, weapon.Knockback, 0.6 * mayhem)
-	victim.root:ApplyImpulse(dV * victim.root.AssemblyMass)
+	launchBot(victim, dV)
 end
 
 -- ── combat ───────────────────────────────────────────────────────────────────
@@ -347,7 +344,7 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 
 	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
 	local dV = Knockback.ComputeDeltaV(dir, bot.accumulated, weapon.Knockback, mayhem)
-	bot.root:ApplyImpulse(dV * bot.root.AssemblyMass)
+	launchBot(bot, dV)
 
 	Remotes.Get("HitConfirm"):FireClient(shooter, {
 		victim      = bot.name,
@@ -367,7 +364,7 @@ function BotService.EnvironmentHit(model: Model, damage: number, dV: Vector3): b
 	bot.humanoid:TakeDamage(damage * 0.5)
 	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
 	if dV.Magnitude > 0 then
-		bot.root:ApplyImpulse(dV * bot.root.AssemblyMass)
+		launchBot(bot, dV)
 	end
 	return true
 end
@@ -517,6 +514,12 @@ local function runBot(bot: BotState)
 	while bot.alive and matchActive do
 		local now = os.clock()
 
+		-- Mid-flight from a hit: hands off the controls until it lands.
+		if now < bot.flyUntil or (now < bot.flyUntil + 1.5 and bot.humanoid.FloorMaterial == Enum.Material.Air and bot.flyUntil > 0) then
+			task.wait(0.1)
+			continue
+		end
+
 		-- Unstick: trying to move but going nowhere for a while -> hop and re-plan.
 		if (bot.root.Position - lastPos).Magnitude > 2 then
 			lastPos, stuckSince = bot.root.Position, now
@@ -620,7 +623,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 	weld.Parent = ring
 	ring.Parent = model
 
-	model:PivotTo(getSpawnCFrame(teamId))
+	model:PivotTo(PlayerService.PickSpawn(teamId))
 	model.Parent = Workspace
 	-- The server simulates bots (ownership can only be set once parented).
 	pcall(function() root:SetNetworkOwner(nil) end)
@@ -650,7 +653,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		aimError = lerp(AIM_ERROR_DEG[1], AIM_ERROR_DEG[2], skill),
 		reaction = lerp(REACTION_SECS[1], REACTION_SECS[2], skill),
 		fireDelay = lerp(FIRE_DELAY[1], FIRE_DELAY[2], skill),
-		hitAt = 0, dodgeAt = 0, align = align,
+		hitAt = 0, dodgeAt = 0, flyUntil = 0, align = align,
 	}
 	bots[botId]      = bot
 	modelToId[model] = botId

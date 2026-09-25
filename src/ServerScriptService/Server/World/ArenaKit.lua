@@ -452,33 +452,18 @@ function ArenaKit.AddHexSpawns(center: Vector3, radius: number, teamId: string?,
 	end
 end
 
--- Competitive team layout: three grounded points on each team island. The
--- marker is only a fraction above the transparent Floor's top surface, so
--- the character root settles onto the island instead of spawning in midair.
-function ArenaKit.AddTeamTriangleSpawns(center: Vector3, radius: number, teamId: string, spawns: Folder)
-	local ring = radius * 0.35
-	for k = 0, 2 do
-		local ang = math.rad(30 + k * 120)
-		ArenaKit.AddSpawn(center + Vector3.new(math.cos(ang) * ring, 2.25, math.sin(ang) * ring), teamId, spawns)
-	end
-end
-
--- Readable in-world markers for the same three authoritative spawn positions.
--- They sit on the island top, so the team start is visually part of the map
--- instead of looking like an invisible floating respawn volume.
-function ArenaKit.AddTeamSpawnBeacons(center: Vector3, radius: number, teamId: string, parent: Instance)
+-- One team spawn point with its glowing pad, at pos (an island-centre-height
+-- point well inside a playable island). Maps give each team three of these
+-- on different islands so a whole team never piles out of one spot.
+function ArenaKit.AddTeamSpawnPoint(pos: Vector3, teamId: string, spawns: Folder, parent: Instance)
+	ArenaKit.AddSpawn(pos + Vector3.new(0, 2.25, 0), teamId, spawns)
 	local color = teamId == "Red" and Color3.fromRGB(255, 92, 102) or Color3.fromRGB(72, 174, 255)
-	local ring = radius * 0.35
-	for k = 0, 2 do
-		local ang = math.rad(30 + k * 120)
-		local pos = center + Vector3.new(math.cos(ang) * ring, 1.78, math.sin(ang) * ring)
-		local pad = ArenaKit.NewDisc("TeamSpawnPad", 5.2, 0.16, pos, color, Enum.Material.Neon, parent)
-		pad.Transparency = 0.48
-		pad.CanCollide = false
-		local core = ArenaKit.NewDisc("TeamSpawnCore", 2.4, 0.08, pos + Vector3.new(0, 0.11, 0), color, Enum.Material.Glass, parent)
-		core.Transparency = 0.22
-		core.CanCollide = false
-	end
+	local pad = ArenaKit.NewDisc("TeamSpawnPad", 5.2, 0.16, pos + Vector3.new(0, 1.78, 0), color, Enum.Material.Neon, parent)
+	pad.Transparency = 0.48
+	pad.CanCollide = false
+	local core = ArenaKit.NewDisc("TeamSpawnCore", 2.4, 0.08, pos + Vector3.new(0, 1.89, 0), color, Enum.Material.Glass, parent)
+	core.Transparency = 0.22
+	core.CanCollide = false
 end
 
 function ArenaKit.AddPowerPad(pos: Vector3, pads: Folder)

@@ -758,6 +758,8 @@ function Volcano.Build(): Folder
 	-- Team bases
 	for _, key in ipairs({ "teamB", "teamR" }) do
 		local t = I[key]
+		local baseSpawn = t.pos + Vector3.new(0, 0, -math.sign(t.pos.Z) * t.r * 0.25)
+		ArenaKit.Reserve(t, baseSpawn, 4) -- keep props off the spawn
 		local col = TEAM_COLOR[t.team]
 		local back = ArenaKit.AngleTo(Vector3.zero, t.pos)
 		local towerA = { back - 0.62, back + 0.62 }
@@ -788,8 +790,13 @@ function Volcano.Build(): Folder
 		makeLavaCracks(t, 6, 15)
 		bridgeBraziers(t)
 		dress(t, 16, 4, 3, 3, 1)
-		ArenaKit.AddTeamTriangleSpawns(t.pos, t.r, t.team, spawns)
-		ArenaKit.AddTeamSpawnBeacons(t.pos, t.r, t.team, t.folder)
+		-- Three spawns per team on three islands: the base and both side pads.
+		ArenaKit.AddTeamSpawnPoint(baseSpawn, t.team, spawns, t.folder)
+		for _, padKey in ipairs(t.team == "Blue" and { "padBL", "padBR" } or { "padRL", "padRR" }) do
+			local pad = I[padKey]
+			ArenaKit.AddTeamSpawnPoint(pad.pos, t.team, spawns, pad.folder)
+			ArenaKit.Reserve(pad, pad.pos, 4)
+		end
 	end
 
 	-- Flank platforms

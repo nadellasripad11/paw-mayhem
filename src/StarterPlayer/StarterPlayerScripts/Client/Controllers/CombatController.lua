@@ -17,6 +17,7 @@ local Weapons = require(Shared.Config.Weapons)
 local Progression = require(Shared.Config.Progression)
 
 local CameraController = require(script.Parent.CameraController)
+local MovementController = require(script.Parent.MovementController)
 local EffectsController = require(script.Parent.EffectsController)
 local SoundController = require(script.Parent.SoundController)
 local ClientState = require(script.Parent.Parent.ClientState)
@@ -160,7 +161,9 @@ local function tryFire()
 	CombatController.MuzzleFlash(muzzle, weapon)
 	EffectsController.Tracers(muzzle, tos, weapon.TrailColor, weapon.Id)
 	SoundController.PlayShot(weapon.Id, muzzle)
-	CameraController.OnShot()
+	-- Recoil: heavier-hitting blasters shove you back and kick the view more.
+	MovementController.Recoil(dir, math.max(0, weapon.Knockback - 0.8) * 10)
+	CameraController.OnShot(0.25 + weapon.Knockback * 0.45)
 	if CombatController.OnLocalShot then
 		CombatController.OnLocalShot(weapon.Id)
 	end

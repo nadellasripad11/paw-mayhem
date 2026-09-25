@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage.Shared
 local GameConfig = require(Shared.Config.GameConfig)
@@ -38,6 +39,23 @@ local function getSpawns(): Folder
 end
 
 -- Pick a spawn point for a team, biased away from other players.
+-- When each spawn was last used, so teammates spread over all three.
+local lastUsed: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Distance from `pos` to the nearest living enemy cat (players and bots).
+local function enemyDistance(pos: Vector3, teamId: string?): number
+	local best = 200
+	for _, m in ipairs(CollectionService:GetTagged(CatBuilder.Tag)) do
+		local r = m:IsA("Model") and m.PrimaryPart
+		local hum = r and m:FindFirstChildOfClass("Humanoid")
+		local team = m:GetAttribute("Team")
+		if r and hum and hum.Health > 0 and team ~= nil and m:IsDescendantOf(Workspace) and (Runtime.Mode == "FFA" or team ~= teamId) then
+			best = math.min(best, (r.Position - pos).Magnitude)
+		end
+	end
+	return best
+end
+
 local function pickSpawn(teamId: string?): CFrame
 	local spawns = getSpawns()
 	if not spawns then
@@ -62,11 +80,26 @@ local function pickSpawn(teamId: string?): CFrame
 	if #candidates == 0 then
 		return CFrame.new(0, 30, 0)
 	end
-	local chosen = candidates[math.random(1, #candidates)]
+	-- Prefer the spawn furthest from enemies that a teammate didn't just use,
+	-- with a little randomness so it isn't predictable.
+	local chosen, bestScore = candidates[1], -math.huge
+	local now = os.clock()
+	for _, s in ipairs(candidates) do
+		local score = math.min(enemyDistance(s.Position, teamId), 80) + math.random() * 20
+		if now - (lastUsed[s] or -100) < 4 then
+			score -= 60
+		end
+		if score > bestScore then
+			chosen, bestScore = s, score
+		end
+	end
+	lastUsed[chosen] = now
 	-- Spawn just above the marker so the root lands on the island surface
 	-- instead of visibly dropping in from several studs overhead.
 	return chosen.CFrame + Vector3.new(0, 1.25, 0)
 end
+
+PlayerService.PickSpawn = pickSpawn
 
 -- Assign the player to the smaller team.
 function PlayerService.AssignTeam(player: Player)
@@ -140,7 +173,7 @@ function PlayerService.Spawn(player: Player)
 	ring.Parent = model
 
 	model:SetAttribute("Team", teamId)
-	model:PivotTo(pickSpawn(teamId))
+	model:PivotTo(PlayerService.PickSpawn(teamId))
 	model.Parent = Workspace
 
 	player.Character = model

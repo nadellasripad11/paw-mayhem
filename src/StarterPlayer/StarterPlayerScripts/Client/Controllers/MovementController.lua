@@ -5,6 +5,8 @@
 --   * knockback the server sends us, whose momentum carries you through the
 --     air (easing off) instead of stopping dead when the hit burst ends
 --   * dash (Q / gamepad B / mobile button) and a mid-air double jump
+--   * recoil: your own shots push you back a little (heavy blasters more; in
+--     the air it carries you, so a big blaster can nudge you across a gap)
 --   * forgiving jumps: a short grace after walking off a ledge, and a jump
 --     pressed just before landing goes off as you land
 --   * jump pads (fling you along an arc to their target)
@@ -198,6 +200,25 @@ local function launch(velocity: Vector3)
 			activeLaunch = nil
 		end
 	end)
+end
+
+-- ── recoil ─────────────────────────────────────────────────────────────────
+function MovementController.Recoil(shotDir: Vector3, speed: number)
+	local root, hum = parts()
+	if not root or not hum or speed <= 0 then
+		return
+	end
+	local back = Vector3.new(-shotDir.X, 0, -shotDir.Z)
+	if back.Magnitude < 0.05 then
+		return
+	end
+	back = back.Unit * speed
+	if isAirborne(hum) then
+		startCarry(carryVel + back)
+	elseif not mover then
+		-- A short shove that still leaves most of your own steering.
+		holdHorizontal(root, back + hum.MoveDirection * hum.WalkSpeed * 0.5, 0.08, "recoil")
+	end
 end
 
 -- ── dash + double jump ───────────────────────────────────────────────────────

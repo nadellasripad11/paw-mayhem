@@ -32,6 +32,7 @@ local touchLastPos: Vector2? = nil
 local shake = 0 -- decaying shake magnitude
 local fovBoost = 0 -- extra field of view from speed
 local assistUntil = 0 -- aim help runs while you've shot recently
+local kick = 0 -- recoil: upward view kick (radians) that settles back
 local parallax = Vector2.zero
 local camDist = 0
 
@@ -68,9 +69,10 @@ end
 
 local MIN_PITCH, MAX_PITCH = -1.2, 1.2
 
--- Called for every local shot.
-function CameraController.OnShot()
+-- Called for every local shot; `kickDeg` is the recoil kick.
+function CameraController.OnShot(kickDeg: number?)
 	assistUntil = os.clock() + 0.35
+	kick = math.min(kick + math.rad(kickDeg or 0), math.rad(4))
 end
 
 local function isEnemy(model: Model, char: Model): boolean
@@ -305,6 +307,12 @@ local function step(dt: number)
 
 	local lookAt = focus + rot:VectorToWorldSpace(Vector3.new(shoulder.X, shoulder.Y, -20))
 	local finalCF = CFrame.lookAt(camPos, lookAt)
+
+	-- Recoil kick: tips the view up, then settles back quickly.
+	if kick > 0.0001 then
+		finalCF = finalCF * CFrame.Angles(kick, 0, 0)
+		kick *= math.exp(-14 * dt)
+	end
 
 	-- Apply decaying shake.
 	if shake > 0.001 then
