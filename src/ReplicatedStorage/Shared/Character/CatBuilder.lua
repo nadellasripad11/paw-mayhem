@@ -368,6 +368,32 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		glass.Transparency = 0.6
 		add(glass, CFrame.new(0, 0.3, 0))
 		add(part("HelmetRing", V(0.2, 2.0, 2.0), Color3.fromRGB(230, 236, 246), Enum.PartType.Cylinder), CFrame.new(0, -1.08, 0) * ROT_Z90)
+	elseif hat and hat.Shape == "PartyHat" then
+		-- Stepped striped cone, tilted a little, with a pompom.
+		for k = 0, 4 do
+			local d = 0.9 - k * 0.17
+			local color = k % 2 == 0 and hat.Color or Color3.fromRGB(255, 236, 120)
+			add(part("PartyHat", V(0.24, d, d), color, Enum.PartType.Cylinder), CFrame.new(0.12, 1.02 + k * 0.22, 0) * CFrame.Angles(0, 0, math.rad(-10)) * ROT_Z90)
+		end
+		add(oval("PartyPom", V(0.26, 0.26, 0.26), Color3.fromRGB(255, 255, 255)), CFrame.new(0.3, 2.14, 0))
+	elseif hat and hat.Shape == "Headphones" then
+		-- Band over the head and a cup on each side.
+		for k = 0, 6 do
+			local a = math.rad(-75 + k * 25)
+			add(part("PhonesBand", V(0.18, 0.12, 0.26), hat.Color), CFrame.new(math.sin(a) * 1.02, 0.2 + math.cos(a) * 0.95, 0.05) * CFrame.Angles(0, 0, -a))
+		end
+		for i = -1, 1, 2 do
+			add(part("PhonesCup", V(0.26, 0.62, 0.62), hat.Color, Enum.PartType.Cylinder), CFrame.new(1.02 * i, 0.02, 0.05))
+			add(part("PhonesPad", V(0.08, 0.5, 0.5), Color3.fromRGB(255, 110, 170), Enum.PartType.Cylinder), CFrame.new(1.17 * i, 0.02, 0.05))
+		end
+	elseif hat and hat.Shape == "Halo" then
+		-- A ring of glowing beads floating over the head.
+		for k = 0, 13 do
+			local a = k / 14 * math.pi * 2
+			local bead = oval("HaloBead", V(0.2, 0.2, 0.2), hat.Color)
+			bead.Material = Enum.Material.Neon
+			add(bead, CFrame.new(math.cos(a) * 0.6, 1.62, math.sin(a) * 0.6))
+		end
 	end
 
 	-- Glasses
@@ -476,6 +502,7 @@ local MESH_REPLACES = {
 local HEAD_GEAR = {
 	Cap = true, CapBrim = true, CapButton = true, Beanie = true, BeanieCuff = true, Pompom = true,
 	Crown = true, CrownPoint = true, CrownGem = true, CrownJewel = true, Helmet = true, HelmetRing = true,
+	PartyHat = true, PartyPom = true, PhonesBand = true, PhonesCup = true, PhonesPad = true, HaloBead = true,
 	Lens = true, GlassesBridge = true,
 }
 local MESH_HEAD_SCALE = 0.705 -- mesh head vs the primitive head
@@ -763,13 +790,68 @@ local function rigFor(model: Model): PoseRig
 	return r
 end
 
+CatBuilder.EmoteSeconds = 2.6
+
+-- Emote poses (k = seconds into the emote). Arms: +Z raises the right arm
+-- out and up, -Z the left; hips: +X swings the legs forward.
+local function emotePose(set: (string, CFrame) -> (), id: string, k: number)
+	local s = math.sin
+	if id == "Wave" then
+		set("PawShoulderR", CFrame.Angles(0, 0, 2.6 + s(k * 12) * 0.3))
+	elseif id == "Celebrate" or id == "Happy" then
+		local up = 2.5 + s(k * 10) * 0.2
+		set("PawShoulderL", CFrame.Angles(0, 0, -up))
+		set("PawShoulderR", CFrame.Angles(0, 0, up))
+		set("PawTail", CFrame.Angles(0.4, s(k * 16) * 0.6, 0))
+	elseif id == "Dance" then
+		set("PawShoulderL", CFrame.Angles(0, 0, -(1.3 + s(k * 8) * 1.1)))
+		set("PawShoulderR", CFrame.Angles(0, 0, 1.3 + s(k * 8 + math.pi) * 1.1))
+		set("PawHipL", CFrame.Angles(s(k * 8) * 0.5, 0, 0))
+		set("PawHipR", CFrame.Angles(-s(k * 8) * 0.5, 0, 0))
+		set("PawNeck", CFrame.Angles(0, 0, s(k * 8) * 0.18))
+		set("PawTail", CFrame.Angles(0.2, s(k * 16) * 0.7, 0))
+	elseif id == "Flex" then
+		set("PawShoulderL", CFrame.Angles(-0.6, 0, -1.6))
+		set("PawShoulderR", CFrame.Angles(-0.6, 0, 1.6))
+		set("PawNeck", CFrame.Angles(-0.15, s(k * 3) * 0.2, 0))
+	elseif id == "Sit" then
+		set("PawHipL", CFrame.Angles(1.4, 0, -0.1))
+		set("PawHipR", CFrame.Angles(1.4, 0, 0.1))
+		set("PawShoulderL", CFrame.Angles(0.5, 0, -0.1))
+		set("PawShoulderR", CFrame.Angles(0.5, 0, 0.1))
+		set("PawTail", CFrame.Angles(0, s(k * 2) * 0.4, 0))
+	elseif id == "Sleep" then
+		set("PawNeck", CFrame.Angles(0.35, 0, 0.25 + s(k * 1.5) * 0.04))
+		set("PawShoulderL", CFrame.Angles(0.1, 0, 0))
+		set("PawShoulderR", CFrame.Angles(0.1, 0, 0))
+		set("PawTail", CFrame.Angles(0, 0, 0))
+	elseif id == "Laugh" then
+		set("PawNeck", CFrame.Angles(-0.25 + s(k * 18) * 0.1, 0, 0))
+		set("PawShoulderL", CFrame.Angles(-0.9, 0, -0.3))
+		set("PawShoulderR", CFrame.Angles(-0.9, 0, 0.3))
+	elseif id == "Fall" then
+		set("PawShoulderL", CFrame.Angles(s(k * 14) * 0.8, 0, -1.8))
+		set("PawShoulderR", CFrame.Angles(-s(k * 14) * 0.8, 0, 1.8))
+		set("PawHipL", CFrame.Angles(s(k * 12) * 0.6, 0, 0))
+		set("PawHipR", CFrame.Angles(-s(k * 12) * 0.6, 0, 0))
+	elseif id == "Spin" then
+		set("PawShoulderL", CFrame.Angles(0, 0, -1.5))
+		set("PawShoulderR", CFrame.Angles(0, 0, 1.5))
+	end
+end
+
 -- Poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed;
--- `air` (0..1) blends into a mid-air pose (legs split, arms out).
+-- `air` (0..1) blends into a mid-air pose (legs split, arms out). The model's
+-- Emote / EmoteAt attributes (set by the server) layer an emote on top.
 function CatBuilder.Pose(model: Model, t: number, move: number, air: number?)
 	local rig = rigFor(model)
 	local j = rig.joints
 
-	local closed = (t % 3.7) < 0.12
+	local emote = model:GetAttribute("Emote")
+	local emoteAt = model:GetAttribute("EmoteAt")
+	local emoteK = (typeof(emote) == "string" and typeof(emoteAt) == "number") and (workspace:GetServerTimeNow() - emoteAt) or math.huge
+	local emoting = emoteK >= 0 and emoteK < CatBuilder.EmoteSeconds
+	local closed = (t % 3.7) < 0.12 or (emoting and emote == "Sleep")
 	if closed ~= rig.closed then
 		rig.closed = closed
 		for _, p in ipairs(rig.open) do
@@ -804,6 +886,9 @@ function CatBuilder.Pose(model: Model, t: number, move: number, air: number?)
 	end
 	set("PawNeck", CFrame.Angles(breathe * 0.025 + math.abs(math.cos(phase)) * 0.05 * walk, math.sin(t * 0.7) * 0.08 * idle, math.sin(t * 0.9) * 0.05 * idle))
 	set("PawTail", CFrame.Angles(math.sin(t * 1.6) * 0.1, math.sin(t * 2.4 + phase * walk * 0.5) * (0.3 + 0.2 * walk), 0))
+	if emoting then
+		emotePose(set, emote :: string, emoteK)
+	end
 end
 
 return CatBuilder

@@ -306,8 +306,30 @@ local function redeemCode(player: Player, code: any)
 	return { ok = true, text = "Redeemed! " .. table.concat(parts, ", ") }
 end
 
+local lastEmote: { [Player]: number } = {}
+
+-- Emotes: if the player owns it, stamp it on their character so every client
+-- poses it (Emote / EmoteAt attributes, read by CatBuilder.Pose).
+local function useEmote(player: Player, id: any)
+	if type(id) ~= "string" or os.clock() - (lastEmote[player] or 0) < 1 then
+		return
+	end
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if not hum or hum.Health <= 0 or not EconomyService.Owns(player, "Emote", id) then
+		return
+	end
+	lastEmote[player] = os.clock()
+	char:SetAttribute("Emote", id)
+	char:SetAttribute("EmoteAt", workspace:GetServerTimeNow())
+end
+
 function EconomyService.Start()
 	Remotes.Get("RedeemCode").OnServerInvoke = redeemCode
+	Remotes.Get("UseEmote").OnServerEvent:Connect(useEmote)
+	game:GetService("Players").PlayerRemoving:Connect(function(p)
+		lastEmote[p] = nil
+	end)
 	Remotes.Get("SaveSettings").OnServerEvent:Connect(function(player, patch)
 		local profile = DataService.Get(player)
 		if not profile or typeof(patch) ~= "table" then

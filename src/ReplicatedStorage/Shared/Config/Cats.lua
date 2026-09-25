@@ -45,6 +45,9 @@ Cats.Hats = {
 	{ Id = "Crown", Name = "Crown", Shape = "Crown", Color = c(255, 205, 90), UnlockLevel = 12, CoinCost = 2000 },
 	{ Id = "Space", Name = "Space Helmet", Shape = "Helmet", Color = c(200, 230, 255), UnlockLevel = 15, CoinCost = 2500 },
 	{ Id = "DiamondCrown", Name = "Diamond Crown", Shape = "Crown", Color = c(140, 230, 255), UnlockLevel = 0, CoinCost = 0, GemCost = 300 },
+	{ Id = "PartyHat", Name = "Party Hat", Shape = "PartyHat", Color = c(255, 110, 170), UnlockLevel = 2, CoinCost = 400 },
+	{ Id = "Headphones", Name = "Headphones", Shape = "Headphones", Color = c(40, 40, 52), UnlockLevel = 7, CoinCost = 900 },
+	{ Id = "Halo", Name = "Halo", Shape = "Halo", Color = c(255, 236, 150), UnlockLevel = 0, CoinCost = 0, GemCost = 250 },
 }
 
 -- Accessories (face/back items).

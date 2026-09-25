@@ -34,6 +34,8 @@ local function animate(emoteId: string)
 	local char = player.Character
 	if char then
 		char:SetAttribute("Emoting", true)
+		char:SetAttribute("Emote", emoteId)
+		char:SetAttribute("EmoteAt", workspace:GetServerTimeNow())
 	end
 	local base = r.CFrame
 
@@ -66,8 +68,8 @@ local function animate(emoteId: string)
 			restore()
 		end)
 	else
-		-- default: brief squash tween via a temporary attachment scale feel
-		task.delay(0.6, restore)
+		-- The pose itself comes from CatBuilder.Pose (Emote attributes).
+		task.delay(2.6, restore)
 	end
 end
 
