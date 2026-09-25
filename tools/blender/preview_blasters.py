@@ -45,6 +45,9 @@ def material(rgb, kind, alpha):
     b = m.node_tree.nodes["Principled BSDF"]
     b.inputs["Base Color"].default_value = srgb(rgb)
     b.inputs["Roughness"].default_value = 0.38
+    if kind == "metal":
+        b.inputs["Metallic"].default_value = 0.85
+        b.inputs["Roughness"].default_value = 0.4
     if kind == "neon":
         b.inputs["Emission Color"].default_value = srgb(rgb)
         b.inputs["Emission Strength"].default_value = 3.0
@@ -84,7 +87,7 @@ def sphere(d):
 
 def build_piece(piece, pal, offset):
     rgb = pal[piece["c"]]
-    kind = piece.get("m", "")
+    kind = piece.get("m", DATA.get("materials", {}).get(piece["c"], ""))
     alpha = piece.get("t", 0)
     k = piece["k"]
     objs = []
@@ -117,7 +120,7 @@ def build_piece(piece, pal, offset):
         place(o, piece, offset)
         o.data.materials.append(material(rgb, kind, alpha))
         for poly in o.data.polygons:
-            poly.use_smooth = k in ("pill", "cyl", "ball")
+            poly.use_smooth = k in ("pill", "ball") or (k == "cyl" and len(poly.vertices) == 4)
 
 
 def main():
@@ -131,7 +134,7 @@ def main():
     scene.world = world
     world.use_nodes = True
     world.node_tree.nodes["Background"].inputs[0].default_value = srgb((28, 36, 60))
-    world.node_tree.nodes["Background"].inputs[1].default_value = 0.9
+    world.node_tree.nodes["Background"].inputs[1].default_value = 1.3
 
     order = ["PawBlaster", "Starfall", "BoomPaw", "RapidPaw", "FrostBlaster",
              "VoidCannon", "BubbleBlaster", "GoldenPurr", "CometClaw", "PurrfectStorm"]
@@ -153,7 +156,7 @@ def main():
 
     cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = 33
+    cam.data.ortho_scale = 36
     scene.collection.objects.link(cam)
     scene.camera = cam
     target = Vector((12.4, 0, -1.8))
