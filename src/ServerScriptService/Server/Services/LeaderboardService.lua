@@ -1,6 +1,6 @@
 --!strict
--- LeaderboardService: global and per-country leaderboards (Eliminations and
--- Wins) backed by OrderedDataStores.
+-- LeaderboardService: global and per-country leaderboards (Eliminations,
+-- Wins and Trophies) backed by OrderedDataStores.
 --   * each player's country comes from LocalizationService and is published
 --     as the "Country" player attribute
 --   * stats are written every couple of minutes and when a player leaves
@@ -18,7 +18,7 @@ local DataService = require(script.Parent.DataService)
 
 local LeaderboardService = {}
 
-local METRICS = { Eliminations = true, Wins = true }
+local METRICS = { Eliminations = true, Wins = true, Trophies = true }
 local TOP = 50
 local CACHE_SECS = 60
 local PUBLISH_SECS = 120

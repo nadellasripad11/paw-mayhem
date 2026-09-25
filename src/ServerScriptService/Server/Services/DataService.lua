@@ -40,6 +40,8 @@ local function defaultProfile()
 			Wins = 0,
 			WinStreak = 0, -- wins in a row (pays a coin bonus)
 			BestWinStreak = 0,
+			Trophies = 0, -- trophy ranking (Config.Ranks)
+			LastTrophies = 0, -- change from the last match, for the results screen
 			Ringouts = 0,
 			DamageDealt = 0,
 			PowerupsGrabbed = 0,
@@ -64,6 +66,7 @@ local function defaultProfile()
 				Emote = Cats.Default.Emote,
 			},
 		},
+		RedeemedCodes = {}, -- reward codes already used (Config.Codes)
 		Receipts = {}, -- Robux purchase ids already granted (duplicate-safe)
 		StarterPackBought = false,
 		Daily = { LastDay = 0, Streak = 0 },

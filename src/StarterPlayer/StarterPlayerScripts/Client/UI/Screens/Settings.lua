@@ -195,6 +195,43 @@ local function choice(parent: Instance, order: number, label: string, key: strin
 	paint()
 end
 
+-- Reward codes: type one in, the server checks and pays it (once each).
+local function codesRow(parent: Instance, order: number)
+	local row = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 86) })
+	UIUtil.label({ Parent = row, Text = "Codes", Font = Theme.Font.Title, TextSize = 18, Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 4) })
+	local box = UIUtil.make("TextBox", {
+		Parent = row, Position = UDim2.fromOffset(0, 32), Size = UDim2.new(1, -104, 0, 34), Text = "",
+		PlaceholderText = "Enter a code", ClearTextOnFocus = false, Font = Theme.Font.Bold, TextSize = 16,
+		TextColor3 = Color3.new(1, 1, 1), PlaceholderColor3 = Theme.Color.TextDim, BackgroundColor3 = Color3.fromRGB(10, 16, 30), BorderSizePixel = 0,
+	}) :: TextBox
+	UIUtil.corner(UDim.new(0, 10), box)
+	local go = UIUtil.make("TextButton", {
+		Parent = row, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 32), Size = UDim2.fromOffset(96, 34),
+		Text = "REDEEM", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.fromRGB(8, 46, 30),
+		BackgroundColor3 = Theme.Color.Play, BorderSizePixel = 0, AutoButtonColor = true,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(0, 10), go)
+	local status = UIUtil.label({ Parent = row, Text = "", TextSize = 12, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(0, 70), Size = UDim2.new(1, 0, 0, 16) })
+	local busy = false
+	go.MouseButton1Click:Connect(function()
+		if busy or box.Text == "" then
+			return
+		end
+		busy = true
+		status.Text = "Checking..."
+		local ok, res = pcall(function()
+			return Remotes.Get("RedeemCode"):InvokeServer(box.Text)
+		end)
+		busy = false
+		local good = ok and typeof(res) == "table" and res.ok == true
+		status.Text = ok and typeof(res) == "table" and tostring(res.text) or "Try again in a moment"
+		status.TextColor3 = good and Color3.fromRGB(120, 240, 150) or Color3.fromRGB(255, 120, 120)
+		if good then
+			box.Text = ""
+		end
+	end)
+end
+
 local function cardFn(parent: Instance, order: number, title: string, color: Color3): Frame
 	local c = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundColor3 = CARD_BG, BorderSizePixel = 0, Size = UDim2.new(1 / 3, -12, 1, 0) }) :: Frame
 	UIUtil.corner(UDim.new(0, 18), c)
@@ -255,6 +292,7 @@ function Settings.Build(parent)
 		toggle(gameplay, 3, "Damage Effects", "ShowDamage", "Red flash when you take damage")
 		toggle(gameplay, 4, "Show FPS", "ShowFPS", "Frame rate in the corner")
 		toggle(gameplay, 5, "Auto Fire", "AutoFire", "Phones: shoots when your crosshair is on an enemy")
+		codesRow(gameplay, 6)
 
 		local controls = card(root, 2, "CONTROLS", Color3.fromRGB(64, 200, 255))
 		slider(controls, 1, "Mouse Sensitivity", "MouseSensitivity", 0, 1, pct)

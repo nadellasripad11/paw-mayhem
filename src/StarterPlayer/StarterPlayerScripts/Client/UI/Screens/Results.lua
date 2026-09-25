@@ -11,6 +11,7 @@ local TweenService = game:GetService("TweenService")
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
+local Ranks = require(game:GetService("ReplicatedStorage").Shared.Config.Ranks)
 
 local Results = {}
 local player = Players.LocalPlayer
@@ -132,6 +133,12 @@ function Results.Show(match)
 	if won and streak >= 2 then
 		statLabel.Text ..= string.format("   •   WIN STREAK x%d  (+%d%% COINS)", streak, math.min(streak - 1, 5) * 10)
 	end
+	-- Trophy change from this match and the tier you're now in.
+	if stats and myStats then
+		local delta = tonumber(stats.LastTrophies) or 0
+		local tier = Ranks.For(tonumber(stats.Trophies) or 0)
+		statLabel.Text ..= string.format("   •   %s%d TROPHIES (%s)", delta >= 0 and "+" or "", delta, string.upper(tier.Name))
+	end
 	Results.Update(match)
 	gui.Enabled = true
 	if won then
@@ -196,9 +203,12 @@ function Results.Build()
 	-- Bottom: your round + countdown
 	statLabel = UIUtil.label({
 		Parent = g, Text = "", Font = Theme.Font.Title, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center,
-		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -44), Size = UDim2.fromOffset(700, 30),
-		TextColor3 = Color3.fromRGB(255, 226, 120), TextStrokeTransparency = 0.3,
+		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -44), Size = UDim2.new(0.92, 0, 0, 30),
+		TextColor3 = Color3.fromRGB(255, 226, 120), TextStrokeTransparency = 0.3, TextScaled = true,
 	})
+	local fit = Instance.new("UITextSizeConstraint")
+	fit.MaxTextSize = 22
+	fit.Parent = statLabel
 	returnLabel = UIUtil.label({
 		Parent = g, Text = "", TextSize = 15, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1),
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -18), Size = UDim2.fromOffset(400, 22), TextStrokeTransparency = 0.4,

@@ -23,6 +23,7 @@ local PodiumService = require(script.Parent.PodiumService)
 local FlagService = require(script.Parent.FlagService)
 local SeasonService = require(script.Parent.SeasonService)
 local Modes = require(game:GetService("ReplicatedStorage").Shared.Config.Modes)
+local Ranks = require(game:GetService("ReplicatedStorage").Shared.Config.Ranks)
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
 
@@ -462,6 +463,12 @@ function MatchService.EndMatch(winnerTeam: string?)
 			EconomyService.AddCoins(player, math.floor(Scoring.WinBonusCoins * bonus))
 		elseif stats and s ~= nil then
 			stats.WinStreak = 0
+		end
+		-- Trophy ranking: everyone who played moves up or down.
+		if stats and s ~= nil then
+			local before = stats.Trophies or 0
+			stats.Trophies = math.max(0, before + Ranks.Delta(won, s.MatchElims or 0))
+			stats.LastTrophies = stats.Trophies - before
 		end
 		EconomyService.Push(player)
 	end

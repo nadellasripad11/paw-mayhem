@@ -134,7 +134,7 @@ local function row(entry: any)
 		TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = top3 and MEDAL[rank][1] or Color3.new(1, 1, 1),
 	})
 	UIUtil.label({
-		Parent = r, Text = metric == "Wins" and "WINS" or "ELIMS", Font = Theme.Font.Bold, TextSize = 12,
+		Parent = r, Text = metric == "Wins" and "WINS" or (metric == "Trophies" and "TROPHIES" or "ELIMS"), Font = Theme.Font.Bold, TextSize = 12,
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 0), Size = UDim2.new(0, 64, 1, 0),
 		TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Theme.Color.TextDim,
 	})
@@ -298,14 +298,15 @@ function Leaderboard.Build(parent)
 
 	-- Leaderboard: scope + metric toggles, then the list
 	local controls = UIUtil.make("Frame", { Parent = boardPage, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1 })
-	local left = UIUtil.make("Frame", { Parent = controls, Size = UDim2.new(0.6, 0, 1, 0), BackgroundTransparency = 1 })
+	local left = UIUtil.make("Frame", { Parent = controls, Size = UDim2.new(0.45, 0, 1, 0), BackgroundTransparency = 1 })
 	UIUtil.listLayout(left, 8, Enum.FillDirection.Horizontal)
 	scopeButtons.Global = pill(left, "GLOBAL", 1, function() scope = "Global"; load() end)
 	scopeButtons.Country = pill(left, "YOUR COUNTRY", 2, function() scope = "Country"; load() end)
-	local right = UIUtil.make("Frame", { Parent = controls, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.4, 0, 1, 0), BackgroundTransparency = 1 })
+	local right = UIUtil.make("Frame", { Parent = controls, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.55, 0, 1, 0), BackgroundTransparency = 1 })
 	UIUtil.listLayout(right, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	metricButtons.Eliminations = pill(right, "ELIMINATIONS", 1, function() metric = "Eliminations"; load() end)
 	metricButtons.Wins = pill(right, "WINS", 2, function() metric = "Wins"; load() end)
+	metricButtons.Trophies = pill(right, "TROPHIES", 3, function() metric = "Trophies"; load() end)
 
 	statusLabel = UIUtil.label({
 		Parent = boardPage, Text = "", TextSize = 13, TextColor3 = Theme.Color.TextDim,

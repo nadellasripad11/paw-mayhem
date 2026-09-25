@@ -11,6 +11,7 @@ local Progression = require(Shared.Config.Progression)
 local Weapons = require(Shared.Config.Weapons)
 local Cats = require(Shared.Config.Cats)
 local Monetization = require(Shared.Config.Monetization)
+local Codes = require(Shared.Config.Codes)
 local DailyRewards = require(Shared.Config.DailyRewards)
 
 local DataService = require(script.Parent.DataService)
@@ -271,7 +272,37 @@ local SETTING_RULES: { [string]: any } = {
 	Crosshair = { White = true, Green = true, Cyan = true, Pink = true, Yellow = true },
 }
 
+-- Reward codes (Config.Codes): once per player, case-insensitive.
+local function redeemCode(player: Player, code: any)
+	local profile = DataService.Get(player)
+	if not profile or type(code) ~= "string" then
+		return { ok = false, text = "Try again in a moment" }
+	end
+	local key = string.upper((string.gsub(code, "%s", "")))
+	local reward = Codes[key]
+	if not reward then
+		return { ok = false, text = "That code doesn't exist" }
+	end
+	profile.RedeemedCodes = profile.RedeemedCodes or {}
+	if profile.RedeemedCodes[key] then
+		return { ok = false, text = "You already used that code" }
+	end
+	profile.RedeemedCodes[key] = true
+	local parts = {}
+	if reward.Coins then
+		EconomyService.AddCoins(player, reward.Coins, true)
+		table.insert(parts, "+" .. reward.Coins .. " coins")
+	end
+	if reward.Gems then
+		EconomyService.AddGems(player, reward.Gems)
+		table.insert(parts, "+" .. reward.Gems .. " gems")
+	end
+	EconomyService.Push(player)
+	return { ok = true, text = "Redeemed! " .. table.concat(parts, ", ") }
+end
+
 function EconomyService.Start()
+	Remotes.Get("RedeemCode").OnServerInvoke = redeemCode
 	Remotes.Get("SaveSettings").OnServerEvent:Connect(function(player, patch)
 		local profile = DataService.Get(player)
 		if not profile or typeof(patch) ~= "table" then

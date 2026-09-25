@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
+local Ranks = require(ReplicatedStorage.Shared.Config.Ranks)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local Theme = require(script.Parent.Parent.Theme)
@@ -149,7 +150,11 @@ local function refreshCurrency()
 	end
 	coinLabel.Text = commas(p.Coins or 0)
 	gemLabel.Text = commas(p.Gems or 0)
-	levelLabel.Text = "Lv. " .. tostring(p.Level or 1)
+	-- Level + trophy tier, e.g. "Lv. 5 · GOLD 640".
+	local trophies = p.Stats and tonumber(p.Stats.Trophies) or 0
+	local tier = Ranks.For(trophies)
+	levelLabel.RichText = true
+	levelLabel.Text = string.format('Lv. %d  <font color="#%s" size="15">%s %d</font>', p.Level or 1, tier.Color:ToHex(), string.upper(tier.Name), trophies)
 	local frac = (p.LevelNeed and p.LevelNeed > 0) and (p.LevelXP / p.LevelNeed) or 0
 	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0.04, 1), 1)
 	if xpLabel then
@@ -490,7 +495,7 @@ function MainMenu.Build()
 	UIUtil.stroke(Color3.new(1, 1, 1), 2, avatarRing)
 	avatarSlot = UIUtil.make("Frame", { Parent = avatarRing, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 })
 	Icons.Place("CatFace", avatarSlot, 40, Color3.fromRGB(255, 236, 222), Color3.fromRGB(255, 248, 242))
-	levelLabel = UIUtil.label({ Parent = pill, Text = "Lv. 1", Font = Theme.Font.Title, TextSize = 19, Position = UDim2.fromOffset(62, 7), Size = UDim2.fromOffset(150, 20), ZIndex = 11 })
+	levelLabel = UIUtil.label({ Parent = pill, Text = "Lv. 1", Font = Theme.Font.Title, TextSize = 19, Position = UDim2.fromOffset(62, 7), Size = UDim2.fromOffset(165, 20), ZIndex = 11 })
 	local track = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(62, 33), Size = UDim2.fromOffset(158, 13), BackgroundColor3 = Color3.fromRGB(8, 12, 20), BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 11 })
 	UIUtil.corner(UDim.new(1, 0), track)
 	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 12 })
