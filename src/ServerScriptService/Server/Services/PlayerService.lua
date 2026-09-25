@@ -195,6 +195,9 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	local state = Runtime.Ensure(player)
 	state.Alive = true
 	state.SpawnProtectUntil = os.clock() + 2.0
+	state.SpawnedAt = os.clock()
+	state.LifeWeapon = weapon.Id
+	model:SetAttribute("Weapon", weapon.Id)
 
 	-- Death (from HP reaching 0) -> elimination by last attacker.
 	humanoid.Died:Connect(function()
@@ -203,6 +206,44 @@ function PlayerService.Spawn(player: Player, opts: any?)
 
 	Remotes.Get("ProfileUpdate") -- ensure remote exists
 	return model
+end
+
+-- The player changed their loadout. In the lobby, or in the first few seconds
+-- of a life, their cat gets it straight away (a new blaster in its paws; a
+-- new look rebuilds the cat on the spot in the lobby). Otherwise it's theirs
+-- from the next respawn.
+local LOADOUT_GRACE = 5
+local rebuildToken: { [Player]: number } = {}
+function PlayerService.ApplyLoadout(player: Player, kind: string)
+	local s = Runtime.Get(player)
+	local char = player.Character
+	local profile = DataService.Get(player)
+	if not (s and s.Alive and char and profile) then
+		return
+	end
+	local lobby = s.Context == "Lobby"
+	local now = lobby or os.clock() - (s.SpawnedAt or 0) <= LOADOUT_GRACE
+	if kind == "Weapon" or kind == "Skin" then
+		if not now or s.WeaponOverride then
+			Remotes.Get("Notify"):FireClient(player, { text = "Equipped - yours from your next respawn.", kind = "info" })
+			return
+		end
+		local loadout = profile.Loadout
+		s.LifeWeapon = loadout.Weapon
+		char:SetAttribute("Weapon", loadout.Weapon)
+		CatBuilder.SetBlaster(char, { Id = loadout.Weapon, Skin = loadout.Skin })
+	elseif lobby and (kind == "Fur" or kind == "Outfit" or kind == "Hat" or kind == "Accessory") then
+		-- Rebuild once the clicking settles.
+		local token = (rebuildToken[player] or 0) + 1
+		rebuildToken[player] = token
+		task.delay(0.6, function()
+			local st = Runtime.Get(player)
+			local c = player.Character
+			if rebuildToken[player] == token and st and st.Alive and st.Context == "Lobby" and c then
+				PlayerService.Spawn(player, { context = "Lobby", team = "Lobby", cframe = c:GetPivot() })
+			end
+		end)
+	end
 end
 
 -- Central elimination handler (HP death or ringout).
@@ -345,7 +386,9 @@ function PlayerService.Start()
 
 	Players.PlayerRemoving:Connect(function(player)
 		Runtime.Remove(player)
+		rebuildToken[player] = nil
 	end)
+	EconomyService.OnEquipped = PlayerService.ApplyLoadout
 
 	startKillFloorLoop()
 	startStatusLoop()

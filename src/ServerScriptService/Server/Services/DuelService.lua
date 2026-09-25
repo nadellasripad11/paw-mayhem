@@ -6,6 +6,8 @@
 -- wins, or whoever leads when the clock runs out. Trophies, coins and XP like
 -- a match, then everyone's back in the lobby. Duels run side by side, each on
 -- its own copy of a map far from the lobby and the arena.
+-- Nobody coming? After 15 seconds on a pad, bots fill the empty slots. Bot
+-- duels pay half and never move your trophies (no farming bots for rank).
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -21,6 +23,7 @@ local Runtime = require(script.Parent.Runtime)
 local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local SeasonService = require(script.Parent.SeasonService)
+local BotService = require(script.Parent.BotService)
 local PlayerService = require(script.Parent.PlayerService)
 local LobbyService = require(script.Parent.LobbyService)
 local ArenaKit = require(script.Parent.Parent.World.ArenaKit)
@@ -34,18 +37,22 @@ local COUNTDOWN = 3
 local SLOT_RADIUS = 2.2
 local WIN_COINS, LOSS_COINS = 40, 10
 local WIN_XP, LOSS_XP = 120, 40
+local BOT_WAIT = 15 -- seconds alone on a pad before bots fill it
 
 local TEAM_COLOR = { Blue = Color3.fromRGB(70, 150, 255), Red = Color3.fromRGB(255, 80, 90) }
 
 type Slot = { team: string, pos: Vector3, part: BasePart, player: Player? }
-type Pad = { kind: string, slots: { Slot }, title: TextLabel, sub: TextLabel, startAt: number? }
+type Pad = { kind: string, slots: { Slot }, title: TextLabel, sub: TextLabel, startAt: number?, waitingSince: number? }
 type Duel = {
 	id: number,
 	place: number,
 	kind: string,
 	map: DuelMaps.Layout,
 	folder: Folder,
+	center: Vector3,
 	teams: { [string]: { Player } },
+	bots: { [string]: { string } }, -- bot names on each side
+	withBots: boolean,
 	members: { [Player]: string },
 	score: { [string]: number },
 	kos: { [Player]: number },
@@ -141,12 +148,16 @@ local function send(duel: Duel, extra: { [string]: any }?)
 		for _, p in ipairs(list) do
 			table.insert(names[team], p.DisplayName)
 		end
+		for _, b in ipairs(duel.bots[team]) do
+			table.insert(names[team], b)
+		end
 	end
 	for p, team in pairs(duel.members) do
 		if p.Parent then
 			local data: { [string]: any } = {
 				id = duel.id, kind = duel.kind, map = duel.map.name, teams = names, score = duel.score,
 				target = TARGET, timeLeft = math.max(0, math.floor(duel.endsAt - os.clock())), myTeam = team,
+				withBots = duel.withBots,
 			}
 			for k, v in pairs(extra or {}) do
 				data[k] = v
@@ -177,25 +188,27 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 		return
 	end
 	duel.over = true
+	BotService.RemoveDuelBots(duel.id)
+	local pay = duel.withBots and 0.5 or 1
 	for p, team in pairs(duel.members) do
 		if p.Parent and inThisDuel(p, duel) then
 			local won = winner == team
 			local delta = 0
 			local profile = DataService.Get(p)
 			local stats = profile and profile.Stats
-			-- A draw leaves trophies alone.
-			if stats and winner then
+			-- A draw (or a duel with bots) leaves trophies alone.
+			if stats and winner and not duel.withBots then
 				local before = stats.Trophies or 0
 				stats.Trophies = math.max(0, before + Ranks.Delta(won, duel.kos[p] or 0))
 				delta = stats.Trophies - before
 			end
-			EconomyService.AddXP(p, won and WIN_XP or LOSS_XP)
-			EconomyService.AddCoins(p, won and WIN_COINS or LOSS_COINS)
+			EconomyService.AddXP(p, math.floor((won and WIN_XP or LOSS_XP) * pay))
+			EconomyService.AddCoins(p, math.floor((won and WIN_COINS or LOSS_COINS) * pay))
 			SeasonService.AddXP(p, "MatchPlayed")
 			EconomyService.Push(p)
 			Remotes.Get("DuelState"):FireClient(p, {
 				id = duel.id, over = true, winner = winner, won = won, draw = winner == nil,
-				forfeit = forfeit == true, trophies = delta, score = duel.score, myTeam = team,
+				forfeit = forfeit == true, trophies = delta, score = duel.score, myTeam = team, withBots = duel.withBots,
 			})
 		end
 	end
@@ -212,45 +225,33 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 	end)
 end
 
-local function startDuel(pad: Pad)
-	local teams: { [string]: { Player } } = { Blue = {}, Red = {} }
-	local members: { [Player]: string } = {}
-	for _, slot in ipairs(pad.slots) do
-		local p = slot.player
-		if p then
-			table.insert(teams[slot.team], p)
-			members[p] = slot.team
+-- Someone on `team` was knocked out (HP or off the map): the other side
+-- scores. Returns true while the duel goes on (so they respawn).
+local function scoreKO(duel: Duel, team: string, victimName: string, killer: Player?, ringout: boolean): boolean
+	local scorer = other(team)
+	duel.score[scorer] += 1
+	if killer and duel.members[killer] and duel.members[killer] ~= team then
+		duel.kos[killer] = (duel.kos[killer] or 0) + 1
+		EconomyService.AddStat(killer, "Eliminations", 1)
+	end
+	local botKiller = #duel.bots[scorer] > 0 and #duel.teams[scorer] == 0 and duel.bots[scorer][1] or nil
+	for p in pairs(duel.members) do
+		if p.Parent then
+			Remotes.Get("KillFeed"):FireClient(p, {
+				killer = killer and killer.DisplayName or botKiller or "☠", killerTeam = scorer,
+				victim = victimName, victimTeam = team, ringout = ringout,
+			})
 		end
-		slot.player = nil
 	end
-	pad.startAt = nil
-
-	local place = 1
-	while places[place] do
-		place += 1
+	if duel.score[scorer] >= TARGET then
+		send(duel)
+		finish(duel, scorer)
+		return false
 	end
-	places[place] = true
-	local id = nextId
-	nextId += 1
-	local folder = Instance.new("Folder")
-	folder.Name = "Duel" .. id
-	folder.Parent = Workspace
-	local origin = Vector3.new(4000 + place * 500, 150, -4000)
-	local map = DuelMaps.BuildRandom(origin, folder)
-
-	local duel: Duel = {
-		id = id, place = place, kind = pad.kind, map = map, folder = folder,
-		teams = teams, members = members, score = { Blue = 0, Red = 0 }, kos = {},
-		endsAt = os.clock() + DUEL_SECONDS, over = false,
-	}
-	duels[id] = duel
-	for p in pairs(members) do
-		task.spawn(spawnIn, duel, p)
-	end
-	send(duel, { started = true })
+	send(duel, { ko = victimName })
+	return true
 end
 
--- A cat in a duel was knocked out (HP or off the map): the other side scores.
 local function onDuelKO(victim: Player, killer: Player?, ringout: boolean)
 	local s = Runtime.Get(victim)
 	local duel = s and s.DuelId and duels[s.DuelId]
@@ -261,31 +262,42 @@ local function onDuelKO(victim: Player, killer: Player?, ringout: boolean)
 	if not team then
 		return
 	end
-	local scorer = other(team)
-	duel.score[scorer] += 1
-	if killer and duel.members[killer] and duel.members[killer] ~= team then
-		duel.kos[killer] = (duel.kos[killer] or 0) + 1
-		EconomyService.AddStat(killer, "Eliminations", 1)
+	if scoreKO(duel, team, victim.DisplayName, killer, ringout) then
+		task.delay(GameConfig.Character.RespawnDelay, function()
+			if inThisDuel(victim, duel) then
+				spawnIn(duel, victim)
+			end
+		end)
 	end
-	for p in pairs(duel.members) do
-		if p.Parent then
-			Remotes.Get("KillFeed"):FireClient(p, {
-				killer = killer and killer.DisplayName or "☠", killerTeam = scorer,
-				victim = victim.DisplayName, victimTeam = team, ringout = ringout,
-			})
-		end
-	end
-	if duel.score[scorer] >= TARGET then
-		send(duel)
-		finish(duel, scorer)
+end
+
+-- Bring a duel's bot (back) in on its side.
+local function spawnBot(duel: Duel, team: string, index: number, name: string?)
+	if duel.over then
 		return
 	end
-	send(duel, { ko = victim.DisplayName })
-	task.delay(GameConfig.Character.RespawnDelay, function()
-		if inThisDuel(victim, duel) then
-			spawnIn(duel, victim)
-		end
-	end)
+	local spots = duel.map.spawns[team]
+	local info: BotService.DuelInfo
+	info = {
+		id = duel.id,
+		spawn = spots[(index - 1) % #spots + 1],
+		center = duel.center,
+		killY = duel.map.killY,
+		onKO = function(botName: string, botTeam: string, killer: Player?, ringout: boolean)
+			if duel.over then
+				return
+			end
+			if scoreKO(duel, botTeam, botName, killer, ringout) then
+				task.delay(GameConfig.Character.RespawnDelay, function()
+					spawnBot(duel, botTeam, index, botName)
+				end)
+			end
+		end,
+	}
+	local botName = BotService.SpawnDuelBot(team, info, name)
+	if not name then
+		table.insert(duel.bots[team], botName)
+	end
 end
 
 local function leave(p: Player)
@@ -310,6 +322,52 @@ local function leave(p: Player)
 			end
 		end
 	end
+end
+
+local function startDuel(pad: Pad)
+	local teams: { [string]: { Player } } = { Blue = {}, Red = {} }
+	local members: { [Player]: string } = {}
+	local botSlots: { string } = {} -- empty slots bots take
+	for _, slot in ipairs(pad.slots) do
+		local p = slot.player
+		if p then
+			table.insert(teams[slot.team], p)
+			members[p] = slot.team
+		else
+			table.insert(botSlots, slot.team)
+		end
+		slot.player = nil
+	end
+	pad.startAt = nil
+	pad.waitingSince = nil
+
+	local place = 1
+	while places[place] do
+		place += 1
+	end
+	places[place] = true
+	local id = nextId
+	nextId += 1
+	local folder = Instance.new("Folder")
+	folder.Name = "Duel" .. id
+	folder.Parent = Workspace
+	local origin = Vector3.new(4000 + place * 500, 150, -4000)
+	local map = DuelMaps.BuildRandom(origin, folder)
+
+	local duel: Duel = {
+		id = id, place = place, kind = pad.kind, map = map, folder = folder, center = origin,
+		teams = teams, bots = { Blue = {}, Red = {} }, withBots = #botSlots > 0,
+		members = members, score = { Blue = 0, Red = 0 }, kos = {},
+		endsAt = os.clock() + DUEL_SECONDS, over = false,
+	}
+	duels[id] = duel
+	for p in pairs(members) do
+		task.spawn(spawnIn, duel, p)
+	end
+	for _, team in ipairs(botSlots) do
+		spawnBot(duel, team, #teams[team] + #duel.bots[team] + 1)
+	end
+	send(duel, { started = true })
 end
 
 -- ── loop ─────────────────────────────────────────────────────────────────────
@@ -349,7 +407,18 @@ local function tickPads()
 		local need = #pad.slots - filled
 		if need > 0 then
 			pad.startAt = nil
-			pad.sub.Text = filled == 0 and "Step on a pad" or ("Waiting for " .. need .. " more")
+			if filled == 0 then
+				pad.waitingSince = nil
+				pad.sub.Text = "Step on a pad"
+			else
+				pad.waitingSince = pad.waitingSince or now
+				local botIn = math.ceil(BOT_WAIT - (now - (pad.waitingSince :: number)))
+				pad.sub.Text = "Waiting for " .. need .. " more  ·  vs BOT in " .. math.max(botIn, 0)
+				if botIn <= 0 then
+					startDuel(pad)
+					pad.sub.Text = "Step on a pad"
+				end
+			end
 		else
 			pad.startAt = pad.startAt or (now + COUNTDOWN)
 			local left = math.ceil((pad.startAt :: number) - now)

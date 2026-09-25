@@ -4,6 +4,9 @@
 -- blaster's range, only shoots what it can see (flanking round cover
 -- otherwise), faces its target while strafing, dodges after being hit, goes
 -- for fish snacks when hurt, and gets itself unstuck.
+-- Duels borrow the same AI (BotService.SpawnDuelBot): a duel bot only fights
+-- the other side of its own duel, respawns where the duel says, and is kept
+-- apart from the match bots.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -112,10 +115,21 @@ type BotState = {
 	dodgeAt:         number,
 	flyUntil:        number,
 	align:           AlignOrientation,
+	duel:            DuelInfo?,
+}
+
+-- What a duel bot needs to know about its duel.
+export type DuelInfo = {
+	id:     number,
+	spawn:  CFrame,
+	center: Vector3,
+	killY:  number,
+	onKO:   (name: string, team: string, killer: Player?, ringout: boolean) -> (),
 }
 
 -- ── module-level state ───────────────────────────────────────────────────────
-local bots:          { [number]: BotState } = {}
+local bots:          { [number]: BotState } = {} -- match bots
+local duelBots:      { [number]: BotState } = {} -- bots standing in for duel players
 local modelToId:     { [Model]: number   } = {}
 local nextBotId      = 1
 -- Bots reserved but not yet in the world (staggered spawn or respawning).
@@ -132,6 +146,18 @@ BotService.OnBotEliminated = nil :: ((killer: Player, botTeam: string) -> ())?
 BotService.OnTeamPoint = nil :: ((teamId: string) -> ())?
 
 -- ── helpers ──────────────────────────────────────────────────────────────────
+local function botById(id: number?): BotState?
+	return id and (bots[id] or duelBots[id]) or nil
+end
+
+-- Is this player on the other side of the bot's fight (its match or its duel)?
+local function isFoe(bot: BotState, s: any): boolean
+	if bot.duel then
+		return s.Context == "Duel" and s.DuelId == bot.duel.id and s.DuelTeam ~= bot.team
+	end
+	return s.Context == "Match" and (Runtime.Mode == "FFA" or s.Team ~= bot.team)
+end
+
 local function pickTeam(): string
 	local counts = { Blue = 0, Red = 0 }
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -197,11 +223,11 @@ local function pickTarget(bot: BotState): (Model?, number, boolean)
 		local s    = Runtime.Get(p)
 		local char = p.Character
 		local root = char and (char.PrimaryPart :: BasePart?)
-		if s and s.Alive and s.Context == "Match" and (Runtime.Mode == "FFA" or s.Team ~= bot.team) and root and char then
+		if s and s.Alive and isFoe(bot, s) and root and char then
 			consider(char, root, s.Accumulated or 0)
 		end
 	end
-	for _, other in pairs(bots) do
+	for _, other in pairs(bot.duel and {} or bots) do
 		if other.alive and other ~= bot and (Runtime.Mode == "FFA" or other.team ~= bot.team) then
 			consider(other.model, other.root, other.accumulated)
 		end
@@ -275,8 +301,8 @@ local function botFireAt(bot: BotState, target: Model, tRoot: BasePart)
 		if victim then
 			BotService.DealDamageToPlayer(bot, victim, weapon, dir)
 		elseif hitModel and modelToId[hitModel] then
-			local other = bots[modelToId[hitModel]]
-			if other then
+			local other = botById(modelToId[hitModel])
+			if other and other.duel == nil and bot.duel == nil then
 				botHitBot(bot, other, weapon, dir)
 			end
 		end
@@ -295,7 +321,8 @@ end
 -- Apply a bot's shot to a real player.
 function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: any, dir: Vector3)
 	local vState = Runtime.Get(victim)
-	if not vState or not vState.Alive or vState.Context ~= "Match" then return end
+	if not vState or not vState.Alive or not isFoe(bot, vState) then return end
+	local inMatch = bot.duel == nil
 	if os.clock() < (vState.SpawnProtectUntil or 0) then return end
 
 	local vChar = victim.Character
@@ -307,12 +334,12 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	vState.LastBot = { name = bot.name, team = bot.team }
 	vState.LastBotAt = os.clock()
 	vState.Accumulated += dmg
-	if Runtime.Mode ~= "Ringout" then
+	if not (inMatch and Runtime.Mode == "Ringout") then
 		vHum:TakeDamage(dmg * GameConfig.Character.HealthDamageScale)
 	end
 	vState.LastAttackAt = os.clock()
 
-	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
+	local mayhem = inMatch and Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
 	local dV     = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, 0.6 * mayhem)
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
@@ -330,16 +357,16 @@ end
 
 -- Apply a player's shot to a bot (called from WeaponService via callback).
 function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: any, dir: Vector3)
-	local botId = modelToId[hitModel]
-	if not botId then return end
-	local bot = bots[botId]
+	local bot = botById(modelToId[hitModel])
 	if not bot or not bot.alive then return end
-	-- No friendly fire on your own team's bots (except Free For All).
+	-- Only its enemies can hit it: the other side of its match (no friendly
+	-- fire except Free For All) or of its duel.
 	local sState = Runtime.Get(shooter)
-	if Runtime.Mode ~= "FFA" and sState and sState.Team and sState.Team == bot.team then return end
+	if not sState or not isFoe(bot, sState) then return end
+	local inMatch = bot.duel == nil
 
 	bot.accumulated += weapon.Damage
-	if Runtime.Mode ~= "Ringout" then
+	if not (inMatch and Runtime.Mode == "Ringout") then
 		bot.humanoid:TakeDamage(weapon.Damage * GameConfig.Character.HealthDamageScale)
 	end
 	bot.lastAttacker = shooter
@@ -347,7 +374,7 @@ function BotService.HandlePlayerHit(shooter: Player, hitModel: Model, weapon: an
 	bot.hitAt = os.clock()
 	bot.model:SetAttribute("Fluff", math.floor(bot.accumulated))
 
-	local mayhem = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
+	local mayhem = inMatch and Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
 	local dV = Knockback.ComputeDeltaV(dir, bot.accumulated, weapon.Knockback, mayhem)
 	launchBot(bot, dV)
 
@@ -361,8 +388,7 @@ end
 
 -- Hazards (meteors, stampede balls, burning ground) hitting a bot.
 function BotService.EnvironmentHit(model: Model, damage: number, dV: Vector3): boolean
-	local botId = modelToId[model]
-	local bot = botId and bots[botId]
+	local bot = botById(modelToId[model])
 	if not bot or not bot.alive then return false end
 	bot.accumulated += damage
 	bot.hitAt = os.clock()
@@ -517,7 +543,7 @@ local function runBot(bot: BotState)
 	bot.strafeSign = math.random() < 0.5 and -1 or 1
 	bot.strafeFlipAt = 0
 	local lastPos, stuckSince = bot.root.Position, os.clock()
-	while bot.alive and matchActive do
+	while bot.alive and (matchActive or bot.duel ~= nil) do
 		local now = os.clock()
 
 		-- Mid-flight from a hit: hands off the controls until it lands.
@@ -536,13 +562,13 @@ local function runBot(bot: BotState)
 		end
 
 		local hurt = bot.accumulated > 100 or bot.humanoid.Health < bot.humanoid.MaxHealth * 0.4
-		local snack = hurt and nearestSnack(bot) or nil
+		local snack = hurt and not bot.duel and nearestSnack(bot) or nil
 		local target, dist, visible = pickTarget(bot)
 		local tRoot = target and target.PrimaryPart
 
 		-- Capture the Flag: carriers run home; odd bots attack the enemy flag;
 		-- everyone goes for the flag when there's nobody to fight.
-		local objective = Runtime.Mode == "CTF" and FlagService.Objective(bot.team, bot.model) or nil
+		local objective = Runtime.Mode == "CTF" and not bot.duel and FlagService.Objective(bot.team, bot.model) or nil
 		local carrying = objective ~= nil and FlagService.IsCarrier(bot.model)
 		local goFlag = objective ~= nil and (carrying or not target or (bot.id % 2 == 1 and dist > 30))
 
@@ -604,8 +630,9 @@ local function runBot(bot: BotState)
 			faceToward(bot, nil)
 			bot.humanoid.WalkSpeed = PATROL_SPEED
 			if not bot.waypoints then
-				local hill = Runtime.HillPos
-				local p = hill and (hill + Vector3.new(math.random(-8, 8), 2, math.random(-8, 8))) or nearestSnack(bot) or randomFloorPoint()
+				local hill = not bot.duel and Runtime.HillPos
+				local p = bot.duel and (bot.duel.center + Vector3.new(math.random(-6, 6), 2, math.random(-6, 6)))
+					or hill and (hill + Vector3.new(math.random(-8, 8), 2, math.random(-8, 8))) or nearestSnack(bot) or randomFloorPoint()
 				if p then
 					computePath(bot, p)
 				end
@@ -619,7 +646,7 @@ local function runBot(bot: BotState)
 end
 
 -- ── spawning ─────────────────────────────────────────────────────────────────
-local function spawnBot(botId: number, teamId: string, botName: string)
+local function spawnBot(botId: number, teamId: string, botName: string, duel: DuelInfo?)
 	local weapon, rangeMin, rangeMax = rollWeapon()
 	local skill = lerp(SKILL_MIN, SKILL_MAX, math.random())
 	local model = CatBuilder.Build(nil, botName, { Id = weapon.Id })
@@ -647,7 +674,7 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 	weld.Parent = ring
 	ring.Parent = model
 
-	model:PivotTo(PlayerService.PickSpawn(teamId))
+	model:PivotTo(duel and duel.spawn or PlayerService.PickSpawn(teamId))
 	model.Parent = Workspace
 	-- The server simulates bots (ownership can only be set once parented).
 	pcall(function() root:SetNetworkOwner(nil) end)
@@ -677,9 +704,13 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		aimError = lerp(AIM_ERROR_DEG[1], AIM_ERROR_DEG[2], skill),
 		reaction = lerp(REACTION_SECS[1], REACTION_SECS[2], skill),
 		fireDelay = lerp(FIRE_DELAY[1], FIRE_DELAY[2], skill),
-		hitAt = 0, dodgeAt = 0, flyUntil = 0, align = align,
+		hitAt = 0, dodgeAt = 0, flyUntil = 0, align = align, duel = duel,
 	}
-	bots[botId]      = bot
+	if duel then
+		duelBots[botId] = bot
+	else
+		bots[botId] = bot
+	end
 	modelToId[model] = botId
 
 	-- Elimination handler
@@ -687,7 +718,16 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		if not bot.alive then return end
 		bot.alive = false
 		bots[botId]      = nil
+		duelBots[botId]  = nil
 		modelToId[model] = nil
+		task.delay(2, function()
+			if model.Parent then model:Destroy() end
+		end)
+		-- A duel scores (and respawns) its own knockouts.
+		if duel then
+			duel.onKO(botName, teamId, bot.lastAttacker, root.Position.Y < duel.killY + 20)
+			return
+		end
 		local raisedFloor = Workspace:GetAttribute("KillFloorY")
 		local ringout = root.Position.Y < math.max(GameConfig.Character.KillFloorY, typeof(raisedFloor) == "number" and raisedFloor or -math.huge) + 20
 
@@ -735,9 +775,6 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 				spawnBot(botId, teamId, botName)
 			end
 		end)
-		task.delay(2, function()
-			if model.Parent then model:Destroy() end
-		end)
 	end)
 
 	-- Kill floor for bots
@@ -747,7 +784,9 @@ local function spawnBot(botId: number, teamId: string, botName: string)
 		local raised = Workspace:GetAttribute("KillFloorY")
 		local arena = Workspace:FindFirstChild("Arena")
 		local mapFloor = arena and arena:GetAttribute("KillFloorY")
-		if root.Position.Y < math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge, typeof(mapFloor) == "number" and mapFloor or -math.huge) then
+		local floorY = duel and duel.killY
+			or math.max(GameConfig.Character.KillFloorY, typeof(raised) == "number" and raised or -math.huge, typeof(mapFloor) == "number" and mapFloor or -math.huge)
+		if root.Position.Y < floorY then
 			-- Let the Died handler run normally so the bot respawns.
 			floorConn:Disconnect()
 			humanoid.Health = 0
@@ -871,6 +910,28 @@ function BotService.Positions(): { { team: string, pos: Vector3 } }
 		end
 	end
 	return out
+end
+
+-- A bot for one side of a duel (a player waited on a duel pad with nobody
+-- to fight). Returns its name.
+function BotService.SpawnDuelBot(team: string, duel: DuelInfo, name: string?): string
+	local id = nextBotId
+	nextBotId += 1
+	local botName = name or BOT_NAMES[math.random(1, #BOT_NAMES)]
+	spawnBot(id, team, botName, duel)
+	return botName
+end
+
+-- A duel ended: its bots go.
+function BotService.RemoveDuelBots(duelId: number)
+	for id, bot in pairs(duelBots) do
+		if bot.duel and bot.duel.id == duelId then
+			bot.alive = false
+			duelBots[id] = nil
+			modelToId[bot.model] = nil
+			if bot.model.Parent then bot.model:Destroy() end
+		end
+	end
 end
 
 function BotService.DespawnAll()

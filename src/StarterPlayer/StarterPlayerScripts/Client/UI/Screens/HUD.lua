@@ -6,6 +6,7 @@
 --   * Compact health bar, your knockback % and active power-up (bottom left)
 --   * Small weapon + ammo pill (bottom center)
 --   * Mobile: FIRE / JUMP / RUN / DASH / POUNCE buttons (bottom right); PC: Q dash + E pounce chips
+--   * A small LOADOUT button (top left, or B) to change blasters mid-match
 --   * Announcements (supply drops, streaks, events, Mayhem Mode) under the timer
 --   * Transient banners: countdown, Get Ready, Eliminated, notices
 --   * Kill feed (top right) and a KNOCKOUT! / RING OUT! pop with multi-KOs
@@ -505,7 +506,7 @@ local function onDuelState(d: any)
 	end
 	local foes = typeof(d.teams) == "table" and d.teams[theirs]
 	if d.target and typeof(foes) == "table" then
-		r.sub.Text = "FIRST TO " .. tostring(d.target) .. "  ·  VS " .. string.upper(table.concat(foes, " & "))
+		r.sub.Text = "FIRST TO " .. tostring(d.target) .. "  ·  VS " .. string.upper(table.concat(foes, " & ")) .. (d.withBots and "  ·  NO TROPHIES" or "")
 	end
 	if d.started then
 		HUD.ShowBig(tostring(d.map or "DUEL"), Theme.Color.Text, 1.6)
@@ -516,7 +517,11 @@ local function onDuelState(d: any)
 		local text = d.draw and "DRAW" or d.won and "VICTORY" or "DEFEAT"
 		HUD.ShowBig(text, d.draw and Theme.Color.Text or d.won and Theme.Color.Coin or Theme.Color.Danger, 3.5)
 		local t = tonumber(d.trophies) or 0
-		HUD.ShowElim((d.forfeit and "They left  ·  " or "") .. (t >= 0 and "+" or "") .. tostring(t) .. " TROPHIES")
+		if d.withBots then
+			HUD.ShowElim("BOT DUEL  ·  HALF REWARDS")
+		else
+			HUD.ShowElim((d.forfeit and "They left  ·  " or "") .. (t >= 0 and "+" or "") .. tostring(t) .. " TROPHIES")
+		end
 	end
 end
 
@@ -567,6 +572,44 @@ function HUD.Announce(data: any)
 		TweenService:Create(a.title, info, { TextTransparency = 1 }):Play()
 		TweenService:Create(a.stroke, info, { Transparency = 1 }):Play()
 		TweenService:Create(a.sub, info, { TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+	end)
+end
+
+-- ── loadout button (top left, matches and duels) ─────────────────────────────
+-- Set by UIManager: open the Loadout screen over the game.
+HUD.OnLoadout = nil :: (() -> ())?
+
+local function buildLoadoutButton(parent)
+	local b = UIUtil.make("TextButton", {
+		Parent = parent, Name = "LoadoutButton", Text = "", AutoButtonColor = false,
+		Position = UDim2.fromOffset(12, UIUtil.topInset() + 8), Size = UDim2.fromOffset(isMobile() and 48 or 58, 40),
+		BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0,
+	}) :: TextButton
+	b:SetAttribute("HudPart", "Loadout")
+	UIUtil.corner(UDim.new(0, 10), b)
+	UIUtil.stroke(Theme.Color.Stroke, 1.5, b)
+	local slot = UIUtil.make("Frame", {
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 22, 0.5, 0),
+		Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1,
+	})
+	Icons.Place("Gun", slot, 22, Color3.new(1, 1, 1), Color3.new(1, 1, 1))
+	if not isMobile() then
+		UIUtil.label({
+			Parent = b, Text = "B", Font = Theme.Font.Title, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Center,
+			AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0), Size = UDim2.fromOffset(18, 18),
+			BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(255, 214, 90), TextColor3 = Color3.fromRGB(40, 30, 10),
+		})
+	end
+	local function open()
+		if HUD.OnLoadout and (hudMode == "Match" or hudMode == "Duel") then
+			HUD.OnLoadout()
+		end
+	end
+	b.MouseButton1Click:Connect(open)
+	UserInputService.InputBegan:Connect(function(input, gpe)
+		if not gpe and input.KeyCode == Enum.KeyCode.B then
+			open()
+		end
 	end)
 end
 
@@ -881,8 +924,10 @@ local function updateWeapon()
 	local profile = ClientState.Profile
 	if not refs.weaponName then return end
 	-- A supply-drop blaster (on the character) shows instead of the loadout.
-	local override = player.Character and player.Character:GetAttribute("WeaponOverride")
-	local id = typeof(override) == "string" and override or (profile and profile.Loadout.Weapon)
+	local char = player.Character
+	local override = char and char:GetAttribute("WeaponOverride")
+	local life = char and char:GetAttribute("Weapon")
+	local id = typeof(override) == "string" and override or typeof(life) == "string" and life or (profile and profile.Loadout.Weapon)
 	local w = id and Weapons.Get(id)
 	if w then
 		refs.weaponName.Text = string.upper(w.Name)
@@ -894,8 +939,8 @@ end
 -- Which parts each place shows: the whole HUD in a match, the crosshair and
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
-	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
-	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true },
+	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true, Loadout = true },
+	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true, Loadout = true },
 	Range = { Aim = true, Weapon = true, Moves = true },
 	Lobby = { Moves = true },
 }
@@ -931,6 +976,7 @@ function HUD.Build()
 	buildHealth(gui)
 	buildAmmo(gui)
 	buildDashChip(gui)
+	buildLoadoutButton(gui)
 	buildBanners(gui)
 	buildMobile(gui)
 	buildKillFeed(gui)
@@ -941,6 +987,7 @@ function HUD.Build()
 	updateScoreBar(ClientState.Match)
 	local function watchCharacter(char: Model)
 		char:GetAttributeChangedSignal("WeaponOverride"):Connect(updateWeapon)
+		char:GetAttributeChangedSignal("Weapon"):Connect(updateWeapon)
 		updateWeapon()
 	end
 	if player.Character then

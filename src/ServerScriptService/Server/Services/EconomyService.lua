@@ -244,8 +244,14 @@ function EconomyService.Equip(player: Player, kind: string, id: string)
 		return { ok = false }
 	end
 	EconomyService.Push(player)
+	if EconomyService.OnEquipped then
+		EconomyService.OnEquipped(player, kind)
+	end
 	return { ok = true }
 end
+
+-- Set by PlayerService: put a loadout change on the player's cat.
+EconomyService.OnEquipped = nil :: ((player: Player, kind: string) -> ())?
 
 function EconomyService.ClaimQuest(player: Player, questId: string)
 	local profile = DataService.Get(player)

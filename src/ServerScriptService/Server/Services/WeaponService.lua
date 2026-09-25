@@ -55,7 +55,9 @@ local function getEquippedWeapon(player: Player)
 	if not profile then
 		return nil
 	end
-	local id = profile.Loadout.Weapon
+	-- The blaster this life spawned with (a loadout change waits for the next
+	-- one, see PlayerService.ApplyLoadout).
+	local id = state and state.LifeWeapon or profile.Loadout.Weapon
 	-- Must own it.
 	if not profile.Unlocks.Weapons[id] then
 		return nil

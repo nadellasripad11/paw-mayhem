@@ -143,22 +143,28 @@ local function inPracticeRange(): boolean
 	return math.abs(d.X) < RANGE_HALF_X and d.Z > -RANGE_BACK and d.Z < RANGE_FRONT and math.abs(d.Y) < 25
 end
 
--- In the lobby: aim + shoot inside the practice range (no screen open), a free
--- mouse everywhere else. Checked a few times a second.
-local lobbyAim: boolean? = nil
-local function updateLobbyAim(force: boolean?)
-	if context() ~= "Lobby" or not alive or queuedCountdown() then
-		lobbyAim = nil
+-- Aim + shoot, or a free mouse: in a match or duel you aim unless a screen
+-- (Loadout) is open over it; in the lobby only inside the practice range.
+-- Checked a few times a second.
+local aiming: boolean? = nil
+local function updateAim(force: boolean?)
+	local ctx = context()
+	local fighting = ctx == "Match" or ctx == "Duel"
+	if not alive or not (fighting or ctx == "Lobby") or queuedCountdown()
+		or (ctx == "Match" and ClientState.Match.phase == "Results") then
+		aiming = nil
 		return
 	end
-	local aim = inPracticeRange() and not MainMenu.Busy()
-	if aim == lobbyAim and not force then
+	local aim = not MainMenu.Busy() and (fighting or inPracticeRange())
+	if aim == aiming and not force then
 		return
 	end
-	lobbyAim = aim
+	aiming = aim
 	CameraController.SetFreeMouse(not aim)
 	CombatController.SetEnabled(aim)
-	HUD.SetMode(aim and "Range" or "Lobby")
+	if ctx == "Lobby" then
+		HUD.SetMode(aim and "Range" or "Lobby")
+	end
 end
 
 -- Put the screen in the right state for where the cat is and the phase.
@@ -171,18 +177,20 @@ local function refresh()
 	if ctx == "Match" or ctx == "Duel" then
 		flyoverUntil = 0
 		if fallbackGui then fallbackGui.Enabled = false end
-		MainMenu.SetVisible(false)
+		if not MainMenu.InGameOpen() then
+			MainMenu.SetVisible(false)
+		end
 		if phase == "Results" and ctx == "Match" then
+			MainMenu.SetVisible(false)
 			return -- the replay and podium have the screen (see onPhase)
 		end
 		CameraController.SetLobbyView(false)
-		CameraController.SetFreeMouse(false)
 		HUD.SetMode(ctx)
 		HUD.SetVisible(alive)
 		Results.Hide()
 		if alive then
 			CameraController.SetEnabled(true)
-			CombatController.SetEnabled(true)
+			updateAim(true)
 		end
 	elseif ctx == "Lobby" and alive then
 		if fallbackGui then fallbackGui.Enabled = false end
@@ -210,7 +218,7 @@ local function refresh()
 		HUD.HideBig()
 		HUD.SetVisible(true)
 		CameraController.SetEnabled(true)
-		updateLobbyAim(true)
+		updateAim(true)
 	else
 		-- Not spawned yet: the menu over the 3D lobby scene.
 		HUD.SetVisible(false)
@@ -363,6 +371,10 @@ function UIManager.Start()
 	CameraController.SetLobbyView(true)
 
 	ClientState.MatchChanged:Connect(onPhase)
+	-- Mid-match loadout: the Loadout screen over the game.
+	HUD.OnLoadout = function()
+		MainMenu.OpenInGame("Loadout")
+	end
 
 	if player.Character then
 		task.spawn(onCharacter, player.Character)
@@ -384,7 +396,7 @@ function UIManager.Start()
 	task.spawn(function()
 		while true do
 			task.wait(0.15)
-			updateLobbyAim()
+			updateAim()
 		end
 	end)
 

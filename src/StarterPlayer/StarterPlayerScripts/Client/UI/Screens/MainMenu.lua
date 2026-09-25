@@ -52,6 +52,7 @@ local SCREEN_TITLES = {
 }
 local navButtons = {}
 local currentPanel
+local inGame = false -- a screen opened over a match or duel (only it shows)
 
 local NAV = {
 	{ id = "Shop", label = "SHOP", icon = "Bag" },
@@ -96,15 +97,44 @@ local function switchTo(id: string?)
 	if relayoutFn then
 		relayoutFn()
 	end
+	if panelBackdrop then
+		-- Over a match the game stays visible behind the screen.
+		panelBackdrop.BackgroundTransparency = inGame and 0.35 or 0.04
+	end
+	-- Closing a screen opened over a match hides the menu again.
+	if id == nil and inGame then
+		inGame = false
+		if gui then
+			gui.Enabled = false
+		end
+	end
 end
 
 MainMenu.Open = function(id: string?)
 	switchTo(id)
 end
 
--- A screen or the map picker is up (the lobby frees the mouse and stops aiming).
+-- A screen or the map picker is up (the mouse is freed and aiming stops).
 function MainMenu.Busy(): boolean
 	return currentPanel ~= nil or MapSelect.IsOpen()
+end
+
+-- Open one screen over a match or duel (Loadout); again to close it.
+function MainMenu.OpenInGame(id: string)
+	if not gui or not panels or not panels[id] then
+		return
+	end
+	if inGame and currentPanel == id then
+		switchTo(nil)
+		return
+	end
+	inGame = true
+	gui.Enabled = true
+	switchTo(id)
+end
+
+function MainMenu.InGameOpen(): boolean
+	return inGame
 end
 
 local function textStroke(label: Instance, color: Color3, thickness: number): UIStroke
@@ -173,6 +203,9 @@ local function refreshCurrency()
 end
 
 function MainMenu.SetVisible(on: boolean)
+	if on then
+		inGame = false -- back in the lobby: the full menu again
+	end
 	if gui then
 		gui.Enabled = on
 	end

@@ -21,6 +21,8 @@ export type PlayerState = {
 	SpawnProtectUntil: number, -- brief invuln after spawn
 	Streak: number, -- eliminations since last death (kill streak)
 	WeaponOverride: string?, -- supply-drop weapon held for the rest of this life
+	LifeWeapon: string?, -- the loadout blaster this life spawned with
+	SpawnedAt: number?, -- os.clock() of the last spawn (loadout changes apply at once shortly after)
 	Context: string?, -- where the cat is: "Lobby" | "Match" | "Duel"
 	DuelId: number?, -- which duel (Context "Duel")
 	DuelTeam: string?, -- side in that duel

@@ -83,6 +83,12 @@ local function currentWeapon()
 	if typeof(override) == "string" and Weapons.Get(override) then
 		return Weapons.Get(override)
 	end
+	-- Then the blaster this life spawned with (a loadout change can wait for
+	-- the next respawn), then the saved loadout.
+	local life = player.Character and player.Character:GetAttribute("Weapon")
+	if typeof(life) == "string" and Weapons.Get(life) then
+		return Weapons.Get(life)
+	end
 	local profile = ClientState.Profile
 	local id = profile and profile.Loadout.Weapon or Weapons.DefaultLoadout
 	return Weapons.Get(id) or Weapons.Get(Weapons.DefaultLoadout)
