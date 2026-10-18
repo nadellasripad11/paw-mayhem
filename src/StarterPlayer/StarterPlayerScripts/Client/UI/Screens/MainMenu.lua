@@ -529,6 +529,8 @@ function MainMenu.Build()
 	if not ok then
 		warn("[PAW MAYHEM] Map select failed to build: " .. tostring(err))
 	end
+	-- Every screen (and the map picker) onto the clean look.
+	UIUtil.restyle(gui)
 
 	ClientState.ProfileChanged:Connect(refreshCurrency)
 	if ClientState.Profile then

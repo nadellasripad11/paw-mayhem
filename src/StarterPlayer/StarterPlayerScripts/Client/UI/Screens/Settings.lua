@@ -21,7 +21,7 @@ local player = Players.LocalPlayer
 local CARD_BG = Color3.fromRGB(22, 38, 68)
 local TRACK = Color3.fromRGB(12, 22, 42)
 local ON = Color3.fromRGB(96, 214, 120)
-local ACCENT = Color3.fromRGB(64, 200, 255)
+local ACCENT = Theme.Color.Blue
 
 -- ── saving (debounced) ───────────────────────────────────────────────────────
 local pending: { [string]: any } = {}
@@ -195,7 +195,7 @@ local function choice(parent: Instance, order: number, label: string, key: strin
 			local on = ClientState.Settings[key] == id
 			local base = colors and colors[id]
 			b.BackgroundColor3 = base or (on and ACCENT or TRACK)
-			b.TextColor3 = (on and not base) and Color3.fromRGB(8, 30, 52) or Color3.new(1, 1, 1)
+			b.TextColor3 = Color3.new(1, 1, 1)
 			local st = b:FindFirstChildOfClass("UIStroke")
 			if st then
 				st.Transparency = on and 0 or 1

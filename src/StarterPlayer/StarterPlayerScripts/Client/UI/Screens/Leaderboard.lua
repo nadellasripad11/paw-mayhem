@@ -71,7 +71,7 @@ local function paint(buttons: { [string]: TextButton }, active: string)
 	for id, b in pairs(buttons) do
 		local on = id == active
 		b.BackgroundColor3 = on and Color3.fromRGB(64, 200, 255) or CARD_BG
-		b.TextColor3 = on and Color3.fromRGB(8, 30, 52) or Color3.new(1, 1, 1)
+		b.TextColor3 = Color3.new(1, 1, 1)
 	end
 end
 

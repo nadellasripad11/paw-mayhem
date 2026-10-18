@@ -387,7 +387,7 @@ function Shop.Build(parent)
 		for tid, b in pairs(tabButtons) do
 			local on = tid == id
 			b.BackgroundColor3 = on and Color3.fromRGB(64, 200, 255) or Color3.fromRGB(22, 38, 68)
-			b.TextColor3 = on and Color3.fromRGB(8, 30, 52) or Color3.new(1, 1, 1)
+			b.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
 		end
 		for _, tab in ipairs(TABS) do
 			if tab.id == id and not built[id] then

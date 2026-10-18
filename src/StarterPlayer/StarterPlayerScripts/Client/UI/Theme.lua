@@ -18,7 +18,7 @@ Theme.Color = {
 	TextDim = Color3.fromRGB(185, 211, 232),
 	TextMuted = Color3.fromRGB(123, 158, 185),
 
-	Accent = Color3.fromRGB(35, 190, 255), -- electric cyan
+	Accent = Color3.fromRGB(64, 156, 255), -- the one accent blue (same as Blue)
 	Accent2 = Color3.fromRGB(171, 91, 255), -- blaster purple
 	Play = Color3.fromRGB(108, 225, 104), -- green CTA
 	PlayDark = Color3.fromRGB(51, 158, 91),

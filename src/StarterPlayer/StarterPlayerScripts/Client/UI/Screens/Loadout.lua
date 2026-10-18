@@ -222,9 +222,9 @@ function Loadout.Build(parent)
 		skinGrid.Visible = on
 		title.Text = on and "WEAPON SKINS" or "WEAPONS"
 		weaponsTab.BackgroundColor3 = on and TAB_OFF or TAB_ON
-		weaponsTab.TextColor3 = on and Theme.Color.Text or Color3.fromRGB(7, 35, 58)
+		weaponsTab.TextColor3 = on and Theme.Color.TextDim or Color3.new(1, 1, 1)
 		skinsTab.BackgroundColor3 = on and TAB_ON or TAB_OFF
-		skinsTab.TextColor3 = on and Color3.fromRGB(7, 35, 58) or Theme.Color.Text
+		skinsTab.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
 	end
 	weaponsTab.MouseButton1Click:Connect(function() showSkins(false) end)
 	skinsTab.MouseButton1Click:Connect(function() showSkins(true) end)

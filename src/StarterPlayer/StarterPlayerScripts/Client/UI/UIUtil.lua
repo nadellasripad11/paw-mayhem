@@ -503,4 +503,74 @@ function UIUtil.currencyPill(props: { [string]: any }, icon: string, iconColor: 
 	return pill, amount, plus
 end
 
+
+-- ── restyle: bring older screens onto the clean look ────────────────────────
+-- Older screens hard-code their own navy shades, bluish outlines and
+-- gradients. restyle(root) maps every navy background onto the three surface
+-- levels (by brightness), turns bluish outlines into hairlines, drops navy
+-- gradients and swaps the old cyan highlight for the accent blue - now, for
+-- anything added later, and whenever a screen recolours something (selected
+-- tabs, equipped cards), so they all share one look.
+local OLD_CYAN = Color3.fromRGB(64, 200, 255)
+
+local function luminance(c: Color3): number
+	return 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B
+end
+
+local function isNavy(c: Color3): boolean
+	return c.B >= c.R + 0.04 and c.B >= c.G and luminance(c) < 0.3
+end
+
+local function surfaceFor(c: Color3): Color3
+	local l = luminance(c)
+	if l < 0.09 then
+		return Theme.Color.Surface
+	elseif l < 0.15 then
+		return Theme.Color.Surface2
+	end
+	return Theme.Color.Surface3
+end
+
+local function restyleOne(d: Instance)
+	if d:IsA("GuiObject") and d.BackgroundTransparency < 1 then
+		local function fix()
+			local c = d.BackgroundColor3
+			if c == OLD_CYAN then
+				d.BackgroundColor3 = Theme.Color.Blue
+			elseif isNavy(c) then
+				local want = surfaceFor(c)
+				if want ~= c then
+					d.BackgroundColor3 = want
+				end
+			end
+		end
+		fix()
+		d:GetPropertyChangedSignal("BackgroundColor3"):Connect(fix)
+	elseif d:IsA("UIStroke") and d.Thickness <= 2.5 then
+		local function fix()
+			if isNavy(d.Color) or (d.Color.B > d.Color.R and luminance(d.Color) < 0.65 and d.Color ~= Theme.Color.Blue) then
+				d.Color = Theme.Color.Line
+				d.Transparency = math.max(d.Transparency, Theme.LineAlpha)
+				d.Thickness = 1
+			end
+		end
+		fix()
+		d:GetPropertyChangedSignal("Color"):Connect(fix)
+	elseif d:IsA("UIGradient") then
+		local keys = d.Color.Keypoints
+		if #keys >= 2 and isNavy(keys[1].Value) and isNavy(keys[#keys].Value) then
+			d.Enabled = false
+		end
+	end
+end
+
+function UIUtil.restyle(root: Instance)
+	for _, d in ipairs(root:GetDescendants()) do
+		restyleOne(d)
+	end
+	root.DescendantAdded:Connect(function(d)
+		task.defer(restyleOne, d) -- after the builder has set its properties
+	end)
+end
+
 return UIUtil
