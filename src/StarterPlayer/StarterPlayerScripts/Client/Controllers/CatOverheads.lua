@@ -1,5 +1,6 @@
 --!strict
 -- CatOverheads: floating info above every other cat in the arena.
+--   * its name: red for enemies, blue for teammates, white in the lobby
 --   * knockback % (the server's "Fluff" attribute): white at 0, heating up to
 --     yellow, orange and red as the cat gets closer to flying off the map
 --   * ON FIRE ×N with its bounty, plus a fire aura, while on a kill streak
@@ -16,6 +17,50 @@ local CatBuilder = require(ReplicatedStorage.Shared.Character.CatBuilder)
 local CatOverheads = {}
 
 local player = Players.LocalPlayer
+local ClientState = require(script.Parent.Parent.ClientState)
+
+local ENEMY = Color3.fromRGB(255, 82, 92)
+local ALLY = Color3.fromRGB(110, 190, 255)
+local NEUTRAL = Color3.fromRGB(255, 255, 255)
+
+-- Is this cat someone you're fighting? (Lobby cats and practice targets aren't
+-- enemies; Free For All matches make everyone one.)
+local function relation(model: Model): Color3
+	local mine = player.Character and player.Character:GetAttribute("Team")
+	local theirs = model:GetAttribute("Team")
+	if mine == nil or mine == "Lobby" or theirs == "Lobby" or theirs == "Dummy" then
+		return NEUTRAL
+	end
+	local match = ClientState.Match
+	if match and match.mode == "FFA" and player:GetAttribute("Context") == "Match" then
+		return ENEMY
+	end
+	return theirs == mine and ALLY or ENEMY
+end
+
+-- The name a cat goes by: the player's display name, or a bot's own name.
+local function nameOf(model: Model): string
+	local owner = Players:GetPlayerFromCharacter(model)
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "CatName"
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.AnchorPoint = Vector2.new(0.5, 1)
+	nameLabel.Size = UDim2.new(1, 0, 0, 18)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextScaled = true
+	nameLabel.TextStrokeTransparency = 0.3
+	nameLabel.Text = nameOf(model)
+	nameLabel.Parent = gui
+	local function paintName()
+		nameLabel.TextColor3 = relation(model)
+	end
+	if owner then
+		return owner.DisplayName
+	end
+	local tag = model:FindFirstChild("DisplayName")
+	return tag and tag:IsA("StringValue") and tag.Value or model.Name
+end
 
 -- 0% white -> 60% yellow -> 120% orange -> 180%+ red.
 function CatOverheads.FluffColor(fluff: number): Color3
@@ -48,7 +93,7 @@ local function attach(model: Model)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "PawOverhead"
 	gui.Adornee = head
-	gui.Size = UDim2.fromOffset(150, 64)
+	gui.Size = UDim2.fromOffset(160, 86)
 	gui.StudsOffset = Vector3.new(0, 2.4, 0)
 	gui.MaxDistance = 150
 	gui.LightInfluence = 0
@@ -88,7 +133,10 @@ local function attach(model: Model)
 			pct.Text = '<font color="#FFD34A">VIP</font> ' .. pct.Text
 		end
 		pct.TextColor3 = CatOverheads.FluffColor(f)
-		pct.Size = UDim2.new(1, 0, 0, 24 + math.clamp(f / 180, 0, 1) * 12)
+		local h = 24 + math.clamp(f / 180, 0, 1) * 12
+		pct.Size = UDim2.new(1, 0, 0, h)
+		nameLabel.Position = UDim2.new(0.5, 0, 1, -h)
+		paintName()
 
 		local s = model:GetAttribute("Streak")
 		local n = typeof(s) == "number" and s or 0
@@ -118,6 +166,13 @@ local function attach(model: Model)
 		owner:GetAttributeChangedSignal("VIP"):Connect(refresh)
 	end
 	refresh()
+	-- Teams change on respawn and between lobby, match and duel: repaint now and then.
+	task.spawn(function()
+		while gui.Parent do
+			paintName()
+			task.wait(0.5)
+		end
+	end)
 end
 
 function CatOverheads.Start()
