@@ -86,20 +86,20 @@ local function buildPad(def: any, parent: Instance)
 	-- round slot for each player.
 	deco(ArenaKit.NewPart("DuelPad", Vector3.new(w, 0.3, d), CFrame.new(center + Vector3.new(0, 0.15, 0)), Color3.fromRGB(26, 30, 48), Enum.Material.SmoothPlastic, parent))
 	for _, half in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
-		local tint = deco(ArenaKit.NewPart("PadHalf", Vector3.new(w / 2 - 0.6, 0.05, d - 0.6), CFrame.new(center + Vector3.new(half[2] * w / 4, 0.32, 0)), TEAM_COLOR[half[1]], Enum.Material.Neon, parent))
-		tint.Transparency = 0.85
+		local tint = deco(ArenaKit.NewPart("PadHalf", Vector3.new(w / 2 - 0.6, 0.05, d - 0.6), CFrame.new(center + Vector3.new(half[2] * w / 4, 0.32, 0)), TEAM_COLOR[half[1]], Enum.Material.SmoothPlastic, parent))
+		tint.Transparency = 0.6
 	end
 	for _, e in ipairs({ { 0, d / 2, w, 0.25 }, { 0, -d / 2, w, 0.25 }, { w / 2, 0, 0.25, d }, { -w / 2, 0, 0.25, d } }) do
-		deco(ArenaKit.NewPart("PadEdge", Vector3.new(e[3], 0.12, e[4]), CFrame.new(center + Vector3.new(e[1], 0.34, e[2])), Color3.fromRGB(220, 230, 255), Enum.Material.Neon, parent))
+		deco(ArenaKit.NewPart("PadEdge", Vector3.new(e[3], 0.12, e[4]), CFrame.new(center + Vector3.new(e[1], 0.34, e[2])), Color3.fromRGB(200, 206, 222), Enum.Material.SmoothPlastic, parent))
 	end
-	deco(ArenaKit.NewPart("PadSplit", Vector3.new(0.2, 0.1, d - 1), CFrame.new(center + Vector3.new(0, 0.34, 0)), Color3.fromRGB(220, 230, 255), Enum.Material.Neon, parent)).Transparency = 0.4
+	deco(ArenaKit.NewPart("PadSplit", Vector3.new(0.2, 0.1, d - 1), CFrame.new(center + Vector3.new(0, 0.34, 0)), Color3.fromRGB(200, 206, 222), Enum.Material.SmoothPlastic, parent)).Transparency = 0.4
 
 	local pad: Pad = { kind = def.kind, slots = {}, count = nil :: any, sub = nil :: any, startAt = nil }
 	local offsets = is2v2 and { { "Blue", -3.2, -2.6 }, { "Blue", -3.2, 2.6 }, { "Red", 3.2, -2.6 }, { "Red", 3.2, 2.6 } }
 		or { { "Blue", -3, 0 }, { "Red", 3, 0 } }
 	for _, o in ipairs(offsets) do
 		local pos = center + Vector3.new(o[2], 0, o[3])
-		local slot = deco(ArenaKit.NewDisc("Slot", 4, 0.2, pos + Vector3.new(0, 0.4, 0), TEAM_COLOR[o[1]], Enum.Material.Neon, parent))
+		local slot = deco(ArenaKit.NewDisc("Slot", 4, 0.2, pos + Vector3.new(0, 0.4, 0), TEAM_COLOR[o[1]], Enum.Material.SmoothPlastic, parent))
 		slot.Transparency = 0.55
 		table.insert(pad.slots, { team = o[1], pos = pos, part = slot, player = nil })
 	end
@@ -109,7 +109,7 @@ local function buildPad(def: any, parent: Instance)
 	local wallX = def.screenX or def.wall * 16.75
 	local screenPos = at(wallX, def.z, 7)
 	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0))
-	deco(ArenaKit.NewPart("ScreenEdge", Vector3.new(8.6, 5.6, 0.15), face * CFrame.new(0, 0, 0.2), is2v2 and Color3.fromRGB(170, 110, 255) or Color3.fromRGB(60, 210, 255), Enum.Material.Neon, parent))
+	deco(ArenaKit.NewPart("ScreenEdge", Vector3.new(8.6, 5.6, 0.15), face * CFrame.new(0, 0, 0.2), is2v2 and Color3.fromRGB(170, 110, 255) or Color3.fromRGB(60, 210, 255), Enum.Material.SmoothPlastic, parent))
 	local screen = deco(ArenaKit.NewPart("PadScreen", Vector3.new(8, 5, 0.3), face, Color3.fromRGB(14, 18, 30), Enum.Material.SmoothPlastic, parent))
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front

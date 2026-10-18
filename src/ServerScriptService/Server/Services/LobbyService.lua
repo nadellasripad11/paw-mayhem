@@ -109,8 +109,9 @@ local function solid(name: string, size: Vector3, cf: CFrame, color: Color3, mat
 	return ArenaKit.NewPart(name, size, cf, color, material, parent)
 end
 
+-- A plain coloured part (no glow) for the few coloured details left.
 local function neon(name: string, size: Vector3, cf: CFrame, color: Color3, parent: Instance): BasePart
-	local p = part(name, size, cf, color, Enum.Material.Neon, parent)
+	local p = part(name, size, cf, color, Enum.Material.SmoothPlastic, parent)
 	p.CastShadow = false
 	return p
 end
@@ -165,7 +166,7 @@ end
 -- A navy board facing `toward`, with a glowing edge and (optional) text.
 local function board(name: string, pos: Vector3, toward: Vector3, w: number, h: number, edge: Color3, lines: any, parent: Instance): BasePart
 	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z))
-	neon(name .. "Edge", Vector3.new(w + 0.5, h + 0.5, 0.2), face * CFrame.new(0, 0, 0.25), edge, parent)
+	part(name .. "Edge", Vector3.new(w + 0.5, h + 0.5, 0.2), face * CFrame.new(0, 0, 0.25), edge:Lerp(NAVY, 0.55), Enum.Material.SmoothPlastic, parent)
 	local b = part(name, Vector3.new(w, h, 0.5), face, NAVY, Enum.Material.SmoothPlastic, parent)
 	if lines then
 		sign(b, Enum.NormalId.Front, lines)
@@ -215,8 +216,7 @@ end
 local function lantern(pos: Vector3, parent: Instance)
 	part("LanternPost", Vector3.new(0.5, 6, 0.5), CFrame.new(pos + Vector3.new(0, 3, 0)), METAL, Enum.Material.Metal, parent)
 	part("LanternArm", Vector3.new(1.4, 0.3, 0.3), CFrame.new(pos + Vector3.new(0.5, 6, 0)), METAL, Enum.Material.Metal, parent)
-	local lamp = neon("Lamp", Vector3.new(0.9, 1.2, 0.9), CFrame.new(pos + Vector3.new(1.1, 5.2, 0)), Color3.fromRGB(255, 214, 150), parent)
-	light(lamp, Color3.fromRGB(255, 214, 150), 14, 0.9)
+	part("Lamp", Vector3.new(0.9, 1.2, 0.9), CFrame.new(pos + Vector3.new(1.1, 5.2, 0)), Color3.fromRGB(240, 226, 196), Enum.Material.Glass, parent)
 	part("LampCap", Vector3.new(1.2, 0.3, 1.2), CFrame.new(pos + Vector3.new(1.1, 5.95, 0)), METAL, Enum.Material.Metal, parent)
 end
 
@@ -334,12 +334,8 @@ local function buildGround(f: Instance)
 		local face = base + normal * 0.02
 		local along = CFrame.lookAt(face, face + dir)
 		part("WallBase", Vector3.new(0.2, 2.4, len), along * CFrame.new(0, 1.2, 0), navy and STONE_WALL or STONE_DARK, Enum.Material.Slate, f)
-		neon("WallTrim", Vector3.new(0.25, 0.3, len), along * CFrame.new(0, HEIGHT - 1, 0), navy and BLUE or PURPLE, f)
 		if not navy then
 			part("WallPanel", Vector3.new(0.15, 9, math.max(len - 3, 1)), along * CFrame.new(0, 9.5, 0), NAVY, Enum.Material.SmoothPlastic, f)
-		end
-		for k = 6, len - 3, 12 do
-			neon("LightStrip", Vector3.new(0.25, 7, 0.3), along * CFrame.new(0, 9.5, k - len / 2), navy and PURPLE or BLUE, f).Transparency = 0.2
 		end
 	end
 	-- Over each way through from the main hall: a wall above the opening with
@@ -350,7 +346,6 @@ local function buildGround(f: Instance)
 		board(h[3] .. "Sign", at(x + side * 1.3, 0, 17.8), at(0, 0, 17.8), 24, 4.4, h[4], {
 			{ text = h[3], size = 140, color = WHITE },
 		}, f)
-		neon("OpeningGlow", Vector3.new(0.3, 0.3, 36), CFrame.new(at(x + side * 1.2, 0, 14.2)), h[4], f)
 		for _, z in ipairs({ -18.5, 18.5 }) do
 			solid("OpeningPillar", Vector3.new(3, HEIGHT, 3), CFrame.new(at(x, z, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
 			lantern(at(x + side * 3, z * 0.95), f)
@@ -396,20 +391,11 @@ local function buildSpawn(f: Instance)
 	-- A raised pale stone pad with a glowing blue frame and a paw print.
 	local c = at(0, 0)
 	solid("SpawnPad", Vector3.new(18, 0.4, 18), CFrame.new(c + Vector3.new(0, 0.2, 0)), Color3.fromRGB(236, 234, 230), Enum.Material.Slate, f)
-	for _, e in ipairs({ { 0, 9, 18.4, 0.4 }, { 0, -9, 18.4, 0.4 }, { 9, 0, 0.4, 18.4 }, { -9, 0, 0.4, 18.4 } }) do
-		neon("SpawnFrame", Vector3.new(e[3], 0.2, e[4]), CFrame.new(c + Vector3.new(e[1], 0.42, e[2])), BLUE, f)
-	end
-	neon("SpawnGlow", Vector3.new(20, 0.06, 20), CFrame.new(c + Vector3.new(0, 0.02, 0)), BLUE, f).Transparency = 0.7
+	part("SpawnBorder", Vector3.new(19.2, 0.3, 19.2), CFrame.new(c + Vector3.new(0, 0.15, 0)), STONE_WALL, Enum.Material.Slate, f)
 	local paw = c + Vector3.new(0, 0.42, -1)
 	disc("Paw", 6, 0.06, paw, Color3.fromRGB(250, 250, 250), Enum.Material.SmoothPlastic, f)
 	for _, t in ipairs({ { -3.1, 3 }, { -1.1, 4.4 }, { 1.1, 4.4 }, { 3.1, 3 } }) do
 		disc("PawToe", 2.3, 0.06, paw + Vector3.new(t[1], 0, t[2]), Color3.fromRGB(250, 250, 250), Enum.Material.SmoothPlastic, f)
-	end
-	-- Glowing paths from the pad to each area.
-	for _, s in ipairs({ -6, 6 }) do
-		neon("Path", Vector3.new(0.3, 0.05, 21), CFrame.new(at(s, 19.5, 0.03)), BLUE, f).Transparency = 0.25
-		neon("Path", Vector3.new(35, 0.05, 0.3), CFrame.new(at(26.5, s, 0.03)), BLUE, f).Transparency = 0.25
-		neon("Path", Vector3.new(35, 0.05, 0.3), CFrame.new(at(-26.5, s, 0.03)), BLUE, f).Transparency = 0.25
 	end
 	-- Planters, lanterns and a terrace behind the spawn looking out at the sky.
 	for _, p in ipairs({ { 15, 22, 8, 4 }, { -15, 22, 8, 4 }, { 18, -16, 6, 6 }, { -18, -16, 6, 6 }, { 34, 25, 10, 3 }, { -34, 25, 10, 3 }, { 26, -35, 10, 3 }, { -26, -35, 10, 3 } }) do
@@ -437,14 +423,6 @@ local function buildMatchHall(f: Instance)
 
 	-- The walkway: a darker lane with glowing arrows, purple and gold edges.
 	part("Walkway", Vector3.new(10, 0.06, 82), CFrame.new(at(0, 71, 0.03)), Color3.fromRGB(26, 28, 40), Enum.Material.SmoothPlastic, f)
-	neon("WalkEdge", Vector3.new(0.35, 0.07, 82), CFrame.new(at(5, 71, 0.04)), PURPLE, f)
-	neon("WalkEdge", Vector3.new(0.35, 0.07, 82), CFrame.new(at(-5, 71, 0.04)), GOLD, f)
-	for z = 38, 106, 9 do
-		for _, s in ipairs({ -1, 1 }) do
-			local p = at(s * 0.9, z, 0.05)
-			neon("Arrow", Vector3.new(2.6, 0.07, 0.45), CFrame.new(p) * CFrame.Angles(0, s * math.rad(35), 0), WHITE, f).Transparency = 0.35
-		end
-	end
 	-- Mode signs above each block of pads.
 	for _, s in ipairs({ { "1V1", 56, BLUE }, { "2V2", 92.5, PURPLE } }) do
 		for _, side in ipairs({ 1, -1 }) do
@@ -456,7 +434,6 @@ local function buildMatchHall(f: Instance)
 	-- An open roof of beams with light strips under them.
 	for z = 34, 110, 8 do
 		part("RoofBeam", Vector3.new(41, 0.8, 1), CFrame.new(at(0, z, HALL_WALL + 0.8)), METAL, Enum.Material.Metal, f).CastShadow = false
-		neon("BeamLight", Vector3.new(30, 0.15, 0.35), CFrame.new(at(0, z, HALL_WALL + 0.3)), z % 16 == 2 and BLUE or PURPLE, f).Transparency = 0.2
 	end
 	for _, x in ipairs({ -12, 12 }) do
 		part("RoofRail", Vector3.new(0.8, 0.8, 80), CFrame.new(at(x, 72, HALL_WALL + 1.6)), METAL, Enum.Material.Metal, f).CastShadow = false
@@ -482,7 +459,6 @@ local function buildGate(f: Instance)
 	board("GateSign", at(0, -38.7, 17.8), at(0, 0, 17.8), 26, 4.4, CYAN, {
 		{ text = "PRACTICE DIMENSION", size = 110, color = WHITE },
 	}, f)
-	neon("GateGlow", Vector3.new(32, 0.3, 0.3), CFrame.new(at(0, -38.8, 14.2)), CYAN, f)
 	for _, x in ipairs({ -11, 11 }) do
 		solid("GatePillar", Vector3.new(3.5, HEIGHT, 3.5), CFrame.new(at(x, -55, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
 		banner(at(x, -53, 13), at(x, 0, 13), CYAN, f)
@@ -491,8 +467,6 @@ local function buildGate(f: Instance)
 	for _, x in ipairs({ -13, 13 }) do
 		planter(at(x, -46), 4, 7, f)
 	end
-	neon("GatePath", Vector3.new(0.3, 0.05, 30), CFrame.new(at(-6, -26, 0.03)), CYAN, f).Transparency = 0.25
-	neon("GatePath", Vector3.new(0.3, 0.05, 30), CFrame.new(at(6, -26, 0.03)), CYAN, f).Transparency = 0.25
 end
 
 -- ── left: the GUNS shop ──────────────────────────────────────────────────────
@@ -503,12 +477,11 @@ local function shopRoom(name: string, backX: number, openSide: number, glow: Col
 	b.Name = name
 	b.Parent = f
 	part("BackPanel", Vector3.new(0.2, 11, 32), CFrame.new(at(backX + openSide * 0.12, 0, 7.5)), NAVY, Enum.Material.SmoothPlastic, b)
-	neon("BackGlow", Vector3.new(0.25, 0.3, 32), CFrame.new(at(backX + openSide * 0.2, 0, 13.2)), glow, b)
 	local midX = backX + openSide * 21
 	for _, z in ipairs({ -9, 9 }) do
 		local holder = part("RoomLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(at(midX, z, HEIGHT - 4)), WHITE, Enum.Material.SmoothPlastic, b)
 		holder.Transparency = 1
-		light(holder, glow:Lerp(WHITE, 0.6), 26, 1)
+		light(holder, Color3.fromRGB(255, 248, 236), 26, 0.8)
 	end
 	return b
 end
@@ -522,7 +495,6 @@ local function buildGuns(f: Instance)
 		local col = (i - 1) % 5
 		local pos = at(84.6, -12 + col * 6, 3.6 + row * 4)
 		local plate = part("RackPlate", Vector3.new(0.2, 3.2, 5.2), CFrame.new(pos + Vector3.new(0.2, 0, 0)), NAVY_LIGHT, Enum.Material.SmoothPlastic, b)
-		neon("RackGlow", Vector3.new(0.1, 0.2, 5.2), CFrame.new(pos + Vector3.new(0.05, -1.5, 0)), w.TrailColor, b)
 		local base = CFrame.fromMatrix(pos + toFront * 0.8, Vector3.yAxis:Cross(toFront), Vector3.yAxis, toFront)
 		local gun = BlasterBuilder.Build(w.Id, nil, base, 0.7)
 		for _, d in ipairs(gun:GetDescendants()) do
@@ -537,7 +509,6 @@ local function buildGuns(f: Instance)
 	end
 	-- A counter, crates, and the shopkeeper.
 	solid("Counter", Vector3.new(3, 3, 12), CFrame.new(at(70, 10, 1.5)), WOOD, Enum.Material.WoodPlanks, b)
-	neon("CounterGlow", Vector3.new(0.2, 0.25, 12), CFrame.new(at(68.45, 10, 2.6)), BLUE, b)
 	for _, c in ipairs({ { 80, -15 }, { 77, -15.2 }, { 80, 15 } }) do
 		solid("Crate", Vector3.new(2.6, 2.6, 2.6), CFrame.new(at(c[1], c[2], 1.3)) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0), WOOD, Enum.Material.WoodPlanks, b)
 	end
@@ -554,15 +525,11 @@ local FEATURED = {
 
 local function glassCase(pos: Vector3, size: Vector3, glow: Color3, parent: Instance): BasePart
 	local stand = solid("CaseStand", Vector3.new(size.X + 0.6, 1.2, size.Z + 0.6), CFrame.new(pos + Vector3.new(0, 0.6, 0)), NAVY, Enum.Material.SmoothPlastic, parent)
-	neon("CaseGlow", Vector3.new(size.X + 0.7, 0.2, size.Z + 0.7), CFrame.new(pos + Vector3.new(0, 1.25, 0)), glow, parent)
 	local glass = solid("CaseGlass", size, CFrame.new(pos + Vector3.new(0, 1.2 + size.Y / 2, 0)), GLASS, Enum.Material.Glass, parent)
 	glass.Transparency = 0.75
 	glass.CastShadow = false
 	glass.CanQuery = false
 	part("CaseTop", Vector3.new(size.X + 0.4, 0.3, size.Z + 0.4), CFrame.new(pos + Vector3.new(0, 1.35 + size.Y, 0)), NAVY, Enum.Material.SmoothPlastic, parent)
-	local glowBlock = part("CaseLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(pos + Vector3.new(0, size.Y, 0)), glow, Enum.Material.SmoothPlastic, parent)
-	glowBlock.Transparency = 1
-	light(glowBlock, glow, 9, 1.2)
 	return stand
 end
 
@@ -579,7 +546,7 @@ local function buildCollection(f: Instance)
 	for i, tier in ipairs(Ranks.Tiers) do
 		local pos = at(-50 - (i - 1) * 4.2, 15)
 		glassCase(pos, Vector3.new(2.6, 2.8, 2.6), tier.Color, b)
-		part("TierGem", Vector3.new(1.2, 1.2, 1.2), CFrame.new(pos + Vector3.new(0, 2.6, 0)) * CFrame.Angles(math.rad(45), math.rad(45), 0), tier.Color, Enum.Material.Neon, b)
+		part("TierGem", Vector3.new(1.2, 1.2, 1.2), CFrame.new(pos + Vector3.new(0, 2.6, 0)) * CFrame.Angles(math.rad(45), math.rad(45), 0), tier.Color, Enum.Material.Glass, b)
 		local front = pos + Vector3.new(0, 0.6, -1.25)
 		local plaque = part("TierPlaque", Vector3.new(2.8, 0.9, 0.1), CFrame.lookAt(front, front + Vector3.new(0, 0, -1)), INK, Enum.Material.SmoothPlastic, b)
 		sign(plaque, Enum.NormalId.Front, {
@@ -590,7 +557,6 @@ local function buildCollection(f: Instance)
 	-- A gold cat statue in the middle of the room.
 	local plinth = at(-62, -4)
 	solid("Plinth", Vector3.new(7, 2, 7), CFrame.new(plinth + Vector3.new(0, 1, 0)), Color3.fromRGB(236, 232, 224), Enum.Material.Marble, b)
-	neon("PlinthGlow", Vector3.new(7.4, 0.25, 7.4), CFrame.new(plinth + Vector3.new(0, 2.05, 0)), GOLD, b)
 	local ok, err = pcall(function()
 		local statue = displayCat({ Fur = "RoyalGold", Outfit = "Royal", Hat = "Crown" }, CFrame.lookAt(plinth + Vector3.new(0, 4.9, 0), plinth + Vector3.new(10, 4.9, 0)), b)
 		for _, d in ipairs(statue:GetDescendants()) do
@@ -720,22 +686,11 @@ local function portal(center: Vector3, facing: Vector3, color: Color3, label: st
 		local p = face * CFrame.new(math.cos(a) * r, math.sin(a) * r, 0)
 		neon("PortalRing", Vector3.new(1.8, 1.8, 1.2), CFrame.new(p.Position) * face.Rotation * CFrame.Angles(0, 0, a), color, parent)
 	end
-	local film = part("PortalFilm", Vector3.new(0.2, r * 2 - 1, r * 2 - 1), face * CFrame.Angles(0, math.rad(90), 0), color, Enum.Material.Neon, parent)
+	local film = part("PortalFilm", Vector3.new(0.2, r * 2 - 1, r * 2 - 1), face * CFrame.Angles(0, math.rad(90), 0), color, Enum.Material.Glass, parent)
 	local filmShape = film :: Part
 	filmShape.Shape = Enum.PartType.Cylinder
 	film.Transparency = 0.5
 	film.CastShadow = false
-	local swirl = Instance.new("ParticleEmitter")
-	swirl.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	swirl.Color = ColorSequence.new(color, WHITE)
-	swirl.Size = NumberSequence.new(0.6, 0)
-	swirl.Lifetime = NumberRange.new(0.8, 1.4)
-	swirl.Rate = 30
-	swirl.Speed = NumberRange.new(2, 4)
-	swirl.SpreadAngle = Vector2.new(180, 180)
-	swirl.LightEmission = 1
-	swirl.Parent = film
-	light(film, color, 20, 1.6)
 	solid("PortalBase", Vector3.new(r * 2 + 3, 1, 3), face * CFrame.new(0, -r - 0.5, 0), NAVY, Enum.Material.SmoothPlastic, parent)
 	if label then
 		board("PortalSign", center + Vector3.new(0, r + 2.2, 0) + facing * 0.5, center + facing * 10, 14, 2.6, color, {
@@ -784,14 +739,7 @@ local function buildPractice(lobby: Instance, hall: Instance)
 	-- open at the far end so target cats can be knocked off it.
 	local floorMid = practiceAt(0, -12)
 	solid("PracticeFloor", Vector3.new(64, 2, 64), CFrame.new(floorMid - Vector3.new(0, 1, 0)), HALL_FLOOR, Enum.Material.SmoothPlastic, p)
-	for x = -24, 24, 8 do
-		neon("Grid", Vector3.new(0.12, 0.05, 64), CFrame.new(practiceAt(x, -12, 0.02)), PURPLE, p).Transparency = 0.6
-	end
-	for z = -40, 16, 8 do
-		neon("Grid", Vector3.new(64, 0.05, 0.12), CFrame.new(practiceAt(0, z, 0.02)), PURPLE, p).Transparency = 0.6
-	end
 	part("Underside", Vector3.new(60, 8, 60), CFrame.new(floorMid - Vector3.new(0, 6, 0)), NAVY, Enum.Material.SmoothPlastic, p)
-	neon("Rim", Vector3.new(64.4, 0.4, 0.4), CFrame.new(practiceAt(0, -44, -0.2)), PURPLE, p)
 	for _, side in ipairs({ { 32, -12, 0.4, 64 }, { -32, -12, 0.4, 64 }, { 0, 20, 64, 0.4 } }) do
 		local rail = solid("Rail", Vector3.new(side[3], 3, side[4]), CFrame.new(practiceAt(side[1], side[2], 1.5)), GLASS, Enum.Material.Glass, p)
 		rail.Transparency = 0.5
@@ -808,7 +756,6 @@ local function buildPractice(lobby: Instance, hall: Instance)
 	for i, dx in ipairs({ -11, 0, 11 }) do
 		local dz = i == 2 and -26 or -23
 		local deck = practiceAt(dx, dz)
-		disc("TargetDeck", 6.4, 0.2, deck + Vector3.new(0, 0.05, 0), PURPLE, Enum.Material.Neon, p).Transparency = 0.5
 		disc("TargetDeckTop", 5.8, 0.3, deck + Vector3.new(0, 0.12, 0), NAVY_LIGHT, Enum.Material.SmoothPlastic, p)
 		archeryTarget(practiceAt(dx, dz - 8), practiceAt(0, 10), p)
 		local standCF = CFrame.lookAt(deck + Vector3.new(0, 1.9, 0), practiceAt(0, 10, 1.9))
