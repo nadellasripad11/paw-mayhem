@@ -6,8 +6,8 @@
 --   * ahead: the Matchmaking hall you walk through - rows of 1v1 / 2v2 pads
 --     down both sides with screens above them (DuelService builds the pads),
 --     a dark walkway with arrows down the middle
---   * at the end of that hall: the Practice Dimension portal, to a floating
---     platform of target cats you can knock off the edge (and a portal back)
+--   * behind the spawn, opposite the hall: the Practice Dimension portal, to a
+--     floating platform of target cats you can knock off the edge (and back)
 --   * left: the GUNS shop, every blaster racked on the back wall (F to equip)
 --   * right: the COLLECTION, featured cats in glass cases, every rank tier
 --     and a gold cat statue
@@ -44,12 +44,12 @@ local PLAZA = { -44, 44, -40, 30 }
 local GUNS_ROOM = { 44, 86, -18, 18 }
 local COLLECTION_ROOM = { -86, -44, -18, 18 }
 local MATCH_HALL = { -20, 20, 30, 112 }
-local GATE = { -24, 24, 112, 134 }
+local GATE = { -16, 16, -62, -40 } -- the portal alcove behind the spawn
 local AREAS = { PLAZA, GUNS_ROOM, COLLECTION_ROOM, MATCH_HALL, GATE }
 -- The outside wall of the whole building, walked round in order.
 local OUTLINE = {
-	{ -44, -40 }, { 44, -40 }, { 44, -18 }, { 86, -18 }, { 86, 18 }, { 44, 18 }, { 44, 30 }, { 20, 30 },
-	{ 20, 112 }, { 24, 112 }, { 24, 134 }, { -24, 134 }, { -24, 112 }, { -20, 112 }, { -20, 30 },
+	{ -44, -40 }, { -16, -40 }, { -16, -62 }, { 16, -62 }, { 16, -40 }, { 44, -40 }, { 44, -18 }, { 86, -18 },
+	{ 86, 18 }, { 44, 18 }, { 44, 30 }, { 20, 30 }, { 20, 112 }, { -20, 112 }, { -20, 30 },
 	{ -44, 30 }, { -44, 18 }, { -86, 18 }, { -86, -18 }, { -44, -18 },
 }
 local HEIGHT = 22 -- walls up to the roof, everywhere
@@ -412,10 +412,10 @@ local function buildSpawn(f: Instance)
 		neon("Path", Vector3.new(35, 0.05, 0.3), CFrame.new(at(-26.5, s, 0.03)), BLUE, f).Transparency = 0.25
 	end
 	-- Planters, lanterns and a terrace behind the spawn looking out at the sky.
-	for _, p in ipairs({ { 15, 22, 8, 4 }, { -15, 22, 8, 4 }, { 18, -16, 6, 6 }, { -18, -16, 6, 6 }, { 34, 25, 10, 3 }, { -34, 25, 10, 3 }, { 0, -34, 14, 3 } }) do
+	for _, p in ipairs({ { 15, 22, 8, 4 }, { -15, 22, 8, 4 }, { 18, -16, 6, 6 }, { -18, -16, 6, 6 }, { 34, 25, 10, 3 }, { -34, 25, 10, 3 }, { 26, -35, 10, 3 }, { -26, -35, 10, 3 } }) do
 		planter(at(p[1], p[2]), p[3], p[4], f)
 	end
-	for _, p in ipairs({ { 9, 26 }, { -9, 26 }, { 26, -30 }, { -14, -30 }, { 12, -30 } }) do
+	for _, p in ipairs({ { 9, 26 }, { -9, 26 }, { 19, -37 }, { -19, -37 } }) do
 		lantern(at(p[1], p[2]), f)
 	end
 end
@@ -467,19 +467,32 @@ local function buildMatchHall(f: Instance)
 		light(holder, Color3.fromRGB(190, 210, 255), 26, 0.9)
 	end
 
-	-- The gate at the far end: pillars, banners, a lit sign over the portal.
-	for _, x in ipairs({ -11, 11 }) do
-		solid("GatePillar", Vector3.new(3.5, HEIGHT, 3.5), CFrame.new(at(x, 127, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
-		banner(at(x, 125, 13), at(x, 0, 13), CYAN, f)
-		lantern(at(x * 1.6, 116), f)
-	end
-	solid("GateBeam", Vector3.new(26, 2, 3.5), CFrame.new(at(0, 127, 20)), NAVY, Enum.Material.SmoothPlastic, f)
-	board("GateSign", at(0, 125, 17.5), at(0, 0, 17.5), 18, 3.6, CYAN, {
-		{ text = "PRACTICE DIMENSION", size = 80, color = WHITE },
+	-- The far end of the hall: a big screen.
+	board("DuelScreen", at(0, 110.8, 10), at(0, 0, 10), 26, 8, BLUE, {
+		{ text = "DUELS", size = 140, color = WHITE },
+		{ text = "Stand on a pad  ·  First to 5  ·  Alone 15s = vs BOT", size = 40, color = CYAN },
 	}, f)
-	for _, x in ipairs({ -18, 18 }) do
-		planter(at(x, 122), 5, 8, f)
+end
+
+-- ── behind the spawn: the Practice Dimension gate ───────────────────────────
+local function buildGate(f: Instance)
+	-- A stone header over the alcove with its sign, pillars and banners round
+	-- the portal (the portal itself is built with the Practice Dimension).
+	solid("GateHeader", Vector3.new(32, HEIGHT - 14, 2), CFrame.new(at(0, -40, 14 + (HEIGHT - 14) / 2)), STONE_WALL, Enum.Material.Slate, f)
+	board("GateSign", at(0, -38.7, 17.8), at(0, 0, 17.8), 26, 4.4, CYAN, {
+		{ text = "PRACTICE DIMENSION", size = 110, color = WHITE },
+	}, f)
+	neon("GateGlow", Vector3.new(32, 0.3, 0.3), CFrame.new(at(0, -38.8, 14.2)), CYAN, f)
+	for _, x in ipairs({ -11, 11 }) do
+		solid("GatePillar", Vector3.new(3.5, HEIGHT, 3.5), CFrame.new(at(x, -55, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
+		banner(at(x, -53, 13), at(x, 0, 13), CYAN, f)
 	end
+	solid("GateBeam", Vector3.new(26, 2, 3.5), CFrame.new(at(0, -55, 20)), NAVY, Enum.Material.SmoothPlastic, f)
+	for _, x in ipairs({ -13, 13 }) do
+		planter(at(x, -46), 4, 7, f)
+	end
+	neon("GatePath", Vector3.new(0.3, 0.05, 30), CFrame.new(at(-6, -26, 0.03)), CYAN, f).Transparency = 0.25
+	neon("GatePath", Vector3.new(0.3, 0.05, 30), CFrame.new(at(6, -26, 0.03)), CYAN, f).Transparency = 0.25
 end
 
 -- ── left: the GUNS shop ──────────────────────────────────────────────────────
@@ -676,7 +689,7 @@ local function practiceAt(dx: number, dz: number, lift: number?): Vector3
 end
 
 local PRACTICE_ARRIVE = CFrame.lookAt(practiceAt(0, 10, 1.9), practiceAt(0, -10, 1.9))
-local HUB_ARRIVE = CFrame.lookAt(at(0, 112, 1.9), at(0, 0, 1.9)) -- back out of the gate, facing the plaza
+local HUB_ARRIVE = CFrame.lookAt(at(0, -44, 1.9), at(0, 0, 1.9)) -- back out of the gate, facing the plaza
 
 local function resetDummy(d: Dummy)
 	d.fluff = 0
@@ -825,7 +838,7 @@ local function buildPractice(lobby: Instance, hall: Instance)
 	end
 
 	-- Portals: the gate at the end of the matchmaking hall, and back.
-	linkPortal(portal(at(0, 126, 8.5), Vector3.new(0, 0, -1), CYAN, nil, hall), PRACTICE_ARRIVE)
+	linkPortal(portal(at(0, -54, 8.5), Vector3.new(0, 0, 1), CYAN, nil, hall), PRACTICE_ARRIVE)
 	linkPortal(portal(practiceAt(0, 16, 8.5), Vector3.new(0, 0, -1), BLUE, "BACK TO LOBBY", p), HUB_ARRIVE)
 end
 
@@ -865,6 +878,7 @@ local function buildLobby()
 	buildGround(plaza)
 	buildSpawn(plaza)
 	buildMatchHall(plaza)
+	buildGate(plaza)
 	buildBoards(plaza)
 	buildGuns(f)
 	buildCollection(f)
