@@ -106,7 +106,7 @@ local function buildPad(def: any, parent: Instance)
 
 	-- A screen on the side wall: the mode, how many are on it, and what it's
 	-- waiting for.
-	local wallX = def.wall * 16.75
+	local wallX = def.screenX or def.wall * 16.75
 	local screenPos = at(wallX, def.z, 7)
 	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0))
 	deco(ArenaKit.NewPart("ScreenEdge", Vector3.new(8.6, 5.6, 0.15), face * CFrame.new(0, 0, 0.2), is2v2 and Color3.fromRGB(170, 110, 255) or Color3.fromRGB(60, 210, 255), Enum.Material.Neon, parent))
