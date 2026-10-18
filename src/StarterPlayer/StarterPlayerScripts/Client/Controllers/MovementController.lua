@@ -185,6 +185,10 @@ local function launch(velocity: Vector3)
 	if activeLaunch then
 		activeLaunch:Destroy()
 	end
+	-- A hit landing mid-flight adds to the flight instead of resetting it, so
+	-- rapid fire pushes you along rather than pinning you in the air.
+	local current = root.AssemblyLinearVelocity
+	velocity += Vector3.new(current.X, math.max(current.Y, 0), current.Z) * GameConfig.Knockback.Stack
 	local lv = Instance.new("LinearVelocity")
 	lv.Attachment0 = attachment(root)
 	lv.RelativeTo = Enum.ActuatorRelativeTo.World

@@ -116,6 +116,11 @@ local function loadProfile(player: Player)
 			if success then
 				data = result
 				break
+			elseif string.find(tostring(result), "StudioAccessToApisNotAllowed") or string.find(tostring(result), "403") then
+				-- Saving is switched off for this place (Studio without API
+				-- access): retrying won't help, so play on a fresh profile now
+				-- instead of keeping the player waiting with no cat.
+				break
 			else
 				task.wait(1.5)
 			end

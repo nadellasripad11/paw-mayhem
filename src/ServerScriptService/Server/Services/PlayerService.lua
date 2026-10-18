@@ -194,6 +194,7 @@ function PlayerService.Spawn(player: Player, opts: any?)
 
 	model:SetAttribute("Team", teamId)
 	model:PivotTo(spawnAt)
+	print(string.format("[PAW MAYHEM] %s spawned (%s) at %s", player.Name, context, tostring(spawnAt.Position)))
 	model.Parent = Workspace
 
 	player.Character = model

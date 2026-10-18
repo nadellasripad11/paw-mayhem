@@ -253,8 +253,8 @@ function WeaponService.ResolveHit(shooter: Player, victim: Player, weapon, dir: 
 	local dV = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, knockMult * mayhem * ringout * (1 - knockResist))
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
-	-- brief stun so victims can't instantly cancel the launch
-	vState.StunUntil = os.clock() + GameConfig.Character.LaunchStunSeconds
+	-- stun so victims can't instantly cancel the launch (longer for big hits)
+	vState.StunUntil = os.clock() + Knockback.StunSeconds(dV)
 
 	-- Frost weapon slow.
 	if weapon.SlowFactor and weapon.SlowSeconds then

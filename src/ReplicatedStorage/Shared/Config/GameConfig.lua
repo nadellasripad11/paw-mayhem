@@ -47,8 +47,6 @@ GameConfig.Character = {
 	RespawnDelay = 1.5, -- fast, chaotic respawns
 	-- A player is "eliminated" when they fall below this Y in the arena.
 	KillFloorY = -120,
-	-- Ragdoll-ish launch: how long control is reduced after a big hit.
-	LaunchStunSeconds = 0.35,
 	-- Hits mostly build knockback %; only this fraction of a blaster's damage
 	-- comes off HP, so most knockouts are cats sent flying off the map.
 	HealthDamageScale = 0.35,
@@ -59,12 +57,28 @@ GameConfig.Character = {
 -- taken this life, similar to a certain party fighter: the more they've been
 -- hit, the further they fly. This rewards sustained pressure + a finisher.
 GameConfig.Knockback = {
-	BaseImpulse = 52, -- flat impulse floor per hit
-	DamageScale = 1.6, -- how much accumulated damage amplifies knockback
-	MaxDamageForScale = 180, -- damage cap used in the scaling curve
-	UpwardBias = 0.5, -- fraction of impulse redirected upward: hits send cats UP and away
-	MassReference = 14, -- normalises impulse against a standard cat mass
-	DecayPerSecond = 0, -- accumulated damage does not decay mid-life
+	-- Launch speed (studs/s) for a 1x weapon at knockback % f:
+	--   Base + Linear * f + Curve * f^2   (0% ~34, 50% ~68, 100% ~109,
+	--   150% ~158, 200% ~214), never more than MaxSpeed.
+	Base = 34,
+	Linear = 0.6,
+	Curve = 0.0015,
+	MaxSpeed = 300,
+	-- Launch angle (share of the push that goes upward): UpLow at 0%,
+	-- rising to UpHigh by SteepAt %. AimTilt: how much aiming up/down tilts it.
+	UpLow = 0.18,
+	UpHigh = 0.55,
+	SteepAt = 120,
+	AimTilt = 0.15,
+	-- Hitstun: StunMin seconds plus a bit per studs/s of launch, capped.
+	StunMin = 0.12,
+	StunPerSpeed = 0.0022,
+	StunMax = 0.6,
+	-- Back-to-back hits stack: this much of your current flight is kept when
+	-- the next hit lands (rapid-fire pushes you along instead of juggling you).
+	Stack = 0.45,
+	MassReference = 14, -- a standard cat's mass, if a rig has no root yet
+	DecayPerSecond = 0, -- knockback % does not decay mid-life
 }
 
 GameConfig.Camera = {

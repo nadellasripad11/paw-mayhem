@@ -1,57 +1,61 @@
 --!strict
 -- Knockback: pure math for the defining mechanic. Kept shared so the client
 -- can predict launch direction for VFX, but the SERVER is the only authority
--- that actually applies impulses.
+-- that decides every launch.
 --
--- Model: each hit adds "fluff" damage to the victim's accumulated total for the
--- current life. The impulse magnitude scales with that accumulated total, so a
--- freshly-spawned cat barely moves but a heavily-pressured cat launches far.
+-- Model: each hit adds "fluff" damage to the victim's knockback % for the
+-- current life, and the launch grows faster than the % does (a curve, not a
+-- line): at 0% a hit is a nudge you walk off, around 100% it sends you
+-- flying, near 200% almost anything is a finisher.
+-- The angle grows with the % too: low-% hits push you mostly sideways, high-%
+-- hits throw you up and away. Aiming up or down tilts it a little.
 
 local GameConfig = require(script.Parent.Parent.Config.GameConfig)
 
 local Knockback = {}
 
+-- How hard a hit at `accumulated` % launches (studs/s, before multipliers).
+function Knockback.Strength(accumulated: number): number
+	local cfg = GameConfig.Knockback
+	local f = math.max(0, accumulated)
+	return math.min(cfg.Base + cfg.Linear * f + cfg.Curve * f * f, cfg.MaxSpeed)
+end
+
 -- Compute the desired VELOCITY-CHANGE vector (studs/s) for a victim. The
--- caller converts this to a mass-correct impulse (impulse = dV * assemblyMass)
--- so knockback velocity is consistent regardless of a rig's mass, while heavier
--- rigs still receive a proportionally larger impulse.
---   direction   : unit Vector3 from shooter to victim (horizontal-ish)
---   accumulated : total fluff damage the victim has taken this life
+-- caller converts this to a mass-correct impulse (impulse = dV * assemblyMass).
+--   direction   : unit Vector3 from shooter to victim
+--   accumulated : the victim's knockback % this life (after this hit)
 --   weaponMult  : weapon's Knockback multiplier
---   extraMult   : power-up / status multipliers (Mega Knockback, shield, etc.)
-function Knockback.ComputeDeltaV(
-	direction: Vector3,
-	accumulated: number,
-	weaponMult: number,
-	extraMult: number
-): Vector3
+--   extraMult   : power-up / status / mode multipliers
+function Knockback.ComputeDeltaV(direction: Vector3, accumulated: number, weaponMult: number, extraMult: number): Vector3
 	local cfg = GameConfig.Knockback
 
-	-- Normalise direction on the horizontal plane, keep a little of the shot's
-	-- vertical component so upward shots pop targets up.
 	local horiz = Vector3.new(direction.X, 0, direction.Z)
 	if horiz.Magnitude < 0.05 then
 		horiz = Vector3.new(0, 0, -1)
 	end
 	horiz = horiz.Unit
 
-	-- Damage scaling curve (0..1 of MaxDamageForScale).
-	local dmgFrac = math.clamp(accumulated / cfg.MaxDamageForScale, 0, 1)
-	local scaled = cfg.BaseImpulse * (1 + dmgFrac * cfg.DamageScale)
+	-- Launch angle: flatter at low %, steeper as the % climbs; aiming up or
+	-- down nudges it.
+	local t = math.clamp(accumulated / cfg.SteepAt, 0, 1)
+	local up = cfg.UpLow + (cfg.UpHigh - cfg.UpLow) * t + math.clamp(direction.Y, -1, 1) * cfg.AimTilt
+	up = math.clamp(up, 0.08, 0.85)
+	local dir = (horiz * (1 - up) + Vector3.new(0, up, 0)).Unit
 
 	local mult = math.max(0, weaponMult) * math.max(0, extraMult)
-	local magnitude = scaled * mult
-
-	-- Blend horizontal push with an upward launch bias.
-	local dir = (horiz * (1 - cfg.UpwardBias) + Vector3.new(0, cfg.UpwardBias, 0)).Unit
-	return dir * magnitude
+	return dir * Knockback.Strength(accumulated) * mult
 end
 
--- Convenience: predicted launch distance for UI/feedback (very rough).
-function Knockback.EstimateLaunch(accumulated: number): number
+-- How long a launch takes your controls away (bigger hits, longer stun).
+function Knockback.StunSeconds(dV: Vector3): number
 	local cfg = GameConfig.Knockback
-	local dmgFrac = math.clamp(accumulated / cfg.MaxDamageForScale, 0, 1)
-	return cfg.BaseImpulse * (1 + dmgFrac * cfg.DamageScale)
+	return math.clamp(cfg.StunMin + dV.Magnitude * cfg.StunPerSpeed, cfg.StunMin, cfg.StunMax)
+end
+
+-- Rough launch speed for UI/feedback.
+function Knockback.EstimateLaunch(accumulated: number): number
+	return Knockback.Strength(accumulated)
 end
 
 return Knockback

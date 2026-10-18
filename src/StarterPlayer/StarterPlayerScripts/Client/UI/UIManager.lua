@@ -167,6 +167,17 @@ local function updateAim(force: boolean?)
 	end
 end
 
+-- Which screen state we picked last (printed to Output when it changes, so a
+-- wrong screen can be tracked down from the log).
+local lastView = ""
+local function trace(view: string)
+	local line = string.format("%s (context=%s, alive=%s, phase=%s)", view, tostring(context()), tostring(alive), tostring(ClientState.Match.phase))
+	if line ~= lastView then
+		lastView = line
+		print("[PAW MAYHEM] screen: " .. line)
+	end
+end
+
 -- Put the screen in the right state for where the cat is and the phase.
 local function refresh()
 	local ctx = context()
@@ -175,6 +186,7 @@ local function refresh()
 		CameraController.SetFlyover(false)
 	end
 	if ctx == "Match" or ctx == "Duel" then
+		trace("fighting")
 		flyoverUntil = 0
 		if fallbackGui then fallbackGui.Enabled = false end
 		if not MainMenu.InGameOpen() then
@@ -193,6 +205,7 @@ local function refresh()
 			updateAim(true)
 		end
 	elseif ctx == "Lobby" and alive then
+		trace("lobby")
 		if fallbackGui then fallbackGui.Enabled = false end
 		Results.Hide()
 		CameraController.SetShowcase(nil)
@@ -221,6 +234,7 @@ local function refresh()
 		updateAim(true)
 	else
 		-- Not spawned yet: the menu over the 3D lobby scene.
+		trace("menu backdrop (no cat yet)")
 		HUD.SetVisible(false)
 		CameraController.SetEnabled(false)
 		CombatController.SetEnabled(false)

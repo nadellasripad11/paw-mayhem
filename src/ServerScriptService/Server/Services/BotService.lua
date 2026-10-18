@@ -343,7 +343,7 @@ function BotService.DealDamageToPlayer(bot: BotState, victim: Player, weapon: an
 	local dV     = Knockback.ComputeDeltaV(dir, vState.Accumulated, weapon.Knockback, 0.6 * mayhem)
 	local impulse = dV * vRoot.AssemblyMass
 	WeaponService.ApplyLaunch(victim, vHum, vRoot, impulse)
-	vState.StunUntil = os.clock() + GameConfig.Character.LaunchStunSeconds
+	vState.StunUntil = os.clock() + Knockback.StunSeconds(dV)
 	if weapon.SlowFactor and weapon.SlowSeconds then
 		vState.SlowUntil = math.max(vState.SlowUntil or 0, os.clock() + weapon.SlowSeconds)
 	end
