@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local SocialService = game:GetService("SocialService")
+local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -485,7 +486,9 @@ function MainMenu.Build()
 	local camera = Workspace.CurrentCamera
 	local function relayout()
 		local vp = camera.ViewportSize
-		local s = math.clamp(vp.Y / 640, 0.72, 1.75)
+		-- Phones get a bigger minimum so every button stays easy to tap.
+		local touch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+		local s = math.clamp(vp.Y / 640, touch and 0.88 or 0.72, 1.75)
 		local inset = UIUtil.topInset()
 		navScale.Scale = s
 		navGroup.Position = UDim2.new(0, 16 * s, 0.5, 0)

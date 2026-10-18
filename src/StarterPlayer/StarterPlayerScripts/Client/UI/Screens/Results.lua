@@ -180,10 +180,10 @@ function Results.Build()
 		Parent = g, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8),
 		Size = UDim2.fromOffset(520, 124), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
 	}) :: Frame
-	UIUtil.corner(UDim.new(0, 22), banner)
-	UIUtil.stroke(Color3.fromRGB(255, 255, 255), 2, banner).Transparency = 0.7
+	UIUtil.corner(Theme.CornerBig, banner)
+	UIUtil.hairline(banner, 0.6)
 	titleLabel = UIUtil.label({ Parent = banner, Text = "VICTORY!", Font = Theme.Font.Title, TextSize = 52, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 58) })
-	UIUtil.stroke(Color3.fromRGB(20, 12, 30), 3, titleLabel)
+	UIUtil.stroke(Color3.fromRGB(20, 12, 30), 1.5, titleLabel).Transparency = 0.3
 	scoreLabel = UIUtil.label({ Parent = banner, Text = "", RichText = true, Font = Theme.Font.Title, TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 34) })
 	subLabel = UIUtil.label({ Parent = banner, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 98), Size = UDim2.new(1, 0, 0, 18) })
 
@@ -192,8 +192,9 @@ function Results.Build()
 		Parent = g, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 20, 0.55, 0), Size = UDim2.new(0, 330, 0.62, 0),
 		BackgroundColor3 = Color3.fromRGB(10, 18, 36), BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	})
-	UIUtil.corner(UDim.new(0, 18), panel)
-	UIUtil.label({ Parent = panel, Text = "MATCH LEADERBOARD", Font = Theme.Font.Title, TextSize = 20, TextColor3 = Color3.fromRGB(150, 220, 255), Position = UDim2.fromOffset(16, 10), Size = UDim2.new(1, -32, 0, 26) })
+	UIUtil.corner(Theme.Corner, panel)
+	UIUtil.hairline(panel)
+	UIUtil.label({ Parent = panel, Text = "SCOREBOARD", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(16, 12), Size = UDim2.new(1, -32, 0, 22) })
 	boardList = UIUtil.make("ScrollingFrame", {
 		Parent = panel, Position = UDim2.fromOffset(10, 44), Size = UDim2.new(1, -20, 1, -54), BackgroundTransparency = 1,
 		BorderSizePixel = 0, ScrollBarThickness = 3, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -213,6 +214,19 @@ function Results.Build()
 		Parent = g, Text = "", TextSize = 15, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1),
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -18), Size = UDim2.fromOffset(400, 22), TextStrokeTransparency = 0.4,
 	})
+	-- Phones: shrink the banner and the scoreboard with the screen height.
+	local bannerScale = Instance.new("UIScale")
+	bannerScale.Parent = banner
+	local panelScale = Instance.new("UIScale")
+	panelScale.Parent = panel
+	local camera = workspace.CurrentCamera
+	local function fitScreen()
+		local s = math.clamp(camera.ViewportSize.Y / 720, 0.62, 1.25)
+		bannerScale.Scale = s
+		panelScale.Scale = s
+	end
+	camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitScreen)
+	fitScreen()
 	return g
 end
 

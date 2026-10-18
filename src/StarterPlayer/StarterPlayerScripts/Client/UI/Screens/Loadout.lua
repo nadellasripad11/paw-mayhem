@@ -23,7 +23,7 @@ local CARD_BG = Color3.fromRGB(16, 32, 60)
 local CARD_STROKE = Color3.fromRGB(42, 72, 114)
 local EQUIP_GREEN = Color3.fromRGB(182, 241, 112)
 local TAB_ON = Theme.Color.Accent
-local TAB_OFF = Color3.fromRGB(20, 40, 70)
+local TAB_OFF = Theme.Color.Surface2
 
 local CLASS_COLOR = {
 	Balanced = Color3.fromRGB(196, 156, 255),
@@ -171,26 +171,22 @@ end
 
 function Loadout.Build(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false })
-	local board = UIUtil.panel({
-		Parent = root, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(1, -24, 1, -24), BackgroundColor3 = Color3.fromRGB(10, 22, 44), ClipsDescendants = true,
-	})
-	UIUtil.padding(14, board)
-
-	local header = UIUtil.make("Frame", { Parent = board, Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1 })
-	local gunSlot = UIUtil.make("Frame", { Parent = header, Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1 })
-	Icons.Place("Gun", gunSlot, 26, Theme.Color.Accent)
-	local title = UIUtil.label({ Parent = header, Text = "WEAPONS", Font = Theme.Font.Title, TextSize = 26, Position = UDim2.fromOffset(36, 0), Size = UDim2.new(0.6, 0, 1, 0) })
-	UIUtil.label({ Parent = header, Text = "Pick your paw-powered playstyle", TextColor3 = Theme.Color.TextMuted, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(1, 0, 1, 0) })
-
-	local tabRow = UIUtil.make("Frame", { Parent = board, Position = UDim2.fromOffset(0, 40), Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1 })
+	-- No box of its own: the screen header already says LOADOUT. Two tabs
+	-- (pills, like the other screens) and a grid that fits the screen width.
+	local board = UIUtil.make("Frame", { Parent = root, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ClipsDescendants = true })
+	local tabRow = UIUtil.make("Frame", { Parent = board, Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1 })
 	UIUtil.listLayout(tabRow, 8, Enum.FillDirection.Horizontal)
+	local title = UIUtil.label({
+		Parent = tabRow, Text = "", TextColor3 = Theme.Color.TextMuted, TextSize = 13, LayoutOrder = 3,
+		Size = UDim2.fromOffset(260, 36), Font = Theme.Font.Bold,
+	})
 	local function tab(text: string): TextButton
 		local b = UIUtil.make("TextButton", {
-			Parent = tabRow, Size = UDim2.fromOffset(150, 32), Text = text, Font = Theme.Font.Bold, TextSize = 13,
+			Parent = tabRow, Size = UDim2.fromOffset(150, 36), Text = text, Font = Theme.Font.Bold, TextSize = 14,
 			AutoButtonColor = false, BorderSizePixel = 0, BackgroundColor3 = TAB_OFF, TextColor3 = Theme.Color.Text,
 		}) :: TextButton
-		UIUtil.corner(UDim.new(0, 10), b)
+		UIUtil.corner(Theme.CornerSmall, b)
+		UIUtil.hairline(b)
 		return b
 	end
 	local weaponsTab = tab("WEAPONS")
@@ -200,7 +196,7 @@ function Loadout.Build(parent)
 
 	local function grid(cellH: number): ScrollingFrame
 		local g = UIUtil.make("ScrollingFrame", {
-			Parent = board, Position = UDim2.fromOffset(0, 84), Size = UDim2.new(1, 0, 1, -84),
+			Parent = board, Position = UDim2.fromOffset(0, 48), Size = UDim2.new(1, 0, 1, -48),
 			BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
 			ScrollBarImageColor3 = Theme.Color.Stroke, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		}) :: ScrollingFrame
@@ -210,7 +206,14 @@ function Loadout.Build(parent)
 		pad.PaddingRight = UDim.new(0, 10)
 		pad.PaddingBottom = UDim.new(0, 8)
 		pad.Parent = g
-		UIUtil.gridLayout(g, UDim2.new(0.25, -9, 0, cellH), UDim2.fromOffset(12, 12))
+		local layout = UIUtil.gridLayout(g, UDim2.new(0.25, -9, 0, cellH), UDim2.fromOffset(12, 12))
+		-- As many ~220px columns as fit (2 on phones, up to 5 on wide screens).
+		local function fit()
+			local cols = math.clamp(math.floor(g.AbsoluteSize.X / 220), 2, 5)
+			layout.CellSize = UDim2.new(1 / cols, -12, 0, cellH)
+		end
+		g:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+		fit()
 		return g
 	end
 	local weaponGrid = grid(236)
@@ -220,7 +223,7 @@ function Loadout.Build(parent)
 	local function showSkins(on: boolean)
 		weaponGrid.Visible = not on
 		skinGrid.Visible = on
-		title.Text = on and "WEAPON SKINS" or "WEAPONS"
+		title.Text = on and "Skins change how your blaster looks, nothing else" or "Pick your blaster: tap a card to equip or unlock it"
 		weaponsTab.BackgroundColor3 = on and TAB_OFF or TAB_ON
 		weaponsTab.TextColor3 = on and Theme.Color.TextDim or Color3.new(1, 1, 1)
 		skinsTab.BackgroundColor3 = on and TAB_ON or TAB_OFF
