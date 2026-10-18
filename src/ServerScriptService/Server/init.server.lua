@@ -40,21 +40,29 @@ local function main()
 	ArenaBuilder.Build()
 
 	-- 3. Start services that must be ready before profiles load.
-	EconomyService.Start()
-	QuestService.Start()
-	WeaponService.Start()
-	PowerUpService.Start()
-	PlayerService.Start()
-	MatchService.Start()
-	DropService.Start()
-	EventService.Start()
-	MonetizationService.Start()
-	LeaderboardService.Start()
-	SeasonService.Start()
-	RetentionService.Start()
-	CommunityService.Start()
-	LobbyService.Start()
-	DuelService.Start() -- its pads stand in the lobby
+	-- Each one starts on its own, so a bug in one can't stop the rest (and
+	-- leave players with no lobby to spawn into); the error still shows in Output.
+	local function start(name: string, service: any)
+		local ok, err = pcall(service.Start)
+		if not ok then
+			warn("[PAW MAYHEM] " .. name .. " failed to start: " .. tostring(err))
+		end
+	end
+	start("EconomyService", EconomyService)
+	start("QuestService", QuestService)
+	start("WeaponService", WeaponService)
+	start("PowerUpService", PowerUpService)
+	start("PlayerService", PlayerService)
+	start("MatchService", MatchService)
+	start("DropService", DropService)
+	start("EventService", EventService)
+	start("MonetizationService", MonetizationService)
+	start("LeaderboardService", LeaderboardService)
+	start("SeasonService", SeasonService)
+	start("RetentionService", RetentionService)
+	start("CommunityService", CommunityService)
+	start("LobbyService", LobbyService)
+	start("DuelService", DuelService) -- (duel pads stand in the lobby)
 
 	-- 4. Push profile to client + ensure daily quests on load, then put the
 	--    player in the lobby (they join matches and duels from there).

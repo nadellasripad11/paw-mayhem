@@ -46,7 +46,8 @@ end
 
 -- Turn a part into a cylinder (its X axis is the cylinder axis).
 local function cyl(p: BasePart): BasePart
-	;(p :: Part).Shape = Enum.PartType.Cylinder
+	local part = p :: Part
+	part.Shape = Enum.PartType.Cylinder
 	return p
 end
 
