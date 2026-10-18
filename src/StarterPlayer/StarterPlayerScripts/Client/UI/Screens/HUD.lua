@@ -575,6 +575,26 @@ function HUD.Announce(data: any)
 	end)
 end
 
+-- ── practice range hint (top centre) ─────────────────────────────────────────
+-- Your mouse locks for aiming inside the range, so say why and how to get it back.
+local function buildRangeHint(parent)
+	local pill = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 10),
+		Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Theme.Color.PanelDark,
+		BackgroundTransparency = 0.2, BorderSizePixel = 0, Visible = false,
+	})
+	pill:SetAttribute("HudPart", "RangeHint")
+	UIUtil.corner(UDim.new(1, 0), pill)
+	UIUtil.stroke(Color3.fromRGB(255, 214, 90), 1.5, pill)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 14), UDim.new(0, 14)
+	pad.Parent = pill
+	UIUtil.label({
+		Parent = pill, Text = "PRACTICE RANGE  ·  walk out to use the menu", Font = Theme.Font.Bold, TextSize = 14,
+		Size = UDim2.fromScale(0, 1), AutomaticSize = Enum.AutomaticSize.X, TextColor3 = Color3.new(1, 1, 1),
+	})
+end
+
 -- ── loadout button (top left, matches and duels) ─────────────────────────────
 -- Set by UIManager: open the Loadout screen over the game.
 HUD.OnLoadout = nil :: (() -> ())?
@@ -941,7 +961,7 @@ end
 local PARTS = {
 	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true, Loadout = true },
 	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true, Loadout = true },
-	Range = { Aim = true, Weapon = true, Moves = true },
+	Range = { Aim = true, Weapon = true, Moves = true, RangeHint = true },
 	Lobby = { Moves = true },
 }
 function HUD.SetMode(mode: string)
@@ -977,6 +997,7 @@ function HUD.Build()
 	buildAmmo(gui)
 	buildDashChip(gui)
 	buildLoadoutButton(gui)
+	buildRangeHint(gui)
 	buildBanners(gui)
 	buildMobile(gui)
 	buildKillFeed(gui)

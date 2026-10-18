@@ -10,3 +10,7 @@ PawMayhem.before-*.rbxlx
 Thumbs.db
 
 tools/blender/textures/
+
+# Luau toolchain (downloaded)
+tools/bin/luau/
+tools/bin/luau-windows.zip

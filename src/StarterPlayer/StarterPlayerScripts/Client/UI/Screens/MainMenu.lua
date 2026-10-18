@@ -432,48 +432,72 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- Leaderboard + Settings: small round icons at the far right of the top bar.
-	for i, spec in ipairs({ { "Leaderboard", "Podium" }, { "Settings", "Gear" } }) do
+	-- The rest of the top bar: one row of matching round buttons (Daily,
+	-- Invite, VIP, Leaderboard, Settings). Each shows its name on hover.
+	local function roundButton(name: string, order: number, tip: string, onClick: () -> ()): TextButton
 		local b = Instance.new("TextButton")
-		b.Name = spec[1] .. "Icon"
+		b.Name = name
 		b.Text = ""
 		b.AutoButtonColor = false
 		b.Size = UDim2.fromOffset(40, 40)
-		b.LayoutOrder = 10 + i
+		b.LayoutOrder = order
 		b.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
 		b.BackgroundTransparency = 0.25
 		b.BorderSizePixel = 0
 		b.ZIndex = 10
 		b.Parent = currGroup
 		UIUtil.corner(UDim.new(1, 0), b)
-		UIUtil.stroke(Color3.new(1, 1, 1), 1, b).Transparency = 0.7
-		smallIcon(spec[2], b)
-		b.MouseButton1Click:Connect(function()
-			switchTo(spec[1])
+		local ring = UIUtil.stroke(Color3.new(1, 1, 1), 1, b)
+		ring.Transparency = 0.7
+		local label = UIUtil.label({
+			Parent = b, Text = tip, Font = Theme.Font.Bold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
+			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 6), Size = UDim2.fromOffset(90, 16),
+			TextStrokeTransparency = 0.4, Visible = false, ZIndex = 12,
+		})
+		local pop = Instance.new("UIScale")
+		pop.Parent = b
+		b.MouseEnter:Connect(function()
+			label.Visible = true
+			ring.Transparency = 0.2
+			TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.08 }):Play()
 		end)
+		b.MouseLeave:Connect(function()
+			label.Visible = false
+			ring.Transparency = 0.7
+			TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
+		end)
+		b.MouseButton1Click:Connect(onClick)
+		return b
+	end
+	local function glyph(parent: Instance, icon: string, size: number, color: Color3)
+		local slot = UIUtil.make("Frame", {
+			Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1, ZIndex = 11,
+		})
+		Icons.Place(icon, slot, size, color, color)
 	end
 
+	-- DAILY reward (red dot when today's reward is waiting).
+	local daily = roundButton("Daily", 3, "DAILY", function()
+		DailyReward.Open()
+	end)
+	glyph(daily, "Sparkle", 22, Color3.fromRGB(255, 150, 190))
+	local dot = UIUtil.make("Frame", { Parent = daily, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -5, 0, 5), Size = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.fromRGB(255, 50, 60), BorderSizePixel = 0, ZIndex = 12 })
+	UIUtil.corner(UDim.new(1, 0), dot)
+	UIUtil.stroke(Color3.new(1, 1, 1), 2, dot)
+	ClientState.ProfileChanged:Connect(function()
+		dot.Visible = DailyReward.CanClaim()
+	end)
+	dot.Visible = false
+
 	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
-	local invite = Instance.new("TextButton")
-	invite.Name = "Invite"
-	invite.Text = "INVITE"
-	invite.Font = Theme.Font.Title
-	invite.TextSize = 17
-	invite.TextColor3 = Color3.new(1, 1, 1)
-	invite.Size = UDim2.fromOffset(88, 40)
-	invite.LayoutOrder = -2
-	invite.BackgroundColor3 = Color3.fromRGB(60, 180, 255)
-	invite.BorderSizePixel = 0
-	invite.ZIndex = 10
-	invite.Visible = false
-	invite.Parent = currGroup
-	UIUtil.corner(UDim.new(0, 12), invite)
-	UIUtil.stroke(Color3.fromRGB(200, 236, 255), 1.5, invite)
-	invite.MouseButton1Click:Connect(function()
+	local invite = roundButton("Invite", 4, "INVITE", function()
 		pcall(function()
 			SocialService:PromptGameInvite(player)
 		end)
 	end)
+	glyph(invite, "Plus", 18, Color3.fromRGB(120, 210, 255))
+	invite.Visible = false
 	task.spawn(function()
 		local ok, can = pcall(function()
 			return SocialService:CanSendGameInviteAsync(player)
@@ -481,57 +505,30 @@ function MainMenu.Build()
 		invite.Visible = ok and can == true
 	end)
 
-	-- DAILY rewards button (red dot when today's reward is waiting).
-	local daily = Instance.new("TextButton")
-	daily.Name = "Daily"
-	daily.Text = "DAILY"
-	daily.Font = Theme.Font.Title
-	daily.TextSize = 18
-	daily.TextColor3 = Color3.new(1, 1, 1)
-	daily.Size = UDim2.fromOffset(84, 40)
-	daily.LayoutOrder = -1
-	daily.BackgroundColor3 = Color3.fromRGB(255, 110, 150)
-	daily.BorderSizePixel = 0
-	daily.ZIndex = 10
-	daily.Parent = currGroup
-	UIUtil.corner(UDim.new(0, 12), daily)
-	UIUtil.stroke(Color3.fromRGB(255, 220, 235), 1.5, daily)
-	local dot = UIUtil.make("Frame", { Parent = daily, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(14, 14), BackgroundColor3 = Color3.fromRGB(255, 50, 60), BorderSizePixel = 0, ZIndex = 11 })
-	UIUtil.corner(UDim.new(1, 0), dot)
-	UIUtil.stroke(Color3.new(1, 1, 1), 2, dot)
-	daily.MouseButton1Click:Connect(function()
-		DailyReward.Open()
-	end)
-	ClientState.ProfileChanged:Connect(function()
-		dot.Visible = DailyReward.CanClaim()
-	end)
-	dot.Visible = false
-
-	-- Gold VIP button (hidden once owned).
-	local vip = Instance.new("TextButton")
-	vip.Name = "VIP"
-	vip.Text = "VIP"
-	vip.Font = Theme.Font.Title
-	vip.TextSize = 20
-	vip.TextColor3 = Color3.fromRGB(70, 40, 0)
-	vip.AutoButtonColor = true
-	vip.Size = UDim2.fromOffset(70, 40)
-	vip.LayoutOrder = 0
-	vip.BackgroundColor3 = Color3.new(1, 1, 1)
-	vip.BorderSizePixel = 0
-	vip.ZIndex = 10
-	vip.Parent = currGroup
-	UIUtil.corner(UDim.new(0, 12), vip)
-	UIUtil.gradient(Color3.fromRGB(255, 226, 110), Color3.fromRGB(240, 160, 30), 90, vip)
-	UIUtil.stroke(Color3.fromRGB(255, 245, 190), 1.5, vip)
-	vip.MouseButton1Click:Connect(function()
+	-- VIP (gold, hidden once owned).
+	local vip = roundButton("VIP", 5, "GET VIP", function()
 		Monetize.PromptPass("VIP")
 	end)
+	vip.BackgroundTransparency = 0
+	vip.BackgroundColor3 = Color3.new(1, 1, 1)
+	UIUtil.gradient(Color3.fromRGB(255, 226, 110), Color3.fromRGB(240, 160, 30), 90, vip)
+	UIUtil.label({
+		Parent = vip, Text = "VIP", Font = Theme.Font.Title, TextSize = 14, TextColor3 = Color3.fromRGB(80, 46, 0),
+		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 11,
+	})
 	local function refreshVip()
 		vip.Visible = not Monetize.OwnsPass("VIP")
 	end
 	player:GetAttributeChangedSignal("VIP"):Connect(refreshVip)
 	refreshVip()
+
+	-- Leaderboard + Settings at the far right.
+	for i, spec in ipairs({ { "Leaderboard", "Podium", "LEADERBOARD" }, { "Settings", "Gear", "SETTINGS" } }) do
+		local b = roundButton(spec[1] .. "Icon", 10 + i, spec[3], function()
+			switchTo(spec[1])
+		end)
+		smallIcon(spec[2], b)
+	end
 
 	-- Toast (top centre) for notices and purchase messages in the lobby.
 	local toast = UIUtil.label({
