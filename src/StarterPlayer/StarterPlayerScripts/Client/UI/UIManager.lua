@@ -384,9 +384,9 @@ function UIManager.Start()
 	if not resultsOk then
 		warn("[PAW MAYHEM] Results screen failed to build: " .. tostring(resultsErr))
 	end
-	-- The results screen and the daily calendar onto the clean look too.
+	-- The results screen, the daily calendar and the HUD onto the clean look too.
 	local playerGui = player:WaitForChild("PlayerGui")
-	for _, name in ipairs({ "PawResults", "PawDaily" }) do
+	for _, name in ipairs({ "PawResults", "PawDaily", "PawHUD" }) do
 		local g = playerGui:FindFirstChild(name)
 		if g then
 			UIUtil.restyle(g)
