@@ -42,7 +42,7 @@ local BOT_WAIT = 15 -- seconds alone on a pad before bots fill it
 local TEAM_COLOR = { Blue = Color3.fromRGB(70, 150, 255), Red = Color3.fromRGB(255, 80, 90) }
 
 type Slot = { team: string, pos: Vector3, part: BasePart, player: Player? }
-type Pad = { kind: string, slots: { Slot }, count: TextLabel, sub: TextLabel, startAt: number?, waitingSince: number? }
+type Pad = { kind: string, slots: { Slot }, counts: { [string]: TextLabel }, sub: TextLabel, startAt: number?, waitingSince: number? }
 type Duel = {
 	id: number,
 	place: number,
@@ -70,57 +70,77 @@ local function other(team: string): string
 end
 
 -- ── the pads in the lobby ────────────────────────────────────────────────────
+-- Pad look (Rivals-style, our colours): a flat dark plate with a light rim,
+-- split across the middle into two sides (blue towards the spawn, red
+-- towards the far end, matching the screen above); each player spot is a round emblem
+-- that fills with its team colour when someone stands on it.
+local PAD_PLATE = Color3.fromRGB(40, 44, 60)
+local PAD_RIM = Color3.fromRGB(196, 200, 214)
+local SPOT_RING = Color3.fromRGB(230, 232, 240)
+local SPOT_EMPTY = Color3.fromRGB(58, 64, 86)
+
 local function buildPad(def: any, parent: Instance)
 	local at = LobbyService.At
 	local is2v2 = def.kind == "2v2"
-	local w, d = is2v2 and 12.5 or 12, is2v2 and 11 or 8.5
+	local w, d = is2v2 and 11 or 9, is2v2 and 12.5 or 12
 	local center = at(def.x, def.z)
-	local function deco(p: BasePart): BasePart
+	local function flat(name: string, size: Vector3, offset: Vector3, color: Color3): BasePart
+		local p = ArenaKit.NewPart(name, size, CFrame.new(center + offset), color, Enum.Material.SmoothPlastic, parent)
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CastShadow = false
+		return p
+	end
+	local function round(name: string, diameter: number, y: number, x: number, z: number, color: Color3): BasePart
+		local p = ArenaKit.NewDisc(name, diameter, 0.04, center + Vector3.new(x, y, z), color, Enum.Material.SmoothPlastic, parent)
 		p.CanCollide = false
 		p.CanQuery = false
 		p.CastShadow = false
 		return p
 	end
 
-	-- The pad: a dark plate, blue half and red half, glowing border, and a
-	-- round slot for each player.
-	deco(ArenaKit.NewPart("DuelPad", Vector3.new(w, 0.3, d), CFrame.new(center + Vector3.new(0, 0.15, 0)), Color3.fromRGB(26, 30, 48), Enum.Material.SmoothPlastic, parent))
-	for _, half in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
-		local tint = deco(ArenaKit.NewPart("PadHalf", Vector3.new(w / 2 - 0.6, 0.05, d - 0.6), CFrame.new(center + Vector3.new(half[2] * w / 4, 0.32, 0)), TEAM_COLOR[half[1]], Enum.Material.SmoothPlastic, parent))
-		tint.Transparency = 0.6
+	-- The plate: light rim, dark top, a thin line down the middle.
+	flat("PadRim", Vector3.new(w, 0.24, d), Vector3.new(0, 0.12, 0), PAD_RIM)
+	flat("PadPlate", Vector3.new(w - 0.6, 0.26, d - 0.6), Vector3.new(0, 0.13, 0), PAD_PLATE)
+	flat("PadLine", Vector3.new(w - 1.4, 0.27, 0.18), Vector3.new(0, 0.135, 0), PAD_RIM)
+	-- A thin team-coloured strip along each outer end, so you can tell the sides.
+	for _, side in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
+		flat("PadSide", Vector3.new(w - 1.4, 0.27, 0.35), Vector3.new(0, 0.135, side[2] * (d / 2 - 0.75)), TEAM_COLOR[side[1]])
 	end
-	for _, e in ipairs({ { 0, d / 2, w, 0.25 }, { 0, -d / 2, w, 0.25 }, { w / 2, 0, 0.25, d }, { -w / 2, 0, 0.25, d } }) do
-		deco(ArenaKit.NewPart("PadEdge", Vector3.new(e[3], 0.12, e[4]), CFrame.new(center + Vector3.new(e[1], 0.34, e[2])), Color3.fromRGB(200, 206, 222), Enum.Material.SmoothPlastic, parent))
-	end
-	deco(ArenaKit.NewPart("PadSplit", Vector3.new(0.2, 0.1, d - 1), CFrame.new(center + Vector3.new(0, 0.34, 0)), Color3.fromRGB(200, 206, 222), Enum.Material.SmoothPlastic, parent)).Transparency = 0.4
 
-	local pad: Pad = { kind = def.kind, slots = {}, count = nil :: any, sub = nil :: any, startAt = nil }
-	local offsets = is2v2 and { { "Blue", -3.2, -2.6 }, { "Blue", -3.2, 2.6 }, { "Red", 3.2, -2.6 }, { "Red", 3.2, 2.6 } }
-		or { { "Blue", -3, 0 }, { "Red", 3, 0 } }
+	local pad: Pad = { kind = def.kind, slots = {}, counts = {}, sub = nil :: any, startAt = nil }
+	local offsets = is2v2 and { { "Blue", -2.6, -3.1 }, { "Blue", 2.6, -3.1 }, { "Red", -2.6, 3.1 }, { "Red", 2.6, 3.1 } }
+		or { { "Blue", 0, -3 }, { "Red", 0, 3 } }
 	for _, o in ipairs(offsets) do
-		local pos = center + Vector3.new(o[2], 0, o[3])
-		local slot = deco(ArenaKit.NewDisc("Slot", 4, 0.2, pos + Vector3.new(0, 0.4, 0), TEAM_COLOR[o[1]], Enum.Material.SmoothPlastic, parent))
-		slot.Transparency = 0.55
-		table.insert(pad.slots, { team = o[1], pos = pos, part = slot, player = nil })
+		-- Emblem: a light ring, a dark centre that takes the team colour
+		-- when someone stands on it, and a small team dot.
+		round("SpotRing", 3.6, 0.29, o[2], o[3], SPOT_RING)
+		local fill = round("SpotFill", 3.1, 0.31, o[2], o[3], SPOT_EMPTY)
+		round("SpotDot", 0.9, 0.33, o[2], o[3], TEAM_COLOR[o[1]])
+		table.insert(pad.slots, { team = o[1], pos = center + Vector3.new(o[2], 0, o[3]), part = fill, player = nil })
 	end
 
-	-- A screen on the side wall: the mode, how many are on it, and what it's
-	-- waiting for.
+	-- The screen above it on the side wall: the mode, and each side's count
+	-- (like 0/1 | 0/1), and what the pad is waiting for.
 	local wallX = def.screenX or def.wall * 16.75
 	local screenPos = at(wallX, def.z, 7)
 	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0))
-	deco(ArenaKit.NewPart("ScreenEdge", Vector3.new(8.6, 5.6, 0.15), face * CFrame.new(0, 0, 0.2), is2v2 and Color3.fromRGB(170, 110, 255) or Color3.fromRGB(60, 210, 255), Enum.Material.SmoothPlastic, parent))
-	local screen = deco(ArenaKit.NewPart("PadScreen", Vector3.new(8, 5, 0.3), face, Color3.fromRGB(14, 18, 30), Enum.Material.SmoothPlastic, parent))
+	local frame = ArenaKit.NewPart("ScreenFrame", Vector3.new(8.6, 5.4, 0.2), face * CFrame.new(0, 0, 0.2), Color3.fromRGB(70, 76, 98), Enum.Material.SmoothPlastic, parent)
+	frame.CanCollide = false
+	frame.CanQuery = false
+	local screen = ArenaKit.NewPart("PadScreen", Vector3.new(8, 4.8, 0.3), face, Color3.fromRGB(16, 18, 28), Enum.Material.SmoothPlastic, parent)
+	screen.CanCollide = false
+	screen.CanQuery = false
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
 	gui.LightInfluence = 0
 	gui.PixelsPerStud = 40
 	gui.Parent = screen
-	local function label(text: string, y: number, h: number, font: Enum.Font, color: Color3): TextLabel
+	local function label(text: string, x: number, y: number, wScale: number, h: number, font: Enum.Font, color: Color3): TextLabel
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
-		t.Position = UDim2.fromScale(0, y)
-		t.Size = UDim2.fromScale(1, h)
+		t.Position = UDim2.fromScale(x, y)
+		t.Size = UDim2.fromScale(wScale, h)
 		t.Font = font
 		t.TextScaled = true
 		t.TextColor3 = color
@@ -128,9 +148,20 @@ local function buildPad(def: any, parent: Instance)
 		t.Parent = gui
 		return t
 	end
-	label(string.upper(def.kind), 0.05, 0.22, Enum.Font.FredokaOne, is2v2 and Color3.fromRGB(200, 160, 255) or Color3.fromRGB(120, 220, 255))
-	pad.count = label("0/" .. #pad.slots, 0.27, 0.45, Enum.Font.GothamBlack, Color3.new(1, 1, 1))
-	pad.sub = label("Step on a pad", 0.76, 0.17, Enum.Font.GothamBold, Color3.fromRGB(255, 226, 120))
+	local need = #pad.slots // 2
+	label(string.upper(def.kind), 0, 0.04, 1, 0.2, Enum.Font.FredokaOne, Color3.fromRGB(235, 238, 248))
+	-- (Facing a left-wall screen the spawn end is on your left; facing a
+	-- right-wall one it's on your right. Each count sits over its own half.)
+	local blueLeft = def.wall > 0
+	pad.counts.Blue = label("0/" .. need, blueLeft and 0.06 or 0.52, 0.27, 0.42, 0.42, Enum.Font.GothamBlack, TEAM_COLOR.Blue)
+	pad.counts.Red = label("0/" .. need, blueLeft and 0.52 or 0.06, 0.27, 0.42, 0.42, Enum.Font.GothamBlack, TEAM_COLOR.Red)
+	local bar = Instance.new("Frame")
+	bar.BackgroundColor3 = Color3.fromRGB(90, 96, 120)
+	bar.BorderSizePixel = 0
+	bar.Position = UDim2.fromScale(0.495, 0.3)
+	bar.Size = UDim2.fromScale(0.01, 0.36)
+	bar.Parent = gui
+	pad.sub = label("Step on a pad", 0, 0.76, 1, 0.17, Enum.Font.GothamBold, Color3.fromRGB(200, 204, 220))
 	table.insert(pads, pad)
 end
 
@@ -408,13 +439,22 @@ local function tickPads()
 	for _, pad in ipairs(pads) do
 		local filled = 0
 		for _, slot in ipairs(pad.slots) do
-			slot.part.Transparency = slot.player and 0.05 or 0.55
+			slot.part.Color = slot.player and TEAM_COLOR[slot.team] or SPOT_EMPTY
 			if slot.player then
 				filled += 1
 			end
 		end
 		local need = #pad.slots - filled
-		pad.count.Text = filled .. "/" .. #pad.slots
+		local per = #pad.slots // 2
+		for _, team in ipairs({ "Blue", "Red" }) do
+			local n = 0
+			for _, slot in ipairs(pad.slots) do
+				if slot.team == team and slot.player then
+					n += 1
+				end
+			end
+			pad.counts[team].Text = n .. "/" .. per
+		end
 		if need > 0 then
 			pad.startAt = nil
 			if filled == 0 then
