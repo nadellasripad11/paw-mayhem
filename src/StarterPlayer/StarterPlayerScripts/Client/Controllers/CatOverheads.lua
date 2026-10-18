@@ -41,20 +41,6 @@ end
 -- The name a cat goes by: the player's display name, or a bot's own name.
 local function nameOf(model: Model): string
 	local owner = Players:GetPlayerFromCharacter(model)
-
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Name = "CatName"
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.AnchorPoint = Vector2.new(0.5, 1)
-	nameLabel.Size = UDim2.new(1, 0, 0, 18)
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.TextScaled = true
-	nameLabel.TextStrokeTransparency = 0.3
-	nameLabel.Text = nameOf(model)
-	nameLabel.Parent = gui
-	local function paintName()
-		nameLabel.TextColor3 = relation(model)
-	end
 	if owner then
 		return owner.DisplayName
 	end
@@ -111,6 +97,20 @@ local function attach(model: Model)
 	pct.Parent = gui
 
 	local owner = Players:GetPlayerFromCharacter(model)
+
+	local nameLabel = Instance.new("TextLabel")
+	nameLabel.Name = "CatName"
+	nameLabel.BackgroundTransparency = 1
+	nameLabel.AnchorPoint = Vector2.new(0.5, 1)
+	nameLabel.Size = UDim2.new(1, 0, 0, 18)
+	nameLabel.Font = Enum.Font.GothamBold
+	nameLabel.TextScaled = true
+	nameLabel.TextStrokeTransparency = 0.3
+	nameLabel.Text = nameOf(model)
+	nameLabel.Parent = gui
+	local function paintName()
+		nameLabel.TextColor3 = relation(model)
+	end
 
 	local streak = Instance.new("TextLabel")
 	streak.BackgroundTransparency = 1

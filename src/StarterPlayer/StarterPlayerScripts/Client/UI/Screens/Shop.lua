@@ -1,6 +1,8 @@
 --!strict
--- Shop: category tabs down the left (Featured, Gems, Blasters, Skins, Fur,
--- Outfits, Hats & Gear, Emotes) and a grid of cards on the right. Every card
+-- Shop: category tabs down the left (Free Gift, Featured, Gems, Blasters,
+-- Skins, Fur, Outfits, Hats & Gear, Emotes) and a grid of cards on the right.
+-- FREE GIFT is the daily login reward: a free gift every day, bigger the more
+-- days in a row you come back (the shop opens on it while one is waiting). Every card
 -- shows a real 3D render of the item (ShopArt), built the first time its tab
 -- opens. Robux items open Roblox's purchase prompt; everything else buys with
 -- coins / gems and falls back to Robux when you're short (Monetize.Buy).
@@ -10,6 +12,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
 local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
+local DailyRewards = require(ReplicatedStorage.Shared.Config.DailyRewards)
+local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
@@ -202,8 +206,75 @@ local function cosmeticItems(list: { any }, kind: string, framing: string?)
 	return out
 end
 
+-- ── free daily gift ───────────────────────────────────────────────────────
+local function dailyStatus()
+	local p = ClientState.Profile
+	return p and p.Daily or { CanClaim = false, Streak = 0, NextIndex = 1 }
+end
+
+local function rewardText(r: any): string
+	local parts = {}
+	if r.Coins then
+		table.insert(parts, tostring(r.Coins) .. " COINS")
+	end
+	if r.Gems then
+		table.insert(parts, tostring(r.Gems) .. " GEMS")
+	end
+	return table.concat(parts, "  +  ")
+end
+
+-- One card per day of the week: done days ticked, today's glowing with a
+-- CLAIM button, later days showing what's coming.
+local claiming = false
+local function dayCard(parent: Instance, index: number, reward: any)
+	local f = UIUtil.make("Frame", { Parent = parent, LayoutOrder = index, BackgroundColor3 = CARD_BG, BorderSizePixel = 0 }) :: Frame
+	UIUtil.corner(UDim.new(0, 14), f)
+	local stroke = UIUtil.stroke(CARD_STROKE, 1.5, f)
+	UIUtil.label({
+		Parent = f, Text = index == #DailyRewards.Days and "DAY 7  ·  CHEST" or ("DAY " .. index), Font = Theme.Font.Title, TextSize = 20,
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 14), Size = UDim2.new(1, 0, 0, 26),
+	})
+	UIUtil.label({
+		Parent = f, Text = rewardText(reward), Font = Theme.Font.Title, TextSize = 18, TextWrapped = true,
+		TextColor3 = reward.Gems and Theme.Color.Gem or Theme.Color.Coin, TextXAlignment = Enum.TextXAlignment.Center,
+		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.45, 0), Size = UDim2.new(1, -20, 0, 50),
+	})
+	local state = UIUtil.make("TextButton", {
+		Parent = f, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.new(1, -28, 0, 40),
+		Font = Theme.Font.Title, TextSize = 17, TextColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, AutoButtonColor = true,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(0, 12), state)
+	local function refresh()
+		local st = dailyStatus()
+		local done = (st.CanClaim and index < st.NextIndex) or (not st.CanClaim and index <= st.NextIndex)
+		local today = st.CanClaim and index == st.NextIndex
+		stroke.Color = today and Color3.fromRGB(255, 214, 90) or CARD_STROKE
+		stroke.Thickness = today and 3 or 1.5
+		f.BackgroundColor3 = today and Color3.fromRGB(44, 64, 110) or CARD_BG
+		state.Text = today and "CLAIM FREE" or done and "CLAIMED ✓" or "LATER"
+		state.BackgroundColor3 = today and EQUIP_GREEN or Color3.fromRGB(40, 54, 84)
+		state.Active = today
+	end
+	state.MouseButton1Click:Connect(function()
+		local st = dailyStatus()
+		if claiming or not (st.CanClaim and index == st.NextIndex) then
+			return
+		end
+		claiming = true
+		state.Text = "..."
+		pcall(function()
+			Remotes.Get("ClaimDaily"):InvokeServer()
+		end)
+		claiming = false
+		refresh()
+	end)
+	table.insert(cards, { refresh = refresh })
+	refresh()
+end
+
 -- ── tabs ─────────────────────────────────────────────────────────────────────
 local TABS = {
+	{ id = "Daily", label = "FREE GIFT", cell = 200, daily = true },
 	{
 		id = "Featured", label = "FEATURED", cell = 250,
 		robux = {
@@ -322,7 +393,11 @@ function Shop.Build(parent)
 			if tab.id == id and not built[id] then
 				built[id] = true
 				local page = pages[id]
-				if tab.robux then
+				if tab.daily then
+					for i, reward in ipairs(DailyRewards.Days) do
+						dayCard(page, i, reward)
+					end
+				elseif tab.robux then
 					for _, spec in ipairs(tab.robux) do
 						robuxCard(page, spec)
 					end
@@ -353,7 +428,8 @@ function Shop.Build(parent)
 		end)
 		tabButtons[tab.id] = b
 	end
-	show("Featured")
+	show(dailyStatus().CanClaim and "Daily" or "Featured")
+	Shop.Show = show
 
 	ClientState.ProfileChanged:Connect(function()
 		for _, c in ipairs(cards) do

@@ -432,8 +432,8 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- The rest of the top bar: one row of matching round buttons (Daily,
-	-- Invite, VIP, Leaderboard, Settings). Each shows its name on hover.
+	-- The rest of the top bar: one row of matching round buttons (Invite,
+	-- VIP, Leaderboard, Settings). Each shows its name on hover.
 	local function roundButton(name: string, order: number, tip: string, onClick: () -> ()): TextButton
 		local b = Instance.new("TextButton")
 		b.Name = name
@@ -477,18 +477,19 @@ function MainMenu.Build()
 		Icons.Place(icon, slot, size, color, color)
 	end
 
-	-- DAILY reward (red dot when today's reward is waiting).
-	local daily = roundButton("Daily", 3, "DAILY", function()
-		DailyReward.Open()
-	end)
-	glyph(daily, "Sparkle", 22, Color3.fromRGB(255, 150, 190))
-	local dot = UIUtil.make("Frame", { Parent = daily, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -5, 0, 5), Size = UDim2.fromOffset(12, 12), BackgroundColor3 = Color3.fromRGB(255, 50, 60), BorderSizePixel = 0, ZIndex = 12 })
-	UIUtil.corner(UDim.new(1, 0), dot)
-	UIUtil.stroke(Color3.new(1, 1, 1), 2, dot)
-	ClientState.ProfileChanged:Connect(function()
-		dot.Visible = DailyReward.CanClaim()
-	end)
-	dot.Visible = false
+	-- Today's free gift lives in the Shop: a red dot on the SHOP icon while
+	-- it's waiting.
+	local shopEntry = navButtons.Shop
+	if shopEntry then
+		local dot = UIUtil.make("Frame", { Parent = shopEntry.button, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(14, 14), BackgroundColor3 = Color3.fromRGB(255, 50, 60), BorderSizePixel = 0, ZIndex = 13 })
+		UIUtil.corner(UDim.new(1, 0), dot)
+		UIUtil.stroke(Color3.new(1, 1, 1), 2, dot)
+		local function paintDot()
+			dot.Visible = DailyReward.CanClaim()
+		end
+		ClientState.ProfileChanged:Connect(paintDot)
+		paintDot()
+	end
 
 	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
 	local invite = roundButton("Invite", 4, "INVITE", function()
@@ -661,9 +662,10 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- First visit: the tutorial; after that, the daily reward popup (once per
-	-- session) whenever one is waiting.
-	local dailyOk = pcall(DailyReward.Build)
+	-- New players are offered the tutorial (it goes away by itself if ignored).
+	-- The daily gift is claimed in the Shop; its 7-day calendar is still here
+	-- for the Shop to open.
+	pcall(DailyReward.Build)
 	-- Settings -> Intro -> REPLAY runs the intro again (not while a match is on).
 	Settings.OnReplayIntro = function()
 		if player:GetAttribute("Context") ~= "Lobby" then
@@ -682,11 +684,6 @@ function MainMenu.Build()
 			return
 		end
 		greeted = true
-		local function daily()
-			if dailyOk and DailyReward.CanClaim() then
-				DailyReward.Open()
-			end
-		end
 		-- Point new players at PLAY.
 		local function pointAtPlay()
 			local play = gui:FindFirstChild("Play", true)
@@ -706,17 +703,70 @@ function MainMenu.Build()
 				end)
 			end
 		end
-		-- Brand-new players get the intro: a short cinematic, then a hands-on
-		-- lesson with Mochi in the lobby. Then PLAY is pointed out.
+		-- New players get asked whether they want the tutorial (a short
+		-- cinematic, then a hands-on lesson with Mochi). Ignore it for 7 seconds
+		-- and it slides away (and asks again next time); NO THANKS stops asking.
 		if Tutorial.ShouldShow() then
-			gui.Enabled = false
-			Intro.Run(function()
-				gui.Enabled = player:GetAttribute("Context") == "Lobby"
-				pointAtPlay()
-				daily()
+			local ask = UIUtil.make("Frame", {
+				Parent = gui, Name = "TutorialAsk", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 70),
+				Size = UDim2.fromOffset(380, 132), BackgroundColor3 = Color3.fromRGB(18, 26, 48), BackgroundTransparency = 0.05, BorderSizePixel = 0, ZIndex = 40,
+			}) :: Frame
+			UIUtil.corner(UDim.new(0, 16), ask)
+			UIUtil.stroke(Color3.fromRGB(90, 200, 255), 2, ask)
+			UIUtil.label({
+				Parent = ask, Text = "NEW HERE?", Font = Theme.Font.Title, TextSize = 24, TextXAlignment = Enum.TextXAlignment.Center,
+				Position = UDim2.fromOffset(0, 10), Size = UDim2.new(1, 0, 0, 28), ZIndex = 41,
+			})
+			UIUtil.label({
+				Parent = ask, Text = "Play the 1-minute tutorial with Mochi?", Font = Theme.Font.Bold, TextSize = 15, TextColor3 = Theme.Color.TextDim,
+				TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 40), Size = UDim2.new(1, 0, 0, 20), ZIndex = 41,
+			})
+			local timer = UIUtil.make("Frame", {
+				Parent = ask, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -8), Size = UDim2.new(1, -32, 0, 4),
+				BackgroundColor3 = Color3.fromRGB(90, 200, 255), BorderSizePixel = 0, ZIndex = 41,
+			}) :: Frame
+			UIUtil.corner(UDim.new(1, 0), timer)
+			local answered = false
+			local function close()
+				answered = true
+				TweenService:Create(ask, TweenInfo.new(0.3), { Position = UDim2.new(0.5, 0, 0, -160) }):Play()
+				task.delay(0.35, function()
+					ask:Destroy()
+				end)
+			end
+			local function choice(text: string, x: number, color: Color3, onClick: () -> ())
+				local b = UIUtil.make("TextButton", {
+					Parent = ask, Text = text, Font = Theme.Font.Title, TextSize = 17, TextColor3 = Color3.new(1, 1, 1),
+					AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, x, 0, 70), Size = UDim2.fromOffset(160, 40),
+					BackgroundColor3 = color, BorderSizePixel = 0, AutoButtonColor = true, ZIndex = 41,
+				}) :: TextButton
+				UIUtil.corner(UDim.new(0, 12), b)
+				b.MouseButton1Click:Connect(function()
+					if not answered then
+						close()
+						onClick()
+					end
+				end)
+			end
+			choice("PLAY TUTORIAL", -86, Color3.fromRGB(70, 190, 90), function()
+				switchTo(nil)
+				gui.Enabled = false
+				Intro.Run(function()
+					gui.Enabled = player:GetAttribute("Context") == "Lobby"
+					pointAtPlay()
+				end)
 			end)
-		else
-			daily()
+			choice("NO THANKS", 86, Color3.fromRGB(60, 72, 104), function()
+				Remotes.Get("TutorialDone"):FireServer()
+				pointAtPlay()
+			end)
+			TweenService:Create(timer, TweenInfo.new(7, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 0, 4) }):Play()
+			task.delay(7, function()
+				if not answered then
+					close()
+					pointAtPlay()
+				end
+			end)
 		end
 		-- Weekend event banner (Sat/Sun UTC): low gravity + bonus coins.
 		local wday = os.date("!*t").wday

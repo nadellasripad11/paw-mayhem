@@ -1,6 +1,7 @@
 --!strict
--- LobbyService: the lobby everyone spawns into: a bright stone plaza on a
--- floating island, laid out like the reference (Rivals-style):
+-- LobbyService: the lobby everyone spawns into: one closed, connected
+-- building on a floating island (stone walls all round, a frosted glass roof
+-- over everything), laid out like the reference (Rivals-style):
 --   * the middle: a glowing paw pad where everyone spawns, facing forward
 --   * ahead: the Matchmaking hall you walk through - rows of 1v1 / 2v2 pads
 --     down both sides with screens above them (DuelService builds the pads),
@@ -11,7 +12,7 @@
 --   * right: the COLLECTION, featured cats in glass cases, every rank tier
 --     and a gold cat statue
 --   * between the spawn and the Collection: the leaderboards
--- Stone railings and invisible walls keep everyone in; nobody can hurt anyone.
+-- Every room opens straight off the main hall; nobody can hurt anyone here.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -39,16 +40,20 @@ local FALL_Y = CENTER.Y - 30
 
 -- Floors, as rectangles relative to CENTER: { x0, x1, z0, z1 }. Spawn faces
 -- +Z, so the player's left is +X and their right is -X.
-local PLAZA = { -92, 92, -40, 30 }
+local PLAZA = { -44, 44, -40, 30 }
+local GUNS_ROOM = { 44, 86, -18, 18 }
+local COLLECTION_ROOM = { -86, -44, -18, 18 }
 local MATCH_HALL = { -20, 20, 30, 112 }
 local GATE = { -24, 24, 112, 134 }
-local AREAS = { PLAZA, MATCH_HALL, GATE }
--- The edge of the whole lobby, walked round in order.
+local AREAS = { PLAZA, GUNS_ROOM, COLLECTION_ROOM, MATCH_HALL, GATE }
+-- The outside wall of the whole building, walked round in order.
 local OUTLINE = {
-	{ -92, -40 }, { 92, -40 }, { 92, 30 }, { 20, 30 }, { 20, 112 }, { 24, 112 }, { 24, 134 },
-	{ -24, 134 }, { -24, 112 }, { -20, 112 }, { -20, 30 }, { -92, 30 },
+	{ -44, -40 }, { 44, -40 }, { 44, -18 }, { 86, -18 }, { 86, 18 }, { 44, 18 }, { 44, 30 }, { 20, 30 },
+	{ 20, 112 }, { 24, 112 }, { 24, 134 }, { -24, 134 }, { -24, 112 }, { -20, 112 }, { -20, 30 },
+	{ -44, 30 }, { -44, 18 }, { -86, 18 }, { -86, -18 }, { -44, -18 },
 }
-local HALL_WALL = 14 -- the matchmaking hall's side walls
+local HEIGHT = 22 -- walls up to the roof, everywhere
+local HALL_WALL = 14 -- where the hall's screens and signs sit under
 
 -- The Practice Dimension floats on its own, far away.
 local PRACTICE = Vector3.new(CENTER.X, CENTER.Y, CENTER.Z - 420)
@@ -281,8 +286,21 @@ local function buildGround(f: Instance)
 		local w, d = r[2] - r[1], r[4] - r[3]
 		local mid = at((r[1] + r[2]) / 2, (r[3] + r[4]) / 2)
 		local hall = r == MATCH_HALL
-		solid("Floor" .. i, Vector3.new(w + 0.2, 2, d + 0.2), CFrame.new(mid - Vector3.new(0, 1, 0)), hall and HALL_FLOOR or STONE, hall and Enum.Material.SmoothPlastic or Enum.Material.Slate, f)
-		if not hall then
+		local room = r == GUNS_ROOM or r == COLLECTION_ROOM
+		solid("Floor" .. i, Vector3.new(w + 0.2, 2, d + 0.2), CFrame.new(mid - Vector3.new(0, 1, 0)), hall and HALL_FLOOR or room and WOOD or STONE,
+			hall and Enum.Material.SmoothPlastic or room and Enum.Material.WoodPlanks or Enum.Material.Slate, f)
+		-- Frosted glass roof (closed, but the daylight comes through) on beams.
+		local roof = solid("Roof" .. i, Vector3.new(w + 2, 1, d + 2), CFrame.new(mid + Vector3.new(0, HEIGHT + 0.5, 0)), Color3.fromRGB(205, 228, 255), Enum.Material.Glass, f)
+		roof.Transparency = 0.45
+		roof.CastShadow = false
+		roof.CanQuery = false
+		local long = w >= d
+		local span = long and w or d
+		for k = 4, span - 4, 8 do
+			local off = long and Vector3.new(r[1] + k - (r[1] + r[2]) / 2, 0, 0) or Vector3.new(0, 0, r[3] + k - (r[3] + r[4]) / 2)
+			part("RoofBeam", long and Vector3.new(0.9, 1, d) or Vector3.new(w, 1, 0.9), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.5, 0)), METAL, Enum.Material.Metal, f).CastShadow = false
+		end
+		if not hall and not room then
 			-- Stone tiles.
 			for x = r[1] + 6, r[2] - 1, 6 do
 				part("Grout", Vector3.new(0.12, 0.04, d), CFrame.new(at(x, (r[3] + r[4]) / 2, 0.02)), GROUT, Enum.Material.SmoothPlastic, f)
@@ -297,8 +315,8 @@ local function buildGround(f: Instance)
 		part("Taper", Vector3.new(w * 0.45, 12, d * 0.45), CFrame.new(mid - Vector3.new(0, 24, 0)), STONE_DARK:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Rock, f)
 	end
 
-	-- The edge: a stone railing round the plaza; tall navy walls along the
-	-- matchmaking hall and the gate; invisible walls above it all.
+	-- Walls all the way round: stone along the plaza and rooms, navy along the
+	-- matchmaking hall and the gate; trim, light strips and a stone base inside.
 	for i, a in ipairs(OUTLINE) do
 		local b = OUTLINE[i % #OUTLINE + 1]
 		local pa, pb = Vector3.new(a[1], 0, a[2]), Vector3.new(b[1], 0, b[2])
@@ -307,26 +325,41 @@ local function buildGround(f: Instance)
 		local normal = Vector3.new(-dir.Z, 0, dir.X)
 		local midXZ = (pa + pb) / 2
 		if not inside(midXZ.X + normal.X * 2, midXZ.Z + normal.Z * 2) then
-			normal = -normal -- into the lobby
+			normal = -normal -- into the building
 		end
 		local base = at(midXZ.X, midXZ.Z)
-		local tall = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
-		local h = tall and HALL_WALL or 3.2
-		local c = base + Vector3.new(0, h / 2, 0) - normal * 0.6
-		solid(tall and "HallWall" or "Railing", Vector3.new(1.2, h, len + 1.2), CFrame.lookAt(c, c + dir), tall and NAVY or STONE_WALL, tall and Enum.Material.SmoothPlastic or Enum.Material.Slate, f)
-		local cap = base + Vector3.new(0, h + 0.2, 0) - normal * 0.6
-		part("Cap", Vector3.new(1.8, 0.4, len + 1.8), CFrame.lookAt(cap, cap + dir), tall and NAVY_LIGHT or STONE, tall and Enum.Material.SmoothPlastic or Enum.Material.Slate, f)
-		if tall then
-			local face = base + normal * 0.02
-			local along = CFrame.lookAt(face, face + dir)
-			part("WallBase", Vector3.new(0.2, 2, len), along * CFrame.new(0, 1, 0), STONE_WALL, Enum.Material.Slate, f)
-			neon("WallTrim", Vector3.new(0.25, 0.3, len), along * CFrame.new(0, HALL_WALL - 0.6, 0), BLUE, f)
+		local navy = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
+		local c = base + Vector3.new(0, HEIGHT / 2, 0) - normal
+		solid("Wall", Vector3.new(2, HEIGHT, len + 2), CFrame.lookAt(c, c + dir), navy and NAVY or STONE_WALL, navy and Enum.Material.SmoothPlastic or Enum.Material.Slate, f)
+		local face = base + normal * 0.02
+		local along = CFrame.lookAt(face, face + dir)
+		part("WallBase", Vector3.new(0.2, 2.4, len), along * CFrame.new(0, 1.2, 0), navy and STONE_WALL or STONE_DARK, Enum.Material.Slate, f)
+		neon("WallTrim", Vector3.new(0.25, 0.3, len), along * CFrame.new(0, HEIGHT - 1, 0), navy and BLUE or PURPLE, f)
+		if not navy then
+			part("WallPanel", Vector3.new(0.15, 9, math.max(len - 3, 1)), along * CFrame.new(0, 9.5, 0), NAVY, Enum.Material.SmoothPlastic, f)
 		end
-		local inv = base + Vector3.new(0, 24, 0) - normal * 0.6
-		local wall = solid("EdgeWall", Vector3.new(1, 40, len + 1), CFrame.lookAt(inv, inv + dir), GLASS, Enum.Material.SmoothPlastic, f)
-		wall.Transparency = 1
-		wall.CanQuery = false
-		wall.CastShadow = false
+		for k = 6, len - 3, 12 do
+			neon("LightStrip", Vector3.new(0.25, 7, 0.3), along * CFrame.new(0, 9.5, k - len / 2), navy and PURPLE or BLUE, f).Transparency = 0.2
+		end
+	end
+	-- Over each way through from the main hall: a wall above the opening with
+	-- its sign (the Guns and Collection rooms; the matchmaking arch has its own).
+	for _, h in ipairs({ { 44, -1, "GUNS", BLUE }, { -44, 1, "COLLECTION", PURPLE } }) do
+		local x, side = h[1], h[2]
+		solid("Header", Vector3.new(2, HEIGHT - 14, 36), CFrame.new(at(x, 0, 14 + (HEIGHT - 14) / 2)), STONE_WALL, Enum.Material.Slate, f)
+		board(h[3] .. "Sign", at(x + side * 1.3, 0, 17.8), at(0, 0, 17.8), 24, 4.4, h[4], {
+			{ text = h[3], size = 140, color = WHITE },
+		}, f)
+		neon("OpeningGlow", Vector3.new(0.3, 0.3, 36), CFrame.new(at(x + side * 1.2, 0, 14.2)), h[4], f)
+		for _, z in ipairs({ -18.5, 18.5 }) do
+			solid("OpeningPillar", Vector3.new(3, HEIGHT, 3), CFrame.new(at(x, z, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
+			lantern(at(x + side * 3, z * 0.95), f)
+		end
+	end
+	for _, p in ipairs({ { 0, 0 }, { -24, -24 }, { 24, -24 }, { -24, 18 }, { 24, 18 }, { 65, 0 }, { -65, 0 } }) do
+		local holder = part("CeilingLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(at(p[1], p[2], HEIGHT - 3)), WHITE, Enum.Material.SmoothPlastic, f)
+		holder.Transparency = 1
+		light(holder, Color3.fromRGB(235, 240, 255), 36, 0.7)
 	end
 
 	-- Sky: little floating islands round about, clouds below.
@@ -391,15 +424,14 @@ end
 local function buildMatchHall(f: Instance)
 	-- The entrance arch: stone pillars, a beam and the big sign.
 	for _, x in ipairs({ -22, 22 }) do
-		solid("ArchPillar", Vector3.new(4, 22, 4), CFrame.new(at(x, 30, 11)), STONE_WALL, Enum.Material.Slate, f)
-		part("PillarCap", Vector3.new(4.8, 1, 4.8), CFrame.new(at(x, 30, 22.5)), STONE, Enum.Material.Slate, f)
+		solid("ArchPillar", Vector3.new(4, HEIGHT, 4), CFrame.new(at(x, 30, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
 		banner(at(x, 27.8, 12), at(x, 0, 12), PURPLE, f)
 	end
-	solid("ArchBeam", Vector3.new(48, 3, 4), CFrame.new(at(0, 30, 20.5)), NAVY, Enum.Material.SmoothPlastic, f)
-	board("MatchSign", at(0, 27.6, 16.5), at(0, 0, 16.5), 30, 5, BLUE, {
+	solid("ArchHeader", Vector3.new(40, HEIGHT - 14, 2), CFrame.new(at(0, 30, 14 + (HEIGHT - 14) / 2)), NAVY, Enum.Material.SmoothPlastic, f)
+	board("MatchSign", at(0, 28.6, 17.8), at(0, 0, 17.8), 30, 5, BLUE, {
 		{ text = "MATCHMAKING", size = 150, color = WHITE },
 	}, f)
-	board("MatchSignBack", at(0, 32.4, 16.5), at(0, 60, 16.5), 30, 5, BLUE, {
+	board("MatchSignBack", at(0, 31.4, 17.8), at(0, 60, 17.8), 30, 5, BLUE, {
 		{ text = "LOBBY", size = 150, color = WHITE },
 	}, f)
 
@@ -437,12 +469,11 @@ local function buildMatchHall(f: Instance)
 
 	-- The gate at the far end: pillars, banners, a lit sign over the portal.
 	for _, x in ipairs({ -11, 11 }) do
-		solid("GatePillar", Vector3.new(3.5, 22, 3.5), CFrame.new(at(x, 127, 11)), STONE_WALL, Enum.Material.Slate, f)
-		part("GatePillarCap", Vector3.new(4.2, 1, 4.2), CFrame.new(at(x, 127, 22.5)), STONE, Enum.Material.Slate, f)
+		solid("GatePillar", Vector3.new(3.5, HEIGHT, 3.5), CFrame.new(at(x, 127, HEIGHT / 2)), STONE_WALL, Enum.Material.Slate, f)
 		banner(at(x, 125, 13), at(x, 0, 13), CYAN, f)
 		lantern(at(x * 1.6, 116), f)
 	end
-	solid("GateBeam", Vector3.new(26, 3, 3.5), CFrame.new(at(0, 127, 20.5)), NAVY, Enum.Material.SmoothPlastic, f)
+	solid("GateBeam", Vector3.new(26, 2, 3.5), CFrame.new(at(0, 127, 20)), NAVY, Enum.Material.SmoothPlastic, f)
 	board("GateSign", at(0, 125, 17.5), at(0, 0, 17.5), 18, 3.6, CYAN, {
 		{ text = "PRACTICE DIMENSION", size = 80, color = WHITE },
 	}, f)
@@ -452,39 +483,25 @@ local function buildMatchHall(f: Instance)
 end
 
 -- ── left: the GUNS shop ──────────────────────────────────────────────────────
-local function shopBuilding(name: string, x0: number, x1: number, openSide: number, title: string, glow: Color3, f: Instance): Folder
-	-- A stone room open towards the spawn, a roof, a lit sign over the front.
+-- A side room off the main hall: a panel on the back wall, glowing trim and
+-- lights (its walls, roof and sign are part of the building).
+local function shopRoom(name: string, backX: number, openSide: number, glow: Color3, f: Instance): Folder
 	local b = Instance.new("Folder")
 	b.Name = name
 	b.Parent = f
-	local w, d = math.abs(x1 - x0), 36
-	local midX = (x0 + x1) / 2
-	local backX = openSide > 0 and math.min(x0, x1) or math.max(x0, x1)
-	local frontX = openSide > 0 and math.max(x0, x1) or math.min(x0, x1)
-	solid("BackWall", Vector3.new(2, 13, d), CFrame.new(at(backX, 0, 6.5)), STONE_WALL, Enum.Material.Slate, b)
-	part("BackPanel", Vector3.new(0.2, 9, d - 4), CFrame.new(at(backX + openSide * 1.05, 0, 6.5)), NAVY, Enum.Material.SmoothPlastic, b)
-	for _, z in ipairs({ -d / 2, d / 2 }) do
-		solid("SideWall", Vector3.new(w, 13, 2), CFrame.new(at(midX, z, 6.5)), STONE_WALL, Enum.Material.Slate, b)
-		neon("SideTrim", Vector3.new(w, 0.3, 0.2), CFrame.new(at(midX, z - math.sign(z) * 1.05, 12)), glow, b)
-	end
-	local roof = solid("Roof", Vector3.new(w + 4, 1.2, d + 4), CFrame.new(at(midX, 0, 13.6)), STONE_DARK, Enum.Material.Slate, b)
-	roof.CastShadow = true
-	solid("Fascia", Vector3.new(1.5, 4, d + 4), CFrame.new(at(frontX, 0, 15.4)), NAVY, Enum.Material.SmoothPlastic, b)
-	board(name .. "Sign", at(frontX + openSide * 0.9, 0, 15.6), at(0, 0, 15.6), 26, 3.6, glow, {
-		{ text = title, size = 120, color = WHITE },
-	}, b)
-	neon("FrontGlow", Vector3.new(0.3, 0.3, d), CFrame.new(at(frontX + openSide * 0.6, 0, 13.2)), glow, b)
-	part("InsideFloor", Vector3.new(w - 2, 0.1, d - 2), CFrame.new(at(midX, 0, 0.05)), WOOD, Enum.Material.WoodPlanks, b)
-	for _, z in ipairs({ -10, 0, 10 }) do
-		local holder = part("ShopLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(at(midX, z, 11.5)), WHITE, Enum.Material.SmoothPlastic, b)
+	part("BackPanel", Vector3.new(0.2, 11, 32), CFrame.new(at(backX + openSide * 0.12, 0, 7.5)), NAVY, Enum.Material.SmoothPlastic, b)
+	neon("BackGlow", Vector3.new(0.25, 0.3, 32), CFrame.new(at(backX + openSide * 0.2, 0, 13.2)), glow, b)
+	local midX = backX + openSide * 21
+	for _, z in ipairs({ -9, 9 }) do
+		local holder = part("RoomLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(at(midX, z, HEIGHT - 4)), WHITE, Enum.Material.SmoothPlastic, b)
 		holder.Transparency = 1
-		light(holder, glow:Lerp(WHITE, 0.6), 22, 1)
+		light(holder, glow:Lerp(WHITE, 0.6), 26, 1)
 	end
 	return b
 end
 
 local function buildGuns(f: Instance)
-	local b = shopBuilding("Guns", 44, 86, -1, "GUNS", BLUE, f)
+	local b = shopRoom("Guns", 86, -1, BLUE, f)
 	-- Every blaster racked on the back wall, two rows, show side out.
 	local toFront = Vector3.new(-1, 0, 0)
 	for i, w in ipairs(Weapons.List) do
@@ -537,7 +554,7 @@ local function glassCase(pos: Vector3, size: Vector3, glow: Color3, parent: Inst
 end
 
 local function buildCollection(f: Instance)
-	local b = shopBuilding("Collection", -86, -44, 1, "COLLECTION", PURPLE, f)
+	local b = shopRoom("Collection", -86, 1, PURPLE, f)
 	-- Featured cats in glass cases along the back wall.
 	for i, look in ipairs(FEATURED) do
 		local pos = at(-81, -13.5 + (i - 1) * 9)
