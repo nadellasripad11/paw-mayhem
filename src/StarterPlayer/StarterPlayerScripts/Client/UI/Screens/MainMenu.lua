@@ -61,8 +61,6 @@ local NAV = {
 	{ id = "Season", label = "SEASON", icon = "Trophy" },
 }
 
-local NAV_BG = Color3.fromRGB(16, 22, 30)
-local NAV_BG_T = 0.32
 
 -- Open a full screen (id) or return to the home screen (nil). Opening the
 -- screen that's already open goes back home.
@@ -86,9 +84,9 @@ local function switchTo(id: string?)
 	end
 	for pid, entry in pairs(navButtons) do
 		local on = pid == id
-		entry.button.BackgroundColor3 = on and Theme.Color.Accent or NAV_BG
-		entry.button.BackgroundTransparency = on and 0.1 or NAV_BG_T
-		entry.stroke.Transparency = on and 0.05 or entry.baseStroke
+		entry.button.BackgroundColor3 = on and Theme.Color.Blue or Theme.Color.Surface2
+		entry.stroke.Transparency = on and 1 or Theme.LineAlpha
+		entry.label.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
 	end
 	if id and panels[id] and id ~= currentPanel then
 		require(script.Parent.Parent.UIJuice).Enter(panels[id])
@@ -99,7 +97,7 @@ local function switchTo(id: string?)
 	end
 	if panelBackdrop then
 		-- Over a match the game stays visible behind the screen.
-		panelBackdrop.BackgroundTransparency = inGame and 0.35 or 0.04
+		panelBackdrop.BackgroundTransparency = inGame and 0.3 or 0.03
 	end
 	-- Closing a screen opened over a match hides the menu again.
 	if id == nil and inGame then
@@ -135,16 +133,6 @@ end
 
 function MainMenu.InGameOpen(): boolean
 	return inGame
-end
-
-local function textStroke(label: Instance, color: Color3, thickness: number): UIStroke
-	local s = Instance.new("UIStroke")
-	s.Color = color
-	s.Thickness = thickness
-	s.LineJoinMode = Enum.LineJoinMode.Round
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-	s.Parent = label
-	return s
 end
 
 local function commas(n: number): string
@@ -188,7 +176,7 @@ local function refreshCurrency()
 	local trophies = p.Stats and tonumber(p.Stats.Trophies) or 0
 	local tier = Ranks.For(trophies)
 	levelLabel.RichText = true
-	levelLabel.Text = string.format('Lv. %d  <font color="#%s" size="15">%s %d</font>', p.Level or 1, tier.Color:ToHex(), string.upper(tier.Name), trophies)
+	levelLabel.Text = string.format('LEVEL %d   ·   <font color="#%s">%s  %d</font>', p.Level or 1, tier.Color:ToHex(), string.upper(tier.Name), trophies)
 	local frac = (p.LevelNeed and p.LevelNeed > 0) and (p.LevelXP / p.LevelNeed) or 0
 	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0.04, 1), 1)
 	if xpLabel then
@@ -198,7 +186,7 @@ local function refreshCurrency()
 	if avatarSlot then
 		avatarSlot:ClearAllChildren()
 		local fur = Cats.FurById[p.Loadout.Cat.Fur] or Cats.FurById[Cats.Default.Fur]
-		Icons.Place("CatFace", avatarSlot, 40, fur.Body, fur.Accent)
+		Icons.Place("CatFace", avatarSlot, 34, fur.Body, fur.Accent)
 	end
 end
 
@@ -230,51 +218,30 @@ local function onPlay()
 	end
 end
 
--- ── left icon buttons: square glass tiles, icon over a small label ───────────
+-- ── left icon buttons: flat square tiles, icon over a small label ────────────
 local function navButton(parent: Instance, item, order: number)
-	local b = Instance.new("TextButton")
-	b.Name = item.id
-	b.AutoButtonColor = false
-	b.Text = ""
-	b.Size = UDim2.fromOffset(74, 74)
-	b.LayoutOrder = order
-	b.BorderSizePixel = 0
-	b.ZIndex = 11
-	b.BackgroundColor3 = NAV_BG
-	b.BackgroundTransparency = NAV_BG_T
-	b.Parent = parent
-	UIUtil.corner(UDim.new(0, 14), b)
-	local stroke = Instance.new("UIStroke")
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = Color3.new(1, 1, 1)
-	stroke.Thickness = 1
-	stroke.Transparency = 0.82
-	stroke.Parent = b
-
+	local b = UIUtil.make("TextButton", {
+		Parent = parent, Name = item.id, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(66, 66), LayoutOrder = order,
+		BorderSizePixel = 0, ZIndex = 11, BackgroundColor3 = Theme.Color.Surface2, BackgroundTransparency = 0.08,
+	}) :: TextButton
+	UIUtil.corner(Theme.Corner, b)
+	local stroke = UIUtil.hairline(b)
 	local slot = UIUtil.make("Frame", {
-		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 30),
-		Size = UDim2.fromOffset(32, 32), BackgroundTransparency = 1, ZIndex = 12,
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 26),
+		Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, ZIndex = 12,
 	})
 	local white = Color3.new(1, 1, 1)
-	Icons.Place(item.icon, slot, 32, white, white)
-	UIUtil.label({
-		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = 12,
-		TextColor3 = white, TextXAlignment = Enum.TextXAlignment.Center,
-		Position = UDim2.new(0, 0, 1, -22), Size = UDim2.new(1, 0, 0, 16), ZIndex = 12,
+	Icons.Place(item.icon, slot, 28, white, white)
+	local label = UIUtil.label({
+		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Bold, TextSize = 11,
+		TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center,
+		Position = UDim2.new(0, 0, 1, -19), Size = UDim2.new(1, 0, 0, 14), ZIndex = 12,
 	})
-
-	local pop = Instance.new("UIScale")
-	pop.Parent = b
-	b.MouseEnter:Connect(function()
-		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.06 }):Play()
-	end)
-	b.MouseLeave:Connect(function()
-		TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
-	end)
+	UIUtil.feedback(b)
 	b.MouseButton1Click:Connect(function()
 		switchTo(item.id)
 	end)
-	navButtons[item.id] = { button = b, stroke = stroke, baseStroke = stroke.Transparency }
+	navButtons[item.id] = { button = b, stroke = stroke, label = label }
 end
 
 -- Tiny white glyphs for the round top-bar buttons: a podium (three bars)
@@ -308,17 +275,6 @@ local function smallIcon(kind: string, parent: Instance)
 	end
 end
 
-local function glassPill(props): Frame
-	local f = UIUtil.make("Frame", props) :: Frame
-	f.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
-	f.BackgroundTransparency = 0.25
-	f.BorderSizePixel = 0
-	UIUtil.corner(UDim.new(0, 12), f)
-	local s = UIUtil.stroke(Color3.new(1, 1, 1), 1, f)
-	s.Transparency = 0.84
-	return f
-end
-
 function MainMenu.Build()
 	gui = UIUtil.make("ScreenGui", {
 		Name = "PawMainMenu", Parent = player:WaitForChild("PlayerGui"),
@@ -336,50 +292,23 @@ function MainMenu.Build()
 	end
 
 	-- Icon buttons down the left side
-	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(74, 4 * 74 + 3 * 10), ZIndex = 10 })
-	UIUtil.listLayout(navGroup, 10)
+	local navGroup, navScale = scaled({ Parent = gui, Name = "NavGroup", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(66, 4 * 66 + 3 * 8), ZIndex = 10 })
+	UIUtil.listLayout(navGroup, 8)
 	for i, item in ipairs(NAV) do
 		navButton(navGroup, item, i)
 	end
 
 	-- PLAY (bottom centre): pick a mode and vote a map for the next match, or
 	-- drop straight into one that's running. The line under it says where you are.
-	local playGroup, playScale = scaled({ Parent = gui, Name = "PlayGroup", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(260, 88), ZIndex = 10 })
-	local play = Instance.new("TextButton")
-	play.Name = "Play"
-	play.AutoButtonColor = false
-	play.Text = ""
-	play.Size = UDim2.fromOffset(260, 62)
-	play.BackgroundColor3 = Color3.new(1, 1, 1)
-	play.BorderSizePixel = 0
-	play.ZIndex = 11
-	play.Parent = playGroup
-	UIUtil.corner(UDim.new(0, 16), play)
-	UIUtil.gradient(Color3.fromRGB(132, 228, 76), Color3.fromRGB(54, 170, 50), 90, play)
-	UIUtil.stroke(Color3.fromRGB(198, 255, 150), 2, play).Transparency = 0.15
-	local gloss = UIUtil.make("Frame", {
-		Parent = play, Position = UDim2.fromOffset(6, 4), Size = UDim2.new(1, -12, 0.42, 0),
-		BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 11,
-	})
-	UIUtil.corner(UDim.new(0, 12), gloss)
-	local playLabel = UIUtil.label({
-		Parent = play, Text = "PLAY", Font = Theme.Font.Title, TextSize = 34, TextColor3 = Color3.new(1, 1, 1),
-		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 12,
-	})
-	textStroke(playLabel, Color3.fromRGB(36, 112, 34), 2)
+	local playGroup, playScale = scaled({ Parent = gui, Name = "PlayGroup", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(240, 86), ZIndex = 10 })
+	local play, playLabel = UIUtil.primaryButton({
+		Parent = playGroup, Name = "Play", Size = UDim2.fromOffset(240, 58), ZIndex = 11, TextSize = 30, CornerRadius = UDim.new(0, 14),
+	}, "PLAY")
 	local playSub = UIUtil.label({
-		Parent = playGroup, Text = "", Font = Theme.Font.Bold, TextSize = 14, TextColor3 = Color3.new(1, 1, 1),
-		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 20),
-		TextStrokeTransparency = 0.5, ZIndex = 11,
+		Parent = playGroup, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 66), Size = UDim2.new(1, 0, 0, 18),
+		TextStrokeTransparency = 0.55, ZIndex = 11,
 	})
-	local playPop = Instance.new("UIScale")
-	playPop.Parent = play
-	play.MouseEnter:Connect(function()
-		TweenService:Create(playPop, TweenInfo.new(0.12), { Scale = 1.04 }):Play()
-	end)
-	play.MouseLeave:Connect(function()
-		TweenService:Create(playPop, TweenInfo.new(0.12), { Scale = 1 }):Play()
-	end)
 	play.MouseButton1Click:Connect(onPlay)
 	local function clock(sec: number): string
 		sec = math.max(0, math.floor(sec))
@@ -402,79 +331,30 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- Coins + gems (top right)
-	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(640, 40), ZIndex = 10 })
+	-- Top right: coins, gems (+ opens the gem shop), then round icon buttons.
+	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(600, 40), ZIndex = 10 })
 	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
-	local coinChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(114, 40), LayoutOrder = 1, ZIndex = 10 })
-	local coinSlot = UIUtil.make("Frame", { Parent = coinChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, ZIndex = 11 })
-	Icons.Place("Coin", coinSlot, 30, Color3.fromRGB(255, 196, 46))
-	coinLabel = UIUtil.label({ Parent = coinChip, Text = "0", Font = Theme.Font.Title, TextSize = 21, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -48, 1, 0), ZIndex = 11 })
-	local gemChip = glassPill({ Parent = currGroup, Size = UDim2.fromOffset(126, 40), LayoutOrder = 2, ZIndex = 10 })
-	local gemSlot = UIUtil.make("Frame", { Parent = gemChip, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 21, 0.5, 0), Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, ZIndex = 11 })
-	Icons.Place("Gem", gemSlot, 30, Color3.fromRGB(206, 92, 255))
-	gemLabel = UIUtil.label({ Parent = gemChip, Text = "0", Font = Theme.Font.Title, TextSize = 21, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -84, 1, 0), ZIndex = 11 })
-	local plus = Instance.new("TextButton")
-	plus.Text = ""
-	plus.AutoButtonColor = false
-	plus.AnchorPoint = Vector2.new(1, 0.5)
-	plus.Position = UDim2.new(1, -4, 0.5, 0)
-	plus.Size = UDim2.fromOffset(32, 32)
-	plus.BackgroundColor3 = Color3.new(1, 1, 1)
-	plus.BackgroundTransparency = 0.82
-	plus.BorderSizePixel = 0
-	plus.ZIndex = 11
-	plus.Parent = gemChip
-	UIUtil.corner(UDim.new(0, 9), plus)
-	Icons.Place("Plus", plus, 18, Color3.new(1, 1, 1))
-	plus.MouseButton1Click:Connect(function()
-		if currentPanel ~= "Shop" then
-			switchTo("Shop")
-		end
-	end)
-
-	-- The rest of the top bar: one row of matching round buttons (Invite,
-	-- VIP, Leaderboard, Settings). Each shows its name on hover.
-	local function roundButton(name: string, order: number, tip: string, onClick: () -> ()): TextButton
-		local b = Instance.new("TextButton")
-		b.Name = name
-		b.Text = ""
-		b.AutoButtonColor = false
-		b.Size = UDim2.fromOffset(40, 40)
-		b.LayoutOrder = order
-		b.BackgroundColor3 = Color3.fromRGB(20, 26, 40)
-		b.BackgroundTransparency = 0.25
-		b.BorderSizePixel = 0
-		b.ZIndex = 10
-		b.Parent = currGroup
-		UIUtil.corner(UDim.new(1, 0), b)
-		local ring = UIUtil.stroke(Color3.new(1, 1, 1), 1, b)
-		ring.Transparency = 0.7
-		local label = UIUtil.label({
-			Parent = b, Text = tip, Font = Theme.Font.Bold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
-			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 6), Size = UDim2.fromOffset(90, 16),
-			TextStrokeTransparency = 0.4, Visible = false, ZIndex = 12,
-		})
-		local pop = Instance.new("UIScale")
-		pop.Parent = b
-		b.MouseEnter:Connect(function()
-			label.Visible = true
-			ring.Transparency = 0.2
-			TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1.08 }):Play()
+	local _, coins = UIUtil.currencyPill({ Parent = currGroup, Size = UDim2.fromOffset(118, 40), LayoutOrder = 1, ZIndex = 10 }, "Coin", Theme.Color.Coin)
+	coinLabel = coins
+	local _, gems, gemPlus = UIUtil.currencyPill({ Parent = currGroup, Size = UDim2.fromOffset(124, 40), LayoutOrder = 2, ZIndex = 10 }, "Gem", Theme.Color.Gem, true)
+	gemLabel = gems
+	if gemPlus then
+		gemPlus.MouseButton1Click:Connect(function()
+			if currentPanel ~= "Shop" then
+				switchTo("Shop")
+			end
+			if Shop.Show then
+				Shop.Show("Gems")
+			end
 		end)
-		b.MouseLeave:Connect(function()
-			label.Visible = false
-			ring.Transparency = 0.7
-			TweenService:Create(pop, TweenInfo.new(0.12), { Scale = 1 }):Play()
-		end)
-		b.MouseButton1Click:Connect(onClick)
-		return b
 	end
-	local function glyph(parent: Instance, icon: string, size: number, color: Color3)
-		local slot = UIUtil.make("Frame", {
-			Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-			Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1, ZIndex = 11,
-		})
-		Icons.Place(icon, slot, size, color, color)
+	local function roundButton(name: string, order: number, tip: string, draw: (Frame) -> (), onClick: () -> ()): TextButton
+		return UIUtil.iconButton({ Parent = currGroup, Name = name, LayoutOrder = order, ZIndex = 10 }, draw, tip, onClick)
+	end
+	local function glyph(icon: string, color: Color3): (Frame) -> ()
+		return function(slot: Frame)
+			Icons.Place(icon, slot, 20, color, color)
+		end
 	end
 
 	-- Today's free gift lives in the Shop: a red dot on the SHOP icon while
@@ -492,12 +372,11 @@ function MainMenu.Build()
 	end
 
 	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
-	local invite = roundButton("Invite", 4, "INVITE", function()
+	local invite = roundButton("Invite", 4, "Invite friends", glyph("Wave", Color3.new(1, 1, 1)), function()
 		pcall(function()
 			SocialService:PromptGameInvite(player)
 		end)
 	end)
-	glyph(invite, "Plus", 18, Color3.fromRGB(120, 210, 255))
 	invite.Visible = false
 	task.spawn(function()
 		local ok, can = pcall(function()
@@ -507,16 +386,16 @@ function MainMenu.Build()
 	end)
 
 	-- VIP (gold, hidden once owned).
-	local vip = roundButton("VIP", 5, "GET VIP", function()
+	local vip = roundButton("VIP", 5, "Get VIP", function(slot: Frame)
+		UIUtil.label({
+			Parent = slot, Text = "VIP", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.fromRGB(70, 44, 0),
+			TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 12,
+		})
+	end, function()
 		Monetize.PromptPass("VIP")
 	end)
+	vip.BackgroundColor3 = Theme.Color.Coin
 	vip.BackgroundTransparency = 0
-	vip.BackgroundColor3 = Color3.new(1, 1, 1)
-	UIUtil.gradient(Color3.fromRGB(255, 226, 110), Color3.fromRGB(240, 160, 30), 90, vip)
-	UIUtil.label({
-		Parent = vip, Text = "VIP", Font = Theme.Font.Title, TextSize = 14, TextColor3 = Color3.fromRGB(80, 46, 0),
-		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 11,
-	})
 	local function refreshVip()
 		vip.Visible = not Monetize.OwnsPass("VIP")
 	end
@@ -524,21 +403,23 @@ function MainMenu.Build()
 	refreshVip()
 
 	-- Leaderboard + Settings at the far right.
-	for i, spec in ipairs({ { "Leaderboard", "Podium", "LEADERBOARD" }, { "Settings", "Gear", "SETTINGS" } }) do
-		local b = roundButton(spec[1] .. "Icon", 10 + i, spec[3], function()
+	for i, spec in ipairs({ { "Leaderboard", "Podium", "Leaderboard" }, { "Settings", "Gear", "Settings" } }) do
+		roundButton(spec[1] .. "Icon", 10 + i, spec[3], function(slot: Frame)
+			smallIcon(spec[2], slot)
+		end, function()
 			switchTo(spec[1])
 		end)
-		smallIcon(spec[2], b)
 	end
 
 	-- Toast (top centre) for notices and purchase messages in the lobby.
 	local toast = UIUtil.label({
-		Parent = gui, Name = "Toast", Text = "", Font = Theme.Font.Title, TextSize = 20,
+		Parent = gui, Name = "Toast", Text = "", Font = Theme.Font.Bold, TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 16), Size = UDim2.fromOffset(0, 40), AutomaticSize = Enum.AutomaticSize.X,
-		BackgroundTransparency = 0.15, BackgroundColor3 = Color3.fromRGB(20, 26, 40), Visible = false, ZIndex = 30,
+		Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 16), Size = UDim2.fromOffset(0, 38), AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundTransparency = 0.04, BackgroundColor3 = Theme.Color.Surface, Visible = false, ZIndex = 30,
 	})
-	UIUtil.corner(UDim.new(0, 12), toast)
+	UIUtil.corner(Theme.Corner, toast)
+	UIUtil.hairline(toast)
 	local toastPad = Instance.new("UIPadding")
 	toastPad.PaddingLeft = UDim.new(0, 18)
 	toastPad.PaddingRight = UDim.new(0, 18)
@@ -562,40 +443,40 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- Level pill (top left)
-	local lvlGroup, lvlScale = scaled({ Parent = gui, Name = "LevelGroup", Size = UDim2.fromOffset(232, 58), ZIndex = 10 })
-	local pill = glassPill({ Parent = lvlGroup, Size = UDim2.fromScale(1, 1), ZIndex = 10 })
-	local avatarRing = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(7, 6), Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Color3.fromRGB(255, 244, 236), BorderSizePixel = 0, ZIndex = 11 })
-	UIUtil.corner(UDim.new(0.5, 0), avatarRing)
-	UIUtil.stroke(Color3.new(1, 1, 1), 2, avatarRing)
+	-- Player card (top left): your cat, your name, level + rank, XP bar.
+	local lvlGroup, lvlScale = scaled({ Parent = gui, Name = "LevelGroup", Size = UDim2.fromOffset(236, 56), ZIndex = 10 })
+	local card = UIUtil.surface({ Parent = lvlGroup, Size = UDim2.fromScale(1, 1), ZIndex = 10, BackgroundTransparency = 0.1 }, 1)
+	local avatarRing = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(40, 40), BackgroundColor3 = Color3.fromRGB(255, 244, 236), BorderSizePixel = 0, ZIndex = 11 })
+	UIUtil.corner(UDim.new(1, 0), avatarRing)
 	avatarSlot = UIUtil.make("Frame", { Parent = avatarRing, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 })
-	Icons.Place("CatFace", avatarSlot, 40, Color3.fromRGB(255, 236, 222), Color3.fromRGB(255, 248, 242))
-	levelLabel = UIUtil.label({ Parent = pill, Text = "Lv. 1", Font = Theme.Font.Title, TextSize = 19, Position = UDim2.fromOffset(62, 7), Size = UDim2.fromOffset(165, 20), ZIndex = 11 })
-	local track = UIUtil.make("Frame", { Parent = pill, Position = UDim2.fromOffset(62, 33), Size = UDim2.fromOffset(158, 13), BackgroundColor3 = Color3.fromRGB(8, 12, 20), BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 11 })
+	Icons.Place("CatFace", avatarSlot, 34, Color3.fromRGB(255, 236, 222), Color3.fromRGB(255, 248, 242))
+	UIUtil.label({
+		Parent = card, Text = player.DisplayName, Font = Theme.Font.Bold, TextSize = 15, Position = UDim2.fromOffset(58, 7),
+		Size = UDim2.new(1, -66, 0, 18), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11,
+	})
+	levelLabel = UIUtil.label({ Parent = card, Text = "Lv. 1", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(58, 25), Size = UDim2.new(1, -66, 0, 14), ZIndex = 11 })
+	local track = UIUtil.make("Frame", { Parent = card, Position = UDim2.fromOffset(58, 42), Size = UDim2.new(1, -70, 0, 5), BackgroundColor3 = Theme.Color.Surface3, BorderSizePixel = 0, ZIndex = 11 })
 	UIUtil.corner(UDim.new(1, 0), track)
-	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 12 })
+	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Theme.Color.Blue, BorderSizePixel = 0, ZIndex = 12 })
 	UIUtil.corner(UDim.new(1, 0), levelFill)
-	UIUtil.gradient(Color3.fromRGB(110, 222, 255), Color3.fromRGB(46, 140, 255), 0, levelFill)
 	xpLabel = nil
 
 	-- Full-screen backdrop behind whichever screen is open, with a header bar:
 	-- BACK button + screen title (currency stays top right).
-	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Color3.fromRGB(10, 18, 36), BackgroundTransparency = 0.04, BorderSizePixel = 0, Visible = false, ZIndex = 9, Size = UDim2.fromScale(1, 1) }) :: Frame
-	UIUtil.gradient(Color3.fromRGB(26, 44, 82), Color3.fromRGB(8, 14, 30), 90, backdrop)
-	local header, headerScale = scaled({ Parent = backdrop, Name = "Header", Size = UDim2.fromOffset(520, 46), ZIndex = 12 })
-	local back = UIUtil.make("TextButton", {
-		Parent = header, Name = "Back", Text = "‹  BACK", Font = Theme.Font.Title, TextSize = 20,
-		TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = true, Size = UDim2.fromOffset(122, 44),
-		BackgroundColor3 = Color3.fromRGB(26, 40, 68), BorderSizePixel = 0, ZIndex = 12,
-	}) :: TextButton
-	UIUtil.corner(UDim.new(0, 12), back)
-	UIUtil.stroke(Color3.fromRGB(120, 150, 200), 1.5, back).Transparency = 0.4
-	back.MouseButton1Click:Connect(function()
+	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Theme.Color.Bg, BackgroundTransparency = 0.03, BorderSizePixel = 0, Visible = false, ZIndex = 9, Size = UDim2.fromScale(1, 1) }) :: Frame
+	local header, headerScale = scaled({ Parent = backdrop, Name = "Header", Size = UDim2.fromOffset(520, 44), ZIndex = 12 })
+	local close = UIUtil.iconButton({ Parent = header, Name = "Close", Size = UDim2.fromOffset(44, 44), ZIndex = 12 }, function(slot: Frame)
+		UIUtil.label({
+			Parent = slot, Text = "✕", Font = Theme.Font.Bold, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+			Size = UDim2.fromScale(1, 1), ZIndex = 13,
+		})
+	end, nil, function()
 		switchTo(nil)
 	end)
+	close.Name = "Back"
 	headerTitle = UIUtil.label({
-		Parent = header, Text = "", Font = Theme.Font.Title, TextSize = 34, TextColor3 = Color3.new(1, 1, 1),
-		Position = UDim2.fromOffset(140, 0), Size = UDim2.new(1, -140, 1, 0), ZIndex = 12,
+		Parent = header, Text = "", Font = Theme.Font.Title, TextSize = 30, TextColor3 = Color3.new(1, 1, 1),
+		Position = UDim2.fromOffset(60, 0), Size = UDim2.new(1, -60, 1, 0), ZIndex = 12,
 	})
 	panelBackdrop = backdrop
 	homeGroups = { navGroup, lvlGroup, playGroup }
@@ -689,11 +570,12 @@ function MainMenu.Build()
 			local play = gui:FindFirstChild("Play", true)
 			if play and play:IsA("GuiObject") then
 				local arrow = UIUtil.label({
-					Parent = play, Name = "StartHere", Text = "▼ START HERE", Font = Theme.Font.Title, TextSize = 18,
-					TextColor3 = Color3.fromRGB(255, 226, 90), TextXAlignment = Enum.TextXAlignment.Center,
+					Parent = play, Name = "StartHere", Text = "START HERE  ▼", Font = Theme.Font.Bold, TextSize = 13,
+					TextColor3 = Color3.fromRGB(40, 30, 6), TextXAlignment = Enum.TextXAlignment.Center,
 					AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8),
-					Size = UDim2.fromOffset(150, 30), ZIndex = 20, TextStrokeTransparency = 0.3,
+					Size = UDim2.fromOffset(120, 26), ZIndex = 20, BackgroundTransparency = 0, BackgroundColor3 = Theme.Color.Coin,
 				})
+				UIUtil.corner(UDim.new(1, 0), arrow)
 				TweenService:Create(arrow, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 0, 0, -18) }):Play()
 				task.spawn(function()
 					while arrow.Parent and not player:GetAttribute("Queued") and player:GetAttribute("Context") ~= "Match" do

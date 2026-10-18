@@ -640,7 +640,7 @@ local function buildDashChip(parent)
 		Parent = parent, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -110, 1, -10),
 		Size = UDim2.fromOffset(62, 28), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	})
-	chip:SetAttribute("HudPart", "Moves")
+	chip:SetAttribute("HudPart", "Keys") -- (the clones below keep it)
 	UIUtil.corner(UDim.new(1, 0), chip)
 	UIUtil.stroke(Theme.Color.Stroke, 1.5, chip)
 	local key = UIUtil.label({
@@ -971,9 +971,9 @@ end
 -- Which parts each place shows: the whole HUD in a match, the crosshair and
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
-	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true, Loadout = true },
-	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Feed = true, Loadout = true },
-	Range = { Aim = true, Weapon = true, Moves = true, RangeHint = true },
+	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true },
+	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true },
+	Range = { Aim = true, Weapon = true, Moves = true, Keys = true, RangeHint = true },
 	Lobby = { Moves = true },
 }
 function HUD.SetMode(mode: string)

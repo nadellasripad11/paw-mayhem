@@ -287,4 +287,220 @@ function UIUtil.tween(inst: Instance, time: number, props: { [string]: any }, st
 	return t
 end
 
+-- ── the clean kit (flat, Rivals-like) ────────────────────────────────────────
+-- Everything new is built from these so screens share one look: flat
+-- surfaces, a hairline outline, one radius scale, the same hover feedback.
+
+-- A thin light outline (white at low opacity).
+function UIUtil.hairline(parent: Instance, transparency: number?): UIStroke
+	local s = Instance.new("UIStroke")
+	s.Color = Theme.Color.Line
+	s.Transparency = transparency or Theme.LineAlpha
+	s.Thickness = 1
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = parent
+	return s
+end
+
+-- A flat surface: level 1 (screens), 2 (cards, buttons) or 3 (selected).
+function UIUtil.surface(props: { [string]: any }, level: number?, radius: UDim?): Frame
+	local f = UIUtil.make("Frame", props) :: Frame
+	local lv = level or 2
+	f.BackgroundColor3 = (props.BackgroundColor3 :: Color3?) or (lv == 1 and Theme.Color.Surface or lv == 3 and Theme.Color.Surface3 or Theme.Color.Surface2)
+	f.BorderSizePixel = 0
+	UIUtil.corner(radius or Theme.Corner, f)
+	UIUtil.hairline(f)
+	return f
+end
+
+-- Hover / press feedback for any button: a small scale pop and a brighter
+-- outline (if it has one).
+function UIUtil.feedback(b: GuiButton, scaleTo: number?)
+	local sc = b:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+	sc.Parent = b
+	local stroke = b:FindFirstChildOfClass("UIStroke")
+	local base = stroke and stroke.Transparency or 0
+	b.MouseEnter:Connect(function()
+		TweenService:Create(sc, TweenInfo.new(0.12), { Scale = scaleTo or 1.05 }):Play()
+		if stroke then
+			stroke.Transparency = math.min(base, Theme.LineHover)
+		end
+	end)
+	b.MouseLeave:Connect(function()
+		TweenService:Create(sc, TweenInfo.new(0.12), { Scale = 1 }):Play()
+		if stroke then
+			stroke.Transparency = base
+		end
+	end)
+	b.MouseButton1Down:Connect(function()
+		TweenService:Create(sc, TweenInfo.new(0.06), { Scale = 0.96 }):Play()
+	end)
+	b.MouseButton1Up:Connect(function()
+		TweenService:Create(sc, TweenInfo.new(0.1), { Scale = scaleTo or 1.05 }):Play()
+	end)
+end
+
+-- A small dark label that shows under `owner` while the mouse is over it.
+function UIUtil.tooltip(owner: GuiObject, text: string)
+	local tip = UIUtil.label({
+		Parent = owner, Name = "Tooltip", Text = text, Font = Theme.Font.Bold, TextSize = Theme.Text.Caption,
+		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 6),
+		Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 0.05,
+		BackgroundColor3 = Theme.Color.Surface, Visible = false, ZIndex = 50,
+	})
+	UIUtil.corner(UDim.new(0, 6), tip)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+	pad.Parent = tip
+	owner.MouseEnter:Connect(function()
+		tip.Visible = true
+	end)
+	owner.MouseLeave:Connect(function()
+		tip.Visible = false
+	end)
+	return tip
+end
+
+-- A square icon button (rounded), e.g. the top bar's leaderboard / settings.
+-- `draw(slot)` puts the icon in a centred slot. Returns the button.
+function UIUtil.iconButton(props: { [string]: any }, draw: (Frame) -> (), tip: string?, onClick: (() -> ())?): TextButton
+	local size = props.Size or UDim2.fromOffset(40, 40)
+	local b = UIUtil.make("TextButton", props) :: TextButton
+	b.Size = size
+	b.Text = ""
+	b.AutoButtonColor = false
+	b.BackgroundColor3 = props.BackgroundColor3 or Theme.Color.Surface2
+	b.BackgroundTransparency = props.BackgroundTransparency or 0.08
+	b.BorderSizePixel = 0
+	UIUtil.corner(props.CornerRadius or Theme.Corner, b)
+	UIUtil.hairline(b)
+	local slot = UIUtil.make("Frame", {
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(0.55, 0.55), BackgroundTransparency = 1, ZIndex = b.ZIndex + 1,
+	}) :: Frame
+	draw(slot)
+	UIUtil.feedback(b)
+	if tip then
+		UIUtil.tooltip(b, tip)
+	end
+	if onClick then
+		b.MouseButton1Click:Connect(onClick)
+	end
+	return b
+end
+
+-- A solid call-to-action button (green by default) with a darker lip under
+-- it for depth. Returns the button and its label.
+function UIUtil.primaryButton(props: { [string]: any }, text: string, onClick: (() -> ())?, color: Color3?, lip: Color3?): (TextButton, TextLabel)
+	local b = UIUtil.make("TextButton", props) :: TextButton
+	b.Text = ""
+	b.AutoButtonColor = false
+	b.BorderSizePixel = 0
+	b.BackgroundColor3 = color or Theme.Color.PlayGreen
+	UIUtil.corner(props.CornerRadius or Theme.Corner, b)
+	-- (A sibling, not a child: children always draw on top of their parent.)
+	local under = UIUtil.make("Frame", {
+		Parent = b.Parent, Name = b.Name .. "Lip", AnchorPoint = b.AnchorPoint, Position = b.Position + UDim2.fromOffset(0, 4),
+		Size = b.Size, BackgroundColor3 = lip or Theme.Color.PlayGreenDark, BorderSizePixel = 0, ZIndex = b.ZIndex - 1,
+	}) :: Frame
+	UIUtil.corner(props.CornerRadius or Theme.Corner, under)
+	local label = UIUtil.label({
+		Parent = b, Text = text, Font = Theme.Font.Title, TextSize = props.TextSize or Theme.Text.Title,
+		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = b.ZIndex + 1,
+		TextColor3 = Color3.new(1, 1, 1),
+	})
+	UIUtil.feedback(b, 1.03)
+	if onClick then
+		b.MouseButton1Click:Connect(onClick)
+	end
+	return b, label
+end
+
+-- A quiet button: a surface with a hairline and text.
+function UIUtil.secondaryButton(props: { [string]: any }, text: string, onClick: (() -> ())?): TextButton
+	local b = UIUtil.make("TextButton", props) :: TextButton
+	b.Text = text
+	b.Font = props.Font or Theme.Font.Bold
+	b.TextSize = props.TextSize or Theme.Text.Body
+	b.TextColor3 = props.TextColor3 or Theme.Color.Text
+	b.AutoButtonColor = false
+	b.BorderSizePixel = 0
+	b.BackgroundColor3 = props.BackgroundColor3 or Theme.Color.Surface2
+	UIUtil.corner(props.CornerRadius or Theme.CornerSmall, b)
+	UIUtil.hairline(b)
+	UIUtil.feedback(b, 1.03)
+	if onClick then
+		b.MouseButton1Click:Connect(onClick)
+	end
+	return b
+end
+
+-- A vertical rail of tabs. tabs = { { id, label } }; onSelect(id). Returns
+-- select(id) so the screen can pick a tab itself.
+function UIUtil.tabRail(parent: Instance, tabs: { { id: string, label: string } }, onSelect: (string) -> ()): (string) -> ()
+	UIUtil.listLayout(parent, Theme.Space.S)
+	local buttons: { [string]: TextButton } = {}
+	local function select(id: string)
+		for tid, b in pairs(buttons) do
+			local on = tid == id
+			b.BackgroundColor3 = on and Theme.Color.Blue or Theme.Color.Surface2
+			b.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
+			local st = b:FindFirstChildOfClass("UIStroke")
+			if st then
+				st.Transparency = on and 1 or Theme.LineAlpha
+			end
+		end
+		onSelect(id)
+	end
+	for i, t in ipairs(tabs) do
+		local b = UIUtil.make("TextButton", {
+			Parent = parent, Name = t.id, LayoutOrder = i, Size = UDim2.new(1, 0, 0, 40), Text = t.label,
+			Font = Theme.Font.Bold, TextSize = Theme.Text.Body, AutoButtonColor = false, BorderSizePixel = 0,
+			BackgroundColor3 = Theme.Color.Surface2, TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Left,
+		}) :: TextButton
+		UIUtil.corner(Theme.CornerSmall, b)
+		UIUtil.hairline(b)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 14)
+		pad.Parent = b
+		b.MouseButton1Click:Connect(function()
+			select(t.id)
+		end)
+		buttons[t.id] = b
+	end
+	return select
+end
+
+-- A currency pill: icon, amount, optional "+" on the right. Returns the
+-- pill, the amount label and the "+" button (if any).
+function UIUtil.currencyPill(props: { [string]: any }, icon: string, iconColor: Color3, withPlus: boolean?): (Frame, TextLabel, TextButton?)
+	local pill = UIUtil.make("Frame", props) :: Frame
+	pill.BackgroundColor3 = Theme.Color.Surface
+	pill.BackgroundTransparency = 0.12
+	pill.BorderSizePixel = 0
+	UIUtil.corner(UDim.new(1, 0), pill)
+	UIUtil.hairline(pill)
+	local slot = UIUtil.make("Frame", {
+		Parent = pill, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 20, 0.5, 0), Size = UDim2.fromOffset(24, 24),
+		BackgroundTransparency = 1, ZIndex = pill.ZIndex + 1,
+	})
+	Icons.Place(icon, slot, 24, iconColor)
+	local amount = UIUtil.label({
+		Parent = pill, Text = "0", Font = Theme.Font.Title, TextSize = 18, Position = UDim2.fromOffset(38, 0),
+		Size = UDim2.new(1, withPlus and -72 or -46, 1, 0), ZIndex = pill.ZIndex + 1,
+	})
+	local plus: TextButton? = nil
+	if withPlus then
+		local p = UIUtil.make("TextButton", {
+			Parent = pill, Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0),
+			Size = UDim2.fromOffset(26, 26), BackgroundColor3 = Theme.Color.Blue, BorderSizePixel = 0, ZIndex = pill.ZIndex + 1,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(1, 0), p)
+		Icons.Place("Plus", p, 14, Color3.new(1, 1, 1))
+		UIUtil.feedback(p, 1.12)
+		plus = p
+	end
+	return pill, amount, plus
+end
+
 return UIUtil

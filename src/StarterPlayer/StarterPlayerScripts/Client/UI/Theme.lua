@@ -25,11 +25,28 @@ Theme.Color = {
 	Coin = Color3.fromRGB(255, 207, 72),
 	Gem = Color3.fromRGB(224, 96, 255),
 	Danger = Color3.fromRGB(255, 89, 111),
-	Blue = Color3.fromRGB(22, 145, 255),
 	Red = Color3.fromRGB(255, 78, 91),
 	Success = Color3.fromRGB(108, 225, 104),
 	Warn = Color3.fromRGB(255, 186, 67),
+
+	-- The clean set the UI is moving to (flat, Rivals-like): three surface
+	-- levels, hairline outlines (white at low opacity) and one blue accent.
+	Surface = Color3.fromRGB(17, 21, 34), -- screens, bars
+	Surface2 = Color3.fromRGB(26, 31, 48), -- cards, buttons
+	Surface3 = Color3.fromRGB(38, 45, 68), -- hover / selected backgrounds
+	Line = Color3.fromRGB(255, 255, 255), -- used at LineAlpha
+	Blue = Color3.fromRGB(64, 156, 255),
+	PlayGreen = Color3.fromRGB(76, 196, 92),
+	PlayGreenDark = Color3.fromRGB(46, 140, 62),
 }
+
+-- Hairline outline opacity (UIStroke.Transparency) and the hover version.
+Theme.LineAlpha = 0.86
+Theme.LineHover = 0.6
+
+-- Spacing scale (px) and text sizes, so every screen lines up the same way.
+Theme.Space = { XS = 4, S = 8, M = 12, L = 16, XL = 24 }
+Theme.Text = { Caption = 12, Body = 14, Label = 16, Title = 22, Display = 32 }
 
 -- Rarity colors for weapon/skin cards.
 Theme.Rarity = {
@@ -49,8 +66,8 @@ Theme.Font = {
 	Number = Enum.Font.GothamBlack,
 }
 
-Theme.Corner = UDim.new(0, 14)
-Theme.CornerSmall = UDim.new(0, 9)
-Theme.CornerBig = UDim.new(0, 22)
+Theme.Corner = UDim.new(0, 12)
+Theme.CornerSmall = UDim.new(0, 8)
+Theme.CornerBig = UDim.new(0, 16)
 
 return Theme
