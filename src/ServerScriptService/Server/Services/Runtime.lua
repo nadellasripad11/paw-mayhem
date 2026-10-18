@@ -65,6 +65,10 @@ function Runtime.Get(player: Player): PlayerState?
 Runtime.Mode = "TDM"
 Runtime.HillPos = nil :: Vector3?
 
+-- The most recent knockout in the match (MatchService turns it into the
+-- FINAL KNOCKOUT moment when it ends the match).
+Runtime.LastKO = nil :: { t: number, position: Vector3 }?
+
 return Runtime.States[player]
 end
 

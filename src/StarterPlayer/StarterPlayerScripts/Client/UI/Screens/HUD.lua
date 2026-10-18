@@ -34,6 +34,8 @@ local CombatController = require(script.Parent.Parent.Parent.Controllers.CombatC
 local MovementController = require(script.Parent.Parent.Parent.Controllers.MovementController)
 local EffectsController = require(script.Parent.Parent.Parent.Controllers.EffectsController)
 local CatOverheads = require(script.Parent.Parent.Parent.Controllers.CatOverheads)
+local CameraController = require(script.Parent.Parent.Parent.Controllers.CameraController)
+local SoundController = require(script.Parent.Parent.Parent.Controllers.SoundController)
 
 local HUD = {}
 local player = Players.LocalPlayer
@@ -108,8 +110,18 @@ local function buildCrosshair(parent)
 		})
 		UIUtil.corner(UDim.new(1, 0), tick)
 		UIUtil.stroke(Color3.new(0, 0, 0), 1, tick).Transparency = 0.5
+		refs.hitTicks = refs.hitTicks or {}
+		table.insert(refs.hitTicks, tick)
 	end
 	refs.hitmarker = marker
+	-- Knockout: a red ring that bursts out from the crosshair.
+	local ring = UIUtil.make("Frame", {
+		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, Visible = false,
+	})
+	UIUtil.corner(UDim.new(1, 0), ring)
+	refs.koRingStroke = UIUtil.stroke(Color3.fromRGB(255, 70, 80), 3, ring)
+	refs.koRing = ring
 end
 
 local function kickCrosshair()
@@ -133,6 +145,54 @@ local function showHitmarker()
 			m.Visible = false
 		end
 	end)
+end
+
+-- You knocked someone out: the hit marker goes red and bigger, and a red
+-- ring bursts out of the crosshair.
+local function showKoMarker()
+	local m, ring = refs.hitmarker, refs.koRing
+	if not m or not ring then return end
+	hitmarkerToken += 1
+	local token = hitmarkerToken
+	for _, t in ipairs(refs.hitTicks or {}) do
+		t.BackgroundColor3 = Color3.fromRGB(255, 70, 80)
+	end
+	m.Visible = true
+	m.Size = UDim2.fromOffset(78, 78)
+	UIUtil.tween(m, 0.18, { Size = UDim2.fromOffset(54, 54) })
+	ring.Visible = true
+	ring.Size = UDim2.fromOffset(30, 30)
+	refs.koRingStroke.Transparency = 0
+	UIUtil.tween(ring, 0.4, { Size = UDim2.fromOffset(110, 110) })
+	UIUtil.tween(refs.koRingStroke, 0.4, { Transparency = 1 })
+	task.delay(0.42, function()
+		if token == hitmarkerToken then
+			m.Visible = false
+			ring.Visible = false
+			for _, t in ipairs(refs.hitTicks or {}) do
+				t.BackgroundColor3 = Color3.new(1, 1, 1)
+			end
+		end
+	end)
+end
+
+-- The knockout that won the match or duel: a moment for everyone in it -
+-- the colour drains out and comes back, the view punches in, a deep boom,
+-- FINAL KNOCKOUT! across the screen.
+local function finalKnockout()
+	HUD.ShowBig("FINAL KNOCKOUT!", Theme.Color.Coin, 2.2)
+	local cc = Instance.new("ColorCorrectionEffect")
+	cc.Saturation = -0.75
+	cc.Contrast = 0.2
+	cc.Brightness = 0.06
+	cc.Parent = game:GetService("Lighting")
+	TweenService:Create(cc, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Saturation = 0, Contrast = 0, Brightness = 0 }):Play()
+	task.delay(1.9, function()
+		cc:Destroy()
+	end)
+	CameraController.Punch(9)
+	CameraController.AddShake(1.5)
+	SoundController.Play("Knockout", 0.65)
 end
 
 -- ── bottom left: compact health + power-up ───────────────────────────────────
@@ -1038,9 +1098,11 @@ function HUD.Build()
 		addKillRow(data)
 		if data.killer == player.DisplayName and data.victim ~= player.DisplayName then
 			showKo(data)
+			showKoMarker()
 		end
 	end)
 	Remotes.Get("DuelState").OnClientEvent:Connect(onDuelState)
+	Remotes.Get("FinalKO").OnClientEvent:Connect(finalKnockout)
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
 	end)

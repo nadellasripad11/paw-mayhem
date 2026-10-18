@@ -45,6 +45,7 @@ Remotes.Definitions = {
 	Announce = "Event", -- {title, sub, color} big centre banner for everyone
 	MapEvent = "Event", -- {kind, dir, duration, strength} client-side event effects
 	Podium = "Event", -- {top = {{userId?, name, elims, isBot}}} end-of-match winners stage
+	FinalKO = "Event", -- {position?} the knockout that won the match / duel, to everyone in it
 	DuelState = "Event", -- {teams, score, target, timeLeft, myTeam, started?, ko?, over?, won?, trophies?} to duelists
 }
 

@@ -256,6 +256,36 @@ function PlayerService.ApplyLoadout(player: Player, kind: string)
 	end
 end
 
+-- Where each cat left the ground last: updated while it's standing (or still
+-- about level with where it stood), so when it falls off the map the ringout
+-- burst goes off where it actually went over the edge.
+local edge: { [Player]: { pos: Vector3, groundY: number } } = {}
+function PlayerService.EdgeOf(player: Player): Vector3?
+	local e = edge[player]
+	return e and e.pos
+end
+
+local function trackEdges()
+	for _, player in ipairs(Players:GetPlayers()) do
+		local char = player.Character
+		local root = char and char.PrimaryPart
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if root and hum then
+			local e = edge[player]
+			if hum.FloorMaterial ~= Enum.Material.Air or not e then
+				edge[player] = { pos = root.Position, groundY = root.Position.Y }
+			elseif root.Position.Y >= e.groundY - 10 then
+				e.pos = root.Position
+			end
+		end
+	end
+end
+
+-- Everyone near enough sees a big burst where a cat flew off the map.
+function PlayerService.RingoutBurst(position: Vector3, color: Color3?)
+	Remotes.Get("PlayEffect"):FireAllClients({ kind = "Ringout", position = position, color = color })
+end
+
 -- Central elimination handler (HP death or ringout).
 function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 	local state = Runtime.Get(victim)
@@ -263,6 +293,18 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 		return
 	end
 	state.Alive = false
+
+	-- The knockout burst: where it went over the edge (ringout) or where it
+	-- dropped (HP).
+	local char = victim.Character
+	local root = char and char.PrimaryPart
+	local at = ringout and PlayerService.EdgeOf(victim) or (root and root.Position)
+	if at and state.Context ~= "Lobby" then -- (a reset in the lobby is no knockout)
+		PlayerService.RingoutBurst(at, teamColor(char and char:GetAttribute("Team") or "Lobby"))
+		if state.Context == "Match" then
+			Runtime.LastKO = { t = os.clock(), position = at }
+		end
+	end
 
 	local killer = state.LastAttacker
 	-- Ringout with no recent attacker = self-elimination.
@@ -401,6 +443,17 @@ function PlayerService.Start()
 	EconomyService.OnEquipped = PlayerService.ApplyLoadout
 
 	startKillFloorLoop()
+	local edgeAcc = 0
+	RunService.Heartbeat:Connect(function(dt)
+		edgeAcc += dt
+		if edgeAcc >= 0.05 then
+			edgeAcc = 0
+			trackEdges()
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		edge[player] = nil
+	end)
 	startStatusLoop()
 end
 

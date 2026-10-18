@@ -116,6 +116,8 @@ type BotState = {
 	flyUntil:        number,
 	align:           AlignOrientation,
 	duel:            DuelInfo?,
+	edge:            Vector3,
+	groundY:         number,
 }
 
 -- What a duel bot needs to know about its duel.
@@ -705,6 +707,7 @@ local function spawnBot(botId: number, teamId: string, botName: string, duel: Du
 		reaction = lerp(REACTION_SECS[1], REACTION_SECS[2], skill),
 		fireDelay = lerp(FIRE_DELAY[1], FIRE_DELAY[2], skill),
 		hitAt = 0, dodgeAt = 0, flyUntil = 0, align = align, duel = duel,
+		edge = root.Position, groundY = root.Position.Y,
 	}
 	if duel then
 		duelBots[botId] = bot
@@ -723,6 +726,16 @@ local function spawnBot(botId: number, teamId: string, botName: string, duel: Du
 		task.delay(2, function()
 			if model.Parent then model:Destroy() end
 		end)
+		-- The knockout burst where it went over the edge (or where it dropped).
+		local fellOff = root.Position.Y < (duel and duel.killY + 20 or GameConfig.Character.KillFloorY + 20)
+		local burstAt = fellOff and bot.edge or root.Position
+		Remotes.Get("PlayEffect"):FireAllClients({
+			kind = "Ringout", position = burstAt,
+			color = teamId == "Blue" and Color3.fromRGB(64, 132, 255) or Color3.fromRGB(255, 82, 82),
+		})
+		if not duel then
+			Runtime.LastKO = { t = os.clock(), position = burstAt }
+		end
 		-- A duel scores (and respawns) its own knockouts.
 		if duel then
 			duel.onKO(botName, teamId, bot.lastAttacker, root.Position.Y < duel.killY + 20)
@@ -781,6 +794,12 @@ local function spawnBot(botId: number, teamId: string, botName: string, duel: Du
 	local floorConn: RBXScriptConnection
 	floorConn = RunService.Heartbeat:Connect(function()
 		if not bot.alive then floorConn:Disconnect(); return end
+		-- Where it left the ground last (see the knockout burst).
+		if humanoid.FloorMaterial ~= Enum.Material.Air then
+			bot.edge, bot.groundY = root.Position, root.Position.Y
+		elseif root.Position.Y >= bot.groundY - 10 then
+			bot.edge = root.Position
+		end
 		local raised = Workspace:GetAttribute("KillFloorY")
 		local arena = Workspace:FindFirstChild("Arena")
 		local mapFloor = arena and arena:GetAttribute("KillFloorY")

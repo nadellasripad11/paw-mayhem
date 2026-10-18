@@ -647,7 +647,7 @@ local function buildBoards(f: Instance)
 end
 
 -- ── the Practice Dimension (through the portal) ─────────────────────────────
-type Dummy = { model: Model, root: BasePart, stand: CFrame, fluff: number }
+type Dummy = { model: Model, root: BasePart, stand: CFrame, fluff: number, edge: Vector3? }
 local dummies: { Dummy } = {}
 
 local function practiceAt(dx: number, dz: number, lift: number?): Vector3
@@ -879,7 +879,15 @@ function LobbyService.Start()
 		acc = 0
 		-- Target cats knocked off the Practice Dimension come back fresh.
 		for _, dm in ipairs(dummies) do
-			if dm.root.Position.Y < FALL_Y or not nearPractice(dm.root.Position) then
+			local pos = dm.root.Position
+			if pos.Y >= dm.stand.Position.Y - 4 then
+				dm.edge = pos
+			end
+			if pos.Y < FALL_Y or not nearPractice(pos) then
+				if dm.fluff > 0 and dm.edge then
+					PlayerService.RingoutBurst(dm.edge, Color3.fromRGB(255, 200, 90))
+				end
+				dm.edge = nil
 				resetDummy(dm)
 			end
 		end

@@ -440,6 +440,17 @@ function MatchService.EndMatch(winnerTeam: string?)
 			state.Winner = (state.Scores.Blue >= state.Scores.Red) and "Blue" or "Red"
 		end
 	end
+	-- The knockout that just won it: everyone in the match gets the moment.
+	local ko = Runtime.LastKO
+	if ko and os.clock() - ko.t < 1.5 then
+		for _, p in ipairs(Players:GetPlayers()) do
+			local s = Runtime.Get(p)
+			if s and s.Context == "Match" then
+				Remotes.Get("FinalKO"):FireClient(p, { position = ko.position })
+			end
+		end
+	end
+	Runtime.LastKO = nil
 	stopHill()
 	FlagService.Stop()
 	setMayhem(false)

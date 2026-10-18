@@ -20,6 +20,8 @@ local Weapons = require(Shared.Config.Weapons)
 local WeaponFX = require(Shared.Config.WeaponFX)
 
 local CameraController = require(script.Parent.CameraController)
+local SoundController = require(script.Parent.SoundController)
+local CatOverheads = require(script.Parent.CatOverheads)
 local ClientState = require(script.Parent.Parent.ClientState)
 
 local EffectsController = {}
@@ -226,41 +228,107 @@ local function pickupSparkle(pos: Vector3, color: Color3)
 	end
 end
 
--- Floating damage number that pops up at the hit and drifts away.
-local function damageNumber(pos: Vector3, amount: number)
-	local anchor = Instance.new("Part")
-	anchor.Size = Vector3.one * 0.1
-	anchor.Transparency = 1
-	anchor.Anchored = true
-	anchor.CanCollide = false
-	anchor.CanQuery = false
-	anchor.CanTouch = false
-	anchor.CFrame = CFrame.new(pos + Vector3.new((math.random() - 0.5) * 2, 2.5, (math.random() - 0.5) * 2))
-	anchor.Parent = workspace
-	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.fromOffset(90, 40)
-	gui.AlwaysOnTop = true
-	gui.LightInfluence = 0
-	gui.Parent = anchor
-	local label = Instance.new("TextLabel")
-	label.BackgroundTransparency = 1
-	label.Size = UDim2.fromScale(1, 1)
-	label.Font = Enum.Font.FredokaOne
-	label.TextScaled = true
-	label.Text = tostring(math.floor(amount + 0.5))
-	label.TextColor3 = amount >= 25 and Color3.fromRGB(255, 120, 60) or Color3.fromRGB(255, 232, 110)
-	label.TextStrokeTransparency = 0.2
-	label.Parent = gui
-	local scale = Instance.new("UIScale")
-	scale.Scale = 1.5
-	scale.Parent = label
-	TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-	TweenService:Create(anchor, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = anchor.CFrame + Vector3.new(0, 3, 0) }):Play()
-	local fade = TweenService:Create(label, TweenInfo.new(0.35, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0.45), { TextTransparency = 1, TextStrokeTransparency = 1 })
-	fade.Completed:Connect(function()
-		anchor:Destroy()
+-- Floating "+X%" that pops up over the cat you hit, coloured like its
+-- knockback % (white -> yellow -> orange -> red). Hits on the same cat in
+-- quick succession add into one number instead of flooding the screen.
+type Stack = { anchor: Part, label: TextLabel, scale: UIScale, total: number, at: number, fade: Tween? }
+local stacks: { [string]: Stack } = {}
+
+local function percentNumber(key: string, pos: Vector3, amount: number, accumulated: number)
+	local now = os.clock()
+	local st = stacks[key]
+	if not (st and now - st.at < 0.5 and st.anchor.Parent) then
+		local anchor = Instance.new("Part")
+		anchor.Size = Vector3.one * 0.1
+		anchor.Transparency = 1
+		anchor.Anchored = true
+		anchor.CanCollide = false
+		anchor.CanQuery = false
+		anchor.CanTouch = false
+		anchor.CFrame = CFrame.new(pos + Vector3.new((math.random() - 0.5) * 1.5, 3, (math.random() - 0.5) * 1.5))
+		anchor.Parent = workspace
+		local gui = Instance.new("BillboardGui")
+		gui.Size = UDim2.fromOffset(110, 44)
+		gui.AlwaysOnTop = true
+		gui.LightInfluence = 0
+		gui.Parent = anchor
+		local label = Instance.new("TextLabel")
+		label.BackgroundTransparency = 1
+		label.Size = UDim2.fromScale(1, 1)
+		label.Font = Enum.Font.FredokaOne
+		label.TextScaled = true
+		label.TextStrokeTransparency = 0.15
+		label.Parent = gui
+		local scale = Instance.new("UIScale")
+		scale.Parent = label
+		TweenService:Create(anchor, TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = anchor.CFrame + Vector3.new(0, 2.5, 0) }):Play()
+		st = { anchor = anchor, label = label, scale = scale, total = 0, at = now, fade = nil }
+		stacks[key] = st
+	end
+	local s = st :: Stack
+	s.total += amount
+	s.at = now
+	s.label.Text = "+" .. tostring(math.floor(s.total + 0.5)) .. "%"
+	s.label.TextColor3 = CatOverheads.FluffColor(accumulated)
+	s.label.TextTransparency = 0
+	s.label.TextStrokeTransparency = 0.15
+	s.scale.Scale = 1.45
+	TweenService:Create(s.scale, TweenInfo.new(0.16, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 + math.min(s.total / 120, 0.5) }):Play()
+	if s.fade then
+		s.fade:Cancel()
+	end
+	local fade = TweenService:Create(s.label, TweenInfo.new(0.35, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0.55), { TextTransparency = 1, TextStrokeTransparency = 1 })
+	s.fade = fade
+	fade.Completed:Connect(function(state)
+		if state == Enum.PlaybackState.Completed then
+			s.anchor:Destroy()
+			if stacks[key] == s then
+				stacks[key] = nil
+			end
+		end
 	end)
 	fade:Play()
+end
+
+-- The knockout burst where a cat went off the map (or dropped): a white
+-- flash, a shock ring in its team colour, a column of light and sparks,
+-- with a boom and a shake if you're close.
+local function ringout(pos: Vector3, color: Color3)
+	local flash = fxPart(Enum.PartType.Ball, Vector3.one * 4, CFrame.new(pos), Color3.new(1, 1, 1))
+	TweenService:Create(flash, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.one * 22, Transparency = 1 }):Play()
+	local ring = fxPart(Enum.PartType.Cylinder, Vector3.new(0.4, 6, 6), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), color)
+	TweenService:Create(ring, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.2, 48, 48), Transparency = 1 }):Play()
+	local beam = fxPart(Enum.PartType.Cylinder, Vector3.new(90, 3.2, 3.2), CFrame.new(pos + Vector3.new(0, 45, 0)) * CFrame.Angles(0, 0, math.rad(90)), color)
+	beam.Transparency = 0.15
+	TweenService:Create(beam, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Size = Vector3.new(90, 0.2, 0.2), Transparency = 1 }):Play()
+	local holder = fxPart(nil, Vector3.one * 0.2, CFrame.new(pos), color)
+	holder.Transparency = 1
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(color, Color3.new(1, 1, 1))
+	sparks.Size = NumberSequence.new(1.2, 0)
+	sparks.Lifetime = NumberRange.new(0.5, 0.9)
+	sparks.Speed = NumberRange.new(30, 60)
+	sparks.SpreadAngle = Vector2.new(180, 180)
+	sparks.Drag = 3
+	sparks.LightEmission = 1
+	sparks.Rate = 0
+	sparks.Parent = holder
+	sparks:Emit(45)
+	local glow = Instance.new("PointLight")
+	glow.Color = color
+	glow.Range = 45
+	glow.Brightness = 6
+	glow.Parent = holder
+	TweenService:Create(glow, TweenInfo.new(0.7), { Brightness = 0 }):Play()
+	for _, p in ipairs({ flash, ring, beam, holder }) do
+		Debris:AddItem(p, 1.2)
+	end
+	SoundController.PlayAt("Knockout", pos, 0.75)
+	local dist = (workspace.CurrentCamera.CFrame.Position - pos).Magnitude
+	if dist < 90 then
+		CameraController.AddShake(1.4 * (1 - dist / 90))
+	end
 end
 
 -- Expanding flash for big pickups (supply crates).
@@ -376,6 +444,8 @@ function EffectsController.Start()
 			coinRain()
 		elseif data.kind == "Confetti" and typeof(data.position) == "Vector3" then
 			confetti(data.position)
+		elseif data.kind == "Ringout" and typeof(data.position) == "Vector3" then
+			ringout(data.position, typeof(data.color) == "Color3" and data.color or Color3.fromRGB(255, 200, 90))
 		end
 	end)
 
@@ -393,7 +463,7 @@ function EffectsController.Start()
 
 	Remotes.Get("HitConfirm").OnClientEvent:Connect(function(data)
 		if type(data) == "table" and typeof(data.position) == "Vector3" and type(data.damage) == "number" then
-			damageNumber(data.position, data.damage)
+			percentNumber(tostring(data.victim or "?"), data.position, data.damage, tonumber(data.accumulated) or 0)
 		end
 		-- Landing a hit on a cat that's about to fly: punch the view in.
 		local acc = type(data) == "table" and tonumber(data.accumulated) or 0

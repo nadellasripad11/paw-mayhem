@@ -284,6 +284,11 @@ local function scoreKO(duel: Duel, team: string, victimName: string, killer: Pla
 		end
 	end
 	if duel.score[scorer] >= TARGET then
+		for p in pairs(duel.members) do
+			if p.Parent then
+				Remotes.Get("FinalKO"):FireClient(p, {})
+			end
+		end
 		send(duel)
 		finish(duel, scorer)
 		return false
