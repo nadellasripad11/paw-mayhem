@@ -36,8 +36,9 @@ local alive = false
 local transitionFrame: Frame? = nil
 local fallbackGui: ScreenGui? = nil
 
--- The practice range: a box round the lobby's "Range" point (behind spawn).
-local RANGE_HALF_X, RANGE_BACK, RANGE_FRONT = 22, 20, 14
+-- The Practice Centre (through the portal behind spawn): a box round the
+-- lobby's "Range" point the size of its platform.
+local RANGE_HALF = 33
 -- The countdown flyover stays up until the server has dropped you into the
 -- arena (a few seconds at most), so the lobby doesn't flash in between.
 local flyoverUntil = 0
@@ -140,7 +141,7 @@ local function inPracticeRange(): boolean
 		return false
 	end
 	local d = root.Position - c
-	return math.abs(d.X) < RANGE_HALF_X and d.Z > -RANGE_BACK and d.Z < RANGE_FRONT and math.abs(d.Y) < 25
+	return math.abs(d.X) < RANGE_HALF and math.abs(d.Z) < RANGE_HALF and math.abs(d.Y) < 30
 end
 
 -- Aim + shoot, or a free mouse: in a match or duel you aim unless a screen
@@ -155,7 +156,9 @@ local function updateAim(force: boolean?)
 		aiming = nil
 		return
 	end
-	local aim = not MainMenu.Busy() and (fighting or inPracticeRange())
+	local busy = MainMenu.Busy()
+	CameraController.SetMenuOpen(busy)
+	local aim = not busy and (fighting or inPracticeRange())
 	if aim == aiming and not force then
 		return
 	end

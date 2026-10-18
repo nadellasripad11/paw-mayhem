@@ -42,7 +42,7 @@ local BOT_WAIT = 15 -- seconds alone on a pad before bots fill it
 local TEAM_COLOR = { Blue = Color3.fromRGB(70, 150, 255), Red = Color3.fromRGB(255, 80, 90) }
 
 type Slot = { team: string, pos: Vector3, part: BasePart, player: Player? }
-type Pad = { kind: string, slots: { Slot }, title: TextLabel, sub: TextLabel, startAt: number?, waitingSince: number? }
+type Pad = { kind: string, slots: { Slot }, count: TextLabel, sub: TextLabel, startAt: number?, waitingSince: number? }
 type Duel = {
 	id: number,
 	place: number,
@@ -72,56 +72,65 @@ end
 -- ── the pads in the lobby ────────────────────────────────────────────────────
 local function buildPad(def: any, parent: Instance)
 	local at = LobbyService.At
-	local center = at(def.x, def.z)
 	local is2v2 = def.kind == "2v2"
-	local d = is2v2 and 15 or 12
-	local base = ArenaKit.NewDisc("DuelPad", d, 0.5, center + Vector3.new(0, 0.2, 0), Color3.fromRGB(226, 220, 208), Enum.Material.Marble, parent)
-	base.CanCollide = false
-	local rim = ArenaKit.NewDisc("DuelPadRim", d + 0.8, 0.3, center + Vector3.new(0, 0.12, 0), Color3.fromRGB(60, 58, 70), Enum.Material.Slate, parent)
-	rim.CanCollide = false
+	local w, d = is2v2 and 12.5 or 12, is2v2 and 11 or 8.5
+	local center = at(def.x, def.z)
+	local function deco(p: BasePart): BasePart
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CastShadow = false
+		return p
+	end
 
-	local pad: Pad = { kind = def.kind, slots = {}, title = nil :: any, sub = nil :: any, startAt = nil }
-	local offsets = is2v2 and { { "Blue", -3.6, -2.5 }, { "Blue", -3.6, 2.5 }, { "Red", 3.6, -2.5 }, { "Red", 3.6, 2.5 } }
+	-- The pad: a dark plate, blue half and red half, glowing border, and a
+	-- round slot for each player.
+	deco(ArenaKit.NewPart("DuelPad", Vector3.new(w, 0.3, d), CFrame.new(center + Vector3.new(0, 0.15, 0)), Color3.fromRGB(26, 30, 48), Enum.Material.SmoothPlastic, parent))
+	for _, half in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
+		local tint = deco(ArenaKit.NewPart("PadHalf", Vector3.new(w / 2 - 0.6, 0.05, d - 0.6), CFrame.new(center + Vector3.new(half[2] * w / 4, 0.32, 0)), TEAM_COLOR[half[1]], Enum.Material.Neon, parent))
+		tint.Transparency = 0.85
+	end
+	for _, e in ipairs({ { 0, d / 2, w, 0.25 }, { 0, -d / 2, w, 0.25 }, { w / 2, 0, 0.25, d }, { -w / 2, 0, 0.25, d } }) do
+		deco(ArenaKit.NewPart("PadEdge", Vector3.new(e[3], 0.12, e[4]), CFrame.new(center + Vector3.new(e[1], 0.34, e[2])), Color3.fromRGB(220, 230, 255), Enum.Material.Neon, parent))
+	end
+	deco(ArenaKit.NewPart("PadSplit", Vector3.new(0.2, 0.1, d - 1), CFrame.new(center + Vector3.new(0, 0.34, 0)), Color3.fromRGB(220, 230, 255), Enum.Material.Neon, parent)).Transparency = 0.4
+
+	local pad: Pad = { kind = def.kind, slots = {}, count = nil :: any, sub = nil :: any, startAt = nil }
+	local offsets = is2v2 and { { "Blue", -3.2, -2.6 }, { "Blue", -3.2, 2.6 }, { "Red", 3.2, -2.6 }, { "Red", 3.2, 2.6 } }
 		or { { "Blue", -3, 0 }, { "Red", 3, 0 } }
 	for _, o in ipairs(offsets) do
 		local pos = center + Vector3.new(o[2], 0, o[3])
-		local slot = ArenaKit.NewDisc("Slot", 4.2, 0.2, pos + Vector3.new(0, 0.5, 0), TEAM_COLOR[o[1]], Enum.Material.Neon, parent)
-		slot.CanCollide = false
-		slot.CanQuery = false
+		local slot = deco(ArenaKit.NewDisc("Slot", 4, 0.2, pos + Vector3.new(0, 0.4, 0), TEAM_COLOR[o[1]], Enum.Material.Neon, parent))
 		slot.Transparency = 0.55
 		table.insert(pad.slots, { team = o[1], pos = pos, part = slot, player = nil })
 	end
 
-	-- Floating label: "1V1" and what the pad is waiting for.
-	local anchor = ArenaKit.NewPart("PadLabel", Vector3.new(0.2, 0.2, 0.2), CFrame.new(center + Vector3.new(0, 6, 0)), Color3.new(1, 1, 1), nil, parent)
-	anchor.Transparency = 1
-	anchor.CanCollide = false
-	anchor.CanQuery = false
-	local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.fromOffset(220, 80)
-	bb.MaxDistance = 90
-	bb.LightInfluence = 0
-	bb.Parent = anchor
-	local title = Instance.new("TextLabel")
-	title.BackgroundTransparency = 1
-	title.Size = UDim2.new(1, 0, 0, 46)
-	title.Font = Enum.Font.FredokaOne
-	title.TextSize = 42
-	title.TextColor3 = Color3.new(1, 1, 1)
-	title.TextStrokeTransparency = 0.4
-	title.Text = string.upper(def.kind)
-	title.Parent = bb
-	local sub = Instance.new("TextLabel")
-	sub.BackgroundTransparency = 1
-	sub.Position = UDim2.fromOffset(0, 46)
-	sub.Size = UDim2.new(1, 0, 0, 26)
-	sub.Font = Enum.Font.GothamBold
-	sub.TextSize = 18
-	sub.TextColor3 = Color3.fromRGB(255, 226, 120)
-	sub.TextStrokeTransparency = 0.4
-	sub.Text = "Step on a pad"
-	sub.Parent = bb
-	pad.title, pad.sub = title, sub
+	-- A screen on the side wall: the mode, how many are on it, and what it's
+	-- waiting for.
+	local wallX = def.wall * 16.75
+	local screenPos = at(wallX, def.z, 7)
+	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0))
+	deco(ArenaKit.NewPart("ScreenEdge", Vector3.new(8.6, 5.6, 0.15), face * CFrame.new(0, 0, 0.2), is2v2 and Color3.fromRGB(170, 110, 255) or Color3.fromRGB(60, 210, 255), Enum.Material.Neon, parent))
+	local screen = deco(ArenaKit.NewPart("PadScreen", Vector3.new(8, 5, 0.3), face, Color3.fromRGB(14, 18, 30), Enum.Material.SmoothPlastic, parent))
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.LightInfluence = 0
+	gui.PixelsPerStud = 40
+	gui.Parent = screen
+	local function label(text: string, y: number, h: number, font: Enum.Font, color: Color3): TextLabel
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Position = UDim2.fromScale(0, y)
+		t.Size = UDim2.fromScale(1, h)
+		t.Font = font
+		t.TextScaled = true
+		t.TextColor3 = color
+		t.Text = text
+		t.Parent = gui
+		return t
+	end
+	label(string.upper(def.kind), 0.05, 0.22, Enum.Font.FredokaOne, is2v2 and Color3.fromRGB(200, 160, 255) or Color3.fromRGB(120, 220, 255))
+	pad.count = label("0/" .. #pad.slots, 0.27, 0.45, Enum.Font.GothamBlack, Color3.new(1, 1, 1))
+	pad.sub = label("Step on a pad", 0.76, 0.17, Enum.Font.GothamBold, Color3.fromRGB(255, 226, 120))
 	table.insert(pads, pad)
 end
 
@@ -405,6 +414,7 @@ local function tickPads()
 			end
 		end
 		local need = #pad.slots - filled
+		pad.count.Text = filled .. "/" .. #pad.slots
 		if need > 0 then
 			pad.startAt = nil
 			if filled == 0 then

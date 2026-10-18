@@ -277,7 +277,7 @@ end
 
 -- Client settings the profile may store, with how to validate each.
 local SETTING_RULES: { [string]: any } = {
-	CameraShake = "boolean", ShowDamage = "boolean", InvertY = "boolean", AutoSprint = "boolean", AutoFire = "boolean", ShowFPS = "boolean",
+	CameraShake = "boolean", ShowDamage = "boolean", InvertY = "boolean", AutoSprint = "boolean", AutoFire = "boolean", ShowFPS = "boolean", FirstPerson = "boolean",
 	MobileSensitivity = { 0, 1 }, MusicVolume = { 0, 1 }, SFXVolume = { 0, 1 }, MouseSensitivity = { 0, 1 }, FieldOfView = { 60, 95 },
 	GraphicsQuality = { Low = true, Medium = true, High = true },
 	Crosshair = { White = true, Green = true, Cyan = true, Pink = true, Yellow = true },

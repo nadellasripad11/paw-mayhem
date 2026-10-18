@@ -132,6 +132,7 @@ local function toggle(parent: Instance, order: number, label: string, key: strin
 		set(key, not (ClientState.Settings[key] == true))
 		paint()
 	end)
+	ClientState.SettingsChanged:Connect(paint) -- (keys like V change some settings too)
 	paint()
 end
 
@@ -348,6 +349,7 @@ function Settings.Build(parent)
 		slider(controls, 2, "Touch Sensitivity", "MobileSensitivity", 0, 1, pct)
 		slider(controls, 3, "Field of View", "FieldOfView", 60, 95, function(v) return tostring(math.floor(v + 0.5)) end)
 		toggle(controls, 4, "Invert Camera", "InvertY", "Flip up / down look")
+		toggle(controls, 5, "First Person", "FirstPerson", "Or press V any time (scroll to zoom)")
 
 		local graphics = card(root, 3, "GRAPHICS", Color3.fromRGB(190, 120, 255))
 		choice(graphics, 1, "Quality", "GraphicsQuality", { "Low", "Medium", "High" }, nil, "Low turns off shadows, glow + effects")

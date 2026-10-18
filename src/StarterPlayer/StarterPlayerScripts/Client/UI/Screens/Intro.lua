@@ -389,7 +389,7 @@ local function lesson(done: (finished: boolean) -> ())
 
 	local m = isMobile()
 	local steps: { Step } = {
-		{ text = "Hey, I'm Mochi! Come to the practice range - " .. (m and "use the stick" or "use WASD") .. " to walk into the gold ring.", done = nearRing },
+		{ text = "Hey, I'm Mochi! Turn around and walk through the purple portal to the Practice Centre, then into the gold ring.", done = nearRing },
 		{ text = "Nice! Now jump" .. (m and " (JUMP)." or " (SPACE)."), done = function() return jumps > 0 end, demo = hop },
 		{ text = "Jump again while you're in the air - that's a double jump.", done = function() return airJumps > 0 end, demo = hop },
 		{ text = (m and "Tap FIRE" or "Click") .. " to blast one of the target cats over there.", done = function() return hit end, demo = demoShots },
@@ -429,7 +429,7 @@ local function lesson(done: (finished: boolean) -> ())
 			SoundController.Play("Pop")
 			task.wait(0.6)
 		end
-		speak("That's everything! Hit PLAY when you're ready, or take on someone at the duel pads.")
+		speak("That's everything! Take the portal back, then hit PLAY or try the duel pads.")
 		progress.Text = ""
 		task.wait(3.5)
 		cleanup()

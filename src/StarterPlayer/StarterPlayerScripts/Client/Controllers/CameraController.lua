@@ -6,6 +6,9 @@
 -- Speed widens the view a little (sprint, dash, getting launched), and on
 -- touch / gamepad your aim eases onto a visible enemy near the crosshair
 -- while you're shooting.
+-- First person (V, the setting, or scrolling all the way in) puts the camera
+-- in the cat's head and hides your own cat; scrolling zooms the third-person
+-- view in and out.
 -- Walking round the lobby it runs in "free mouse" mode: the cursor stays free
 -- for the on-screen buttons, holding right mouse turns the view, and the cat
 -- faces where it walks instead of where you aim.
@@ -31,6 +34,8 @@ local distance = GameConfig.Camera.ThirdPersonDistance
 local enabled = false
 local lobbyView = false
 local freeMouse = false -- lobby: cursor free, right mouse turns the view
+local menuOpen = false -- a screen is open: the cursor is always free
+local MIN_ZOOM, MAX_ZOOM = GameConfig.Camera.MinDistance, GameConfig.Camera.MaxDistance
 local turning = false -- right mouse held in free mouse mode
 local lookTouch: InputObject? = nil
 local touchLastPos: Vector2? = nil
@@ -150,12 +155,17 @@ local function isMobile()
 	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 end
 
+local function firstPerson(): boolean
+	return require(script.Parent.Parent.ClientState).Settings.FirstPerson == true
+end
+
 -- Lock the cursor to the centre (aiming) or leave it free (lobby, menus).
+-- First person always aims down the middle unless a screen is open.
 local function applyMouse()
 	if not enabled or isMobile() or not UserInputService.MouseEnabled then
 		return
 	end
-	if freeMouse then
+	if menuOpen or (freeMouse and not firstPerson()) then
 		UserInputService.MouseBehavior = turning and Enum.MouseBehavior.LockCurrentPosition or Enum.MouseBehavior.Default
 		UserInputService.MouseIconEnabled = true
 	else
@@ -167,7 +177,35 @@ end
 -- A touch that starts on free screen space (not the joystick or a HUD button)
 -- becomes the look drag. Only that finger turns the camera, so moving the
 -- joystick while holding Fire can't swing the view.
+-- Switch between first and third person (saved like any other setting).
+local saveQueued = false
+local function setFirstPerson(on: boolean)
+	local ClientState = require(script.Parent.Parent.ClientState)
+	if ClientState.Settings.FirstPerson == on then
+		return
+	end
+	ClientState.UpdateSettings({ FirstPerson = on })
+	if not saveQueued then
+		saveQueued = true
+		task.delay(1, function()
+			saveQueued = false
+			local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
+			Remotes.Get("SaveSettings"):FireServer({ FirstPerson = ClientState.Settings.FirstPerson })
+		end)
+	end
+	distance = on and MIN_ZOOM or math.max(distance, MIN_ZOOM)
+	applyMouse()
+end
+
+function CameraController.ToggleView()
+	setFirstPerson(not firstPerson())
+end
+
 local function onInputBegan(input: InputObject, gpe: boolean)
+	if input.KeyCode == Enum.KeyCode.V and not gpe then
+		CameraController.ToggleView()
+		return
+	end
 	if input.UserInputType == Enum.UserInputType.MouseButton2 and not gpe then
 		turning = true
 		applyMouse()
@@ -182,6 +220,21 @@ end
 
 local function onInputChanged(input: InputObject, gpe: boolean)
 	if not enabled then
+		return
+	end
+	if input.UserInputType == Enum.UserInputType.MouseWheel and not gpe then
+		-- Scroll to zoom; all the way in is first person, out again is third.
+		local d = input.Position.Z
+		if firstPerson() then
+			if d < 0 then
+				setFirstPerson(false)
+			end
+		else
+			distance = math.clamp(distance - d * 1.5, MIN_ZOOM - 1.5, MAX_ZOOM)
+			if distance < MIN_ZOOM then
+				setFirstPerson(true)
+			end
+		end
 		return
 	end
 	if input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -274,6 +327,21 @@ local function livingCat(): Model?
 	return nil
 end
 
+-- First person: your own cat disappears for you (its blaster stays).
+local hidden: Model? = nil
+local function hideSelf(char: Model, on: boolean)
+	if (hidden == char) == on then
+		return
+	end
+	hidden = on and char or nil
+	local blaster = char:FindFirstChild("Blaster")
+	for _, d in ipairs(char:GetDescendants()) do
+		if d:IsA("BasePart") and not (blaster and d:IsDescendantOf(blaster)) then
+			d.LocalTransparencyModifier = on and 1 or 0
+		end
+	end
+end
+
 local function step(dt: number)
 	if override then
 		camera.CameraType = Enum.CameraType.Scriptable
@@ -355,8 +423,36 @@ local function step(dt: number)
 	punch *= math.exp(-10 * dt)
 	camera.FieldOfView = (require(script.Parent.Parent.ClientState).Settings.FieldOfView or GameConfig.Camera.FieldOfView) + fovBoost - punch
 
-	local focus = root.Position + Vector3.new(0, 1.5, 0)
 	local rot = CFrame.Angles(0, yaw, 0) * CFrame.Angles(pitch, 0, 0)
+	local fp = firstPerson()
+	hideSelf(char, fp)
+	if fp then
+		-- In the cat's head, looking where you aim.
+		local head = char:FindFirstChild("Head")
+		local eye = (head and head:IsA("BasePart") and head.Position or root.Position + Vector3.new(0, 1.6, 0)) + Vector3.new(0, 0.25, 0)
+		local fpCF = CFrame.new(eye) * rot
+		if kick > 0.0001 then
+			fpCF = fpCF * CFrame.Angles(kick, 0, 0)
+			kick *= math.exp(-14 * dt)
+		end
+		if shake > 0.001 then
+			local s = shake
+			fpCF = fpCF * CFrame.Angles((math.random() - 0.5) * s * 0.012, (math.random() - 0.5) * s * 0.012, 0)
+			shake = math.max(0, shake - dt * 4)
+		end
+		camera.CFrame = fpCF
+		local fpHum = char:FindFirstChildOfClass("Humanoid")
+		if fpHum and fpHum.Health > 0 and not char:GetAttribute("Emoting") then
+			fpHum.AutoRotate = false
+			local want = CFrame.Angles(0, yaw, 0)
+			if root.CFrame.LookVector:Dot(want.LookVector) < 0.9999 then
+				root.CFrame = CFrame.new(root.Position) * want
+			end
+		end
+		return
+	end
+
+	local focus = root.Position + Vector3.new(0, 1.5, 0)
 	local shoulder = GameConfig.Camera.ShoulderOffset
 
 	-- Camera sits behind + offset from the shoulder. It snaps in when a wall
@@ -396,7 +492,7 @@ local function step(dt: number)
 	-- crosshair (the cat's front is its -Z, same as the camera's look).
 	-- (Walking round the lobby it faces where it walks instead.)
 	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum and freeMouse then
+	if hum and freeMouse and not fp then
 		hum.AutoRotate = true
 	elseif hum and hum.Health > 0 and not char:GetAttribute("Emoting") then
 		hum.AutoRotate = false
@@ -462,6 +558,15 @@ function CameraController.SetFreeMouse(on: boolean)
 	end
 	freeMouse = on
 	turning = on and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+	applyMouse()
+end
+
+-- A screen is open over the game: free the cursor even in first person.
+function CameraController.SetMenuOpen(on: boolean)
+	if menuOpen == on then
+		return
+	end
+	menuOpen = on
 	applyMouse()
 end
 

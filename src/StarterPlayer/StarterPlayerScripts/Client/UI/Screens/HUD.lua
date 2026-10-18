@@ -590,7 +590,7 @@ local function buildRangeHint(parent)
 	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 14), UDim.new(0, 14)
 	pad.Parent = pill
 	UIUtil.label({
-		Parent = pill, Text = "PRACTICE RANGE  ·  walk out to use the menu", Font = Theme.Font.Bold, TextSize = 14,
+		Parent = pill, Text = "PRACTICE CENTRE  ·  go back through the portal to use the menu", Font = Theme.Font.Bold, TextSize = 14,
 		Size = UDim2.fromScale(0, 1), AutomaticSize = Enum.AutomaticSize.X, TextColor3 = Color3.new(1, 1, 1),
 	})
 end
@@ -663,6 +663,18 @@ local function buildDashChip(parent)
 	local pkey = pchip:FindFirstChild("Key") :: TextLabel
 	local pl = pchip:FindFirstChild("Label") :: TextLabel
 	pkey.Text = "E"
+
+	-- V: switch first / third person, right of the weapon pill.
+	local vchip = chip:Clone()
+	vchip.AnchorPoint = Vector2.new(0, 1)
+	vchip.Position = UDim2.new(0.5, 110, 1, -10)
+	vchip.Size = UDim2.fromOffset(70, 28)
+	vchip.Parent = parent
+	local vkey = vchip:FindFirstChild("Key") :: TextLabel
+	local vl = vchip:FindFirstChild("Label") :: TextLabel
+	vkey.Text = "V"
+	vkey.BackgroundColor3 = Color3.fromRGB(190, 160, 255)
+	vl.Text = "VIEW"
 	pkey.BackgroundColor3 = Color3.fromRGB(255, 200, 110)
 	pl.Text = "POUNCE"
 	refs.pounceChip = { key = pkey, label = pl }
