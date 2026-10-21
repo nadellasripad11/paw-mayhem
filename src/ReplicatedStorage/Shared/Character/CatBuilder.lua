@@ -716,6 +716,25 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	humanoid.Parent = model
 
 	root.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5, 1, 1)
+	-- One pivot under everything you can see (PawBody), so the animator can
+	-- lean, squash, flip and tumble the whole cat while the root itself stays
+	-- upright for the physics. Same look and size: the pivot sits exactly on
+	-- the root.
+	local pivot = part("PawPivot", V(0.2, 0.2, 0.2), Color3.new(1, 1, 1))
+	pivot.Transparency = 1
+	pivot.CFrame = root.CFrame
+	pivot.Parent = model
+	for _, d in ipairs(model:GetDescendants()) do
+		if (d:IsA("JointInstance") or d:IsA("WeldConstraint")) and (d :: any).Part0 == root then
+			(d :: any).Part0 = pivot
+		end
+	end
+	local bodyJoint = Instance.new("Motor6D")
+	bodyJoint.Name = "PawBody"
+	bodyJoint.Part0 = root
+	bodyJoint.Part1 = pivot
+	bodyJoint:SetAttribute("BaseC0", CFrame.identity)
+	bodyJoint.Parent = root
 	model:SetAttribute("PoseSeed", math.random() * 10)
 	CollectionService:AddTag(model, CatBuilder.Tag)
 
@@ -750,7 +769,21 @@ function CatBuilder.SetBlaster(model: Model, weapon: any)
 end
 
 -- ── posing ───────────────────────────────────────────────────────────────────
-local JOINTS = { "PawNeck", "PawShoulderL", "PawShoulderR", "PawHipL", "PawHipR", "PawTail" }
+local JOINTS = { "PawNeck", "PawShoulderL", "PawShoulderR", "PawHipL", "PawHipR", "PawTail", "PawBody" }
+-- Ear pieces (primitive and mesh) the animator flattens and twitches.
+local EAR_PARTS = { Ear = true, InnerEar = true, EarFluff = true, Ears = true, EarTufts = true }
+
+-- Extra layers on top of the basic pose (CatAnimator works them out):
+-- `body` moves the whole cat, `replace` sets joints outright, `add`
+-- turns them a bit more, `blink` shuts the eyes, `ears` flattens /
+-- twitches them (`side` -1 left, 1 right).
+export type PoseFx = {
+	body: CFrame?,
+	add: { [string]: CFrame }?,
+	replace: { [string]: CFrame }?,
+	blink: boolean?,
+	ears: { flat: number, twitch: number, side: number }?,
+}
 local OPEN_EYE = { EyeWhite = true, Iris = true, IrisGlow = true, Pupil = true, Shine = true }
 
 type PoseRig = {
@@ -759,6 +792,7 @@ type PoseRig = {
 	shut: { BasePart },
 	closed: boolean,
 	armed: boolean,
+	ears: { { motor: Motor6D, base: CFrame, pivot: CFrame, side: number } },
 }
 local rigCache: { [Model]: PoseRig } = setmetatable({}, { __mode = "k" }) :: any
 
@@ -767,7 +801,7 @@ local function rigFor(model: Model): PoseRig
 	if rig then
 		return rig
 	end
-	local r: PoseRig = { joints = {}, open = {}, shut = {}, closed = false, armed = model:GetAttribute("Armed") == true }
+	local r: PoseRig = { joints = {}, open = {}, shut = {}, closed = false, armed = model:GetAttribute("Armed") == true, ears = {} }
 	for _, name in ipairs(JOINTS) do
 		local m = model:FindFirstChild(name, true)
 		if m and m:IsA("Motor6D") then
@@ -778,6 +812,19 @@ local function rigFor(model: Model): PoseRig
 		end
 	end
 	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("Motor6D") and d.Part0 and d.Part0.Name == "Head" and d.Part1 and EAR_PARTS[d.Part1.Name] then
+			local base = d:GetAttribute("BaseC0")
+			if typeof(base) ~= "CFrame" then
+				base = d.C0
+				d:SetAttribute("BaseC0", base)
+			end
+			local b = base :: CFrame
+			local x = b.Position.X
+			local side = x > 0.1 and 1 or x < -0.1 and -1 or 0
+			-- Turn about the ear's base (one shared point per side).
+			local pivot = side ~= 0 and CFrame.new(0.5 * side, 0.5, 0.04) or CFrame.new(b.Position - Vector3.new(0, 0.3, 0))
+			table.insert(r.ears, { motor = d, base = b, pivot = pivot, side = side })
+		end
 		if d:IsA("BasePart") then
 			if OPEN_EYE[d.Name] then
 				table.insert(r.open, d)
@@ -794,9 +841,58 @@ CatBuilder.EmoteSeconds = 2.6
 
 -- Emote poses (k = seconds into the emote). Arms: +Z raises the right arm
 -- out and up, -Z the left; hips: +X swings the legs forward.
-local function emotePose(set: (string, CFrame) -> (), id: string, k: number)
+-- Emotes that shut the eyes.
+local SHUT_EMOTES = { Sleep = true, Knead = true, Purr = true, Loaf = true }
+
+local function emotePose(set: (string, CFrame) -> (), id: string, k: number): CFrame?
 	local s = math.sin
-	if id == "Wave" then
+	if id == "Loaf" then
+		-- Tucked into a bread loaf.
+		set("PawHipL", CFrame.Angles(1.6, 0, -0.1))
+		set("PawHipR", CFrame.Angles(1.6, 0, 0.1))
+		set("PawShoulderL", CFrame.Angles(1.4, 0, -0.1))
+		set("PawShoulderR", CFrame.Angles(1.4, 0, 0.1))
+		set("PawTail", CFrame.Angles(0, 1.1, 0))
+		set("PawNeck", CFrame.Angles(0.1, 0, s(k * 1.5) * 0.03))
+		return CFrame.new(0, -0.75, 0)
+	elseif id == "Zoomies" then
+		-- (EmoteController runs the cat round in a little circle.)
+		set("PawHipL", CFrame.Angles(s(k * 30) * 0.9, 0, 0))
+		set("PawHipR", CFrame.Angles(-s(k * 30) * 0.9, 0, 0))
+		set("PawShoulderL", CFrame.Angles(-s(k * 30) * 0.8, 0, -0.3))
+		set("PawShoulderR", CFrame.Angles(s(k * 30) * 0.8, 0, 0.3))
+		set("PawTail", CFrame.Angles(-0.5, s(k * 20) * 0.3, 0))
+		return CFrame.new(0, math.abs(s(k * 15)) * 0.15, 0) * CFrame.Angles(-0.2, 0, -0.35)
+	elseif id == "Hiss" then
+		-- Back arched, tail straight up, claws out.
+		set("PawShoulderL", CFrame.Angles(-1.2, 0, -0.6))
+		set("PawShoulderR", CFrame.Angles(-1.2, 0, 0.6))
+		set("PawTail", CFrame.Angles(0.9, s(k * 40) * 0.05, 0))
+		set("PawNeck", CFrame.Angles(-0.2 + s(k * 25) * 0.03, 0, 0))
+		return CFrame.new(0, 0.15, 0) * CFrame.Angles(0.25, 0, 0)
+	elseif id == "Knead" then
+		set("PawShoulderL", CFrame.Angles(-0.6 + s(k * 8) * 0.5, 0, -0.1))
+		set("PawShoulderR", CFrame.Angles(-0.6 - s(k * 8) * 0.5, 0, 0.1))
+		set("PawTail", CFrame.Angles(0.3, s(k * 2) * 0.3, 0))
+		return CFrame.new(0, -0.35, 0) * CFrame.Angles(-0.15, 0, 0)
+	elseif id == "Purr" then
+		set("PawTail", CFrame.Angles(0.3, s(k * 2.5) * 0.5, 0))
+		set("PawNeck", CFrame.Angles(0.1, 0, s(k * 2) * 0.12))
+		return CFrame.new(s(k * 90) * 0.02, 0, 0)
+	elseif id == "BoxSit" then
+		-- (CatAnimator puts a box round the cat.)
+		set("PawHipL", CFrame.Angles(1.4, 0, -0.1))
+		set("PawHipR", CFrame.Angles(1.4, 0, 0.1))
+		set("PawShoulderL", CFrame.Angles(0.4, 0, -0.1))
+		set("PawShoulderR", CFrame.Angles(0.4, 0, 0.1))
+		set("PawNeck", CFrame.Angles(0, s(k * 1.2) * 0.3, 0))
+		return CFrame.new(0, -0.5, 0)
+	elseif id == "Taunt" then
+		set("PawShoulderR", CFrame.Angles(-1.6, 0, 0.1))
+		set("PawShoulderL", CFrame.Angles(0.3, 0, -0.6))
+		set("PawNeck", CFrame.Angles(0, 0, 0.2 + s(k * 4) * 0.08))
+		return CFrame.Angles(0, 0, s(k * 4) * 0.06)
+	elseif id == "Wave" then
 		set("PawShoulderR", CFrame.Angles(0, 0, 2.6 + s(k * 12) * 0.3))
 	elseif id == "Celebrate" or id == "Happy" then
 		local up = 2.5 + s(k * 10) * 0.2
@@ -838,12 +934,14 @@ local function emotePose(set: (string, CFrame) -> (), id: string, k: number)
 		set("PawShoulderL", CFrame.Angles(0, 0, -1.5))
 		set("PawShoulderR", CFrame.Angles(0, 0, 1.5))
 	end
+	return nil
 end
 
 -- Poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed;
 -- `air` (0..1) blends into a mid-air pose (legs split, arms out). The model's
--- Emote / EmoteAt attributes (set by the server) layer an emote on top.
-function CatBuilder.Pose(model: Model, t: number, move: number, air: number?)
+-- Emote / EmoteAt attributes (set by the server) layer an emote on top, and
+-- `fx` (CatAnimator) layers everything else.
+function CatBuilder.Pose(model: Model, t: number, move: number, air: number?, fx: PoseFx?)
 	local rig = rigFor(model)
 	local j = rig.joints
 
@@ -851,7 +949,8 @@ function CatBuilder.Pose(model: Model, t: number, move: number, air: number?)
 	local emoteAt = model:GetAttribute("EmoteAt")
 	local emoteK = (typeof(emote) == "string" and typeof(emoteAt) == "number") and (workspace:GetServerTimeNow() - emoteAt) or math.huge
 	local emoting = emoteK >= 0 and emoteK < CatBuilder.EmoteSeconds
-	local closed = (t % 3.7) < 0.12 or (emoting and emote == "Sleep")
+	local blinkNow = if fx then fx.blink == true else (t % 3.7) < 0.12
+	local closed = blinkNow or (emoting and SHUT_EMOTES[emote :: string] == true)
 	if closed ~= rig.closed then
 		rig.closed = closed
 		for _, p in ipairs(rig.open) do
@@ -886,8 +985,30 @@ function CatBuilder.Pose(model: Model, t: number, move: number, air: number?)
 	end
 	set("PawNeck", CFrame.Angles(breathe * 0.025 + math.abs(math.cos(phase)) * 0.05 * walk, math.sin(t * 0.7) * 0.08 * idle, math.sin(t * 0.9) * 0.05 * idle))
 	set("PawTail", CFrame.Angles(math.sin(t * 1.6) * 0.1, math.sin(t * 2.4 + phase * walk * 0.5) * (0.3 + 0.2 * walk), 0))
+	if fx and fx.replace and not emoting then
+		for name, rot in pairs(fx.replace) do
+			set(name, rot)
+		end
+	end
+	local emoteBody: CFrame? = nil
 	if emoting then
-		emotePose(set, emote :: string, emoteK)
+		emoteBody = emotePose(set, emote :: string, emoteK)
+	end
+	if fx and fx.add and not emoting then
+		for name, rot in pairs(fx.add) do
+			local e = j[name]
+			if e then
+				e.motor.C0 = e.motor.C0 * rot
+			end
+		end
+	end
+	set("PawBody", ((fx and fx.body) or CFrame.identity) * (emoteBody or CFrame.identity))
+	local ef = fx and fx.ears
+	for _, ear in ipairs(rig.ears) do
+		local flat = ef and ef.flat or 0
+		local twitch = (ef and ear.side ~= 0 and ear.side == ef.side) and ef.twitch or 0
+		local rot = CFrame.Angles(-flat * 0.8 + twitch * 0.35, 0, ear.side * flat * 0.4)
+		ear.motor.C0 = ear.pivot * rot * ear.pivot:Inverse() * ear.base
 	end
 end
 

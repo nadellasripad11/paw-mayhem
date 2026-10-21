@@ -168,8 +168,10 @@ local function tryFire()
 	CombatController.MuzzleFlash(muzzle, weapon)
 	EffectsController.Tracers(muzzle, tos, weapon.TrailColor, weapon.Id)
 	SoundController.PlayShot(weapon.Id, muzzle)
-	-- Recoil: heavier-hitting blasters shove you back and kick the view more.
+	-- Recoil: heavier-hitting blasters shove you back and kick the view more
+	-- (and the arms, CatAnimator).
 	MovementController.Recoil(dir, math.max(0, weapon.Knockback - 0.8) * 10)
+	require(script.Parent.CatAnimator).Trigger(game:GetService("Players").LocalPlayer.Character, "Recoil", math.clamp(0.7 + weapon.Knockback * 0.4, 0.8, 1.8))
 	CameraController.OnShot(0.25 + weapon.Knockback * 0.45)
 	if CombatController.OnLocalShot then
 		CombatController.OnLocalShot(weapon.Id)

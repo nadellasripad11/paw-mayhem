@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local ClientState = require(script.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.ClientActions)
@@ -54,6 +55,36 @@ local function animate(emoteId: string)
 				rr.CFrame = rr.CFrame * CFrame.Angles(0, math.rad(18), 0)
 				task.wait(0.02)
 			end
+			restore()
+		end)
+	elseif emoteId == "Zoomies" then
+		-- Tear round in a little circle.
+		task.spawn(function()
+			local rr = root()
+			if not rr then
+				restore()
+				return
+			end
+			local lv = Instance.new("LinearVelocity")
+			local att = Instance.new("Attachment")
+			att.Parent = rr
+			lv.Attachment0 = att
+			lv.RelativeTo = Enum.ActuatorRelativeTo.World
+			lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+			lv.PrimaryTangentAxis = Vector3.xAxis
+			lv.SecondaryTangentAxis = Vector3.zAxis
+			lv.MaxForce = rr.AssemblyMass * 3000
+			lv.Parent = rr
+			local t0 = os.clock()
+			while os.clock() - t0 < 2.4 and rr.Parent do
+				local a = (os.clock() - t0) * 6
+				local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+				lv.PlaneVelocity = Vector2.new(dir.X, dir.Z) * 26
+				rr.CFrame = CFrame.lookAt(rr.Position, rr.Position + dir)
+				RunService.Heartbeat:Wait()
+			end
+			lv:Destroy()
+			att:Destroy()
 			restore()
 		end)
 	elseif emoteId == "Happy" or emoteId == "Celebrate" or emoteId == "Wave" then

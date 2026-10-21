@@ -396,7 +396,7 @@ local function buildMobile(parent)
 
 	-- FIRE tracks the exact touch, so sliding a finger off the button still
 	-- stops firing when it lifts.
-	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -78, 1, -104), 92, Theme.Color.Danger, "Reticle", "FIRE")
+	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -66, 1, -96), 92, Theme.Color.Danger, "Reticle", "FIRE")
 	local fireInput: InputObject? = nil
 	fire.InputBegan:Connect(function(input)
 		if isPress(input) and not fireInput then
@@ -413,18 +413,22 @@ local function buildMobile(parent)
 		end
 	end)
 
-	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -180, 1, -58), 66, Theme.Color.Accent, "JumpArrow", "JUMP")
+	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -160, 1, -50), 66, Theme.Color.Accent, "JumpArrow", "JUMP")
 	jump.InputBegan:Connect(function(input)
 		if isPress(input) then
 			jumpPressed(true)
+			MovementController.SetJumpHeld(true)
 			MovementController.Jump() -- second tap in the air = double jump
 		end
 	end)
 	jump.InputEnded:Connect(function(input)
-		if isPress(input) then jumpPressed(false) end
+		if isPress(input) then
+			jumpPressed(false)
+			MovementController.SetJumpHeld(false)
+		end
 	end)
 
-	local dash, dashLit, dashPressed = touchButton(parent, "DashButton", UDim2.new(1, -92, 1, -205), 58, Color3.fromRGB(120, 220, 255), "Bolt", "DASH")
+	local dash, dashLit, dashPressed = touchButton(parent, "DashButton", UDim2.new(1, -58, 1, -192), 58, Color3.fromRGB(120, 220, 255), "Bolt", "DASH")
 	dash.InputBegan:Connect(function(input)
 		if isPress(input) then
 			dashPressed(true)
@@ -440,7 +444,7 @@ local function buildMobile(parent)
 	})
 	refs.dashButton = { lit = dashLit, timer = dashTimer, button = dash }
 
-	local pounce, pounceLit, pouncePressed = touchButton(parent, "PounceButton", UDim2.new(1, -252, 1, -104), 58, Color3.fromRGB(255, 200, 110), "JumpArrow", "POUNCE")
+	local pounce, pounceLit, pouncePressed = touchButton(parent, "PounceButton", UDim2.new(1, -150, 1, -150), 58, Color3.fromRGB(255, 200, 110), "JumpArrow", "POUNCE")
 	pounce.InputBegan:Connect(function(input)
 		if isPress(input) then
 			pouncePressed(true)
@@ -456,7 +460,7 @@ local function buildMobile(parent)
 	})
 	refs.pounceButton = { lit = pounceLit, timer = pounceTimer }
 
-	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -170, 1, -160), 58, Theme.Color.Warn, "Dash", "RUN")
+	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -58, 1, -268), 58, Theme.Color.Warn, "Dash", "RUN")
 	run.InputBegan:Connect(function(input)
 		if isPress(input) then
 			runPressed(true)

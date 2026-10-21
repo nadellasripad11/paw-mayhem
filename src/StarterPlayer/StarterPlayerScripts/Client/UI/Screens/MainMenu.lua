@@ -491,10 +491,16 @@ function MainMenu.Build()
 	local tasksGroup, tasksScale = scaled({ Parent = gui, Name = "TasksGroup", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(TASKS_W, 300), ZIndex = 10 })
 	local tasksCard = UIUtil.surface({ Parent = tasksGroup, Size = UDim2.new(1, 0, 0, HEAD_H), ZIndex = 10, BackgroundColor3 = Theme.Color.Surface }, 1, UDim.new(0, 14))
 	tasksCard.BackgroundTransparency = 0.15
-	UIUtil.label({
+	-- On phones the list starts folded up to its header (tap to open).
+	local phone = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
+	local collapsed = phone
+	local tasksTitle = UIUtil.label({
 		Parent = tasksCard, Text = "DAILY TASKS", Font = Theme.Font.Title, TextSize = 18, Position = UDim2.fromOffset(12, 0),
-		Size = UDim2.new(0.6, 0, 0, HEAD_H), ZIndex = 11,
+		Size = UDim2.new(0.62, 0, 0, HEAD_H), ZIndex = 11,
 	})
+	local fold = UIUtil.make("TextButton", {
+		Parent = tasksCard, Name = "Fold", Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, HEAD_H), ZIndex = 13,
+	}) :: TextButton
 	local resetLabel = UIUtil.label({
 		Parent = tasksCard, Text = "", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.TextDim,
 		TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.4, 0, 0, 0), Size = UDim2.new(0.6, -12, 0, HEAD_H), ZIndex = 11,
@@ -536,6 +542,10 @@ function MainMenu.Build()
 
 	local claiming = false
 	local rebuildTasks: () -> ()
+	fold.MouseButton1Click:Connect(function()
+		collapsed = not collapsed
+		rebuildTasks()
+	end)
 	local function taskRow(q: any, y: number)
 		local row = UIUtil.make("Frame", {
 			Parent = tasksCard, Name = "TaskRow", Position = UDim2.fromOffset(8, y), Size = UDim2.new(1, -16, 0, ROW_H - 6),
@@ -611,20 +621,26 @@ function MainMenu.Build()
 		end
 		local p = ClientState.Profile
 		local list = (p and p.Quests and p.Quests.Active) or {}
-		local ready, open = 0, 0
+		local ready, open, finished = 0, 0, 0
 		for i, q in ipairs(list) do
-			taskRow(q, HEAD_H + (i - 1) * ROW_H)
+			if not collapsed then
+				taskRow(q, HEAD_H + (i - 1) * ROW_H)
+			end
 			local done = (tonumber(q.Progress) or 0) >= (tonumber(q.Target) or 1)
+			if done then
+				finished += 1
+			end
 			if not q.Claimed and done then
 				ready += 1
 			elseif not done then
 				open += 1
 			end
 		end
-		local h = HEAD_H + #list * ROW_H + 4
+		tasksTitle.Text = collapsed and string.format("DAILY TASKS  %d/%d  ▾", finished, #list) or (phone and "DAILY TASKS  ▴" or "DAILY TASKS")
+		local h = HEAD_H + (collapsed and 0 or #list * ROW_H) + 4
 		tasksCard.Size = UDim2.new(1, 0, 0, h)
 		-- (NEW TASKS only while there's something left to swap.)
-		reroll.Visible = open > 0
+		reroll.Visible = open > 0 and not collapsed
 		local y = h + 8
 		if reroll.Visible then
 			reroll.Position = UDim2.fromOffset(0, y)
@@ -712,12 +728,15 @@ function MainMenu.Build()
 		local vp = camera.ViewportSize
 		-- Phones get a bigger minimum so every button stays easy to tap.
 		local touch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
-		local s = math.clamp(vp.Y / 640, touch and 0.88 or 0.72, 1.75)
+		local s = math.clamp(vp.Y / 640, touch and 0.62 or 0.72, 1.75)
 		local inset = UIUtil.topInset()
+		-- Phones: the move buttons take the bottom-right corner, so the bar and
+		-- PLAY centre in the space left of them.
+		local cx = touch and math.max((vp.X - 210) / 2, barW * s / 2 + 8) or vp.X / 2
 		barScale.Scale = s
-		barGroup.Position = UDim2.new(0.5, 0, 1, -12 * s)
+		barGroup.Position = UDim2.new(0, cx, 1, -12 * s)
 		playScale.Scale = s
-		playGroup.Position = UDim2.new(0.5, 0, 1, -(12 + 80 + 12) * s)
+		playGroup.Position = UDim2.new(0, cx, 1, -(12 + 80 + 12) * s)
 		currScale.Scale = s
 		currGroup.Position = UDim2.new(0.5, 0, 0, 12 * s)
 		iconScale.Scale = s

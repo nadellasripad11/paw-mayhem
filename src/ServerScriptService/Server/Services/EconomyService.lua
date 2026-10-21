@@ -355,11 +355,33 @@ local function useEmote(player: Player, id: any)
 	char:SetAttribute("EmoteAt", workspace:GetServerTimeNow())
 end
 
+-- Move animations (the double-jump flip, a dash...) are passed on to everyone
+-- else so they see them too. Animation only: nothing here changes the game.
+local MOVE_FX = { Flip = true, Dash = true, Pounce = true, WallKick = true, Swing = true, SwingEnd = true }
+local lastMoveFx: { [Player]: number } = {}
+local function relayMoveFx(player: Player, kind: any)
+	if type(kind) ~= "string" or not MOVE_FX[kind] or not player.Character then
+		return
+	end
+	local now = os.clock()
+	if now - (lastMoveFx[player] or 0) < 0.08 then
+		return
+	end
+	lastMoveFx[player] = now
+	for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+		if p ~= player then
+			Remotes.Get("MoveFx"):FireClient(p, { char = player.Character, kind = kind })
+		end
+	end
+end
+
 function EconomyService.Start()
 	Remotes.Get("RedeemCode").OnServerInvoke = redeemCode
 	Remotes.Get("UseEmote").OnServerEvent:Connect(useEmote)
+	Remotes.Get("MoveFx").OnServerEvent:Connect(relayMoveFx)
 	game:GetService("Players").PlayerRemoving:Connect(function(p)
 		lastEmote[p] = nil
+		lastMoveFx[p] = nil
 	end)
 	Remotes.Get("SaveSettings").OnServerEvent:Connect(function(player, patch)
 		local profile = DataService.Get(player)

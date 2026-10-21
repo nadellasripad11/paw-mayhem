@@ -427,9 +427,9 @@ local function step(dt: number)
 	local fp = firstPerson()
 	hideSelf(char, fp)
 	if fp then
-		-- In the cat's head, looking where you aim.
-		local head = char:FindFirstChild("Head")
-		local eye = (head and head:IsA("BasePart") and head.Position or root.Position + Vector3.new(0, 1.6, 0)) + Vector3.new(0, 0.25, 0)
+		-- In the cat's head, looking where you aim. (From the root, not the head
+		-- part: flips, tumbles and landings move the head and would swing the view.)
+		local eye = root.Position + Vector3.new(0, 1.47, 0)
 		local fpCF = CFrame.new(eye) * rot
 		if kick > 0.0001 then
 			fpCF = fpCF * CFrame.Angles(kick, 0, 0)

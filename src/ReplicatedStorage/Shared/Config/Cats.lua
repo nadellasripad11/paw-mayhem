@@ -68,6 +68,13 @@ Cats.Emotes = {
 	{ Id = "Sleep", Name = "Sleep", UnlockLevel = 4, CoinCost = 300 },
 	{ Id = "Spin", Name = "Spin", UnlockLevel = 5, CoinCost = 300 },
 	{ Id = "Fall", Name = "Fall", UnlockLevel = 6, CoinCost = 300 },
+	{ Id = "Loaf", Name = "Loaf", UnlockLevel = 1, CoinCost = 150 },
+	{ Id = "Knead", Name = "Knead", UnlockLevel = 2, CoinCost = 200 },
+	{ Id = "Purr", Name = "Purr", UnlockLevel = 3, CoinCost = 250 },
+	{ Id = "Hiss", Name = "Hiss", UnlockLevel = 4, CoinCost = 250 },
+	{ Id = "Taunt", Name = "Taunt", UnlockLevel = 5, CoinCost = 300 },
+	{ Id = "Zoomies", Name = "Zoomies", UnlockLevel = 7, CoinCost = 400 },
+	{ Id = "BoxSit", Name = "Box Sit", UnlockLevel = 0, CoinCost = 0, PassOnly = "EmotePack" },
 	{ Id = "Dance", Name = "Dance", UnlockLevel = 0, CoinCost = 0, PassOnly = "EmotePack" },
 	{ Id = "Flex", Name = "Flex", UnlockLevel = 0, CoinCost = 0, PassOnly = "EmotePack" },
 }

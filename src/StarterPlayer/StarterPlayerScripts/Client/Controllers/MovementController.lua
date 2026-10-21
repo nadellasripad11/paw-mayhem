@@ -62,6 +62,12 @@ local lastJumpRequest = 0
 
 MovementController.SprintChanged = nil :: ((boolean) -> ())?
 
+-- A move's animation, here and on everyone else's screen.
+local function moveFx(kind: string)
+	require(script.Parent.CatAnimator).Trigger(player.Character, kind)
+	Remotes.Get("MoveFx"):FireServer(kind)
+end
+
 local function setSprint(on: boolean)
 	sprinting = on
 	if MovementController.SprintChanged then
@@ -251,6 +257,7 @@ function MovementController.Dash()
 	dir = dir.Unit
 	dashReadyAt = os.clock() + cfg.DashCooldown
 	holdHorizontal(root, dir * cfg.DashSpeed, cfg.DashTime, "dash")
+	moveFx("Dash")
 	require(script.Parent.SoundController).Play("Dash")
 
 	-- Speed trail behind the cat.
@@ -300,6 +307,7 @@ local function tryDoubleJump()
 	root.AssemblyLinearVelocity = Vector3.new(v.X, GameConfig.Movement.DoubleJumpSpeed, v.Z)
 	hum:ChangeState(Enum.HumanoidStateType.Jumping)
 	ringFx(root.Position - Vector3.new(0, 1.4, 0), Color3.new(1, 1, 1), 5)
+	moveFx("Flip")
 end
 
 -- The wall you're hugging in the air (its flat outward normal), if any.
@@ -335,6 +343,7 @@ local function tryWallJump(root: BasePart, hum: Humanoid): boolean
 	hum:ChangeState(Enum.HumanoidStateType.Jumping)
 	ringFx(root.Position - n * 1.2, Color3.new(1, 1, 1), 4)
 	require(script.Parent.SoundController).Play("Jump")
+	moveFx("WallKick")
 	return true
 end
 
@@ -389,19 +398,35 @@ function MovementController.Pounce()
 	startCarry(dir * cfg.PounceSpeed)
 	ringFx(root.Position - Vector3.new(0, 1.4, 0), Color3.fromRGB(255, 214, 120), 7)
 	require(script.Parent.SoundController).Play("Dash", 0.8)
+	moveFx("Pounce")
 end
 
 -- Jump from the mobile button: a normal jump on the ground, a double jump in the air.
+-- (Roblox's touch controls reset Humanoid.Jump every frame, so setting it
+-- from our button did nothing: the button changes state directly.)
 function MovementController.Jump()
-	local _, hum = parts()
-	if not hum then
+	local root, hum = parts()
+	if not root or not hum then
 		return
 	end
+	lastJumpRequest = os.clock()
+	if MovementController.Swimming then
+		return -- holding jump swims up (see SetJumpHeld)
+	end
 	if hum.FloorMaterial ~= Enum.Material.Air then
-		hum.Jump = true
+		jumpedSinceGround = true
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(v.X, hum.JumpPower, v.Z)
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
 	else
 		airJump()
 	end
+end
+
+-- The on-screen jump button held down (swims up in a column).
+local jumpHeld = false
+function MovementController.SetJumpHeld(on: boolean)
+	jumpHeld = on
 end
 
 -- A new cat can arrive before the ground under it has loaded (far-off lobby
@@ -432,6 +457,7 @@ local function endSwing(letGo: boolean)
 	s.line:Destroy()
 	s.rope.LocalTransparencyModifier = 0
 	swingReadyAt = os.clock() + 2
+	moveFx("SwingEnd")
 	local root, hum = parts()
 	if letGo and root and hum then
 		-- A little hop forward onto the landing.
@@ -483,6 +509,7 @@ local function startSwing(rope: BasePart, root: BasePart, hum: Humanoid)
 	swing = { rope = rope, line = line, mover = lv, pivot = pivot, u = u, a0 = a0, a1 = a1, r0 = r0, r1 = r1, t0 = os.clock(), dur = math.clamp(arc / 34, 1.3, 2.6) }
 	hum:ChangeState(Enum.HumanoidStateType.Freefall)
 	require(script.Parent.SoundController).Play("Whoosh", 0.8)
+	moveFx("Swing")
 end
 
 local function checkSwings(root: BasePart, hum: Humanoid)
@@ -708,7 +735,7 @@ local function swimStep(root: BasePart, hum: Humanoid): boolean
 
 	local lp = zone.CFrame:PointToObjectSpace(root.Position)
 	local half = zone.Size / 2
-	local up = UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA) or now - lastJumpRequest < 0.25
+	local up = UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA) or now - lastJumpRequest < 0.25 or jumpHeld
 	local down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
 		or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.DPadDown) or touchDown
 	if up and lp.Y > half.Y - 2.5 then

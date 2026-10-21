@@ -34,6 +34,8 @@ local CATEGORIES = {
 local EMOTE_ICON = {
 	Happy = "Smiley", Sit = "SitDown", Wave = "Wave", Laugh = "Laugh",
 	Celebrate = "Burst", Sleep = "Sleep", Spin = "Spin", Fall = "Fall",
+	Loaf = "CatBody", Knead = "Paw", Purr = "Smiley", Hiss = "Burst", Taunt = "Laugh", Zoomies = "Dash", BoxSit = "SitDown",
+	Dance = "Sparkle", Flex = "Bolt",
 }
 
 local grid: ScrollingFrame

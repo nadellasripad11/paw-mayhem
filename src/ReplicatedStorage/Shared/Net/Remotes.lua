@@ -15,6 +15,7 @@ Remotes.Definitions = {
 	FireWeapon = "Event", -- {origin, direction, weaponId, clientTime}
 	SwitchWeapon = "Event", -- weaponId
 	UseEmote = "Event", -- emoteId
+	MoveFx = "Event", -- client -> server: a move's kind ("Flip", "Dash"...); server -> everyone else: {char, kind} (animation only)
 	RequestRespawn = "Event",
 	SetLoadout = "Event", -- {weaponId, skinId, cat = {...}}
 	PurchaseItem = "Function", -- {kind, id} -> {ok, reason}
