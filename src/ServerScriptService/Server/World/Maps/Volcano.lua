@@ -748,6 +748,8 @@ function Volcano.Build(): Folder
 		local tp = ArenaKit.Polar(k, outward, k.r - 6)
 		makeTower(tp, 14, 1, ArenaKit.Polar(k, 0, 0) - tp, k.folder)
 		ArenaKit.Reserve(k, tp, 5)
+		-- A steam vent's updraft you can ride, off the open side.
+		ArenaKit.AddSwimColumn("Steam", k, ArenaKit.OpenAngles(k, 1)[1], k.folder)
 		addLavaRuns(k, 1)
 		makeFlagstones(k, 7.5, 26)
 		makeLavaCracks(k, 5, 8)

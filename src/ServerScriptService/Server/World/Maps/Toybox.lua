@@ -229,6 +229,11 @@ function Toybox.Build(): Folder
 		local isl = ArenaKit.MakeIslandBase(o.pos, o.r, "Island" .. i, PALETTE, Enum.Material.SmoothPlastic, arena)
 		outerFolders[i] = isl
 		scatterDecor(o.pos, o.r, isl, 5, 16)
+		-- The two side islands get a bubble tube you can swim up (turned off
+		-- the outward side so it misses the ribbon falls).
+		if i == 3 or i == 4 then
+			ArenaKit.AddSwimColumn("Bubbles", ArenaKit.NewIsle(o.pos, o.r, isl), ArenaKit.AngleTo(Vector3.zero, o.pos) + 0.6, isl)
+		end
 		makeStreamerFall(o.pos + Vector3.new(o.r - 2, 1, 0), 36 + i * 3, isl)
 		makeStreamerFall(o.pos + Vector3.new(-(o.r - 2), 1, 4), 30 + i * 3, isl)
 		if i == 3 or i == 4 or i == 5 or i == 6 then

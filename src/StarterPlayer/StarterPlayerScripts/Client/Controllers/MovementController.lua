@@ -14,6 +14,9 @@
 --   * pounce (E / gamepad X / mobile button): a cat leap forward and up
 --   * jump pads (fling you along an arc to their target)
 --   * map-event wind that pushes you while you keep steering
+--   * swim columns (waterfalls, steam vents, bubble tubes, fan shafts): float
+--     in them, SPACE / jump up, SHIFT down; 15 seconds in and you're flung
+--     to a random spot on the map (a warning counts down from 8)
 -- Airborne horizontal speed is held with a Plane LinearVelocity, because the
 -- Humanoid otherwise drags air speed back down to walking speed.
 
@@ -52,6 +55,7 @@ local carryMover: LinearVelocity? = nil
 local wind = { dir = Vector3.zero, strength = 0, untilT = 0 }
 local windMover: LinearVelocity? = nil
 local windFx: Part? = nil
+local lastJumpRequest = 0
 
 MovementController.SprintChanged = nil :: ((boolean) -> ())?
 
@@ -399,6 +403,224 @@ end
 
 -- A new cat can arrive before the ground under it has loaded (far-off lobby
 -- and duel maps): hold it still until there's something to stand on.
+-- ── swim columns ─────────────────────────────────────────────────────────────
+local SWIM_MAX, SWIM_WARN, SWIM_GRACE = 15, 8, 1.5
+local SWIM_RISE, SWIM_SINK = 24, 24
+local FLING_TEXT = { Water = "THE CURRENT FLINGS YOU", Steam = "THE VENT ERUPTS", Bubbles = "THE TUBE POPS", Wind = "THE FAN BLASTS YOU" }
+local zones: { [BasePart]: boolean } = {}
+local swimMover: LinearVelocity? = nil
+local swimSince = 0 -- when this stay in a column began (0 = not in one)
+local swimLastIn = 0
+local swimIgnoreUntil = 0
+local touchDown = false -- the on-screen ▼ button (phones)
+local swimUI: { gui: ScreenGui, warn: TextLabel, hint: TextLabel, down: TextButton }? = nil
+
+MovementController.Swimming = false
+
+local function getSwimUI()
+	if swimUI then
+		return swimUI
+	end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "PawSwim"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 6
+	gui.Parent = player:WaitForChild("PlayerGui")
+	local function label(y: number, size: number): TextLabel
+		local l = Instance.new("TextLabel")
+		l.AnchorPoint = Vector2.new(0.5, 0.5)
+		l.Position = UDim2.fromScale(0.5, y)
+		l.Size = UDim2.fromOffset(460, size + 12)
+		l.BackgroundTransparency = 1
+		l.Font = Enum.Font.FredokaOne
+		l.TextSize = size
+		l.TextColor3 = Color3.new(1, 1, 1)
+		l.TextStrokeTransparency = 0.3
+		l.Visible = false
+		l.Parent = gui
+		return l
+	end
+	local warnLabel = label(0.6, 30)
+	warnLabel.TextColor3 = Color3.fromRGB(255, 196, 70)
+	local hint = label(0.66, 18)
+	local down = Instance.new("TextButton")
+	down.AnchorPoint = Vector2.new(1, 1)
+	down.Position = UDim2.new(1, -150, 1, -190)
+	down.Size = UDim2.fromOffset(72, 72)
+	down.BackgroundColor3 = Color3.fromRGB(17, 21, 34)
+	down.BackgroundTransparency = 0.25
+	down.Text = "▼"
+	down.Font = Enum.Font.GothamBold
+	down.TextSize = 30
+	down.TextColor3 = Color3.new(1, 1, 1)
+	down.Visible = false
+	down.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1, 0)
+	corner.Parent = down
+	down.MouseButton1Down:Connect(function()
+		touchDown = true
+	end)
+	down.MouseButton1Up:Connect(function()
+		touchDown = false
+	end)
+	down.MouseLeave:Connect(function()
+		touchDown = false
+	end)
+	swimUI = { gui = gui, warn = warnLabel, hint = hint, down = down }
+	return swimUI
+end
+
+local function showSwimUI(kind: string?, stay: number)
+	local ui = swimUI
+	if not kind then
+		if ui then
+			ui.warn.Visible = false
+			ui.hint.Visible = false
+			ui.down.Visible = false
+		end
+		touchDown = false
+		return
+	end
+	ui = getSwimUI()
+	local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	ui.down.Visible = touch
+	ui.hint.Visible = stay < 4
+	ui.hint.Text = touch and "JUMP to go up  ·  ▼ to go down" or "SPACE to go up  ·  SHIFT to go down"
+	ui.warn.Visible = stay >= SWIM_WARN
+	if ui.warn.Visible then
+		ui.warn.Text = string.format("%s IN %d", FLING_TEXT[kind] or "FLUNG", math.ceil(SWIM_MAX - stay))
+		ui.warn.Rotation = math.sin(os.clock() * 18) * 1.5
+	end
+end
+
+local function zoneAt(pos: Vector3): BasePart?
+	for z in pairs(zones) do
+		if z.Parent then
+			local lp = z.CFrame:PointToObjectSpace(pos)
+			local half = z.Size / 2
+			if math.abs(lp.X) <= half.X and math.abs(lp.Y) <= half.Y and math.abs(lp.Z) <= half.Z then
+				return z
+			end
+		end
+	end
+	return nil
+end
+
+local function endSwim()
+	if swimMover then
+		swimMover:Destroy()
+		swimMover = nil
+	end
+	MovementController.Swimming = false
+	showSwimUI(nil, 0)
+end
+
+-- 15 seconds up: launched along an arc to a random spawn spot on the map.
+local function swimFling(root: BasePart, hum: Humanoid)
+	endSwim()
+	swimSince = 0
+	swimIgnoreUntil = os.clock() + 3
+	local spots = {}
+	local arena = Workspace:FindFirstChild("Arena")
+	local spawns = arena and arena:FindFirstChild("Spawns")
+	if spawns then
+		for _, s in ipairs(spawns:GetChildren()) do
+			if s:IsA("BasePart") then
+				table.insert(spots, s.Position)
+			end
+		end
+	end
+	local p0 = root.Position
+	ringFx(p0, Color3.fromRGB(120, 220, 255), 14)
+	require(script.Parent.SoundController).Play("Spring")
+	if #spots == 0 then
+		root.AssemblyLinearVelocity = Vector3.new(0, 110, 0)
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		return
+	end
+	local goal = spots[math.random(1, #spots)]
+	local flat = Vector3.new(goal.X - p0.X, 0, goal.Z - p0.Z)
+	local t = math.clamp(flat.Magnitude / 60, 1.4, 3)
+	local vy = (goal.Y - p0.Y + 0.5 * Workspace.Gravity * t * t) / t
+	doubleUsed = false
+	root.AssemblyLinearVelocity = flat / t + Vector3.new(0, vy, 0)
+	hum:ChangeState(Enum.HumanoidStateType.Freefall)
+	holdHorizontal(root, flat / t, t, "pad")
+end
+
+-- Returns true while swimming (the rest of the movement step waits).
+local function swimStep(root: BasePart, hum: Humanoid): boolean
+	local now = os.clock()
+	local zone = now >= swimIgnoreUntil and zoneAt(root.Position) or nil
+	if not zone then
+		if MovementController.Swimming then
+			endSwim()
+		end
+		if swimSince > 0 and now - swimLastIn > SWIM_GRACE then
+			swimSince = 0 -- left it for good: the clock starts again next time
+		end
+		return false
+	end
+	local kind = tostring(zone:GetAttribute("Kind"))
+	if swimSince == 0 then
+		swimSince = now
+		if kind == "Water" then
+			require(script.Parent.SoundController).PlayAt("Splash", root.Position)
+		end
+	end
+	swimLastIn = now
+	MovementController.Swimming = true
+	stopCarry()
+	if mover then
+		mover:Destroy() -- a dash or pad flight ends in the column
+		mover = nil
+	end
+	local stay = now - swimSince
+	if stay >= SWIM_MAX then
+		swimFling(root, hum)
+		return true
+	end
+	showSwimUI(kind, stay)
+
+	local lp = zone.CFrame:PointToObjectSpace(root.Position)
+	local half = zone.Size / 2
+	local up = UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA) or now - lastJumpRequest < 0.25
+	local down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
+		or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.DPadDown) or touchDown
+	if up and lp.Y > half.Y - 2.5 then
+		-- Up at the top hops you out.
+		endSwim()
+		local v = root.AssemblyLinearVelocity
+		root.AssemblyLinearVelocity = Vector3.new(v.X, hum.JumpPower * 1.15, v.Z)
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		swimIgnoreUntil = now + 0.6
+		return true
+	end
+	local vy = up and SWIM_RISE or down and -SWIM_SINK or (tonumber(zone:GetAttribute("Drift")) or 0)
+	if vy < 0 and lp.Y < -half.Y + 2 then
+		vy = 0 -- the bottom holds you
+	elseif vy > 0 and lp.Y > half.Y - 1 then
+		vy = 0 -- drifting up stops at the top
+	end
+	if not swimMover or swimMover.Parent ~= root then
+		local lv = Instance.new("LinearVelocity")
+		lv.Name = "Swim"
+		lv.Attachment0 = attachment(root)
+		lv.RelativeTo = Enum.ActuatorRelativeTo.World
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+		lv.MaxForce = root.AssemblyMass * 2500
+		lv.Parent = root
+		swimMover = lv
+	end
+	local sm = swimMover :: LinearVelocity
+	sm.Enabled = activeLaunch == nil -- a hit can still knock you out of it
+	local walk = hum.MoveDirection * hum.WalkSpeed * 0.75
+	sm.VectorVelocity = Vector3.new(walk.X, vy, walk.Z)
+	return true
+end
+
 local function holdUntilGround(char: Model)
 	local root = char:WaitForChild("HumanoidRootPart", 10) :: BasePart?
 	if not root then
@@ -432,6 +654,10 @@ local function hookCharacter(char: Model)
 	doubleUsed = false
 	jumpedSinceGround = false
 	carryVel = Vector3.zero
+	swimMover = nil
+	swimSince = 0
+	MovementController.Swimming = false
+	showSwimUI(nil, 0)
 	hum.StateChanged:Connect(function(_, new)
 		if new == Enum.HumanoidStateType.Jumping or new == Enum.HumanoidStateType.Freefall then
 			if airborneSince == 0 then
@@ -585,6 +811,12 @@ local function step(dt: number)
 	hum.WalkSpeed = base * mult
 	if hum.Health <= 0 then
 		stopCarry()
+		if MovementController.Swimming then
+			endSwim()
+		end
+		return
+	end
+	if swimStep(root, hum) then
 		return
 	end
 	if not isAirborne(hum) then
@@ -615,7 +847,9 @@ function MovementController.Start()
 		elseif key == Enum.KeyCode.E or key == Enum.KeyCode.ButtonX then
 			MovementController.Pounce()
 		elseif key == Enum.KeyCode.Space or key == Enum.KeyCode.ButtonA then
-			airJump()
+			if not MovementController.Swimming then
+				airJump()
+			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input)
@@ -648,6 +882,30 @@ function MovementController.Start()
 	end)
 	CollectionService:GetInstanceRemovedSignal("JumpPad"):Connect(function(inst)
 		pads[inst :: BasePart] = nil
+	end)
+
+	-- Swim columns, each with its looping sound.
+	local function addZone(inst: Instance)
+		if inst:IsA("BasePart") and not zones[inst] then
+			zones[inst] = true
+			local sound = inst:GetAttribute("Sound")
+			if typeof(sound) == "string" then
+				local spot = Instance.new("Attachment")
+				spot.Position = Vector3.new(0, inst.Size.Y / 2 - 3, 0)
+				spot.Parent = inst
+				require(script.Parent.SoundController).Loop(sound, spot)
+			end
+		end
+	end
+	for _, inst in ipairs(CollectionService:GetTagged("SwimZone")) do
+		addZone(inst)
+	end
+	CollectionService:GetInstanceAddedSignal("SwimZone"):Connect(addZone)
+	CollectionService:GetInstanceRemovedSignal("SwimZone"):Connect(function(inst)
+		zones[inst :: BasePart] = nil
+	end)
+	UserInputService.JumpRequest:Connect(function()
+		lastJumpRequest = os.clock()
 	end)
 
 	if player.Character then

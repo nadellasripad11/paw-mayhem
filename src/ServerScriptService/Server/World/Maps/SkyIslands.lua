@@ -692,7 +692,8 @@ function SkyIslands.Build(): Folder
 		makePlaza(ArenaKit.Polar(fl, 0, 0), 7, fl.folder)
 		ArenaKit.Reserve(fl, ArenaKit.Polar(fl, 0, 0), 8)
 		pathsToLinks(fl, 7)
-		addFalls(fl, 1, 50)
+		-- A waterfall you can swim in, pouring off the open side.
+		ArenaKit.AddSwimColumn("Water", fl, ArenaKit.OpenAngles(fl, 1)[1], fl.folder)
 		propsAt(fl, 2, 9, 15, function(p) makeCrateStack(p, fl.folder) end)
 		propsAt(fl, 1, 9, 15, function(p) makeBarrel(p, fl.folder) end)
 		propsAt(fl, 1, 9, 14, function(p) makeLamp(p, fl.folder) end)

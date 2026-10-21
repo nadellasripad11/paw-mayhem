@@ -30,6 +30,14 @@ Sounds.SFX = {
 	Defeat = { id = rbx(15675081158), volume = 0.6, pitch = 0.9 },
 	Alert = { id = rbx(15675085146), volume = 0.5, pitch = 1 }, -- announcements / map events
 	Whoosh = { id = rbx(15675024286), volume = 0.4, pitch = 1 }, -- screen transitions
+	-- Swim columns: a loop from each column, a splash going in. (Built-in
+	-- stand-ins: swap in proper waterfall / steam / bubble / fan loops from
+	-- the Creator Store when you have them.)
+	Waterfall = { id = "rbxasset://sounds/action_swim.mp3", volume = 0.55, pitch = 0.55 },
+	SteamVent = { id = "rbxasset://sounds/action_falling.mp3", volume = 0.5, pitch = 1.4 },
+	Bubbles = { id = "rbxasset://sounds/action_swim.mp3", volume = 0.45, pitch = 1.6 },
+	FanWind = { id = "rbxasset://sounds/action_falling.mp3", volume = 0.5, pitch = 0.8 },
+	Splash = { id = "rbxasset://sounds/impact_water.mp3", volume = 0.6, pitch = 1 },
 }
 
 Sounds.Music = {

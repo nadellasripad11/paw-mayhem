@@ -94,6 +94,27 @@ function SoundController.PlayAt(name: string, position: Vector3, pitch: number?,
 	end)
 end
 
+-- A looping sound coming from `parent` (waterfalls, steam vents...). It
+-- goes when its parent does.
+function SoundController.Loop(name: string, parent: Instance): Sound?
+	local def = Sounds.SFX[name]
+	if not def then
+		return nil
+	end
+	local s = Instance.new("Sound")
+	s.Name = "PawLoop_" .. name
+	s.SoundId = def.id
+	s.Volume = def.volume
+	s.PlaybackSpeed = def.pitch
+	s.Looped = true
+	s.RollOffMinDistance = 10
+	s.RollOffMaxDistance = 90
+	s.SoundGroup = sfxGroup
+	s.Parent = parent
+	s:Play()
+	return s
+end
+
 -- A blaster shot, pitched and weighted for its weapon class (a deep boom
 -- for Boom Paw, a high zip for Rapid Paw...).
 function SoundController.PlayShot(weaponId: string?, position: Vector3)

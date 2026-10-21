@@ -668,4 +668,139 @@ function ArenaKit.MakeCloudBank(arena: Instance, color: Color3, count: number, y
 	end
 end
 
+-- ── swim columns ─────────────────────────────────────────────────────────────
+-- A column off an island's edge you can swim in (MovementController): SPACE /
+-- jump goes up, SHIFT goes down, and after 15 seconds in it you're flung to a
+-- random spot on the map. Each map has its own kind:
+--   Water   - a waterfall pouring off the edge (you drift down)
+--   Steam   - a volcanic vent's updraft (you drift up)
+--   Bubbles - a clear toy tube full of rising bubbles
+--   Wind    - an industrial fan blowing up past a roof
+-- `above` / `below` are how far the column reaches over and under the
+-- island's surface. Each plays its own loop (Config.Sounds).
+ArenaKit.SwimKinds = {
+	Water = { above = 0.6, below = 55, width = 10, depth = 7, drift = -4, sound = "Waterfall", color = Color3.fromRGB(118, 204, 242) },
+	Steam = { above = 22, below = 40, width = 9, depth = 9, drift = 6, sound = "SteamVent", color = Color3.fromRGB(236, 236, 242) },
+	Bubbles = { above = 16, below = 40, width = 9, depth = 9, drift = 3, sound = "Bubbles", color = Color3.fromRGB(150, 220, 255) },
+	Wind = { above = 22, below = 32, width = 10, depth = 10, drift = 7, sound = "FanWind", color = Color3.fromRGB(200, 230, 255) },
+}
+
+local function swimDeco(p: BasePart): BasePart
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	return p
+end
+
+local function swimParticles(parent: BasePart, texture: string, color: ColorSequence, dir: Enum.NormalId, speed: NumberRange, size: NumberSequence, rate: number, lifetime: NumberRange): ParticleEmitter
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = texture
+	e.Color = color
+	e.EmissionDirection = dir
+	e.Speed = speed
+	e.Size = size
+	e.Rate = rate
+	e.Lifetime = lifetime
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.15, 0.45), NumberSequenceKeypoint.new(1, 1) })
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	e.LightEmission = 0.2
+	e.Parent = parent
+	return e
+end
+
+function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: Instance): BasePart
+	local spec = ArenaKit.SwimKinds[kind]
+	table.insert(isle.reserved, angle)
+	local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local h = spec.above + spec.below
+	-- The column overlaps the island's rim a little, so stepping off the
+	-- edge drops you straight in.
+	local base = ArenaKit.Polar(isle, angle, isle.r + spec.depth / 2 - 1)
+	local mid = base + Vector3.new(0, (spec.above - spec.below) / 2, 0)
+	local face = CFrame.lookAt(mid, mid + out) -- -Z faces away from the island
+	local top = base + Vector3.new(0, spec.above, 0)
+	local bottom = base - Vector3.new(0, spec.below, 0)
+	local folder = Instance.new("Folder")
+	folder.Name = kind .. "Column"
+	folder.Parent = parent
+
+	local zone = Instance.new("Part")
+	zone.Name = "SwimZone"
+	zone.Size = Vector3.new(spec.width, h, spec.depth)
+	zone.CFrame = face
+	zone.Anchored = true
+	zone.CanCollide = false
+	zone.CanQuery = false
+	zone.CanTouch = false
+	zone.Transparency = 1
+	zone:SetAttribute("Kind", kind)
+	zone:SetAttribute("Drift", spec.drift)
+	zone:SetAttribute("Sound", spec.sound)
+	zone.Parent = folder
+	CollectionService:AddTag(zone, "SwimZone")
+	local white = Color3.new(1, 1, 1)
+	local NP = ArenaKit.NewPart
+
+	if kind == "Water" then
+		-- A stream across the top, the falling water, foam where it spills and
+		-- mist at the bottom.
+		local from = ArenaKit.Polar(isle, angle, isle.r * 0.55)
+		local lip = ArenaKit.Polar(isle, angle, isle.r - 0.5)
+		local len = (lip - from).Magnitude
+		swimDeco(NP("StreamBank", Vector3.new(6.4, 0.22, len), CFrame.lookAt((from + lip) / 2 + Vector3.new(0, 0.08, 0), lip + Vector3.new(0, 0.08, 0)), Color3.fromRGB(142, 136, 126), Enum.Material.Slate, folder))
+		swimDeco(NP("Stream", Vector3.new(5, 0.25, len), CFrame.lookAt((from + lip) / 2 + Vector3.new(0, 0.14, 0), lip + Vector3.new(0, 0.14, 0)), spec.color, Enum.Material.Glass, folder)).Transparency = 0.12
+		swimDeco(NP("WaterColumn", Vector3.new(spec.width - 0.6, h, spec.depth - 0.6), face, spec.color, Enum.Material.Glass, folder)).Transparency = 0.45
+		swimDeco(NP("WaterSheet", Vector3.new(spec.width - 1.6, h, 0.6), face * CFrame.new(0, 0, -(spec.depth / 2 - 0.8)), spec.color:Lerp(white, 0.2), Enum.Material.Glass, folder)).Transparency = 0.2
+		swimDeco(NP("WaterFoam", Vector3.new(spec.width + 0.4, 1.1, spec.depth), CFrame.new(top - Vector3.new(0, 0.3, 0)) * face.Rotation, white, Enum.Material.SmoothPlastic, folder)).Transparency = 0.15
+		swimDeco(NP("WaterMist", Vector3.new(spec.width + 3, 10, spec.depth + 3), CFrame.new(bottom + Vector3.new(0, 4, 0)) * face.Rotation, white, Enum.Material.SmoothPlastic, folder)).Transparency = 0.7
+		swimParticles(zone, "rbxasset://textures/particles/smoke_main.dds", ColorSequence.new(white), Enum.NormalId.Bottom,
+			NumberRange.new(28, 40), NumberSequence.new(1.4, 3), 30, NumberRange.new(1.2, 1.6))
+	elseif kind == "Steam" then
+		-- A glowing vent at the bottom and steam rising all the way up.
+		local glow = swimDeco(NP("VentGlow", Vector3.new(spec.width, 1, spec.depth), CFrame.new(bottom + Vector3.new(0, 0.5, 0)) * face.Rotation, Color3.fromRGB(255, 120, 40), Enum.Material.Neon, folder))
+		glow.Transparency = 0.25
+		local l = Instance.new("PointLight")
+		l.Color = Color3.fromRGB(255, 140, 60)
+		l.Range = 24
+		l.Brightness = 2
+		l.Parent = glow
+		swimDeco(NP("SteamHaze", zone.Size - Vector3.new(1, 0, 1), face, spec.color, Enum.Material.SmoothPlastic, folder)).Transparency = 0.86
+		swimParticles(zone, "rbxasset://textures/particles/smoke_main.dds", ColorSequence.new(spec.color), Enum.NormalId.Top,
+			NumberRange.new(22, 32), NumberSequence.new(3, 8), 40, NumberRange.new(1.6, 2.2))
+	elseif kind == "Bubbles" then
+		-- A clear tube with candy-coloured rings and bubbles rising in it.
+		local tube = NP("BubbleTube", Vector3.new(h, spec.width, spec.width), CFrame.new(mid) * CFrame.Angles(0, 0, math.rad(90)), spec.color, Enum.Material.Glass, folder) :: Part
+		tube.Shape = Enum.PartType.Cylinder
+		swimDeco(tube).Transparency = 0.72
+		local rings = { Color3.fromRGB(255, 110, 150), Color3.fromRGB(255, 210, 70), Color3.fromRGB(110, 210, 255), Color3.fromRGB(140, 230, 120) }
+		local k = 0
+		for y = -spec.below + 4, spec.above - 1, 8 do
+			k += 1
+			swimDeco(ArenaKit.NewDisc("TubeRing", spec.width + 0.8, 0.7, base + Vector3.new(0, y, 0), rings[(k - 1) % #rings + 1], Enum.Material.SmoothPlastic, folder))
+		end
+		swimParticles(zone, "rbxasset://textures/particles/sparkles_main.dds", ColorSequence.new(Color3.fromRGB(200, 240, 255), Color3.fromRGB(255, 200, 240)), Enum.NormalId.Top,
+			NumberRange.new(10, 18), NumberSequence.new(0.8, 1.6), 26, NumberRange.new(2.5, 3.5))
+	elseif kind == "Wind" then
+		-- A fan in a steel frame at the bottom, girders up the side, a lit
+		-- ring at roof level and wind streaks rushing up.
+		local metal = Color3.fromRGB(60, 64, 76)
+		swimDeco(ArenaKit.NewDisc("FanHousing", spec.width + 1, 1.2, bottom + Vector3.new(0, 0.6, 0), metal, Enum.Material.Metal, folder))
+		for b = 0, 3 do
+			swimDeco(NP("FanBlade", Vector3.new(spec.width * 0.42, 0.2, 1.6), CFrame.new(bottom + Vector3.new(0, 1.3, 0)) * CFrame.Angles(0, b * math.pi / 2, math.rad(18)) * CFrame.new(spec.width * 0.22, 0, 0), Color3.fromRGB(180, 186, 198), Enum.Material.Metal, folder))
+		end
+		for _, c in ipairs({ { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } }) do
+			local p = face * CFrame.new(c[1] * spec.width / 2, 0, c[2] * spec.depth / 2)
+			swimDeco(NP("ShaftGirder", Vector3.new(0.6, h, 0.6), p, metal, Enum.Material.Metal, folder))
+		end
+		swimDeco(NP("ShaftRing", Vector3.new(spec.width + 0.6, 0.3, spec.depth + 0.6), CFrame.new(base + Vector3.new(0, 0.2, 0)) * face.Rotation, Color3.fromRGB(80, 220, 255), Enum.Material.Neon, folder)).Transparency = 0.3
+		local e = swimParticles(zone, "rbxasset://textures/particles/smoke_main.dds", ColorSequence.new(spec.color), Enum.NormalId.Top,
+			NumberRange.new(45, 60), NumberSequence.new(0.5), 60, NumberRange.new(0.8, 1.1))
+		e.Orientation = Enum.ParticleOrientation.VelocityParallel
+		e.Squash = NumberSequence.new(-2.5)
+	end
+	return zone
+end
+
 return ArenaKit

@@ -188,6 +188,12 @@ function Rooftops.Build(): Folder
 		NP("TeamStrip", Vector3.new(base.sx * 0.9, 0.2, 0.5), CFrame.new(base.x, base.top + 0.05, base.z + front * (base.sz / 2 - 1)), TEAM[team], Enum.Material.Neon, base.folder).CanCollide = false
 	end
 
+	-- Fan shafts off the outer side of both flank roofs: ride the updraft.
+	for _, key in ipairs({ "flankL", "flankR" }) do
+		local r = R[key]
+		ArenaKit.AddSwimColumn("Wind", ArenaKit.NewIsle(Vector3.new(r.x, r.top - ArenaKit.SURFACE, r.z), r.sx / 2, r.folder), r.x < 0 and math.pi or 0, r.folder)
+	end
+
 	-- Jump pads: from each base up onto the tower roof, and from the tower
 	-- out to the flanks.
 	local pads = Instance.new("Folder")
