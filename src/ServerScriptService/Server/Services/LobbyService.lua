@@ -68,10 +68,11 @@ for _, side in ipairs({ 1, -1 }) do
 end
 
 -- Colours from the reference: light stone, navy panels, blue/purple light.
-local STONE = Color3.fromRGB(214, 210, 202)
-local GROUT = Color3.fromRGB(184, 180, 174)
-local STONE_WALL = Color3.fromRGB(170, 164, 156)
-local STONE_DARK = Color3.fromRGB(116, 112, 108)
+local STONE = Color3.fromRGB(170, 164, 154) -- warm grey floor stone
+local GROUT = Color3.fromRGB(132, 126, 118)
+local STONE_WALL = Color3.fromRGB(150, 144, 134)
+local STONE_DARK = Color3.fromRGB(104, 100, 96)
+local BEAM = Color3.fromRGB(92, 66, 46) -- dark wood
 local NAVY = Color3.fromRGB(22, 28, 56)
 local NAVY_LIGHT = Color3.fromRGB(36, 46, 86)
 local HALL_FLOOR = Color3.fromRGB(38, 42, 60)
@@ -81,7 +82,7 @@ local CYAN = Color3.fromRGB(90, 220, 255)
 local GOLD = Color3.fromRGB(255, 200, 90)
 local WOOD = Color3.fromRGB(122, 84, 56)
 local METAL = Color3.fromRGB(60, 64, 82)
-local LEAF = { Color3.fromRGB(86, 164, 72), Color3.fromRGB(68, 142, 60), Color3.fromRGB(104, 180, 84) }
+local LEAF = { Color3.fromRGB(64, 122, 54), Color3.fromRGB(52, 106, 46), Color3.fromRGB(76, 138, 60) }
 local INK = Color3.fromRGB(14, 18, 34)
 local GLASS = Color3.fromRGB(190, 220, 255)
 local WHITE = Color3.new(1, 1, 1)
@@ -149,13 +150,19 @@ local function sign(parent: BasePart, face: Enum.NormalId, lines: { { text: stri
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = gui
+	-- Each line gets a share of the board's height by its size, and its text
+	-- scales to fill that share (so it reads from across the room).
+	local total = 0
+	for _, l in ipairs(lines) do
+		total += l.size
+	end
 	for i, l in ipairs(lines) do
 		local t = Instance.new("TextLabel")
 		t.LayoutOrder = i
 		t.BackgroundTransparency = 1
-		t.Size = UDim2.new(1, 0, 0, l.size * 1.25)
+		t.Size = UDim2.new(0.9, 0, 0.82 * l.size / total, 0)
 		t.Text = l.text
-		t.TextSize = l.size
+		t.TextScaled = true
 		t.Font = Enum.Font.FredokaOne
 		t.TextColor3 = l.color
 		t.Parent = gui
@@ -254,7 +261,7 @@ local function shopkeeper(look: any, pos: Vector3, toward: Vector3, line: string
 	local bubble = Instance.new("BillboardGui")
 	bubble.Size = UDim2.fromOffset(150, 46)
 	bubble.StudsOffset = Vector3.new(0, 4.2, 0)
-	bubble.MaxDistance = 60
+	bubble.MaxDistance = 28
 	bubble.Parent = root
 	local frame = Instance.new("TextLabel")
 	frame.Size = UDim2.fromScale(1, 1)
@@ -290,15 +297,15 @@ local function buildGround(f: Instance)
 		solid("Floor" .. i, Vector3.new(w + 0.2, 2, d + 0.2), CFrame.new(mid - Vector3.new(0, 1, 0)), hall and HALL_FLOOR or room and WOOD or STONE,
 			hall and Enum.Material.SmoothPlastic or room and Enum.Material.WoodPlanks or Enum.Material.Slate, f)
 		-- Frosted glass roof (closed, but the daylight comes through) on beams.
-		local roof = solid("Roof" .. i, Vector3.new(w + 2, 1, d + 2), CFrame.new(mid + Vector3.new(0, HEIGHT + 0.5, 0)), Color3.fromRGB(205, 228, 255), Enum.Material.Glass, f)
-		roof.Transparency = 0.45
+		local roof = solid("Roof" .. i, Vector3.new(w + 2, 1, d + 2), CFrame.new(mid + Vector3.new(0, HEIGHT + 0.5, 0)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, f)
+		roof.Transparency = 0.94 -- (closed, but you see the sky through it)
 		roof.CastShadow = false
 		roof.CanQuery = false
 		local long = w >= d
 		local span = long and w or d
 		for k = 4, span - 4, 8 do
 			local off = long and Vector3.new(r[1] + k - (r[1] + r[2]) / 2, 0, 0) or Vector3.new(0, 0, r[3] + k - (r[3] + r[4]) / 2)
-			part("RoofBeam", long and Vector3.new(0.9, 1, d) or Vector3.new(w, 1, 0.9), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.5, 0)), METAL, Enum.Material.Metal, f).CastShadow = false
+			part("RoofBeam", long and Vector3.new(1.4, 1.6, d) or Vector3.new(w, 1.6, 1.4), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.8, 0)), BEAM, Enum.Material.Wood, f).CastShadow = false
 		end
 		if not hall and not room then
 			-- Stone tiles.
@@ -335,7 +342,13 @@ local function buildGround(f: Instance)
 		local along = CFrame.lookAt(face, face + dir)
 		part("WallBase", Vector3.new(0.2, 2.4, len), along * CFrame.new(0, 1.2, 0), navy and STONE_WALL or STONE_DARK, Enum.Material.Slate, f)
 		if not navy then
-			part("WallPanel", Vector3.new(0.15, 9, math.max(len - 3, 1)), along * CFrame.new(0, 9.5, 0), NAVY, Enum.Material.SmoothPlastic, f)
+			-- A wooden rail along the wall and stone pillars every 16 studs.
+			part("WallRail", Vector3.new(0.4, 0.6, len), along * CFrame.new(0, 4.2, 0), BEAM, Enum.Material.Wood, f)
+			part("WallCap", Vector3.new(0.6, 1, len), along * CFrame.new(0, HEIGHT - 2, 0), BEAM, Enum.Material.Wood, f)
+			for k = 8, len - 4, 16 do
+				local at2 = face + normal * 0.6 - dir * (k - len / 2) + Vector3.new(0, (HEIGHT - 2.4) / 2 + 2.4, 0)
+				part("Pillar", Vector3.new(1.4, HEIGHT - 2.4, 2.2), CFrame.lookAt(at2, at2 + dir), STONE_DARK, Enum.Material.Slate, f)
+			end
 		end
 	end
 	-- Over each way through from the main hall: a wall above the opening with
@@ -433,7 +446,7 @@ local function buildMatchHall(f: Instance)
 	end
 	-- An open roof of beams with light strips under them.
 	for z = 34, 110, 8 do
-		part("RoofBeam", Vector3.new(41, 0.8, 1), CFrame.new(at(0, z, HALL_WALL + 0.8)), METAL, Enum.Material.Metal, f).CastShadow = false
+		part("RoofBeam", Vector3.new(41, 1, 1.2), CFrame.new(at(0, z, HALL_WALL + 0.8)), BEAM, Enum.Material.Wood, f).CastShadow = false
 	end
 	for _, x in ipairs({ -12, 12 }) do
 		part("RoofRail", Vector3.new(0.8, 0.8, 80), CFrame.new(at(x, 72, HALL_WALL + 1.6)), METAL, Enum.Material.Metal, f).CastShadow = false
@@ -568,8 +581,8 @@ local function buildCollection(f: Instance)
 		end
 		for _, d in ipairs(statue:GetDescendants()) do
 			if d:IsA("BasePart") then
-				d.Color = GOLD
-				d.Material = Enum.Material.Foil
+				d.Color = Color3.fromRGB(198, 150, 56)
+				d.Material = Enum.Material.Metal
 			end
 		end
 		statue:ScaleTo(2.4)
@@ -684,7 +697,7 @@ local function portal(center: Vector3, facing: Vector3, color: Color3, label: st
 	for k = 0, 27 do
 		local a = k / 28 * math.pi * 2
 		local p = face * CFrame.new(math.cos(a) * r, math.sin(a) * r, 0)
-		neon("PortalRing", Vector3.new(1.8, 1.8, 1.2), CFrame.new(p.Position) * face.Rotation * CFrame.Angles(0, 0, a), color, parent)
+		part("PortalRing", Vector3.new(1.9, 1.9, 1.4), CFrame.new(p.Position) * face.Rotation * CFrame.Angles(0, 0, a), STONE_WALL, Enum.Material.Slate, parent)
 	end
 	local film = part("PortalFilm", Vector3.new(0.2, r * 2 - 1, r * 2 - 1), face * CFrame.Angles(0, math.rad(90), 0), color, Enum.Material.Glass, parent)
 	local filmShape = film :: Part
@@ -785,7 +798,7 @@ local function buildPractice(lobby: Instance, hall: Instance)
 	end
 
 	-- Portals: the gate at the end of the matchmaking hall, and back.
-	linkPortal(portal(at(0, -54, 8.5), Vector3.new(0, 0, 1), CYAN, nil, hall), PRACTICE_ARRIVE)
+	linkPortal(portal(at(0, -54, 8.5), Vector3.new(0, 0, 1), Color3.fromRGB(46, 96, 200), nil, hall), PRACTICE_ARRIVE)
 	linkPortal(portal(practiceAt(0, 16, 8.5), Vector3.new(0, 0, -1), BLUE, "BACK TO LOBBY", p), HUB_ARRIVE)
 end
 

@@ -25,6 +25,7 @@ local Results = require(script.Parent.Screens.Results)
 local Intro = require(script.Parent.Screens.Intro)
 
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
+local LobbyLook = require(script.Parent.Parent.Controllers.LobbyLook)
 local ReplayController = require(script.Parent.Parent.Controllers.ReplayController)
 local CombatController = require(script.Parent.Parent.Controllers.CombatController)
 local LobbyScene = require(script.Parent.Parent.Lobby.LobbyScene)
@@ -185,6 +186,7 @@ end
 local function refresh()
 	local ctx = context()
 	local phase = ClientState.Match.phase
+	LobbyLook.Set(ctx == "Lobby")
 	if not (ctx == "Lobby" and (queuedCountdown() or os.clock() < flyoverUntil)) then
 		CameraController.SetFlyover(false)
 	end
