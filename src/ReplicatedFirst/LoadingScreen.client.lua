@@ -21,7 +21,7 @@ local TIPS = {
 	"The more hits a cat takes, the farther your next shot launches it!",
 	"Knock cats off the edge of the map for a RINGOUT.",
 	"Step on a duel pad in the lobby to start a 1v1 or 2v2.",
-	"Warm up on the target cats in the Practice Dimension.",
+	"Warm up on the target cats in the Shooting Range behind the spawn.",
 	"Press V to switch between first and third person.",
 	"Press B during a match to change your loadout.",
 	"There's a free gift waiting in the Shop every day.",

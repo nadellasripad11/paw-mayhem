@@ -4,9 +4,12 @@
 -- in the lobby this client uses its own: less ambient light, a touch less
 -- exposure, no haze or glare, softer bloom. Leaving the lobby puts the map's
 -- lighting back. If the server changes the lighting meanwhile (a new map
--- loading), the new values are remembered and come back instead.
+-- loading), the new values are remembered and come back instead. It also
+-- turns the lobby's floating displays (tagged LobbySpin) while you're there.
 
 local Lighting = game:GetService("Lighting")
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
 
 local LobbyLook = {}
 
@@ -97,6 +100,20 @@ function LobbyLook.Start()
 	Lighting.ChildAdded:Connect(function(c)
 		if active and c:IsA("Atmosphere") then
 			task.defer(takeAtmosphere, c)
+		end
+	end)
+	-- Floating displays: a slow turn and a gentle bob round where they were built.
+	RunService.RenderStepped:Connect(function()
+		if not active then
+			return
+		end
+		local t = os.clock()
+		for i, m in ipairs(CollectionService:GetTagged("LobbySpin")) do
+			local pivot = m:GetAttribute("SpinPivot")
+			if m:IsA("Model") and typeof(pivot) == "CFrame" then
+				local bob = math.sin(t * 1.6 + i) * 0.35
+				m:PivotTo(CFrame.new(pivot.Position + Vector3.new(0, bob, 0)) * CFrame.Angles(0, t * 0.8 + i, 0) * pivot.Rotation)
+			end
 		end
 	end)
 end

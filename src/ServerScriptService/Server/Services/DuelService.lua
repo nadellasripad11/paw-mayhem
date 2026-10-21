@@ -241,6 +241,8 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 				local before = stats.Trophies or 0
 				stats.Trophies = math.max(0, before + Ranks.Delta(won, duel.kos[p] or 0))
 				delta = stats.Trophies - before
+				stats.WinStreak = won and (stats.WinStreak or 0) + 1 or 0
+				stats.BestWinStreak = math.max(stats.BestWinStreak or 0, stats.WinStreak)
 			end
 			EconomyService.AddXP(p, math.floor((won and WIN_XP or LOSS_XP) * pay))
 			EconomyService.AddCoins(p, math.floor((won and WIN_COINS or LOSS_COINS) * pay))
@@ -506,7 +508,30 @@ local function tickDuels()
 	end
 end
 
+-- The duels being played right now, for the lobby's DUELS LIVE board:
+-- "Mochi  3 - 1  Bob" (2v2: "A & B  2 - 2  C & D").
+function DuelService.Live(): { string }
+	local out = {}
+	for _, d in pairs(duels) do
+		if not d.over then
+			local function side(team: string): string
+				local names = {}
+				for _, p in ipairs(d.teams[team] or {}) do
+					table.insert(names, p.DisplayName)
+				end
+				for _, n in ipairs(d.bots[team] or {}) do
+					table.insert(names, n)
+				end
+				return #names > 0 and table.concat(names, " & ") or "?"
+			end
+			table.insert(out, string.format("%s  %d - %d  %s", side("Blue"), d.score.Blue or 0, d.score.Red or 0, side("Red")))
+		end
+	end
+	return out
+end
+
 function DuelService.Start()
+	LobbyService.LiveDuels = DuelService.Live
 	local folder = Instance.new("Folder")
 	folder.Name = "DuelPads"
 	folder.Parent = Workspace:WaitForChild("Lobby")

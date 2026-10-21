@@ -389,7 +389,7 @@ local function lesson(done: (finished: boolean) -> ())
 
 	local m = isMobile()
 	local steps: { Step } = {
-		{ text = "Hey, I'm Mochi! Turn around and walk into the Practice Dimension portal behind the spawn, then into the gold ring.", done = nearRing },
+		{ text = "Hey, I'm Mochi! Turn around and walk through the SHOOTING RANGE glass behind the spawn, then into the gold ring.", done = nearRing },
 		{ text = "Nice! Now jump" .. (m and " (JUMP)." or " (SPACE)."), done = function() return jumps > 0 end, demo = hop },
 		{ text = "Jump again while you're in the air - that's a double jump.", done = function() return airJumps > 0 end, demo = hop },
 		{ text = (m and "Tap FIRE" or "Click") .. " to blast one of the target cats over there.", done = function() return hit end, demo = demoShots },
