@@ -873,8 +873,27 @@ function LobbyService.Start()
 			end
 		end)
 	end
+	-- TO DUELS (lobby menu): straight to the duel pads at the hall entrance.
+	local lastTravel: { [Player]: number } = {}
+	Remotes.Get("LobbyTravel").OnServerEvent:Connect(function(player, dest)
+		if dest ~= "Duels" or player:GetAttribute("Context") ~= "Lobby" then
+			return
+		end
+		local now = os.clock()
+		if now - (lastTravel[player] or 0) < 1 then
+			return
+		end
+		lastTravel[player] = now
+		local char = player.Character
+		local root = char and char.PrimaryPart
+		if char and root then
+			root.AssemblyLinearVelocity = Vector3.zero
+			char:PivotTo(CFrame.lookAt(at(0, 34, 2.3), at(0, 60, 2.3)))
+		end
+	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastPortal[player] = nil
+		lastTravel[player] = nil
 	end)
 	task.spawn(function()
 		while true do

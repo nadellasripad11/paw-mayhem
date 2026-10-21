@@ -27,6 +27,7 @@ Remotes.Definitions = {
 	GetLeaderboard = "Function", -- {scope = "Global"|"Country", metric} -> {entries, country}
 	RequestJoinMatch = "Event",
 	RedeemCode = "Function", -- code -> {ok, text}
+	LobbyTravel = "Event", -- "Duels": move to the duel pads (lobby only)
 
 	-- Server -> Client (state + feedback)
 	MatchState = "Event", -- {phase, timeLeft, scores, ...}
