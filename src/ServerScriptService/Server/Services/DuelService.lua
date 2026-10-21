@@ -241,8 +241,12 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 				local before = stats.Trophies or 0
 				stats.Trophies = math.max(0, before + Ranks.Delta(won, duel.kos[p] or 0))
 				delta = stats.Trophies - before
-				stats.WinStreak = won and (stats.WinStreak or 0) + 1 or 0
-				stats.BestWinStreak = math.max(stats.BestWinStreak or 0, stats.WinStreak)
+				if won then
+					stats.WinStreak = (stats.WinStreak or 0) + 1
+					stats.BestWinStreak = math.max(stats.BestWinStreak or 0, stats.WinStreak)
+				else
+					EconomyService.EndStreak(p)
+				end
 			end
 			EconomyService.AddXP(p, math.floor((won and WIN_XP or LOSS_XP) * pay))
 			EconomyService.AddCoins(p, math.floor((won and WIN_COINS or LOSS_COINS) * pay))

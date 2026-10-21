@@ -484,7 +484,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 			local bonus = 1 + Scoring.WinStreakBonus * math.min(streak - 1, Scoring.WinStreakMaxSteps)
 			EconomyService.AddCoins(player, math.floor(Scoring.WinBonusCoins * bonus))
 		elseif stats and s ~= nil then
-			stats.WinStreak = 0
+			EconomyService.EndStreak(player)
 		end
 		if s ~= nil then
 			local played = stats and stats.Matches or 0

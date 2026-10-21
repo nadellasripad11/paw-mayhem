@@ -80,6 +80,11 @@ function EconomyService.AddXP(player: Player, amount: number)
 	if not profile or amount <= 0 then
 		return
 	end
+	for pass, mult in pairs(Monetization.XPMult) do
+		if player:GetAttribute(pass) == true then
+			amount = math.floor(amount * mult + 0.5)
+		end
+	end
 	local beforeLevel = Progression.Resolve(profile.XP)
 	profile.XP += amount
 	local afterLevel = Progression.Resolve(profile.XP)
@@ -120,6 +125,22 @@ function EconomyService.AddGems(player: Player, amount: number)
 		return
 	end
 	profile.Gems = math.max(0, (profile.Gems or 0) + amount)
+end
+
+-- A win streak ended: reset it, and if it was worth saving (3+), remember it
+-- for a few minutes and offer the Streak Saver.
+function EconomyService.EndStreak(player: Player)
+	local profile = DataService.Get(player)
+	local stats = profile and profile.Stats
+	if not stats then
+		return
+	end
+	local n = stats.WinStreak or 0
+	stats.WinStreak = 0
+	if n >= Monetization.StreakSaver.MinStreak then
+		profile.LostStreak = { N = n, At = os.time() }
+		Remotes.Get("StreakLost"):FireClient(player, { streak = n })
+	end
 end
 
 -- Give an item outright (Robux unlocks, pass rewards). Returns true if new.
@@ -267,9 +288,13 @@ function EconomyService.ClaimQuest(player: Player, questId: string)
 				return { ok = false, reason = "incomplete" }
 			end
 			q.Claimed = true
-			profile.Coins += q.Coins
+			local coins = q.Coins
+			if player:GetAttribute("TaskMaster") == true then
+				coins = math.floor(coins * Monetization.TaskMaster.CoinMult + 0.5)
+			end
+			profile.Coins += coins
 			EconomyService.Push(player)
-			return { ok = true, coins = q.Coins }
+			return { ok = true, coins = coins }
 		end
 	end
 	return { ok = false, reason = "unknown quest" }

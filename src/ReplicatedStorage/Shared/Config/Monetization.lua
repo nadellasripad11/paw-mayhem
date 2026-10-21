@@ -18,11 +18,23 @@ Monetization.Passes = {
 	EmotePack = { Id = 1993058474, Price = 99, Name = "Emote Pack", Desc = "Unlocks every emote plus the exclusive Dance and Flex." },
 	SeasonPass = { Id = 0, Price = 299, Name = "Season Pass", Desc = "Unlocks every premium reward in the current season pass." },
 	TrailPack = { Id = 1988444705, Price = 149, Name = "Trail Pack", Desc = "Rainbow dash trail and confetti bursts on every elimination." },
+	DoubleXP = { Id = 0, Price = 149, Name = "2x XP", Desc = "Double XP from everything: level up and climb the season pass twice as fast." },
+	LuckyGift = { Id = 0, Price = 99, Name = "Lucky Gift", Desc = "Double coins and gems from the free daily gift, every day." },
+	TaskMaster = { Id = 0, Price = 129, Name = "Task Master", Desc = "A 4th daily task every day and +50% coins from every task." },
 } :: { [string]: Pass }
 
 -- Coin reward multipliers granted by passes (they stack).
 -- Coin multipliers by player attribute (GroupMember: Config.Community).
 Monetization.CoinMult = { VIP = 1.25, DoubleCoins = 2, GroupMember = 1.1 }
+-- XP multipliers granted by passes (levels and the season pass).
+Monetization.XPMult = { DoubleXP = 2 }
+-- Task Master: one extra daily task and this much more coin per task.
+Monetization.TaskMaster = { ExtraTasks = 1, CoinMult = 1.5 }
+-- Lucky Gift: the daily gift's coins and gems are multiplied by this.
+Monetization.LuckyGiftMult = 2
+-- Streak Saver: a lost win streak of at least MinStreak can be bought back
+-- for Window seconds. Bought with nothing to save, it gives FallbackGems.
+Monetization.StreakSaver = { MinStreak = 3, Window = 300, FallbackGems = 100 }
 
 -- Developer Products (can be bought again and again).
 Monetization.Products = {
@@ -33,6 +45,8 @@ Monetization.Products = {
 	CoinRain = { Id = 3714380823, Price = 99, Name = "Coin Rain", Desc = "Make it rain! Everyone in the server gets 150 coins (you get 300).", Kind = "CoinRain", Amount = 150 },
 	SeasonTiers = { Id = 0, Price = 99, Name = "+5 Season Tiers", Desc = "Jump 5 tiers ahead in the season pass.", Kind = "SeasonTiers", Amount = 5 },
 	StarterPack = { Id = 3714380879, Price = 79, Name = "Starter Pack", Desc = "1,500 coins, 150 gems and the Aurora blaster skin. Once per player.", Kind = "StarterPack" },
+	RerollTasks = { Id = 0, Price = 25, Name = "Reroll Tasks", Desc = "Swap your unfinished daily tasks for new ones.", Kind = "RerollTasks" },
+	StreakSaver = { Id = 0, Price = 49, Name = "Streak Saver", Desc = "Get back the win streak you just lost.", Kind = "StreakSaver" },
 } :: { [string]: Product }
 
 Monetization.StarterPack = { Coins = 1500, Gems = 150, Skin = "Aurora" }

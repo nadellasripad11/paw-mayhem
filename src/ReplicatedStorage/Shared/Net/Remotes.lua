@@ -47,6 +47,7 @@ Remotes.Definitions = {
 	MapEvent = "Event", -- {kind, dir, duration, strength} client-side event effects
 	Podium = "Event", -- {top = {{userId?, name, elims, isBot}}} end-of-match winners stage
 	FinalKO = "Event", -- {position?} the knockout that won the match / duel, to everyone in it
+	StreakLost = "Event", -- {streak} to a player whose win streak (3+) just ended; Streak Saver can bring it back
 	DuelState = "Event", -- {teams, score, target, timeLeft, myTeam, started?, ko?, over?, won?, trophies?} to duelists
 }
 

@@ -284,6 +284,9 @@ local TABS = {
 			{ product = "CoinRain", art = "CoinRain", color = Color3.fromRGB(255, 214, 70) },
 			{ pass = "EmotePack", art = "Emote", color = Color3.fromRGB(255, 120, 180) },
 			{ pass = "TrailPack", art = "Rainbow", color = Color3.fromRGB(120, 220, 255) },
+			{ pass = "DoubleXP", art = "Rainbow", color = Color3.fromRGB(150, 120, 255), overlay = "2x XP" },
+			{ pass = "LuckyGift", art = "Gift", color = Color3.fromRGB(255, 120, 160), overlay = "2x" },
+			{ pass = "TaskMaster", art = "Coins", color = Color3.fromRGB(110, 220, 140), overlay = "+1 TASK" },
 		},
 	},
 	{

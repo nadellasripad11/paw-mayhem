@@ -14,6 +14,7 @@ local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
 local DailyRewards = require(Shared.Config.DailyRewards)
 local Badges = require(Shared.Config.Badges)
+local Monetization = require(Shared.Config.Monetization)
 
 local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -58,15 +59,19 @@ local function claimDaily(player: Player)
 	local streak = status.Streak + 1
 	local reward = DailyRewards.Days[((streak - 1) % #DailyRewards.Days) + 1]
 	profile.Daily = { LastDay = today, Streak = streak }
-	if reward.Coins then
-		EconomyService.AddCoins(player, reward.Coins, true)
+	-- Lucky Gift doubles it.
+	local mult = player:GetAttribute("LuckyGift") == true and Monetization.LuckyGiftMult or 1
+	local coins = reward.Coins and reward.Coins * mult
+	local gems = reward.Gems and reward.Gems * mult
+	if coins then
+		EconomyService.AddCoins(player, coins, true)
 	end
-	if reward.Gems then
-		EconomyService.AddGems(player, reward.Gems)
+	if gems then
+		EconomyService.AddGems(player, gems)
 	end
 	SeasonService.AddXP(player, "DailyClaim")
 	EconomyService.Push(player)
-	return { ok = true, streak = streak, coins = reward.Coins, gems = reward.Gems }
+	return { ok = true, streak = streak, coins = coins, gems = gems }
 end
 
 function RetentionService.Start()

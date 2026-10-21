@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Cats = require(ReplicatedStorage.Shared.Config.Cats)
 local GameConfig = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
 local Ranks = require(ReplicatedStorage.Shared.Config.Ranks)
 local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
@@ -506,6 +507,12 @@ function MainMenu.Build()
 			task.wait(30)
 		end
 	end)
+	-- NEW TASKS (R$): swap the ones you haven't finished.
+	local reroll = UIUtil.secondaryButton({
+		Parent = tasksGroup, Name = "Reroll", Size = UDim2.fromOffset(TASKS_W, 30), ZIndex = 11, TextSize = 13, Visible = false,
+	}, "↻  NEW TASKS   R$ " .. tostring(Monetization.Products.RerollTasks.Price), function()
+		Monetize.PromptProduct("RerollTasks")
+	end)
 	local duelsHolder = UIUtil.make("Frame", { Parent = tasksGroup, Size = UDim2.fromOffset(TASKS_W, 48), BackgroundTransparency = 1, ZIndex = 10 })
 	UIUtil.primaryButton({
 		Parent = duelsHolder, Name = "ToDuels", Size = UDim2.fromOffset(TASKS_W, 44), ZIndex = 11, TextSize = 20, CornerRadius = UDim.new(0, 12),
@@ -604,17 +611,29 @@ function MainMenu.Build()
 		end
 		local p = ClientState.Profile
 		local list = (p and p.Quests and p.Quests.Active) or {}
-		local ready = 0
+		local ready, open = 0, 0
 		for i, q in ipairs(list) do
 			taskRow(q, HEAD_H + (i - 1) * ROW_H)
-			if not q.Claimed and (tonumber(q.Progress) or 0) >= (tonumber(q.Target) or 1) then
+			local done = (tonumber(q.Progress) or 0) >= (tonumber(q.Target) or 1)
+			if not q.Claimed and done then
 				ready += 1
+			elseif not done then
+				open += 1
 			end
 		end
 		local h = HEAD_H + #list * ROW_H + 4
 		tasksCard.Size = UDim2.new(1, 0, 0, h)
-		duelsHolder.Position = UDim2.fromOffset(0, h + 12)
-		tasksGroup.Size = UDim2.fromOffset(TASKS_W, h + 12 + 48)
+		-- (NEW TASKS only while there's something left to swap.)
+		reroll.Visible = open > 0
+		local y = h + 8
+		if reroll.Visible then
+			reroll.Position = UDim2.fromOffset(0, y)
+			y += 38
+		else
+			y += 4
+		end
+		duelsHolder.Position = UDim2.fromOffset(0, y)
+		tasksGroup.Size = UDim2.fromOffset(TASKS_W, y + 48)
 		if questBadge then
 			questBadge.Text = tostring(ready)
 			questBadge.Visible = ready > 0
@@ -622,6 +641,50 @@ function MainMenu.Build()
 	end
 	ClientState.ProfileChanged:Connect(rebuildTasks)
 	rebuildTasks()
+
+	-- Your win streak (3+) just ended: offer to buy it back for a few minutes
+	-- (shows once you're back in the lobby).
+	local saver = UIUtil.surface({
+		Parent = gui, Name = "StreakSaver", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 64),
+		Size = UDim2.fromOffset(360, 104), ZIndex = 35, Visible = false, BackgroundColor3 = Theme.Color.Surface,
+	}, 1, UDim.new(0, 14))
+	UIUtil.stroke(Theme.Color.Coin, 2, saver)
+	local saverTitle = UIUtil.label({
+		Parent = saver, Text = "", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+		Position = UDim2.fromOffset(0, 10), Size = UDim2.new(1, 0, 0, 24), ZIndex = 36,
+	})
+	UIUtil.primaryButton({
+		Parent = saver, Name = "SaveStreak", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, -20, 0, 46),
+		Size = UDim2.fromOffset(240, 42), ZIndex = 37, TextSize = 18, CornerRadius = UDim.new(0, 10),
+	}, "SAVE IT   R$ " .. tostring(Monetization.Products.StreakSaver.Price), function()
+		Monetize.PromptProduct("StreakSaver")
+		saver.Visible = false
+	end, Theme.Color.Coin, Color3.fromRGB(196, 150, 30))
+	UIUtil.iconButton({
+		Parent = saver, Name = "Dismiss", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 48),
+		Size = UDim2.fromOffset(38, 38), ZIndex = 37,
+	}, function(slot: Frame)
+		UIUtil.label({ Parent = slot, Text = "✕", Font = Theme.Font.Bold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 38 })
+	end, nil, function()
+		saver.Visible = false
+	end)
+	local saverToken = 0
+	Remotes.Get("StreakLost").OnClientEvent:Connect(function(data)
+		local n = typeof(data) == "table" and tonumber(data.streak) or 0
+		if not n or n <= 0 then
+			return
+		end
+		saverToken += 1
+		local token = saverToken
+		saverTitle.Text = string.format("Your %d-win streak ended!", n)
+		saver.Visible = true
+		-- The server keeps it for 5 minutes; the offer goes a bit before that.
+		task.delay(Monetization.StreakSaver.Window - 30, function()
+			if token == saverToken then
+				saver.Visible = false
+			end
+		end)
+	end)
 
 	-- Full-screen backdrop behind whichever screen is open, with a header bar:
 	-- BACK button + screen title (currency stays top right).

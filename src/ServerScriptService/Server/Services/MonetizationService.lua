@@ -20,6 +20,7 @@ local Cats = require(Shared.Config.Cats)
 local DataService = require(script.Parent.DataService)
 local EconomyService = require(script.Parent.EconomyService)
 local SeasonService = require(script.Parent.SeasonService)
+local QuestService = require(script.Parent.QuestService)
 
 local MonetizationService = {}
 
@@ -56,6 +57,9 @@ local function applyPass(player: Player, passKey: string)
 	player:SetAttribute(passKey, true)
 	for _, it in ipairs(passItems(passKey)) do
 		EconomyService.Grant(player, it.kind, it.id)
+	end
+	if passKey == "TaskMaster" then
+		QuestService.TopUp(player)
 	end
 	EconomyService.Push(player)
 end
@@ -102,6 +106,23 @@ local function grantProduct(player: Player, key: string): boolean
 	elseif product.Kind == "SeasonTiers" then
 		SeasonService.SkipTiers(player, product.Amount or 5)
 		Remotes.Get("Notify"):FireClient(player, { text = string.format("+%d season tiers!", product.Amount or 5), kind = "success" })
+	elseif product.Kind == "RerollTasks" then
+		local n = QuestService.Reroll(player)
+		Remotes.Get("Notify"):FireClient(player, { text = n > 0 and "New daily tasks!" or "All your tasks are done already!", kind = "success" })
+	elseif product.Kind == "StreakSaver" then
+		local cfg = Monetization.StreakSaver
+		local lost = profile.LostStreak
+		local stats = profile.Stats
+		if lost and stats and os.time() - (lost.At or 0) <= cfg.Window then
+			stats.WinStreak = (lost.N or 0) + (stats.WinStreak or 0)
+			stats.BestWinStreak = math.max(stats.BestWinStreak or 0, stats.WinStreak)
+			profile.LostStreak = nil
+			Remotes.Get("Notify"):FireClient(player, { text = string.format("Streak saved! %d in a row", stats.WinStreak), kind = "success" })
+		else
+			-- Nothing left to save (it expired): gems instead, never nothing.
+			EconomyService.AddGems(player, cfg.FallbackGems)
+			Remotes.Get("Notify"):FireClient(player, { text = string.format("No streak to save, so here's %d gems!", cfg.FallbackGems), kind = "success" })
+		end
 	elseif product.Kind == "Unlock" and product.ItemKind and product.ItemId then
 		EconomyService.Grant(player, product.ItemKind, product.ItemId)
 		EconomyService.Equip(player, product.ItemKind, product.ItemId)

@@ -39,6 +39,9 @@ function SeasonService.AddXP(player: Player, action: string | number)
 	if amount <= 0 then
 		return
 	end
+	if player:GetAttribute("DoubleXP") == true then
+		amount *= 2
+	end
 	local s = seasonOf(profile)
 	local before = Season.TierFor(s.XP)
 	s.XP = math.min(s.XP + amount, Season.Tiers * Season.XPPerTier)
