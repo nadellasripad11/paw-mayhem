@@ -14,6 +14,9 @@
 --   * pounce (E / gamepad X / mobile button): a cat leap forward and up
 --   * jump pads (fling you along an arc to their target)
 --   * map-event wind that pushes you while you keep steering
+--   * rope swings (grab the knot, swing across a gap) and giant springs
+--     (a JumpPad with a Bounce speed: straight up, steer in the air)
+--   * wading slowly while Hidden in a ball pit
 --   * swim columns (waterfalls, steam vents, bubble tubes, fan shafts): float
 --     in them, SPACE / jump up, SHIFT down; 15 seconds in and you're flung
 --     to a random spot on the map (a warning counts down from 8)
@@ -403,6 +406,123 @@ end
 
 -- A new cat can arrive before the ground under it has loaded (far-off lobby
 -- and duel maps): hold it still until there's something to stand on.
+-- ── rope swings ──────────────────────────────────────────────────────────────
+-- Walk into a rope's knot: you hang on and swing along an arc under its
+-- pivot to the far side, then let go just over the landing spot. A hit
+-- knocks you off.
+local swings: { [BasePart]: boolean } = {}
+type Swing = { rope: BasePart, line: Part, mover: LinearVelocity, pivot: Vector3, u: Vector3, a0: number, a1: number, r0: number, r1: number, t0: number, dur: number }
+local swing: Swing? = nil
+local swingReadyAt = 0
+
+local function swingPoint(s: Swing, t: number): Vector3
+	local e = (1 - math.cos(math.pi * math.clamp(t, 0, 1))) / 2 -- slow at the ends, fastest at the bottom
+	local a = s.a0 + (s.a1 - s.a0) * e
+	local r = s.r0 + (s.r1 - s.r0) * e
+	return s.pivot + s.u * math.sin(a) * r - Vector3.yAxis * math.cos(a) * r
+end
+
+local function endSwing(letGo: boolean)
+	local s = swing
+	if not s then
+		return
+	end
+	swing = nil
+	s.mover:Destroy()
+	s.line:Destroy()
+	s.rope.LocalTransparencyModifier = 0
+	swingReadyAt = os.clock() + 2
+	local root, hum = parts()
+	if letGo and root and hum then
+		-- A little hop forward onto the landing.
+		root.AssemblyLinearVelocity = s.u * 14 + Vector3.new(0, 12, 0)
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		holdHorizontal(root, s.u * 14, 0.4, "pad")
+	end
+end
+
+local function startSwing(rope: BasePart, root: BasePart, hum: Humanoid)
+	local pivot, land = rope:GetAttribute("Pivot"), rope:GetAttribute("Land")
+	if typeof(pivot) ~= "Vector3" or typeof(land) ~= "Vector3" then
+		return
+	end
+	local start = root.Position
+	local u = Vector3.new(land.X - start.X, 0, land.Z - start.Z).Unit
+	local function polar(p: Vector3): (number, number)
+		local d = p - pivot
+		return math.atan2(d:Dot(u), -d.Y), d.Magnitude
+	end
+	local a0, r0 = polar(start)
+	local a1, r1 = polar(land)
+	stopCarry()
+	if mover then
+		mover:Destroy()
+		mover = nil
+	end
+	doubleUsed = false
+	local lv = Instance.new("LinearVelocity")
+	lv.Name = "Swing"
+	lv.Attachment0 = attachment(root)
+	lv.RelativeTo = Enum.ActuatorRelativeTo.World
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+	lv.MaxForce = root.AssemblyMass * 8000
+	lv.Parent = root
+	local line = Instance.new("Part")
+	line.Name = "SwingLine"
+	line.Size = Vector3.new(0.3, 0.3, 1)
+	line.Color = rope.Color
+	line.Material = Enum.Material.Fabric
+	line.Anchored = true
+	line.CanCollide = false
+	line.CanQuery = false
+	line.CanTouch = false
+	line.CastShadow = false
+	line.Parent = Workspace
+	rope.LocalTransparencyModifier = 1
+	local arc = math.abs(a1 - a0) * (r0 + r1) / 2
+	swing = { rope = rope, line = line, mover = lv, pivot = pivot, u = u, a0 = a0, a1 = a1, r0 = r0, r1 = r1, t0 = os.clock(), dur = math.clamp(arc / 34, 1.3, 2.6) }
+	hum:ChangeState(Enum.HumanoidStateType.Freefall)
+	require(script.Parent.SoundController).Play("Whoosh", 0.8)
+end
+
+local function checkSwings(root: BasePart, hum: Humanoid)
+	if os.clock() < swingReadyAt then
+		return
+	end
+	for rope in pairs(swings) do
+		local grab = rope:GetAttribute("Grab")
+		if rope.Parent and typeof(grab) == "Vector3" and (root.Position - grab).Magnitude < 3.5 then
+			startSwing(rope, root, hum)
+			return
+		end
+	end
+end
+
+-- Returns true while swinging (the rest of the movement step waits).
+local function swingStep(root: BasePart, dt: number): boolean
+	local s = swing
+	if not s then
+		return false
+	end
+	local t = (os.clock() - s.t0) / s.dur
+	if t >= 1 or activeLaunch ~= nil or not s.rope.Parent then
+		endSwing(t >= 1)
+		return false
+	end
+	-- Chase the next point on the arc.
+	local goal = swingPoint(s, t + dt / s.dur)
+	local v = (goal - root.Position) / math.max(dt, 1 / 120)
+	if v.Magnitude > 140 then
+		v = v.Unit * 140
+	end
+	s.mover.VectorVelocity = v
+	local a = s.pivot
+	local b = root.Position + Vector3.new(0, 0.8, 0)
+	s.line.Size = Vector3.new(0.3, 0.3, (b - a).Magnitude)
+	s.line.CFrame = CFrame.lookAt((a + b) / 2, b)
+	return true
+end
+
 -- ── swim columns ─────────────────────────────────────────────────────────────
 local SWIM_MAX, SWIM_WARN, SWIM_GRACE = 15, 8, 1.5
 local SWIM_RISE, SWIM_SINK = 24, 24
@@ -472,7 +592,7 @@ local function getSwimUI()
 	return swimUI
 end
 
-local function showSwimUI(kind: string?, stay: number)
+local function showSwimUI(kind: string?, stay: number, golden: boolean?)
 	local ui = swimUI
 	if not kind then
 		if ui then
@@ -486,8 +606,10 @@ local function showSwimUI(kind: string?, stay: number)
 	ui = getSwimUI()
 	local touch = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	ui.down.Visible = touch
-	ui.hint.Visible = stay < 4
-	ui.hint.Text = touch and "JUMP to go up  ·  ▼ to go down" or "SPACE to go up  ·  SHIFT to go down"
+	ui.hint.Visible = stay < 4 or golden == true
+	ui.hint.Text = golden and "GOLDEN COLUMN  ·  +5 coins a second"
+		or touch and "JUMP to go up  ·  ▼ to go down" or "SPACE to go up  ·  SHIFT to go down"
+	ui.hint.TextColor3 = golden and Color3.fromRGB(255, 214, 80) or Color3.new(1, 1, 1)
 	ui.warn.Visible = stay >= SWIM_WARN
 	if ui.warn.Visible then
 		ui.warn.Text = string.format("%s IN %d", FLING_TEXT[kind] or "FLUNG", math.ceil(SWIM_MAX - stay))
@@ -582,7 +704,7 @@ local function swimStep(root: BasePart, hum: Humanoid): boolean
 		swimFling(root, hum)
 		return true
 	end
-	showSwimUI(kind, stay)
+	showSwimUI(kind, stay, zone:GetAttribute("Golden") == true)
 
 	local lp = zone.CFrame:PointToObjectSpace(root.Position)
 	local half = zone.Size / 2
@@ -683,6 +805,24 @@ end
 
 -- ── jump pads ────────────────────────────────────────────────────────────────
 local function padLaunch(pad: BasePart, root: BasePart, hum: Humanoid)
+	local bounce = pad:GetAttribute("Bounce")
+	if typeof(bounce) == "number" then
+		-- A spring: straight up, keeping (and steering) your run-up.
+		local v = root.AssemblyLinearVelocity
+		padReadyAt = os.clock() + 0.6
+		doubleUsed = false
+		root.AssemblyLinearVelocity = Vector3.new(v.X, bounce, v.Z)
+		hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		startCarry(Vector3.new(v.X, 0, v.Z) + hum.MoveDirection * hum.WalkSpeed)
+		require(script.Parent.SoundController).Play("Spring", 0.8)
+		ringFx(pad.Position + Vector3.new(0, 0.3, 0), Color3.fromRGB(255, 210, 70), 10)
+		local down = TweenService:Create(pad, TweenInfo.new(0.08), { CFrame = pad.CFrame - Vector3.new(0, 0.7, 0) })
+		down.Completed:Once(function()
+			TweenService:Create(pad, TweenInfo.new(0.35, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), { CFrame = pad.CFrame + Vector3.new(0, 0.7, 0) }):Play()
+		end)
+		down:Play()
+		return
+	end
 	local target = pad:GetAttribute("Target")
 	if typeof(target) ~= "Vector3" then
 		return
@@ -808,17 +948,25 @@ local function step(dt: number)
 	if typeof(mult) ~= "number" then
 		mult = 1
 	end
+	if char:GetAttribute("Hidden") == true then
+		mult *= 0.55 -- wading through a ball pit
+	end
 	hum.WalkSpeed = base * mult
 	if hum.Health <= 0 then
 		stopCarry()
 		if MovementController.Swimming then
 			endSwim()
 		end
+		endSwing(false)
+		return
+	end
+	if swingStep(root, dt) then
 		return
 	end
 	if swimStep(root, hum) then
 		return
 	end
+	checkSwings(root, hum)
 	if not isAirborne(hum) then
 		lastGroundAt = os.clock()
 	end
@@ -895,6 +1043,40 @@ function MovementController.Start()
 				spot.Parent = inst
 				require(script.Parent.SoundController).Loop(sound, spot)
 			end
+			-- The golden column (Mayhem Mode): a gold glow and sparkles.
+			local function paintGolden()
+				local old = inst:FindFirstChild("GoldenGlow")
+				if inst:GetAttribute("Golden") == true then
+					if not old then
+						local g = Instance.new("Part")
+						g.Name = "GoldenGlow"
+						g.Size = inst.Size + Vector3.new(0.4, 0, 0.4)
+						g.CFrame = inst.CFrame
+						g.Color = Color3.fromRGB(255, 206, 60)
+						g.Material = Enum.Material.Neon
+						g.Transparency = 0.8
+						g.Anchored = true
+						g.CanCollide = false
+						g.CanQuery = false
+						g.CanTouch = false
+						g.CastShadow = false
+						g.Parent = inst
+						local e = Instance.new("ParticleEmitter")
+						e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+						e.Color = ColorSequence.new(Color3.fromRGB(255, 220, 90))
+						e.Size = NumberSequence.new(1, 0)
+						e.Speed = NumberRange.new(4, 8)
+						e.Lifetime = NumberRange.new(1, 1.6)
+						e.Rate = 40
+						e.LightEmission = 1
+						e.Parent = g
+					end
+				elseif old then
+					old:Destroy()
+				end
+			end
+			inst:GetAttributeChangedSignal("Golden"):Connect(paintGolden)
+			paintGolden()
 		end
 	end
 	for _, inst in ipairs(CollectionService:GetTagged("SwimZone")) do
@@ -903,6 +1085,19 @@ function MovementController.Start()
 	CollectionService:GetInstanceAddedSignal("SwimZone"):Connect(addZone)
 	CollectionService:GetInstanceRemovedSignal("SwimZone"):Connect(function(inst)
 		zones[inst :: BasePart] = nil
+	end)
+	for _, inst in ipairs(CollectionService:GetTagged("RopeSwing")) do
+		if inst:IsA("BasePart") then
+			swings[inst] = true
+		end
+	end
+	CollectionService:GetInstanceAddedSignal("RopeSwing"):Connect(function(inst)
+		if inst:IsA("BasePart") then
+			swings[inst] = true
+		end
+	end)
+	CollectionService:GetInstanceRemovedSignal("RopeSwing"):Connect(function(inst)
+		swings[inst :: BasePart] = nil
 	end)
 	UserInputService.JumpRequest:Connect(function()
 		lastJumpRequest = os.clock()

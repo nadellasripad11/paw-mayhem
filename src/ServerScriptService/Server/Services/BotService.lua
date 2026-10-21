@@ -225,12 +225,15 @@ local function pickTarget(bot: BotState): (Model?, number, boolean)
 		local s    = Runtime.Get(p)
 		local char = p.Character
 		local root = char and (char.PrimaryPart :: BasePart?)
-		if s and s.Alive and isFoe(bot, s) and root and char then
+		-- (A cat hiding in a ball pit is only spotted up close.)
+		local hiding = char and root and char:GetAttribute("Hidden") == true and (root.Position - bot.root.Position).Magnitude > 10
+		if s and s.Alive and isFoe(bot, s) and root and char and not hiding then
 			consider(char, root, s.Accumulated or 0)
 		end
 	end
 	for _, other in pairs(bot.duel and {} or bots) do
-		if other.alive and other ~= bot and (Runtime.Mode == "FFA" or other.team ~= bot.team) then
+		local hiding = other.model:GetAttribute("Hidden") == true and (other.root.Position - bot.root.Position).Magnitude > 10
+		if other.alive and other ~= bot and (Runtime.Mode == "FFA" or other.team ~= bot.team) and not hiding then
 			consider(other.model, other.root, other.accumulated)
 		end
 	end

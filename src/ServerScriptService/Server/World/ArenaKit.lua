@@ -803,4 +803,225 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 	return zone
 end
 
+-- ── map features ─────────────────────────────────────────────────────────────
+-- Built here, run by MapFeatureService (server), MovementController and
+-- MapLife (client).
+
+-- A rope swing across the gap between two islands: a log beam on tall posts
+-- at both edges and a rope hanging at each end. Walk into a rope's knot to
+-- grab it and swing across (MovementController). Reserves both edges.
+function ArenaKit.AddRopeSwing(A: any, B: any, parent: Instance)
+	local folder = Instance.new("Folder")
+	folder.Name = "RopeSwing"
+	folder.Parent = parent
+	local aAng, bAng = ArenaKit.AngleTo(A.pos, B.pos), ArenaKit.AngleTo(B.pos, A.pos)
+	table.insert(A.reserved, aAng)
+	table.insert(B.reserved, bAng)
+	local ea, eb = ArenaKit.Polar(A, aAng, A.r - 2.5), ArenaKit.Polar(B, bAng, B.r - 2.5)
+	local top = math.max(ea.Y, eb.Y) + 24
+	local u = Vector3.new(eb.X - ea.X, 0, eb.Z - ea.Z).Unit
+	local side = Vector3.new(-u.Z, 0, u.X)
+	local wood, dark, rope = Color3.fromRGB(150, 104, 62), Color3.fromRGB(98, 66, 40), Color3.fromRGB(196, 166, 116)
+	for _, e in ipairs({ ea, eb }) do
+		for _, s in ipairs({ -1, 1 }) do
+			local p = e + side * s * 3.6
+			ArenaKit.NewPart("SwingPost", Vector3.new(1.2, top - e.Y + 1, 1.2), CFrame.new(Vector3.new(p.X, (top + e.Y) / 2, p.Z)), dark, Enum.Material.Wood, folder)
+		end
+		ArenaKit.Beam("SwingCross", Vector3.new(e.X, top, e.Z) - side * 4, Vector3.new(e.X, top, e.Z) + side * 4, 1, dark, Enum.Material.Wood, folder)
+	end
+	ArenaKit.Beam("SwingLog", Vector3.new(ea.X, top + 0.4, ea.Z), Vector3.new(eb.X, top + 0.4, eb.Z), 1.4, wood, Enum.Material.Wood, folder)
+	local mid = Vector3.new((ea.X + eb.X) / 2, top, (ea.Z + eb.Z) / 2)
+	for _, d in ipairs({ { ea, eb, 1 }, { eb, ea, -1 } }) do
+		local from, to, s = d[1], d[2], d[3]
+		local pivot = mid + side * s * 2.2
+		local grab = from + side * s * 2.2 + Vector3.new(0, 2.6, 0)
+		local r = swimDeco(ArenaKit.Beam("SwingRope", pivot, grab, 0.3, rope, Enum.Material.Fabric, folder))
+		r:SetAttribute("Pivot", pivot)
+		r:SetAttribute("Grab", grab)
+		r:SetAttribute("Land", to + u * s * 3.5 + side * s * 2.2 + Vector3.new(0, 2.6, 0))
+		CollectionService:AddTag(r, "RopeSwing")
+		local knot = ArenaKit.NewPart("SwingKnot", Vector3.one * 0.9, CFrame.new(grab), rope, Enum.Material.Fabric, folder) :: Part
+		knot.Shape = Enum.PartType.Ball
+		swimDeco(knot)
+	end
+end
+
+-- Spots where a few birds peck about (MapLife scares them off).
+function ArenaKit.AddBirdSpots(isle: any, rng: Random, count: number, parent: Instance)
+	for _ = 1, count do
+		local p = ArenaKit.TryPlace(isle, rng, 4, isle.r - 4, 2.5, 3)
+		if p then
+			ArenaKit.Reserve(isle, p, 2.5)
+			local s = swimDeco(ArenaKit.NewPart("BirdSpot", Vector3.one * 0.2, CFrame.new(p), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent))
+			s.Transparency = 1
+			CollectionService:AddTag(s, "BirdSpot")
+		end
+	end
+end
+
+-- A lava geyser in the ground: a basalt rim, glowing cracks and the vent.
+-- MapFeatureService makes it rumble, then blast whoever's on it.
+function ArenaKit.AddGeyser(pos: Vector3, parent: Instance): BasePart
+	local folder = Instance.new("Folder")
+	folder.Name = "Geyser"
+	folder.Parent = parent
+	local lava = Color3.fromRGB(255, 120, 40)
+	swimDeco(ArenaKit.NewDisc("GeyserRim", 6.6, 0.5, pos + Vector3.new(0, 0.25, 0), Color3.fromRGB(44, 38, 40), Enum.Material.Basalt, folder))
+	for k = 0, 3 do
+		local a = k * math.pi / 2 + 0.4
+		local d = Vector3.new(math.cos(a), 0, math.sin(a))
+		local c = pos + d * 4.6 + Vector3.new(0, 0.04, 0)
+		swimDeco(ArenaKit.NewPart("GeyserCrack", Vector3.new(0.35, 0.06, 3.2), CFrame.lookAt(c, c + d), lava, Enum.Material.Neon, folder))
+	end
+	local vent = swimDeco(ArenaKit.NewDisc("Geyser", 4.4, 0.2, pos + Vector3.new(0, 0.55, 0), lava, Enum.Material.Neon, folder))
+	vent.Transparency = 0.35
+	local glow = Instance.new("PointLight")
+	glow.Color = lava
+	glow.Range = 14
+	glow.Brightness = 1
+	glow.Parent = vent
+	-- (Emitters on an upright attachment: the disc itself lies on its side.)
+	local spout = Instance.new("Attachment")
+	spout.Name = "Spout"
+	spout.Parent = vent
+	spout.WorldCFrame = CFrame.new(pos + Vector3.new(0, 0.7, 0))
+	local smoke = Instance.new("ParticleEmitter")
+	smoke.Name = "Smoke"
+	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	smoke.Color = ColorSequence.new(Color3.fromRGB(80, 70, 66))
+	smoke.Size = NumberSequence.new(1.5, 4)
+	smoke.Transparency = NumberSequence.new(0.3, 1)
+	smoke.Speed = NumberRange.new(8, 14)
+	smoke.SpreadAngle = Vector2.new(20, 20)
+	smoke.Lifetime = NumberRange.new(1.2, 1.8)
+	smoke.Rate = 25
+	smoke.Enabled = false
+	smoke.Parent = spout
+	local burst = Instance.new("ParticleEmitter")
+	burst.Name = "Burst"
+	burst.Texture = "rbxasset://textures/particles/fire_main.dds"
+	burst.Color = ColorSequence.new(Color3.fromRGB(255, 200, 80), Color3.fromRGB(255, 70, 30))
+	burst.Size = NumberSequence.new(2.2, 0.4)
+	burst.Speed = NumberRange.new(60, 90)
+	burst.SpreadAngle = Vector2.new(12, 12)
+	burst.Acceleration = Vector3.new(0, -60, 0)
+	burst.Lifetime = NumberRange.new(0.8, 1.2)
+	burst.LightEmission = 1
+	burst.Rate = 0
+	burst.Parent = spout
+	for _, s in ipairs({ { "Rumble", "rbxasset://sounds/action_falling.mp3", 0.8, 0.35 }, { "Blast", "rbxasset://sounds/impact_explosion_03.mp3", 0.7, 1.1 } }) do
+		local snd = Instance.new("Sound")
+		snd.Name = s[1]
+		snd.SoundId = s[2]
+		snd.Volume = s[3]
+		snd.PlaybackSpeed = s[4]
+		snd.RollOffMaxDistance = 90
+		snd.Parent = vent
+	end
+	CollectionService:AddTag(vent, "Geyser")
+	return vent
+end
+
+-- A giant toy spring: jump on the top and it bounces you straight up
+-- (MovementController; it's a JumpPad with a Bounce speed).
+function ArenaKit.AddSpring(pos: Vector3, bounce: number, parent: Instance): BasePart
+	local folder = Instance.new("Folder")
+	folder.Name = "Spring"
+	folder.Parent = parent
+	swimDeco(ArenaKit.NewDisc("SpringBase", 5.8, 0.5, pos + Vector3.new(0, 0.25, 0), Color3.fromRGB(70, 80, 120), Enum.Material.SmoothPlastic, folder))
+	for i = 0, 5 do
+		swimDeco(ArenaKit.NewDisc("SpringCoil", 4.2, 0.32, pos + Vector3.new(0, 0.75 + i * 0.42, 0), i % 2 == 0 and Color3.fromRGB(255, 90, 110) or Color3.fromRGB(255, 210, 70), Enum.Material.SmoothPlastic, folder))
+	end
+	local top = ArenaKit.NewDisc("SpringTop", 5, 0.5, pos + Vector3.new(0, 3.3, 0), Color3.fromRGB(80, 200, 255), Enum.Material.SmoothPlastic, folder)
+	top:SetAttribute("Bounce", bounce)
+	CollectionService:AddTag(top, "JumpPad")
+	return top
+end
+
+-- A ball pit: a soft rim, two layers of plastic balls and the region
+-- MapFeatureService checks (cats inside are Hidden and wade slowly).
+function ArenaKit.AddBallPit(center: Vector3, sx: number, sz: number, rng: Random, parent: Instance): BasePart
+	local folder = Instance.new("Folder")
+	folder.Name = "BallPit"
+	folder.Parent = parent
+	swimDeco(ArenaKit.NewPart("PitFloor", Vector3.new(sx, 0.1, sz), CFrame.new(center + Vector3.new(0, 0.05, 0)), Color3.fromRGB(60, 140, 220), Enum.Material.SmoothPlastic, folder))
+	local rim = Color3.fromRGB(255, 120, 170)
+	for _, e in ipairs({ { 0, sz / 2, sx + 0.8, 0.8 }, { 0, -sz / 2, sx + 0.8, 0.8 }, { sx / 2, 0, 0.8, sz }, { -sx / 2, 0, 0.8, sz } }) do
+		swimDeco(ArenaKit.NewPart("RailPit", Vector3.new(e[3], 1.4, e[4]), CFrame.new(center + Vector3.new(e[1], 0.7, e[2])), rim, Enum.Material.Fabric, folder))
+	end
+	local colors = { Color3.fromRGB(255, 90, 110), Color3.fromRGB(255, 210, 70), Color3.fromRGB(90, 200, 255), Color3.fromRGB(130, 230, 120), Color3.fromRGB(190, 130, 255) }
+	for layer = 0, 1 do
+		for x = -sx / 2 + 0.7, sx / 2 - 0.6, 1.3 do
+			for z = -sz / 2 + 0.7, sz / 2 - 0.6, 1.3 do
+				local p = center + Vector3.new(x + rng:NextNumber(-0.25, 0.25), 0.65 + layer * 1.05, z + rng:NextNumber(-0.25, 0.25))
+				local b = ArenaKit.NewPart("BallPitBall", Vector3.one * 1.3, CFrame.new(p), colors[rng:NextInteger(1, #colors)], Enum.Material.SmoothPlastic, folder) :: Part
+				b.Shape = Enum.PartType.Ball
+				swimDeco(b)
+			end
+		end
+	end
+	local zone = swimDeco(ArenaKit.NewPart("BallPit", Vector3.new(sx, 4, sz), CFrame.new(center + Vector3.new(0, 2, 0)), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, folder))
+	zone.Transparency = 1
+	CollectionService:AddTag(zone, "BallPit")
+	return zone
+end
+
+-- A neon billboard on two legs over `pos` (a roof), facing `toward`.
+-- MapFeatureService makes it flicker, then surge and knock back cats near
+-- it.
+function ArenaKit.AddBillboard(pos: Vector3, toward: Vector3, color: Color3, text: string, parent: Instance): BasePart
+	local folder = Instance.new("Folder")
+	folder.Name = "Billboard"
+	folder.Parent = parent
+	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z))
+	local metal = Color3.fromRGB(46, 50, 60)
+	for _, s in ipairs({ -1, 1 }) do
+		swimDeco(ArenaKit.NewPart("PostBillboard", Vector3.new(0.6, 9, 0.6), face * CFrame.new(s * 4.5, 4.5, 0.6), metal, Enum.Material.Metal, folder))
+	end
+	swimDeco(ArenaKit.NewPart("BillboardFrame", Vector3.new(12, 5.4, 0.5), face * CFrame.new(0, 7, 0.35), metal, Enum.Material.Metal, folder))
+	local panel = swimDeco(ArenaKit.NewPart("Billboard", Vector3.new(11.4, 4.8, 0.3), face * CFrame.new(0, 7, 0), color, Enum.Material.Neon, folder))
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Front
+	gui.LightInfluence = 0
+	gui.PixelsPerStud = 30
+	gui.Parent = panel
+	local label = Instance.new("TextLabel")
+	label.BackgroundTransparency = 1
+	label.Size = UDim2.fromScale(1, 1)
+	label.Text = text
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0.4
+	label.Parent = gui
+	panel:SetAttribute("BlastAt", pos + Vector3.new(0, 1, 0))
+	for _, s in ipairs({ { "Buzz", "rbxasset://sounds/action_falling.mp3", 0.5, 2.2 }, { "Zap", "rbxasset://sounds/impact_explosion_03.mp3", 0.6, 1.6 } }) do
+		local snd = Instance.new("Sound")
+		snd.Name = s[1]
+		snd.SoundId = s[2]
+		snd.Volume = s[3]
+		snd.PlaybackSpeed = s[4]
+		snd.RollOffMaxDistance = 90
+		snd.Parent = panel
+	end
+	local sparks = Instance.new("ParticleEmitter")
+	sparks.Name = "Sparks"
+	sparks.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	sparks.Color = ColorSequence.new(Color3.new(1, 1, 1), color)
+	sparks.Size = NumberSequence.new(0.8, 0)
+	sparks.Speed = NumberRange.new(20, 40)
+	sparks.SpreadAngle = Vector2.new(180, 180)
+	sparks.Lifetime = NumberRange.new(0.4, 0.8)
+	sparks.LightEmission = 1
+	sparks.Rate = 0
+	sparks.Parent = panel
+	local flash = Instance.new("PointLight")
+	flash.Color = color
+	flash.Range = 30
+	flash.Brightness = 0
+	flash.Parent = panel
+	CollectionService:AddTag(panel, "Billboard")
+	return panel
+end
+
 return ArenaKit

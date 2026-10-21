@@ -22,6 +22,7 @@ local CatOverheads = require(Controllers.CatOverheads)
 local SoundController = require(Controllers.SoundController)
 local ReplayController = require(Controllers.ReplayController)
 local LobbyLook = require(Controllers.LobbyLook)
+local MapLife = require(Controllers.MapLife)
 
 local UIManager = require(script.UI.UIManager)
 
@@ -58,6 +59,7 @@ local function main()
 	LavaFX.Start()
 	CatOverheads.Start()
 	SoundController.Start()
+	MapLife.Start()
 	ReplayController.Start()
 	LobbyLook.Start()
 

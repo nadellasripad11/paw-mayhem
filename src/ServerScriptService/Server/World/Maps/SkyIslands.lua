@@ -574,6 +574,14 @@ function SkyIslands.Build(): Folder
 		end
 	end
 
+	-- Rope swings across the gaps from the team-side pads to the flanks.
+	local swings = Instance.new("Folder")
+	swings.Name = "RopeSwings"
+	swings.Parent = arena
+	for _, pair in ipairs({ { "padBL", "flankBL" }, { "padBR", "flankBR" }, { "padRL", "flankRL" }, { "padRR", "flankRR" } }) do
+		ArenaKit.AddRopeSwing(I[pair[1]], I[pair[2]], swings)
+	end
+
 	-- Supply drops land on any playable island; jump pads on the team bases
 	-- and windmill islands fling you onto the windmill hill.
 	for _, isle in pairs(I) do
@@ -757,6 +765,11 @@ function SkyIslands.Build(): Folder
 		Brightness = 2.4,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
+	-- Birds pecking about on the grass (they scatter when a cat comes near).
+	for _, key in ipairs({ "center", "plazaB", "plazaR", "flankBL", "flankBR", "flankRL", "flankRR", "millL", "millR" }) do
+		ArenaKit.AddBirdSpots(I[key], rng, key == "center" and 2 or 1, I[key].folder)
+	end
+
 	return arena
 end
 

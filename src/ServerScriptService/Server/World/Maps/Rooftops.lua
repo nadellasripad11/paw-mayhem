@@ -7,6 +7,7 @@
 -- and you're out. AC units and water tanks are solid cover.
 
 local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
 local ArenaKit = require(script.Parent.Parent.ArenaKit)
 
 local Rooftops = { Id = "Rooftops", Name = "Neon Rooftops" }
@@ -142,6 +143,59 @@ local function roofSpot(r: Roof, avoid: { Vector3 }): Vector3?
 		end
 	end
 	return nil
+end
+
+-- A window-cleaner lift beside step roof `step` (`sx`, `sz` = which corner):
+-- a yellow deck on a slider (MapFeatureService drives it) riding from the
+-- roof up to a high perch over the tower, with cables and a pulley beam.
+local function makeLift(step: Roof, sx: number, sz: number, parent: Instance)
+	local x, zDeck, zPerch = 30.5 * sx, 33.5 * sz, 26.5 * sz
+	local low, high = step.top, 26
+	local metal = Color3.fromRGB(58, 62, 74)
+	NP("Platform", Vector3.new(10, 1, 8), CFrame.new(x, high - 0.5, zPerch), Color3.fromRGB(70, 74, 86), Enum.Material.DiamondPlate, parent)
+	NP("PerchStrip", Vector3.new(10, 0.15, 0.3), CFrame.new(x, high + 0.08, zPerch - sz * 3.85), NEON[2], Enum.Material.Neon, parent).CanCollide = false
+	for _, c in ipairs({ { -1, -1 }, { -1, 1 }, { 1, -1 }, { 1, 1 } }) do
+		NP("PostPerch", Vector3.new(0.8, 60, 0.8), CFrame.new(x + c[1] * 4.5, high - 30.5, zPerch + c[2] * 3.5), metal, Enum.Material.Metal, parent).CanCollide = false
+	end
+	for _, cx in ipairs({ -2.7, 2.7 }) do
+		NP("StringCable", Vector3.new(0.15, high + 4 - low, 0.15), CFrame.new(x + cx, (high + 4 + low) / 2, zDeck), metal, Enum.Material.Metal, parent).CanCollide = false
+	end
+	NP("ArmPulley", Vector3.new(6.2, 0.6, 0.6), CFrame.new(x, high + 4, zDeck), metal, Enum.Material.Metal, parent).CanCollide = false
+	-- The deck on its slider (it starts flush with the step roof).
+	local guide = NP("LiftGuide", Vector3.one * 0.4, CFrame.new(x, low - 0.3, zDeck), metal, Enum.Material.Metal, parent)
+	guide.Transparency = 1
+	guide.CanCollide = false
+	local deck = NP("Platform", Vector3.new(5, 0.6, 5), CFrame.new(x, low - 0.3, zDeck), Color3.fromRGB(255, 196, 40), Enum.Material.DiamondPlate, parent)
+	for _, s in ipairs({ -1, 1 }) do
+		local rail = NP("RailLift", Vector3.new(0.25, 1.4, 5), CFrame.new(x + s * 2.4, low + 0.7, zDeck), metal, Enum.Material.Metal, parent)
+		rail.CanCollide = false
+		rail.Massless = true
+		rail.Anchored = false
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = deck
+		weld.Part1 = rail
+		weld.Parent = deck
+	end
+	local up = CFrame.fromMatrix(Vector3.zero, Vector3.yAxis, Vector3.zAxis) -- the slide axis (X) points up
+	local a0 = Instance.new("Attachment")
+	a0.CFrame = up
+	a0.Parent = guide
+	local a1 = Instance.new("Attachment")
+	a1.CFrame = up
+	a1.Parent = deck
+	local slider = Instance.new("PrismaticConstraint")
+	slider.Attachment0 = a0
+	slider.Attachment1 = a1
+	slider.LimitsEnabled = true
+	slider.LowerLimit = 0
+	slider.UpperLimit = high - low
+	slider.ActuatorType = Enum.ActuatorType.Servo
+	slider.Speed = 7
+	slider.ServoMaxForce = 1e7
+	slider.TargetPosition = 0
+	slider.Parent = deck
+	deck.Anchored = false
+	CollectionService:AddTag(slider, "Lift")
 end
 
 function Rooftops.Build(): Folder
@@ -282,6 +336,15 @@ function Rooftops.Build(): Folder
 		ClockTime = 18.2, FogColor = Color3.fromRGB(120, 90, 160), FogEnd = 900, Brightness = 2.2,
 	})
 	-- Falls between buildings end quickly: out well before the fog floor.
+	-- Window-cleaner lifts from each step roof up to a high perch over the tower.
+	for _, key in ipairs({ "stepBL", "stepBR", "stepRL", "stepRR" }) do
+		local r = R[key]
+		makeLift(r, r.x > 0 and 1 or -1, r.z > 0 and 1 or -1, r.folder)
+	end
+	-- Neon billboards on the flank roofs: they flicker, then surge.
+	ArenaKit.AddBillboard(Vector3.new(R.flankL.x, R.flankL.top, 8), Vector3.zero, Color3.fromRGB(255, 90, 200), "MEOW COLA", R.flankL.folder)
+	ArenaKit.AddBillboard(Vector3.new(R.flankR.x, R.flankR.top, -8), Vector3.zero, Color3.fromRGB(80, 220, 255), "FISH TV", R.flankR.folder)
+
 	arena:SetAttribute("KillFloorY", -45)
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
 	return arena

@@ -84,6 +84,12 @@ local function attach(model: Model)
 	gui.MaxDistance = 150
 	gui.LightInfluence = 0
 	gui.Parent = model
+	-- Hiding in a ball pit: no name tag.
+	local function paintHidden()
+		gui.Enabled = model:GetAttribute("Hidden") ~= true
+	end
+	model:GetAttributeChangedSignal("Hidden"):Connect(paintHidden)
+	paintHidden()
 
 	local pct = Instance.new("TextLabel")
 	pct.BackgroundTransparency = 1

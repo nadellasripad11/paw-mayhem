@@ -300,6 +300,12 @@ function Toybox.Build(): Folder
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
 
+	-- A giant toy spring each side of the block tower, and a ball pit to hide in.
+	for _, p in ipairs({ Vector3.new(22, 1.6, -14), Vector3.new(-22, 1.6, 14) }) do
+		ArenaKit.AddSpring(centerPos + p, 125, center)
+	end
+	ArenaKit.AddBallPit(centerPos + Vector3.new(0, 1.6, 21), 12, 8, Random.new(20260930), center)
+
 	return arena
 end
 

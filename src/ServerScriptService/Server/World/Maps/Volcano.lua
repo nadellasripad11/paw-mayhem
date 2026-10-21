@@ -972,6 +972,18 @@ function Volcano.Build(): Folder
 		HideCelestial = true,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
+	-- Lava geysers on the crater terrace and the flanks.
+	for _, spec in ipairs({ { "center", 2, 22 }, { "flankL", 1, 6 }, { "flankR", 1, 6 } }) do
+		local isle = I[spec[1]]
+		for _ = 1, spec[2] do
+			local p = ArenaKit.TryPlace(isle, rng, spec[3], isle.r - 5, 4, 4)
+			if p then
+				ArenaKit.Reserve(isle, p, 4)
+				ArenaKit.AddGeyser(p, isle.folder)
+			end
+		end
+	end
+
 	return arena
 end
 
