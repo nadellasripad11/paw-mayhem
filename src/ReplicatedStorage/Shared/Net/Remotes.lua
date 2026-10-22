@@ -49,6 +49,9 @@ Remotes.Definitions = {
 	Podium = "Event", -- {top = {{userId?, name, elims, isBot}}} end-of-match winners stage
 	FinalKO = "Event", -- {position?} the knockout that won the match / duel, to everyone in it
 	StreakLost = "Event", -- {streak} to a player whose win streak (3+) just ended; Streak Saver can bring it back
+	DuelQueue = "Event", -- client -> server: {join = "1v1".."5v5"} or {leave = true}
+	QueueState = "Event", -- server -> client: {kind, since} while searching, {} when not
+	DuelVote = "Event", -- server -> client: {stage, options, endsAt, votes, myVote} ({} closes); client -> server: {choice}
 	DuelState = "Event", -- {teams, score, target, timeLeft, myTeam, started?, ko?, over?, won?, trophies?} to duelists
 }
 

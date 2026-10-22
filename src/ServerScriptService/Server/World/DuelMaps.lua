@@ -206,10 +206,20 @@ local function crystalRing(o: Vector3, f: Instance): Layout
 end
 
 DuelMaps.List = {
-	{ Id = "SkyBridge", Build = skyBridge },
-	{ Id = "Rooftops", Build = rooftops },
-	{ Id = "CrystalRing", Build = crystalRing },
+	{ Id = "SkyBridge", Name = "SKY BRIDGE", Build = skyBridge },
+	{ Id = "Rooftops", Name = "ROOFTOP DUEL", Build = rooftops },
+	{ Id = "CrystalRing", Name = "CRYSTAL RING", Build = crystalRing },
 }
+
+-- Build duel map `id` (a random one if unknown) at `origin` into `parent`.
+function DuelMaps.Build(id: string?, origin: Vector3, parent: Instance): Layout
+	for _, def in ipairs(DuelMaps.List) do
+		if def.Id == id then
+			return def.Build(origin, parent)
+		end
+	end
+	return DuelMaps.BuildRandom(origin, parent)
+end
 
 -- Build a random duel map at `origin` into `parent`.
 function DuelMaps.BuildRandom(origin: Vector3, parent: Instance): Layout

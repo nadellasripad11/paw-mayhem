@@ -58,6 +58,8 @@ type Duel = {
 	kos: { [Player]: number },
 	endsAt: number,
 	over: boolean,
+	target: number, -- knockouts to win
+	ringoutOnly: boolean, -- only knock-offs score
 }
 
 local pads: { Pad } = {}
@@ -196,7 +198,7 @@ local function send(duel: Duel, extra: { [string]: any }?)
 		if p.Parent then
 			local data: { [string]: any } = {
 				id = duel.id, kind = duel.kind, map = duel.map.name, teams = names, score = duel.score,
-				target = TARGET, timeLeft = math.max(0, math.floor(duel.endsAt - os.clock())), myTeam = team,
+				target = duel.target, timeLeft = math.max(0, math.floor(duel.endsAt - os.clock())), myTeam = team,
 				withBots = duel.withBots,
 			}
 			for k, v in pairs(extra or {}) do
@@ -215,7 +217,9 @@ local function spawnIn(duel: Duel, p: Player)
 	local list = duel.teams[team]
 	local index = table.find(list, p) or 1
 	local spots = duel.map.spawns[team]
-	PlayerService.Spawn(p, { context = "Duel", team = team, duelId = duel.id, cframe = spots[(index - 1) % #spots + 1] })
+	-- Bigger teams than spawn spots: spread out sideways.
+	local spot = spots[(index - 1) % #spots + 1] * CFrame.new(((index - 1) // #spots) * 3, 0, 0)
+	PlayerService.Spawn(p, { context = "Duel", team = team, duelId = duel.id, cframe = spot })
 end
 
 local function inThisDuel(p: Player, duel: Duel): boolean
@@ -275,6 +279,11 @@ end
 -- scores. Returns true while the duel goes on (so they respawn).
 local function scoreKO(duel: Duel, team: string, victimName: string, killer: Player?, ringout: boolean): boolean
 	local scorer = other(team)
+	if duel.ringoutOnly and not ringout then
+		-- (Ringout mode: only knock-offs count; they still respawn.)
+		send(duel, { ko = victimName })
+		return true
+	end
 	duel.score[scorer] += 1
 	if killer and duel.members[killer] and duel.members[killer] ~= team then
 		duel.kos[killer] = (duel.kos[killer] or 0) + 1
@@ -289,7 +298,7 @@ local function scoreKO(duel: Duel, team: string, victimName: string, killer: Pla
 			})
 		end
 	end
-	if duel.score[scorer] >= TARGET then
+	if duel.score[scorer] >= duel.target then
 		for p in pairs(duel.members) do
 			if p.Parent then
 				Remotes.Get("FinalKO"):FireClient(p, {})
@@ -331,7 +340,7 @@ local function spawnBot(duel: Duel, team: string, index: number, name: string?)
 	local info: BotService.DuelInfo
 	info = {
 		id = duel.id,
-		spawn = spots[(index - 1) % #spots + 1],
+		spawn = spots[(index - 1) % #spots + 1] * CFrame.new(((index - 1) // #spots) * 3, 0, 0),
 		center = duel.center,
 		killY = duel.map.killY,
 		onKO = function(botName: string, botTeam: string, killer: Player?, ringout: boolean)
@@ -375,23 +384,31 @@ local function leave(p: Player)
 	end
 end
 
-local function startDuel(pad: Pad)
-	local teams: { [string]: { Player } } = { Blue = {}, Red = {} }
-	local members: { [Player]: string } = {}
-	local botSlots: { string } = {} -- empty slots bots take
-	for _, slot in ipairs(pad.slots) do
-		local p = slot.player
-		if p then
-			table.insert(teams[slot.team], p)
-			members[p] = slot.team
-		else
-			table.insert(botSlots, slot.team)
+-- Gamemodes you can vote for after a queue match is found.
+local MODES = {
+	{ id = "Classic", name = "CLASSIC", desc = "First to 5 knockouts", target = 5 },
+	{ id = "Quick", name = "QUICK", desc = "First to 3 - fast and furious", target = 3 },
+	{ id = "Ringout", name = "RINGOUT", desc = "Only knock-offs count - first to 3", target = 3, ringoutOnly = true },
+	{ id = "Marathon", name = "MARATHON", desc = "First to 10 - the long haul", target = 10 },
+}
+local function modeById(id: string?): any
+	for _, m in ipairs(MODES) do
+		if m.id == id then
+			return m
 		end
-		slot.player = nil
 	end
-	pad.startAt = nil
-	pad.waitingSince = nil
+	return MODES[1]
+end
 
+-- Set up and start a duel. `teams` holds the players on each side; empty
+-- places up to `perTeam` are filled with bots.
+local function createDuel(kind: string, teams: { [string]: { Player } }, perTeam: number, mapId: string?, modeId: string?)
+	local members: { [Player]: string } = {}
+	for team, list in pairs(teams) do
+		for _, p in ipairs(list) do
+			members[p] = team
+		end
+	end
 	local place = 1
 	while places[place] do
 		place += 1
@@ -403,22 +420,246 @@ local function startDuel(pad: Pad)
 	folder.Name = "Duel" .. id
 	folder.Parent = Workspace
 	local origin = Vector3.new(4000 + place * 500, 150, -4000)
-	local map = DuelMaps.BuildRandom(origin, folder)
+	local map = DuelMaps.Build(mapId, origin, folder)
+	local mode = modeById(modeId)
+	local botsNeeded = (perTeam - #teams.Blue) + (perTeam - #teams.Red)
 
 	local duel: Duel = {
-		id = id, place = place, kind = pad.kind, map = map, folder = folder, center = origin,
-		teams = teams, bots = { Blue = {}, Red = {} }, withBots = #botSlots > 0,
+		id = id, place = place, kind = kind, map = map, folder = folder, center = origin,
+		teams = teams, bots = { Blue = {}, Red = {} }, withBots = botsNeeded > 0,
 		members = members, score = { Blue = 0, Red = 0 }, kos = {},
 		endsAt = os.clock() + DUEL_SECONDS, over = false,
+		target = mode.target, ringoutOnly = mode.ringoutOnly == true,
 	}
 	duels[id] = duel
 	for p in pairs(members) do
 		task.spawn(spawnIn, duel, p)
 	end
-	for _, team in ipairs(botSlots) do
-		spawnBot(duel, team, #teams[team] + #duel.bots[team] + 1)
+	for _, team in ipairs({ "Blue", "Red" }) do
+		for _ = #teams[team] + 1, perTeam do
+			spawnBot(duel, team, #teams[team] + #duel.bots[team] + 1)
+		end
 	end
-	send(duel, { started = true })
+	send(duel, { started = true, mode = mode.name })
+end
+
+local function startDuel(pad: Pad)
+	local teams: { [string]: { Player } } = { Blue = {}, Red = {} }
+	for _, slot in ipairs(pad.slots) do
+		local p = slot.player
+		if p then
+			table.insert(teams[slot.team], p)
+		end
+		slot.player = nil
+	end
+	pad.startAt = nil
+	pad.waitingSince = nil
+	createDuel(pad.kind, teams, #pad.slots // 2, nil, "Classic")
+end
+
+-- ── the PLAY queue: 1v1 to 5v5 from the menu ─────────────────────────────────
+-- Search for a kind; once enough players are searching (or the first has
+-- waited QUEUE_BOT_WAIT seconds) a match is found and bots fill the gaps.
+-- Everyone in it then votes a map, then a gamemode (VOTE_TIME each), and
+-- the duel starts.
+local QUEUE_KINDS = { ["1v1"] = 1, ["2v2"] = 2, ["3v3"] = 3, ["4v4"] = 4, ["5v5"] = 5 }
+local QUEUE_BOT_WAIT = 15
+local VOTE_TIME = 8
+type Waiting = { player: Player, since: number }
+local queues: { [string]: { Waiting } } = {}
+type VoteLobby = { kind: string, players: { Player }, stage: string, options: { any }, endsAt: number, votes: { [Player]: string }, map: string? }
+local voteLobbies: { VoteLobby } = {}
+
+local function inVote(p: Player): VoteLobby?
+	for _, l in ipairs(voteLobbies) do
+		if table.find(l.players, p) then
+			return l
+		end
+	end
+	return nil
+end
+
+local function unqueue(p: Player)
+	for _, q in pairs(queues) do
+		for i = #q, 1, -1 do
+			if q[i].player == p then
+				table.remove(q, i)
+			end
+		end
+	end
+	if p.Parent then
+		p:SetAttribute("DuelQueue", nil)
+		Remotes.Get("QueueState"):FireClient(p, {})
+	end
+end
+
+local function sendVote(l: VoteLobby)
+	local counts: { [string]: number } = {}
+	for _, choice in pairs(l.votes) do
+		counts[choice] = (counts[choice] or 0) + 1
+	end
+	for _, p in ipairs(l.players) do
+		if p.Parent then
+			Remotes.Get("DuelVote"):FireClient(p, {
+				stage = l.stage, kind = l.kind, options = l.options, endsAt = l.endsAt, votes = counts, myVote = l.votes[p],
+			})
+		end
+	end
+end
+
+local function mapOptions(): { any }
+	local opts = {}
+	for _, def in ipairs(DuelMaps.List) do
+		table.insert(opts, { id = def.Id, name = def.Name or def.Id })
+	end
+	table.insert(opts, { id = "Random", name = "RANDOM", desc = "Surprise me" })
+	return opts
+end
+
+local function modeOptions(): { any }
+	local opts = {}
+	for _, m in ipairs(MODES) do
+		table.insert(opts, { id = m.id, name = m.name, desc = m.desc })
+	end
+	return opts
+end
+
+-- The most-voted option (a random one on a tie, or when nobody voted).
+local function winner(l: VoteLobby): string
+	local counts: { [string]: number } = {}
+	local best, bestN = {}, 0
+	for _, choice in pairs(l.votes) do
+		counts[choice] = (counts[choice] or 0) + 1
+	end
+	for id, n in pairs(counts) do
+		if n > bestN then
+			best, bestN = { id }, n
+		elseif n == bestN then
+			table.insert(best, id)
+		end
+	end
+	if #best == 0 then
+		for _, o in ipairs(l.options) do
+			table.insert(best, o.id)
+		end
+	end
+	return best[math.random(1, #best)]
+end
+
+local function startVote(kind: string, players: { Player })
+	local l: VoteLobby = { kind = kind, players = players, stage = "Map", options = mapOptions(), endsAt = workspace:GetServerTimeNow() + VOTE_TIME, votes = {} }
+	table.insert(voteLobbies, l)
+	sendVote(l)
+end
+
+local function closeVote(l: VoteLobby)
+	for _, p in ipairs(l.players) do
+		if p.Parent then
+			Remotes.Get("DuelVote"):FireClient(p, {})
+		end
+	end
+	local i = table.find(voteLobbies, l)
+	if i then
+		table.remove(voteLobbies, i)
+	end
+end
+
+local function tickVotes()
+	local now = workspace:GetServerTimeNow()
+	for i = #voteLobbies, 1, -1 do
+		local l = voteLobbies[i]
+		for k = #l.players, 1, -1 do
+			if not l.players[k].Parent or not eligible(l.players[k]) then
+				table.remove(l.players, k)
+			end
+		end
+		local voted = 0
+		for _ in pairs(l.votes) do
+			voted += 1
+		end
+		if #l.players == 0 then
+			table.remove(voteLobbies, i)
+		elseif now >= l.endsAt or voted >= #l.players then
+			local pick = winner(l)
+			if l.stage == "Map" then
+				l.map = pick ~= "Random" and pick or nil
+				l.stage = "Mode"
+				l.options = modeOptions()
+				l.votes = {}
+				l.endsAt = now + VOTE_TIME
+				sendVote(l)
+			else
+				closeVote(l)
+				-- Split the players into two teams (bots fill the rest).
+				local per = QUEUE_KINDS[l.kind] or 1
+				local teams: { [string]: { Player } } = { Blue = {}, Red = {} }
+				for n, p in ipairs(l.players) do
+					table.insert(teams[n % 2 == 1 and "Blue" or "Red"], p)
+				end
+				createDuel(l.kind, teams, per, l.map, pick)
+			end
+		end
+	end
+end
+
+local function tickQueue()
+	local now = os.clock()
+	for kind, q in pairs(queues) do
+		for i = #q, 1, -1 do
+			local p = q[i].player
+			if not p.Parent or not eligible(p) then
+				table.remove(q, i)
+				if p.Parent then
+					unqueue(p)
+				end
+			end
+		end
+		local per = QUEUE_KINDS[kind]
+		if #q > 0 and (#q >= per * 2 or now - q[1].since >= QUEUE_BOT_WAIT) then
+			local players = {}
+			while #players < per * 2 and #q > 0 do
+				table.insert(players, table.remove(q, 1).player)
+			end
+			for _, p in ipairs(players) do
+				p:SetAttribute("DuelQueue", nil)
+				Remotes.Get("QueueState"):FireClient(p, {})
+			end
+			startVote(kind, players)
+		end
+	end
+end
+
+local function onQueue(p: Player, data: any)
+	if typeof(data) ~= "table" then
+		return
+	end
+	if data.leave then
+		unqueue(p)
+		return
+	end
+	local kind = data.join
+	if type(kind) ~= "string" or not QUEUE_KINDS[kind] or not eligible(p) or inVote(p) then
+		return
+	end
+	unqueue(p)
+	queues[kind] = queues[kind] or {}
+	table.insert(queues[kind], { player = p, since = os.clock() })
+	p:SetAttribute("DuelQueue", kind)
+	Remotes.Get("QueueState"):FireClient(p, { kind = kind, since = workspace:GetServerTimeNow() })
+end
+
+local function onVote(p: Player, data: any)
+	local l = inVote(p)
+	if not l or typeof(data) ~= "table" or type(data.choice) ~= "string" then
+		return
+	end
+	for _, o in ipairs(l.options) do
+		if o.id == data.choice then
+			l.votes[p] = o.id
+			sendVote(l)
+			return
+		end
+	end
 end
 
 -- ── loop ─────────────────────────────────────────────────────────────────────
@@ -544,6 +785,9 @@ function DuelService.Start()
 	end
 	PlayerService.OnDuelKO = onDuelKO
 	Players.PlayerRemoving:Connect(leave)
+	Players.PlayerRemoving:Connect(unqueue)
+	Remotes.Get("DuelQueue").OnServerEvent:Connect(onQueue)
+	Remotes.Get("DuelVote").OnServerEvent:Connect(onVote)
 
 	local padAcc, duelAcc = 0, 0
 	RunService.Heartbeat:Connect(function(dt)
@@ -556,6 +800,8 @@ function DuelService.Start()
 		if padAcc >= 0.2 then
 			padAcc = 0
 			tickPads()
+			tickQueue()
+			tickVotes()
 		end
 	end)
 	-- The clock for everyone in a duel, once a second.

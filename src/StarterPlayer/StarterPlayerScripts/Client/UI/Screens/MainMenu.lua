@@ -40,6 +40,8 @@ local SeasonPass = require(script.Parent.SeasonPass)
 local DailyReward = require(script.Parent.DailyReward)
 local Tutorial = require(script.Parent.Tutorial)
 local Intro = require(script.Parent.Intro)
+local PlayMenu = require(script.Parent.PlayMenu)
+local DuelVote = require(script.Parent.DuelVote)
 
 local MainMenu = {}
 local player = Players.LocalPlayer
@@ -121,7 +123,7 @@ end
 
 -- A screen or the map picker is up (the mouse is freed and aiming stops).
 function MainMenu.Busy(): boolean
-	return currentPanel ~= nil or MapSelect.IsOpen()
+	return currentPanel ~= nil or MapSelect.IsOpen() or PlayMenu.IsOpen() or DuelVote.IsOpen()
 end
 
 -- Open one screen over a match or duel (Loadout); again to close it.
@@ -221,7 +223,9 @@ end
 
 -- Play: during a live match, join it straight away; otherwise open the map
 -- picker for the next round.
-local function onPlay()
+-- The big shared arena match (the old PLAY): join it if it's running,
+-- else open the map vote for the next one.
+local function onArena()
 	switchTo(nil)
 	local m = ClientState.Match
 	if m.phase == "Playing" then
@@ -232,6 +236,12 @@ local function onPlay()
 			Remotes.Get("RequestJoinMatch"):FireServer({ mapId = "SkyIslands" })
 		end
 	end
+end
+
+-- PLAY: the mode picker (1v1 - 5v5 duels, or the arena match).
+local function onPlay()
+	switchTo(nil)
+	PlayMenu.Open(onArena)
 end
 
 -- ── bottom bar tiles: flat square tiles, icon over a small label ─────────────
@@ -364,6 +374,47 @@ function MainMenu.Build()
 		TextStrokeTransparency = 0.55, ZIndex = 11,
 	})
 	play.MouseButton1Click:Connect(onPlay)
+
+	-- Searching for a duel: a pill over PLAY with the mode, the time and a
+	-- cancel button.
+	local search = UIUtil.surface({
+		Parent = playGroup, Name = "Search", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -10),
+		Size = UDim2.fromOffset(260, 40), ZIndex = 12, Visible = false, BackgroundColor3 = Theme.Color.Surface,
+	}, 1, UDim.new(1, 0))
+	UIUtil.stroke(Theme.Color.PlayGreen, 2, search)
+	local searchText = UIUtil.label({
+		Parent = search, Text = "", Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(16, 0),
+		Size = UDim2.new(1, -60, 1, 0), ZIndex = 13,
+	})
+	local cancel = UIUtil.make("TextButton", {
+		Parent = search, Text = "✕", Font = Theme.Font.Bold, TextSize = 16, TextColor3 = Color3.new(1, 1, 1),
+		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(30, 30),
+		BackgroundColor3 = Theme.Color.Red, AutoButtonColor = true, BorderSizePixel = 0, ZIndex = 13,
+	}) :: TextButton
+	UIUtil.corner(UDim.new(1, 0), cancel)
+	cancel.MouseButton1Click:Connect(function()
+		Remotes.Get("DuelQueue"):FireServer({ leave = true })
+	end)
+	local searchKind: string? = nil
+	local searchSince = 0
+	Remotes.Get("QueueState").OnClientEvent:Connect(function(data)
+		if typeof(data) == "table" and type(data.kind) == "string" then
+			searchKind = data.kind
+			searchSince = tonumber(data.since) or Workspace:GetServerTimeNow()
+		else
+			searchKind = nil
+		end
+		search.Visible = searchKind ~= nil
+	end)
+	task.spawn(function()
+		while gui.Parent do
+			if searchKind then
+				local t = math.max(0, Workspace:GetServerTimeNow() - searchSince)
+				searchText.Text = string.format("SEARCHING %s   %d:%02d", string.upper(searchKind), t // 60, math.floor(t % 60))
+			end
+			task.wait(0.25)
+		end
+	end)
 
 	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
 	local invite = UIUtil.iconButton({
@@ -788,6 +839,8 @@ function MainMenu.Build()
 	end
 	currentPanel = nil
 
+	pcall(PlayMenu.Build)
+	pcall(DuelVote.Build)
 	local ok, err = pcall(MapSelect.Build, gui)
 	if not ok then
 		warn("[PAW MAYHEM] Map select failed to build: " .. tostring(err))
