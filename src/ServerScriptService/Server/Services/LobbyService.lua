@@ -1026,15 +1026,16 @@ local function buildPractice(lobby: Instance)
 	p.Parent = lobby
 	-- The platform: a dark floor with a glowing grid, rails on three sides,
 	-- open at the far end so target cats can be knocked off it.
-	local floorMid = practiceAt(0, -12)
-	solid("PracticeFloor", Vector3.new(64, 2, 64), CFrame.new(floorMid - Vector3.new(0, 1, 0)), Color3.fromRGB(48, 51, 60), Enum.Material.DiamondPlate, p)
-	part("Underside", Vector3.new(60, 8, 60), CFrame.new(floorMid - Vector3.new(0, 6, 0)), STEEL_DARK, Enum.Material.Metal, p)
-	-- Lanes for the three target cats, caution stripes along the open edge.
-	for _, x in ipairs({ -16.5, -5.5, 5.5, 16.5 }) do
-		part("LaneLine", Vector3.new(0.3, 0.05, 40), CFrame.new(practiceAt(x, -22, 0.03)), Color3.fromRGB(200, 204, 214), Enum.Material.SmoothPlastic, p)
+	-- (A big floor: 110 wide, 96 deep, open at the far end.)
+	local floorMid = practiceAt(0, -24)
+	solid("PracticeFloor", Vector3.new(110, 2, 96), CFrame.new(floorMid - Vector3.new(0, 1, 0)), Color3.fromRGB(48, 51, 60), Enum.Material.DiamondPlate, p)
+	part("Underside", Vector3.new(104, 8, 90), CFrame.new(floorMid - Vector3.new(0, 6, 0)), STEEL_DARK, Enum.Material.Metal, p)
+	-- Lanes for the target cats, caution stripes along the open edge.
+	for _, x in ipairs({ -27.5, -16.5, -5.5, 5.5, 16.5, 27.5 }) do
+		part("LaneLine", Vector3.new(0.3, 0.05, 60), CFrame.new(practiceAt(x, -36, 0.03)), Color3.fromRGB(200, 204, 214), Enum.Material.SmoothPlastic, p)
 	end
-	caution("EdgeStripe", CFrame.new(practiceAt(0, -43.2, 0.03)), 64, 1.2, p)
-	for _, side in ipairs({ { 32, -12, 0.4, 64 }, { -32, -12, 0.4, 64 }, { 0, 20, 64, 0.4 } }) do
+	caution("EdgeStripe", CFrame.new(practiceAt(0, -71.2, 0.03)), 110, 1.2, p)
+	for _, side in ipairs({ { 55, -24, 0.4, 96 }, { -55, -24, 0.4, 96 }, { 0, 24, 110, 0.4 } }) do
 		local rail = solid("Rail", Vector3.new(side[3], 3, side[4]), CFrame.new(practiceAt(side[1], side[2], 1.5)), GLASS, Enum.Material.Glass, p)
 		rail.Transparency = 0.5
 		local wall = solid("PracticeWall", Vector3.new(side[3], 40, side[4]), CFrame.new(practiceAt(side[1], side[2], 20)), GLASS, Enum.Material.Glass, p)
@@ -1042,11 +1043,47 @@ local function buildPractice(lobby: Instance)
 		wall.CanQuery = false
 		wall.CastShadow = false
 	end
-	neonSign("RangeTitle", practiceAt(0, 19.6, 18.5), practiceAt(0, 0, 18.5), 24, 4.4, CYAN, "SHOOTING RANGE", p)
+	neonSign("RangeTitle", practiceAt(0, 23.6, 18.5), practiceAt(0, 0, 18.5), 24, 4.4, CYAN, "SHOOTING RANGE", p)
+
+	-- A floating pedestal to change your blaster (opens the weapons screen).
+	do
+		local spot = practiceAt(-16, 10)
+		local base, top = holoPedestal(spot, practiceAt(0, -10), CYAN, "CHANGE BLASTER", p)
+		local toFront = (practiceAt(0, -10) - spot) * Vector3.new(1, 0, 1)
+		local gun = BlasterBuilder.Build(Weapons.DefaultLoadout, nil, CFrame.fromMatrix(top, Vector3.yAxis:Cross(toFront.Unit), Vector3.yAxis, toFront.Unit), 1.4)
+		for _, d in ipairs(gun:GetDescendants()) do
+			if d:IsA("BasePart") then
+				deco(d)
+			end
+		end
+		gun.Parent = p
+		spinning(gun)
+		prompt(base, "Change", "Blaster", "Loadout")
+	end
+
+	-- Targets floating in the sky beyond the range: shoot them and they pop
+	-- (on your screen) and come back (MapLife).
+	for _ = 1, 26 do
+		local pos = practiceAt(rng:NextNumber(-60, 60), rng:NextNumber(-130, -40), rng:NextNumber(5, 42))
+		local face = CFrame.lookAt(pos, practiceAt(0, 10, pos.Y - SURFACE_Y))
+		local d = rng:NextNumber(2.2, 3.4)
+		local disc = ArenaKit.NewPart("RangeTarget", Vector3.new(0.3, d, d), face * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(250, 246, 238), Enum.Material.SmoothPlastic, p) :: Part
+		disc.Shape = Enum.PartType.Cylinder
+		disc.CanCollide = false
+		disc.CanTouch = false
+		disc.CastShadow = false
+		disc.CanQuery = true -- shots have to hit it
+		for i, ring in ipairs({ { 0.72, Color3.fromRGB(226, 60, 60) }, { 0.45, Color3.fromRGB(250, 246, 238) }, { 0.2, Color3.fromRGB(226, 60, 60) } }) do
+			local r = part("RangeTargetRing", Vector3.new(0.32 + i * 0.02, d * ring[1], d * ring[1]), face * CFrame.Angles(0, math.rad(90), 0), ring[2], Enum.Material.SmoothPlastic, disc) :: Part
+			r.Shape = Enum.PartType.Cylinder
+			r.CastShadow = false
+		end
+		CollectionService:AddTag(disc, "RangeTarget")
+	end
 
 	-- Three target cats on glowing decks, archery targets behind them.
-	for i, dx in ipairs({ -11, 0, 11 }) do
-		local dz = i == 2 and -26 or -23
+	for i, dx in ipairs({ -22, -11, 0, 11, 22 }) do
+		local dz = i % 2 == 1 and -26 or -23
 		local deck = practiceAt(dx, dz)
 		disc("TargetDeckTop", 5.8, 0.3, deck + Vector3.new(0, 0.12, 0), NAVY_LIGHT, Enum.Material.SmoothPlastic, p)
 		archeryTarget(practiceAt(dx, dz - 8), practiceAt(0, 10), p)

@@ -3,6 +3,8 @@
 --   * birds (BirdSpot parts, Sky Islands): a few birds peck about on the
 --     grass and scatter into the sky when a cat comes near, then come back
 --     a while later
+--   * the shooting range's floating targets (RangeTarget): they pop
+--     when you shoot them and come back a few seconds later
 
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -122,6 +124,49 @@ local function removeSpot(inst: Instance)
 		end
 		flocks[inst :: BasePart] = nil
 	end
+end
+
+-- A floating target was shot: pop it, bring it back after a moment.
+local popped: { [BasePart]: boolean } = {}
+function MapLife.HitTarget(target: BasePart)
+	if popped[target] then
+		return
+	end
+	popped[target] = true
+	SoundController.PlayAt("Pop", target.Position, 1.2)
+	local a = Instance.new("Attachment")
+	a.WorldPosition = target.Position
+	a.Parent = Workspace.Terrain
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(255, 90, 90), Color3.new(1, 1, 1))
+	e.Size = NumberSequence.new(1, 0)
+	e.Speed = NumberRange.new(10, 20)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Lifetime = NumberRange.new(0.3, 0.6)
+	e.Rate = 0
+	e.Parent = a
+	e:Emit(20)
+	task.delay(1, function()
+		a:Destroy()
+	end)
+	local parts = { target }
+	for _, d in ipairs(target:GetDescendants()) do
+		if d:IsA("BasePart") then
+			table.insert(parts, d)
+		end
+	end
+	for _, p in ipairs(parts) do
+		p.LocalTransparencyModifier = 1
+	end
+	target.CanQuery = false
+	task.delay(3, function()
+		for _, p in ipairs(parts) do
+			p.LocalTransparencyModifier = 0
+		end
+		target.CanQuery = true
+		popped[target] = nil
+	end)
 end
 
 function MapLife.Start()

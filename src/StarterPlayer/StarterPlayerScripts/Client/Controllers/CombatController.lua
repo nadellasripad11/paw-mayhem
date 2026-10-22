@@ -151,6 +151,9 @@ local function tryFire()
 	for _ = 1, weapon.Pellets + extraPellets do
 		local d = withSpread(dir, weapon.Spread + spreadAdd)
 		local result = Workspace:Raycast(muzzle, d * weapon.Range, params)
+		if result and result.Instance.Name == "RangeTarget" then
+			require(script.Parent.MapLife).HitTarget(result.Instance)
+		end
 		local hitModel = result and catModel(result.Instance)
 		table.insert(pellets, { dir = d, hit = (hitModel and CombatController.IsEnemy(hitModel)) and hitModel or nil })
 		table.insert(tos, result and result.Position or muzzle + d * weapon.Range)

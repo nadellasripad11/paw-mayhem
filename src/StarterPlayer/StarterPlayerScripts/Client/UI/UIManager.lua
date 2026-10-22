@@ -39,7 +39,7 @@ local fallbackGui: ScreenGui? = nil
 
 -- The Practice Centre (through the portal behind spawn): a box round the
 -- lobby's "Range" point the size of its platform.
-local RANGE_HALF = 33
+local RANGE_HALF = 60
 -- The countdown flyover stays up until the server has dropped you into the
 -- arena (a few seconds at most), so the lobby doesn't flash in between.
 local flyoverUntil = 0
