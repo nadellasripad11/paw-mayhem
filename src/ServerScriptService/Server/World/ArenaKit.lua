@@ -803,6 +803,24 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 	return zone
 end
 
+-- A ladder (a climbable truss) standing at `base`, `height` tall, its back to
+-- the wall it's on (`outward` points away from that wall).
+function ArenaKit.AddLadder(base: Vector3, height: number, outward: Vector3, parent: Instance): TrussPart
+	local h = math.max(2, math.ceil(height / 2) * 2)
+	local flat = Vector3.new(outward.X, 0, outward.Z).Unit
+	local c = base + Vector3.new(0, h / 2, 0)
+	local t = Instance.new("TrussPart")
+	t.Name = "Ladder"
+	t.Size = Vector3.new(2, h, 2)
+	t.Style = Enum.Style.AlternatingSupports
+	t.CFrame = CFrame.lookAt(c, c + flat)
+	t.Color = Color3.fromRGB(122, 84, 54)
+	t.Material = Enum.Material.Wood
+	t.Anchored = true
+	t.Parent = parent
+	return t
+end
+
 -- ── map features ─────────────────────────────────────────────────────────────
 -- Built here, run by MapFeatureService (server), MovementController and
 -- MapLife (client).

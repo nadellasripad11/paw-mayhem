@@ -452,6 +452,15 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		replace.PawHipL = CFrame.Angles(math.clamp(-fwd.Z * 0.01, -0.5, 0.5) + 0.15, 0, 0)
 		replace.PawHipR = CFrame.Angles(math.clamp(-fwd.Z * 0.01, -0.5, 0.5) + 0.1, 0, 0)
 		body = CFrame.Angles(math.clamp(fwd.Z * 0.006, -0.4, 0.4), 0, 0)
+	elseif mo.moves.Fly and now - mo.moves.Fly < 4 then
+		-- Flying (the Fly ability): stretched out like a superhero.
+		body = CFrame.Angles(-1.15, 0, math.sin(now * 3) * 0.08)
+		replace.PawShoulderL = CFrame.Angles(-2.8, 0, -0.15)
+		replace.PawShoulderR = CFrame.Angles(-2.8, 0, 0.15)
+		replace.PawHipL = CFrame.Angles(-0.25, 0, -0.05)
+		replace.PawHipR = CFrame.Angles(-0.25, 0, 0.05)
+		addJ("PawTail", CFrame.Angles(-0.4, math.sin(now * 8) * 0.3, 0))
+		ears.flat = 0.8
 	elseif zone then
 		local p = now * 10
 		if zone == "Water" or zone == "Bubbles" then

@@ -697,6 +697,70 @@ local function buildLoadoutButton(parent)
 	end)
 end
 
+-- ── abilities: three buttons in the middle above the weapon ─────────────────
+-- Boost / Jumps / Fly, each recharging in 15 s: the dark shade drains away
+-- as it recharges, a glow while it's running. Click or tap (or Z / X / C).
+local ABILITY_LOOK = {
+	Boost = { icon = "Bolt", key = "Z", color = Color3.fromRGB(120, 220, 255) },
+	Jumps = { icon = "JumpArrow", key = "X", color = Color3.fromRGB(255, 214, 90) },
+	Fly = { icon = "Sparkle", key = "C", color = Color3.fromRGB(190, 150, 255) },
+}
+local function buildAbilities(parent)
+	local row = UIUtil.make("Frame", {
+		Parent = parent, Name = "Abilities", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -48),
+		Size = UDim2.fromOffset(3 * 58 + 2 * 10, 58), BackgroundTransparency = 1,
+	})
+	row:SetAttribute("HudPart", "Abilities")
+	UIUtil.listLayout(row, 10, Enum.FillDirection.Horizontal)
+	local slots = {}
+	for i, name in ipairs(MovementController.Abilities) do
+		local look = ABILITY_LOOK[name]
+		local b = UIUtil.make("TextButton", {
+			Parent = row, Name = name, LayoutOrder = i, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(58, 58),
+			BackgroundColor3 = Color3.fromRGB(16, 22, 40), BackgroundTransparency = 0.2, BorderSizePixel = 0,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(0, 12), b)
+		local ring = UIUtil.stroke(look.color, 2, b)
+		Icons.Place(look.icon, b, 30, Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.45))
+		local shade = UIUtil.make("Frame", {
+			Parent = b, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0),
+			BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 3,
+		})
+		UIUtil.corner(UDim.new(0, 12), shade)
+		local timer = UIUtil.label({
+			Parent = b, Text = "", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+			Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, ZIndex = 4,
+		})
+		if not isMobile() then
+			local key = UIUtil.label({
+				Parent = b, Text = look.key, Font = Theme.Font.Title, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center,
+				Position = UDim2.fromOffset(3, 3), Size = UDim2.fromOffset(15, 15), BackgroundTransparency = 0,
+				BackgroundColor3 = look.color, TextColor3 = Color3.fromRGB(10, 20, 40), ZIndex = 5,
+			})
+			UIUtil.corner(UDim.new(0, 4), key)
+		end
+		b.MouseButton1Click:Connect(function()
+			MovementController.UseAbility(name)
+		end)
+		slots[name] = { shade = shade, timer = timer, ring = ring }
+	end
+	task.spawn(function()
+		while row.Parent do
+			if row.Visible and gui and gui.Enabled then
+				for name, s in pairs(slots) do
+					local cd = MovementController.AbilityCooldown(name)
+					local active = MovementController.AbilityActive(name)
+					s.shade.Size = UDim2.fromScale(1, math.clamp(cd / 15, 0, 1))
+					s.timer.Text = active > 0 and "" or cd > 0 and tostring(math.ceil(cd)) or ""
+					s.ring.Thickness = active > 0 and 4 or 2
+					s.ring.Transparency = (cd > 0 and active <= 0) and 0.6 or 0
+				end
+			end
+			task.wait(0.1)
+		end
+	end)
+end
+
 -- ── PC dash chip (mobile has its own button) ─────────────────────────────────
 local function buildDashChip(parent)
 	if isMobile() then return end
@@ -1035,15 +1099,16 @@ end
 -- Which parts each place shows: the whole HUD in a match, the crosshair and
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
-	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true },
-	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true },
-	Range = { Aim = true, Weapon = true, Moves = true, Keys = true, RangeHint = true },
+	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true },
+	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true },
+	Range = { Aim = true, Weapon = true, Moves = true, Abilities = true },
 	Lobby = { Moves = true },
 }
 function HUD.SetMode(mode: string)
 	hudMode = mode
 	if not gui then return end
 	local show = PARTS[mode] or PARTS.Match
+	MovementController.AbilitiesEnabled = show.Abilities == true
 	for _, c in ipairs(gui:GetChildren()) do
 		local part = c:GetAttribute("HudPart")
 		if part and c:IsA("GuiObject") then
@@ -1072,6 +1137,7 @@ function HUD.Build()
 	buildHealth(gui)
 	buildAmmo(gui)
 	buildDashChip(gui)
+	buildAbilities(gui)
 	buildLoadoutButton(gui)
 	buildRangeHint(gui)
 	buildBanners(gui)

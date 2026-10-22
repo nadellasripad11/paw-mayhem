@@ -357,7 +357,7 @@ end
 
 -- Move animations (the double-jump flip, a dash...) are passed on to everyone
 -- else so they see them too. Animation only: nothing here changes the game.
-local MOVE_FX = { Flip = true, Dash = true, Pounce = true, WallKick = true, Swing = true, SwingEnd = true }
+local MOVE_FX = { Flip = true, Dash = true, Pounce = true, WallKick = true, Swing = true, SwingEnd = true, Fly = true }
 local lastMoveFx: { [Player]: number } = {}
 local function relayMoveFx(player: Player, kind: any)
 	if type(kind) ~= "string" or not MOVE_FX[kind] or not player.Character then

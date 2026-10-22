@@ -57,6 +57,8 @@ local SCREEN_TITLES = {
 local navButtons = {}
 local currentPanel
 local inGame = false -- a screen opened over a match or duel (only it shows)
+local rangeMode = false -- in the practice range (see SetRangeMode)
+local rangeHidden: { GuiObject } = {}
 
 local NAV = {
 	{ id = "Loadout", label = "LOADOUT", icon = "Gun" },
@@ -82,7 +84,7 @@ local function switchTo(id: string?)
 		panelBackdrop.Visible = id ~= nil
 	end
 	for _, g in ipairs(homeGroups) do
-		g.Visible = id == nil
+		g.Visible = id == nil and not (rangeMode and table.find(rangeHidden, g) ~= nil)
 	end
 	if headerTitle then
 		headerTitle.Text = id and (SCREEN_TITLES[id] or string.upper(id)) or ""
@@ -134,6 +136,18 @@ function MainMenu.OpenInGame(id: string)
 	inGame = true
 	gui.Enabled = true
 	switchTo(id)
+end
+
+-- In the practice range only the daily tasks and TO DUELS stay up (the
+-- HUD shows your blaster); everything else comes back when you leave.
+function MainMenu.SetRangeMode(on: boolean)
+	if on == rangeMode then
+		return
+	end
+	rangeMode = on
+	for _, g in ipairs(rangeHidden) do
+		g.Visible = not on
+	end
 end
 
 function MainMenu.InGameOpen(): boolean
@@ -721,6 +735,7 @@ function MainMenu.Build()
 	})
 	panelBackdrop = backdrop
 	homeGroups = { barGroup, playGroup, tasksGroup }
+	rangeHidden = { barGroup, playGroup, currGroup, iconGroup }
 	content = UIUtil.make("Frame", { Parent = gui, Name = "Content", BackgroundTransparency = 1, ZIndex = 10 })
 
 	local camera = Workspace.CurrentCamera

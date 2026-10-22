@@ -168,6 +168,7 @@ local function updateAim(force: boolean?)
 	CombatController.SetEnabled(aim)
 	if ctx == "Lobby" then
 		HUD.SetMode(aim and "Range" or "Lobby")
+		MainMenu.SetRangeMode(aim)
 	end
 end
 

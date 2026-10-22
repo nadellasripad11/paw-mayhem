@@ -219,6 +219,9 @@ function Toybox.Build(): Folder
 	makeToySlide(Vector3.new(10, 1.6, -9), center, Color3.fromRGB(255, 120, 150))
 	makeToyDice(Vector3.new(-10, 1.6, 12), center)
 	makePlatform(Vector3.new(0, 8, 0), Vector3.new(16, 1.5, 16), center)
+	-- Ladders: up to the platform, then on up the block tower.
+	ArenaKit.AddLadder(centerPos + Vector3.new(9, 1.6, 0), 7.4, Vector3.xAxis, center)
+	ArenaKit.AddLadder(centerPos + Vector3.new(3.9, 8.75, 0), 9, Vector3.xAxis, center)
 	makeCrate(Vector3.new(-14, 1.6, 10), center)
 	makeCrate(Vector3.new(14, 1.6, -10), center)
 	ArenaKit.AddPowerPad(Vector3.new(0, 9, 0), powerPads)

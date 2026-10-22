@@ -342,7 +342,9 @@ local function makeTower(pos: Vector3, height: number, s: number, facing: Vector
 		end
 	end
 	local dh = ht + 1.1 * s
-	deco(NP("Deck", Vector3.new(dh * 2, 0.5, dh * 2), rot * CFrame.new(0, height + 0.25, 0), PALETTE.Wood, Enum.Material.WoodPlanks, f))
+	-- A deck you can stand on, and a ladder up to it on the side facing in.
+	NP("Deck", Vector3.new(dh * 2, 0.5, dh * 2), rot * CFrame.new(0, height + 0.25, 0), PALETTE.Wood, Enum.Material.WoodPlanks, f).CanCollide = true
+	ArenaKit.AddLadder(rot:PointToWorldSpace(Vector3.new(0, 0, -(hb + 1.2))), height + 1.6, rot.LookVector, f)
 	local deckCorners = {}
 	for k = 1, 4 do
 		local c = corners[k]

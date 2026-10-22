@@ -327,7 +327,9 @@ local function makeWindmill(pos: Vector3, facing: Vector3, s: number, parent: In
 	deco(DISC("Plinth", 13 * s, 0.5, at(0.1), STONE_WALL, Enum.Material.Slate, f))
 	DISC("StoneTower", 10 * s, 10 * s, at(1 + 5), Color3.fromRGB(176, 166, 150), Enum.Material.Cobblestone, f)
 	deco(DISC("Band", 10.8 * s, 0.8 * s, at(11), PALETTE.WoodDark, Enum.Material.Wood, f))
-	deco(DISC("Balcony", 13 * s, 0.4 * s, at(11.5), PALETTE.Wood, Enum.Material.WoodPlanks, f))
+	-- The balcony takes your weight; a ladder climbs to it.
+	DISC("Balcony", 13 * s, 0.4 * s, at(11.5), PALETTE.Wood, Enum.Material.WoodPlanks, f).CanCollide = true
+	ArenaKit.AddLadder((base * CFrame.new(5 * s + 1, 0, 0)).Position, 12 * s + 1, base.RightVector, f)
 	local prev: Vector3? = nil
 	for i = 0, 12 do
 		local a = i / 12 * math.pi * 2
