@@ -25,6 +25,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local Icons = require(script.Parent.Parent.Icons)
+local GunView = require(script.Parent.Parent.GunView)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local Monetize = require(script.Parent.Parent.Parent.Monetize)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
@@ -63,11 +64,11 @@ local rangeMode = false -- in the practice range (see SetRangeMode)
 local rangeHidden: { GuiObject } = {}
 
 local NAV = {
-	{ id = "Loadout", label = "LOADOUT", icon = "Gun" },
-	{ id = "Customize", label = "CUSTOMIZE", icon = "CatFace" },
-	{ id = "Quests", label = "TASKS", icon = "Check" },
-	{ id = "Shop", label = "SHOP", icon = "Bag" },
-	{ id = "Season", label = "PASS", icon = "Trophy" },
+	{ id = "Loadout", label = "WEAPONS", icon = "Gun", color = Color3.fromRGB(255, 170, 80) },
+	{ id = "Customize", label = "CUSTOMIZE", icon = "CatFace", color = Color3.fromRGB(255, 220, 200) },
+	{ id = "Quests", label = "TASKS", icon = "Check", color = Color3.fromRGB(120, 230, 120) },
+	{ id = "Shop", label = "SHOP", icon = "Bag", color = Color3.fromRGB(255, 90, 100) },
+	{ id = "Season", label = "PASS", icon = "Trophy", color = Color3.fromRGB(150, 180, 255) },
 }
 
 
@@ -93,9 +94,9 @@ local function switchTo(id: string?)
 	end
 	for pid, entry in pairs(navButtons) do
 		local on = pid == id
-		entry.button.BackgroundColor3 = on and Theme.Color.Blue or Theme.Color.Surface2
-		entry.stroke.Transparency = on and 1 or Theme.LineAlpha
-		entry.label.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
+		entry.button.BackgroundColor3 = Theme.Color.Blue
+		entry.button.BackgroundTransparency = on and 0.35 or 1
+		entry.label.TextColor3 = Color3.new(1, 1, 1)
 	end
 	if id and panels[id] and id ~= currentPanel then
 		require(script.Parent.Parent.UIJuice).Enter(panels[id])
@@ -248,20 +249,30 @@ end
 local function navButton(parent: Instance, item, order: number)
 	local b = UIUtil.make("TextButton", {
 		Parent = parent, Name = item.id, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(78, 68), LayoutOrder = order,
-		BorderSizePixel = 0, ZIndex = 11, BackgroundColor3 = Theme.Color.Surface2, BackgroundTransparency = 0.08,
+		BorderSizePixel = 0, ZIndex = 11, BackgroundColor3 = Theme.Color.Surface2, BackgroundTransparency = 1,
 	}) :: TextButton
 	UIUtil.corner(Theme.Corner, b)
 	local stroke = UIUtil.hairline(b)
-	local slot = UIUtil.make("Frame", {
-		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 26),
-		Size = UDim2.fromOffset(28, 28), BackgroundTransparency = 1, ZIndex = 12,
-	})
+	stroke.Transparency = 1
 	local white = Color3.new(1, 1, 1)
-	Icons.Place(item.icon, slot, 28, white, white)
+	if item.id == "Loadout" then
+		-- Your blaster, in 3D.
+		local vf = GunView.Create(b, ClientState.Equipped("Weapon") or "PawBlaster", ClientState.Equipped("Skin"), UDim2.fromOffset(74, 46), UDim2.fromOffset(2, 2))
+		vf.ZIndex = 12
+		ClientState.ProfileChanged:Connect(function()
+			GunView.Set(vf, ClientState.Equipped("Weapon") or "PawBlaster", ClientState.Equipped("Skin"))
+		end)
+	else
+		local slot = UIUtil.make("Frame", {
+			Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 25),
+			Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1, ZIndex = 12,
+		})
+		Icons.Place(item.icon, slot, 40, item.color or white, (item.color or white):Lerp(white, 0.5))
+	end
 	local label = UIUtil.label({
-		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Bold, TextSize = 11,
-		TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center,
-		Position = UDim2.new(0, 0, 1, -19), Size = UDim2.new(1, 0, 0, 14), ZIndex = 12,
+		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = 13,
+		TextColor3 = white, TextXAlignment = Enum.TextXAlignment.Center, TextStrokeTransparency = 0.4,
+		Position = UDim2.new(0, 0, 1, -18), Size = UDim2.new(1, 0, 0, 15), ZIndex = 13,
 	})
 	UIUtil.feedback(b)
 	b.MouseButton1Click:Connect(function()
