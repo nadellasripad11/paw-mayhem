@@ -388,21 +388,24 @@ function MainMenu.Build()
 
 	-- Searching for a duel: a pill over PLAY with the mode, the time and a
 	-- cancel button.
-	local search = UIUtil.surface({
-		Parent = playGroup, Name = "Search", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -10),
-		Size = UDim2.fromOffset(260, 40), ZIndex = 12, Visible = false, BackgroundColor3 = Theme.Color.Surface,
-	}, 1, UDim.new(1, 0))
-	UIUtil.stroke(Theme.Color.PlayGreen, 2, search)
+	-- (A green box at the top of the screen, like Rivals.)
+	local search = UIUtil.make("Frame", {
+		Parent = gui, Name = "Search", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 58),
+		Size = UDim2.fromOffset(300, 54), ZIndex = 30, Visible = false, BackgroundColor3 = Theme.Color.PlayGreen, BorderSizePixel = 0,
+	}) :: Frame
+	UIUtil.corner(UDim.new(0, 12), search)
+	UIUtil.stroke(Color3.fromRGB(30, 110, 40), 3, search)
+	UIUtil.gradient(Color3.fromRGB(110, 230, 110), Color3.fromRGB(50, 160, 60), 90, search)
 	local searchText = UIUtil.label({
-		Parent = search, Text = "", Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(16, 0),
-		Size = UDim2.new(1, -60, 1, 0), ZIndex = 13,
+		Parent = search, Text = "", Font = Theme.Font.Title, TextSize = 22, Position = UDim2.fromOffset(16, 0),
+		Size = UDim2.new(1, -66, 1, 0), ZIndex = 31, TextStrokeTransparency = 0.5,
 	})
 	local cancel = UIUtil.make("TextButton", {
-		Parent = search, Text = "X", Font = Theme.Font.Bold, TextSize = 16, TextColor3 = Color3.new(1, 1, 1),
-		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(30, 30),
-		BackgroundColor3 = Theme.Color.Red, AutoButtonColor = true, BorderSizePixel = 0, ZIndex = 13,
+		Parent = search, Text = "X", Font = Theme.Font.Title, TextSize = 20, TextColor3 = Color3.new(1, 1, 1),
+		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(38, 38),
+		BackgroundColor3 = Color3.fromRGB(20, 70, 26), BackgroundTransparency = 0.2, AutoButtonColor = true, BorderSizePixel = 0, ZIndex = 31,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(1, 0), cancel)
+	UIUtil.corner(UDim.new(0, 10), cancel)
 	cancel.MouseButton1Click:Connect(function()
 		Remotes.Get("DuelQueue"):FireServer({ leave = true })
 	end)
@@ -421,7 +424,7 @@ function MainMenu.Build()
 		while gui.Parent do
 			if searchKind then
 				local t = math.max(0, Workspace:GetServerTimeNow() - searchSince)
-				searchText.Text = string.format("SEARCHING %s   %d:%02d", string.upper(searchKind), t // 60, math.floor(t % 60))
+				searchText.Text = string.format("%s  ·  SEARCHING  %d:%02d", string.upper(searchKind), t // 60, math.floor(t % 60))
 			end
 			task.wait(0.25)
 		end

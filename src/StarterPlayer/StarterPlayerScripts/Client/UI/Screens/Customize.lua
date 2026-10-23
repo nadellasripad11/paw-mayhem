@@ -299,7 +299,7 @@ function Customize.Build(parent)
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 414), Size = UDim2.new(1, 0, 0, 26),
 	})
 	UIUtil.label({
-		Parent = holder, Text = "Drag to spin", Font = Theme.Font.Body, TextSize = 12, TextColor3 = Theme.Color.TextMuted,
+		Parent = holder, Text = "Drag to look around  ·  scroll to zoom", Font = Theme.Font.Body, TextSize = 12, TextColor3 = Theme.Color.TextMuted,
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 442), Size = UDim2.new(1, 0, 0, 16),
 	})
 
@@ -314,12 +314,8 @@ function Customize.Build(parent)
 			lastX = input.Position.X
 		end
 	end)
-	spin.InputChanged:Connect(function(input)
-		if dragInput and (input == dragInput or input.UserInputType == Enum.UserInputType.MouseMovement) then
-			userYaw += (input.Position.X - lastX) * 0.012
-			lastX = input.Position.X
-		end
-	end)
+	-- Dragging swings the camera all round the cat (up and down too).
+	require(script.Parent.Parent.Orbit).Enable(spin, previewVF)
 	UserInputService.InputEnded:Connect(function(input)
 		if input == dragInput or (dragInput and input.UserInputType == Enum.UserInputType.MouseButton1) then
 			dragInput = nil

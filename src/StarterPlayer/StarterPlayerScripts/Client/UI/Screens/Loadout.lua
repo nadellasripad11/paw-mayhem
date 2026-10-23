@@ -13,6 +13,7 @@ local BlasterBuilder = require(ReplicatedStorage.Shared.Character.BlasterBuilder
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local GunView = require(script.Parent.Parent.GunView)
+local Orbit = require(script.Parent.Parent.Orbit)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
 local Monetize = require(script.Parent.Parent.Parent.Monetize)
@@ -80,6 +81,11 @@ function Loadout.Build(parent)
 	}) :: Frame
 	UIUtil.corner(UDim.new(1, 0), glow)
 	local vf = GunView.Create(stage, selected, ClientState.Equipped("Skin"), UDim2.fromScale(1, 1), UDim2.new())
+	Orbit.Enable(stage, vf) -- drag to look all round it, wheel to zoom
+	UIUtil.label({
+		Parent = stage, Text = "Drag to look around", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.TextDim,
+		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, 0, 0, 16),
+	})
 
 	-- ── bottom: action + skins ────────────────────────────────────────────────
 	local actions = UIUtil.make("Frame", {
