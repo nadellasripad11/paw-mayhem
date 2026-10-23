@@ -611,11 +611,20 @@ end
 -- pivot to the far side, then let go just over the landing spot. A hit
 -- knocks you off.
 local swings: { [BasePart]: boolean } = {}
-type Swing = { rope: BasePart, line: Part, mover: LinearVelocity, pivot: Vector3, u: Vector3, a0: number, a1: number, r0: number, r1: number, t0: number, dur: number }
+type Swing = { rope: BasePart, line: Part, mover: LinearVelocity, pivot: Vector3, u: Vector3, a0: number, a1: number, r0: number, r1: number, t0: number, dur: number,
+	zip: boolean, start: Vector3, za: Vector3, zb: Vector3, lift: number }
 local swing: Swing? = nil
 local swingReadyAt = 0
 
 local function swingPoint(s: Swing, t: number): Vector3
+	if s.zip then
+		-- Zipline: up to the cable, then along it (picking up speed).
+		if t < s.lift then
+			return s.start:Lerp(s.za, t / s.lift)
+		end
+		local k = (t - s.lift) / (1 - s.lift)
+		return s.za:Lerp(s.zb, math.clamp(k * k * 0.35 + k * 0.65, 0, 1))
+	end
 	local e = (1 - math.cos(math.pi * math.clamp(t, 0, 1))) / 2 -- slow at the ends, fastest at the bottom
 	local a = s.a0 + (s.a1 - s.a0) * e
 	local r = s.r0 + (s.r1 - s.r0) * e
@@ -644,6 +653,9 @@ end
 
 local function startSwing(rope: BasePart, root: BasePart, hum: Humanoid)
 	local pivot, land = rope:GetAttribute("Pivot"), rope:GetAttribute("Land")
+	if typeof(pivot) ~= "Vector3" then
+		pivot = rope:GetAttribute("HangA") -- (ziplines have no pivot)
+	end
 	if typeof(pivot) ~= "Vector3" or typeof(land) ~= "Vector3" then
 		return
 	end
@@ -681,7 +693,18 @@ local function startSwing(rope: BasePart, root: BasePart, hum: Humanoid)
 	line.Parent = Workspace
 	rope.LocalTransparencyModifier = 1
 	local arc = math.abs(a1 - a0) * (r0 + r1) / 2
-	swing = { rope = rope, line = line, mover = lv, pivot = pivot, u = u, a0 = a0, a1 = a1, r0 = r0, r1 = r1, t0 = os.clock(), dur = math.clamp(arc / 34, 1.3, 2.6) }
+	local za, zb = rope:GetAttribute("HangA"), rope:GetAttribute("HangB")
+	local zip = rope:GetAttribute("Zip") == true and typeof(za) == "Vector3" and typeof(zb) == "Vector3"
+	local dur = math.clamp(arc / 34, 1.3, 2.6)
+	local lift = 0
+	if zip then
+		local ride = ((zb :: Vector3) - (za :: Vector3)).Magnitude / 48
+		dur = 0.3 + ride
+		lift = 0.3 / dur
+		rope.LocalTransparencyModifier = 0 -- (the handle rides with you: keep it shown)
+	end
+	swing = { rope = rope, line = line, mover = lv, pivot = pivot, u = u, a0 = a0, a1 = a1, r0 = r0, r1 = r1, t0 = os.clock(), dur = dur,
+		zip = zip, start = start, za = zip and za :: Vector3 or start, zb = zip and zb :: Vector3 or start, lift = lift }
 	hum:ChangeState(Enum.HumanoidStateType.Freefall)
 	require(script.Parent.SoundController).Play("Whoosh", 0.8)
 	moveFx("Swing")
@@ -718,7 +741,7 @@ local function swingStep(root: BasePart, dt: number): boolean
 		v = v.Unit * 140
 	end
 	s.mover.VectorVelocity = v
-	local a = s.pivot
+	local a = s.zip and (root.Position + Vector3.new(0, 3, 0)) or s.pivot
 	local b = root.Position + Vector3.new(0, 0.8, 0)
 	s.line.Size = Vector3.new(0.3, 0.3, (b - a).Magnitude)
 	s.line.CFrame = CFrame.lookAt((a + b) / 2, b)

@@ -974,6 +974,46 @@ function Volcano.Build(): Folder
 		HideCelestial = true,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
+	-- Obsidian crystals and glowing rocks round the platforms, ash falling.
+	for _, key in ipairs({ "center", "cornerBL", "cornerBR", "cornerRL", "cornerRR", "flankL", "flankR" }) do
+		local isle = I[key]
+		for _ = 1, key == "center" and 3 or 2 do
+			local p = ArenaKit.TryPlace(isle, rng, isle.r * 0.55, isle.r - 2, 2.2, 4)
+			if p then
+				ArenaKit.Reserve(isle, p, 2.2)
+				for c = 1, 3 do
+					local h = rng:NextNumber(2, 4.5)
+					local crystal = NP("Rock", Vector3.new(0.9, h, 0.9), CFrame.new(p + Vector3.new(rng:NextNumber(-0.8, 0.8), h / 2 - 0.2, rng:NextNumber(-0.8, 0.8))) * CFrame.Angles(rng:NextNumber(-0.35, 0.35), rng:NextNumber(0, 3), rng:NextNumber(-0.35, 0.35)), c == 1 and Color3.fromRGB(255, 110, 40) or Color3.fromRGB(26, 20, 30), c == 1 and Enum.Material.Neon or Enum.Material.Glass, isle.folder)
+					crystal.CanCollide = false
+					crystal.CastShadow = false
+				end
+			end
+		end
+	end
+	do
+		local ash = Instance.new("Part")
+		ash.Name = "AshFall"
+		ash.Size = Vector3.new(260, 1, 260)
+		ash.CFrame = CFrame.new(0, 90, 0)
+		ash.Transparency = 1
+		ash.Anchored = true
+		ash.CanCollide = false
+		ash.CanQuery = false
+		ash.CanTouch = false
+		ash.Parent = arena
+		local e = Instance.new("ParticleEmitter")
+		e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+		e.Color = ColorSequence.new(Color3.fromRGB(70, 60, 60))
+		e.Size = NumberSequence.new(0.35, 0.2)
+		e.Transparency = NumberSequence.new(0.3, 0.9)
+		e.EmissionDirection = Enum.NormalId.Bottom
+		e.Speed = NumberRange.new(4, 8)
+		e.Lifetime = NumberRange.new(12, 16)
+		e.Rate = 30
+		e.Acceleration = Vector3.new(2, 0, 1)
+		e.Parent = ash
+	end
+
 	-- Lava geysers on the crater terrace and the flanks.
 	for _, spec in ipairs({ { "center", 2, 22 }, { "flankL", 1, 6 }, { "flankR", 1, 6 } }) do
 		local isle = I[spec[1]]

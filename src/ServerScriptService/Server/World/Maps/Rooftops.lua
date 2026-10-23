@@ -336,6 +336,65 @@ function Rooftops.Build(): Folder
 		ClockTime = 18.2, FogColor = Color3.fromRGB(120, 90, 160), FogEnd = 900, Brightness = 2.2,
 	})
 	-- Falls between buildings end quickly: out well before the fog floor.
+	-- Rooftop life: a helipad on the tower, string lights, neon edges,
+	-- satellite dishes, planters; traffic glowing far below.
+	do
+		local c = R.center
+		local pad = NP("Helipad", Vector3.new(0.12, 14, 14), CFrame.new(c.x, c.top + 0.03, c.z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(40, 42, 50), Enum.Material.Concrete, c.folder)
+		pad.Shape = Enum.PartType.Cylinder
+		pad.CanCollide = false
+		local ring = NP("HeliRing", Vector3.new(0.1, 14.8, 14.8), CFrame.new(c.x, c.top + 0.02, c.z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 200, 80), Enum.Material.Neon, c.folder)
+		ring.Shape = Enum.PartType.Cylinder
+		ring.CanCollide = false
+		for _, bar in ipairs({ { -2, 0, 0.9, 7 }, { 2, 0, 0.9, 7 }, { 0, 0, 4, 0.9 } }) do
+			NP("HeliH", Vector3.new(bar[3], 0.06, bar[4]), CFrame.new(c.x + bar[1], c.top + 0.08, c.z + bar[2]), Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, c.folder).CanCollide = false
+		end
+	end
+	for _, r in pairs(R) do
+		-- Neon trim along the parapet.
+		local trim = NEON[rng:NextInteger(1, #NEON)]
+		for _, e in ipairs({ { 0, r.sz / 2, r.sx, 0.2 }, { 0, -r.sz / 2, r.sx, 0.2 }, { r.sx / 2, 0, 0.2, r.sz }, { -r.sx / 2, 0, 0.2, r.sz } }) do
+			NP("Parapet", Vector3.new(e[3], 0.12, e[4]), CFrame.new(r.x + e[1], r.top + 0.86, r.z + e[2]), trim, Enum.Material.Neon, r.folder).CanCollide = false
+		end
+		-- String lights corner to corner.
+		local h = r.top + 4.5
+		local corners = { Vector3.new(r.x - r.sx / 2 + 1, h, r.z - r.sz / 2 + 1), Vector3.new(r.x + r.sx / 2 - 1, h, r.z + r.sz / 2 - 1) }
+		NP("Post", Vector3.new(0.25, 4.6, 0.25), CFrame.new(corners[1] - Vector3.new(0, 2.3, 0)), Color3.fromRGB(60, 60, 70), Enum.Material.Metal, r.folder).CanCollide = false
+		NP("Post", Vector3.new(0.25, 4.6, 0.25), CFrame.new(corners[2] - Vector3.new(0, 2.3, 0)), Color3.fromRGB(60, 60, 70), Enum.Material.Metal, r.folder).CanCollide = false
+		local nBulbs = 10
+		for k = 0, nBulbs do
+			local t = k / nBulbs
+			local p = corners[1]:Lerp(corners[2], t) - Vector3.new(0, math.sin(t * math.pi) * 1.4, 0)
+			local b = NP("Bulb", Vector3.one * 0.45, CFrame.new(p), Color3.fromRGB(255, 226, 150), Enum.Material.Neon, r.folder)
+			b.Shape = Enum.PartType.Ball
+			b.CanCollide = false
+		end
+		-- A satellite dish or a planter in a free corner.
+		local spot = Vector3.new(r.x + r.sx / 2 - 2.5, r.top, r.z - r.sz / 2 + 2.5)
+		if rng:NextNumber() < 0.5 then
+			NP("Post", Vector3.new(0.4, 2, 0.4), CFrame.new(spot + Vector3.new(0, 1, 0)), Color3.fromRGB(170, 176, 186), Enum.Material.Metal, r.folder).CanCollide = false
+			local dish = NP("Bulb", Vector3.new(0.4, 3, 3), CFrame.new(spot + Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, math.rad(45), math.rad(55)), Color3.fromRGB(220, 224, 232), Enum.Material.Metal, r.folder)
+			dish.Shape = Enum.PartType.Cylinder
+			dish.CanCollide = false
+		else
+			NP("Crate", Vector3.new(3, 1.2, 1.6), CFrame.new(spot + Vector3.new(0, 0.6, 0)), Color3.fromRGB(110, 80, 60), Enum.Material.WoodPlanks, r.folder)
+			for k = -1, 1 do
+				local leaf = NP("Bush", Vector3.one * 1.3, CFrame.new(spot + Vector3.new(k * 0.9, 1.6, 0)), Color3.fromRGB(70, 150, 80), Enum.Material.Grass, r.folder)
+				leaf.Shape = Enum.PartType.Ball
+				leaf.CanCollide = false
+			end
+		end
+	end
+	-- Traffic streaming through the streets far below.
+	for k = 1, 16 do
+		local along = rng:NextNumber() < 0.5
+		local off = rng:NextNumber(-150, 150)
+		local len = rng:NextNumber(30, 80)
+		local streak = NP("Window", along and Vector3.new(len, 0.6, 1.2) or Vector3.new(1.2, 0.6, len), CFrame.new(along and rng:NextNumber(-120, 120) or off, -58, along and off or rng:NextNumber(-120, 120)), k % 2 == 0 and Color3.fromRGB(255, 210, 120) or Color3.fromRGB(255, 80, 80), Enum.Material.Neon, arena)
+		streak.CanCollide = false
+		streak.Transparency = 0.3
+	end
+
 	-- Window-cleaner lifts from each step roof up to a high perch over the tower.
 	for _, key in ipairs({ "stepBL", "stepBR", "stepRL", "stepRR" }) do
 		local r = R[key]

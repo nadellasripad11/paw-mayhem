@@ -203,6 +203,244 @@ local function makeToyTeamMarker(pos: Vector3, teamId: string, parent: Instance)
 	light.Parent = flag
 end
 
+-- ── the toy world dressing ───────────────────────────────────────────────────
+local TOY = { Color3.fromRGB(255, 110, 140), Color3.fromRGB(255, 200, 70), Color3.fromRGB(110, 200, 255), Color3.fromRGB(150, 230, 120), Color3.fromRGB(190, 140, 255), Color3.fromRGB(255, 150, 80) }
+local toyRng = Random.new(20261023)
+local function toyColor(): Color3
+	return TOY[toyRng:NextInteger(1, #TOY)]
+end
+local function toyDeco(p: BasePart): BasePart
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	return p
+end
+local function toyBall(d: number, pos: Vector3, color: Color3, parent: Instance): BasePart
+	local p = toyDeco(ArenaKit.NewPart("Bloom", Vector3.one * d, CFrame.new(pos), color, Enum.Material.SmoothPlastic, parent)) :: Part
+	p.Shape = Enum.PartType.Ball
+	return p
+end
+
+-- A lollipop tree: a white stick and a big swirl disc.
+local function lollipop(pos: Vector3, s: number, parent: Instance)
+	ArenaKit.NewPart("Trunk", Vector3.new(0.6 * s, 7 * s, 0.6 * s), CFrame.new(pos + Vector3.new(0, 3.5 * s, 0)), Color3.fromRGB(250, 248, 244), Enum.Material.SmoothPlastic, parent)
+	local top = pos + Vector3.new(0, 8.6 * s, 0)
+	local face = CFrame.new(top) * CFrame.Angles(0, toyRng:NextNumber(0, 6.28), 0)
+	local c1, c2 = toyColor(), Color3.new(1, 1, 1)
+	for i, d in ipairs({ 5.2, 4.1, 3, 1.9, 0.9 }) do
+		local disc = toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(0.6 + i * 0.02, d * s, d * s), face, i % 2 == 1 and c1 or c2, Enum.Material.SmoothPlastic, parent)) :: Part
+		disc.Shape = Enum.PartType.Cylinder
+	end
+end
+
+-- An ABC block stack (solid cover), letters on the sides.
+local function abcBlocks(pos: Vector3, parent: Instance)
+	local letters = { "A", "B", "C", "P", "A", "W" }
+	for i = 0, toyRng:NextInteger(1, 2) do
+		local size = 3.2 - i * 0.4
+		local b = ArenaKit.NewPart("ToyCrate", Vector3.new(size, size, size), CFrame.new(pos + Vector3.new(toyRng:NextNumber(-0.3, 0.3), size / 2 + i * 3.1, toyRng:NextNumber(-0.3, 0.3))) * CFrame.Angles(0, toyRng:NextNumber(-0.5, 0.5), 0), toyColor(), Enum.Material.SmoothPlastic, parent)
+		for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back, Enum.NormalId.Left, Enum.NormalId.Right }) do
+			local gui = Instance.new("SurfaceGui")
+			gui.Face = face
+			gui.LightInfluence = 0.3
+			gui.PixelsPerStud = 30
+			gui.Parent = b
+			local l = Instance.new("TextLabel")
+			l.Size = UDim2.fromScale(1, 1)
+			l.BackgroundTransparency = 1
+			l.Text = letters[toyRng:NextInteger(1, #letters)]
+			l.Font = Enum.Font.FredokaOne
+			l.TextScaled = true
+			l.TextColor3 = Color3.new(1, 1, 1)
+			l.TextStrokeTransparency = 0.6
+			l.Parent = gui
+		end
+	end
+end
+
+-- A crayon standing up (a tall pillar with a pointed tip).
+local function crayon(pos: Vector3, h: number, parent: Instance)
+	local c = toyColor()
+	local body = ArenaKit.NewPart("Crayon", Vector3.new(h, 1.6, 1.6), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), c, Enum.Material.SmoothPlastic, parent) :: Part
+	body.Shape = Enum.PartType.Cylinder
+	for _, y in ipairs({ h * 0.15, h * 0.85 }) do
+		local band = toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(0.5, 1.7, 1.7), CFrame.new(pos + Vector3.new(0, y, 0)) * CFrame.Angles(0, 0, math.rad(90)), c:Lerp(Color3.new(0, 0, 0), 0.35), Enum.Material.SmoothPlastic, parent)) :: Part
+		band.Shape = Enum.PartType.Cylinder
+	end
+	toyDeco(ArenaKit.NewWedge("Bloom", Vector3.new(1.4, 1.6, 1.4), CFrame.new(pos + Vector3.new(0, h + 0.8, 0)), c, Enum.Material.SmoothPlastic, parent))
+end
+
+-- A bunch of balloons on strings, tied to a spot.
+local function balloons(pos: Vector3, parent: Instance)
+	for k = 1, 3 do
+		local top = pos + Vector3.new(toyRng:NextNumber(-1.6, 1.6), 9 + k * 1.2, toyRng:NextNumber(-1.6, 1.6))
+		toyBall(2.4, top, toyColor(), parent).Material = Enum.Material.Glass
+		toyDeco(ArenaKit.Beam("String", pos + Vector3.new(0, 0.2, 0), top - Vector3.new(0, 1.2, 0), 0.06, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent))
+	end
+end
+
+-- A candy-cane lamp (red and white stripes, a warm light on top).
+local function candyLamp(pos: Vector3, parent: Instance)
+	for i = 0, 6 do
+		toyDeco(ArenaKit.NewPart("Post", Vector3.new(0.5, 1, 0.5), CFrame.new(pos + Vector3.new(0, 0.5 + i, 0)), i % 2 == 0 and Color3.fromRGB(240, 60, 70) or Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent))
+	end
+	local bulb = toyBall(1.3, pos + Vector3.new(0, 7.6, 0), Color3.fromRGB(255, 236, 170), parent)
+	bulb.Material = Enum.Material.Neon
+	local l = Instance.new("PointLight")
+	l.Color = Color3.fromRGB(255, 220, 160)
+	l.Range = 16
+	l.Brightness = 0.8
+	l.Parent = bulb
+end
+
+-- Confetti sprinkles on a surface.
+local function sprinkles(center: Vector3, r: number, parent: Instance)
+	for _ = 1, math.floor(r * 2.2) do
+		local a = toyRng:NextNumber(0, math.pi * 2)
+		local d = toyRng:NextNumber(2, r - 1.5)
+		toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(0.9, 0.05, 0.25), CFrame.new(center + Vector3.new(math.cos(a) * d, 0.03, math.sin(a) * d)) * CFrame.Angles(0, toyRng:NextNumber(0, 3.14), 0), toyColor(), Enum.Material.SmoothPlastic, parent))
+	end
+end
+
+-- A free spot on an island's rim, away from the bridge toward the centre.
+local function rimSpot(pos: Vector3, r: number, avoidDir: Vector3?): Vector3
+	for _ = 1, 12 do
+		local a = toyRng:NextNumber(0, math.pi * 2)
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		if not avoidDir or dir:Dot(avoidDir) < 0.55 then
+			return pos + dir * (r - toyRng:NextNumber(2.5, 4)) + Vector3.new(0, 1.6, 0)
+		end
+	end
+	return pos + Vector3.new(r - 3, 1.6, 0)
+end
+
+-- A toy train going round and round the centre island on its own track.
+local function toyTrain(center: Vector3, radius: number, parent: Instance)
+	local track = Instance.new("Folder")
+	track.Name = "TrainTrack"
+	track.Parent = parent
+	local n = 48
+	for k = 0, n - 1 do
+		local a = k / n * math.pi * 2
+		local p = center + Vector3.new(math.cos(a) * radius, 0.05, math.sin(a) * radius)
+		toyDeco(ArenaKit.NewPart("Rail", Vector3.new(2.4, 0.12, 0.5), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(150, 100, 70), Enum.Material.Wood, track))
+	end
+	local cars = {}
+	for c = 0, 3 do
+		local car = Instance.new("Model")
+		car.Name = "ToyTrain"
+		local body = toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(1.6, 1.4, 2.6), CFrame.new(), c == 0 and Color3.fromRGB(240, 70, 80) or toyColor(), Enum.Material.SmoothPlastic, car))
+		if c == 0 then
+			toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(0.6, 1.2, 0.6), CFrame.new(0, 1.2, -0.7), Color3.fromRGB(40, 40, 50), Enum.Material.SmoothPlastic, car))
+		end
+		for _, w in ipairs({ { -0.85, -0.8 }, { 0.85, -0.8 }, { -0.85, 0.8 }, { 0.85, 0.8 } }) do
+			local wheel = toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(0.3, 0.8, 0.8), CFrame.new(w[1], -0.6, w[2]), Color3.fromRGB(40, 40, 50), Enum.Material.SmoothPlastic, car)) :: Part
+			wheel.Shape = Enum.PartType.Cylinder
+		end
+		car.PrimaryPart = body
+		car.Parent = track
+		-- (Weld the bits to the body so the car moves as one.)
+		for _, p in ipairs(car:GetChildren()) do
+			if p:IsA("BasePart") and p ~= body then
+				p.CFrame = body.CFrame * p.CFrame
+			end
+		end
+		table.insert(cars, { model = car, offsets = (function()
+			local o = {}
+			for _, p in ipairs(car:GetChildren()) do
+				if p:IsA("BasePart") then
+					o[p] = body.CFrame:ToObjectSpace(p.CFrame)
+				end
+			end
+			return o
+		end)() })
+	end
+	task.spawn(function()
+		local t = 0
+		while track.Parent do
+			t += task.wait(1 / 15)
+			for i, c in ipairs(cars) do
+				local a = t * 0.25 - (i - 1) * 0.07
+				local p = center + Vector3.new(math.cos(a) * radius, 1, math.sin(a) * radius)
+				local cf = CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a)))
+				for part, off in pairs(c.offsets) do
+					part.CFrame = cf * off
+				end
+			end
+		end
+	end)
+end
+
+-- A rainbow arching high over the centre.
+local function rainbow(center: Vector3, parent: Instance)
+	local colors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 170, 60), Color3.fromRGB(255, 230, 80), Color3.fromRGB(110, 220, 120), Color3.fromRGB(90, 170, 255), Color3.fromRGB(170, 110, 255) }
+	for b, c in ipairs(colors) do
+		local r = 70 - b * 2.2
+		for k = 0, 23 do
+			local a = math.pi * k / 23
+			local p = center + Vector3.new(math.cos(a) * r, 18 + math.sin(a) * r * 0.75, 30)
+			local seg = toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(2.2, 2.2, 10.5), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), math.cos(a) * 0.75, 0)), c, Enum.Material.SmoothPlastic, parent))
+			seg.Transparency = 0.15
+		end
+	end
+end
+
+-- A giant rubber duck bobbing in the clouds.
+local function giantDuck(pos: Vector3, parent: Instance)
+	local yellow, orange = Color3.fromRGB(255, 214, 50), Color3.fromRGB(255, 140, 40)
+	toyBall(14, pos, yellow, parent)
+	toyBall(9, pos + Vector3.new(0, 8, -4), yellow, parent)
+	toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(4, 1.4, 3.2), CFrame.new(pos + Vector3.new(0, 7.4, -8.6)), orange, Enum.Material.SmoothPlastic, parent))
+	for _, s in ipairs({ -1, 1 }) do
+		toyBall(1.4, pos + Vector3.new(s * 2.2, 9.6, -7.9), Color3.fromRGB(20, 20, 30), parent)
+	end
+	toyBall(5, pos + Vector3.new(0, 3, 6), yellow, parent)
+end
+
+local function dressToyWorld(arena: Instance, centerPos: Vector3, centerR: number, layout: any, outerFolders: { Folder })
+	local f = Instance.new("Folder")
+	f.Name = "ToyWorld"
+	f.Parent = arena
+	local top = centerPos + Vector3.new(0, 1.6, 0)
+	sprinkles(top, centerR, f)
+	toyTrain(top, centerR - 3, f)
+	rainbow(centerPos, f)
+	for i, o in ipairs(layout.Outer) do
+		local isl = outerFolders[i]
+		local toCenter = (centerPos - o.pos) * Vector3.new(1, 0, 1)
+		local avoid = toCenter.Magnitude > 0 and toCenter.Unit or nil
+		local surf = o.pos + Vector3.new(0, 1.6, 0)
+		sprinkles(surf, o.r, isl)
+		lollipop(rimSpot(o.pos, o.r, avoid), toyRng:NextNumber(0.8, 1.1), isl)
+		lollipop(rimSpot(o.pos, o.r, avoid), toyRng:NextNumber(0.7, 0.9), isl)
+		abcBlocks(rimSpot(o.pos, o.r, avoid), isl)
+		balloons(rimSpot(o.pos, o.r, avoid), isl)
+		candyLamp(rimSpot(o.pos, o.r, avoid), isl)
+		if i > 2 then
+			crayon(rimSpot(o.pos, o.r, avoid), 9 + toyRng:NextNumber(0, 4), isl)
+		end
+	end
+	for _, s in ipairs(layout.Satellites) do
+		balloons(s.pos + Vector3.new(0, 1.6, 0), f)
+	end
+	-- Giant toys out in the sky.
+	giantDuck(centerPos + Vector3.new(-150, -20, 90), f)
+	for k = 1, 8 do
+		local a = k / 8 * math.pi * 2 + 0.3
+		local p = centerPos + Vector3.new(math.cos(a) * 165, toyRng:NextNumber(-30, 30), math.sin(a) * 165)
+		local size = toyRng:NextNumber(10, 18)
+		toyDeco(ArenaKit.NewPart("Bloom", Vector3.one * size, CFrame.new(p) * CFrame.Angles(toyRng:NextNumber(0, 1), toyRng:NextNumber(0, 3), toyRng:NextNumber(0, 1)), toyColor(), Enum.Material.SmoothPlastic, f))
+	end
+	for k = 1, 10 do
+		local a = toyRng:NextNumber(0, math.pi * 2)
+		local d = toyRng:NextNumber(90, 200)
+		local p = centerPos + Vector3.new(math.cos(a) * d, toyRng:NextNumber(20, 70), math.sin(a) * d)
+		toyBall(toyRng:NextNumber(5, 8), p, toyColor(), f).Material = Enum.Material.Glass
+		toyDeco(ArenaKit.Beam("String", p - Vector3.new(0, 3, 0), p - Vector3.new(0, 14, 0), 0.1, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, f))
+	end
+end
+
 function Toybox.Build(): Folder
 	local arena, spawns, powerPads = ArenaKit.SetupFolders(Workspace, Toybox.Name)
 	local layout = ArenaKit.StandardLayout
@@ -294,12 +532,16 @@ function Toybox.Build(): Folder
 	ArenaKit.AddJumpPad(s2, 0, 0, ArenaKit.Polar(centerIsle, math.rad(240), centerR * 0.6), pads)
 
 	ArenaKit.ScatterDebris(arena, 22, PALETTE, false)
-	ArenaKit.MakeClouds(arena, Color3.fromRGB(255, 245, 250))
+	dressToyWorld(arena, centerPos, centerR, layout, outerFolders)
+	-- Cotton-candy clouds below and above.
+	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(255, 214, 236), 36, -62, -34, 40, 300, 0.1)
+	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(214, 236, 255), 18, -50, -30, 60, 300, 0.15)
+	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(255, 245, 250), 12, 70, 100, 140, 320, 0.35)
 	ArenaKit.ApplyAtmosphere({
-		Density = 0.18, Offset = 0.2, Color = Color3.fromRGB(255, 220, 240),
-		Decay = Color3.fromRGB(180, 210, 255), Glare = 0.2, Haze = 0.9,
-		Ambient = Color3.fromRGB(150, 150, 170), OutdoorAmbient = Color3.fromRGB(200, 200, 220),
-		ClockTime = 13,
+		Density = 0.2, Offset = 0.22, Color = Color3.fromRGB(255, 222, 242),
+		Decay = Color3.fromRGB(170, 200, 255), Glare = 0.25, Haze = 1,
+		Ambient = Color3.fromRGB(160, 150, 180), OutdoorAmbient = Color3.fromRGB(210, 200, 230),
+		ClockTime = 14, Brightness = 2.3,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
 

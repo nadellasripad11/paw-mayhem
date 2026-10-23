@@ -825,42 +825,46 @@ end
 -- Built here, run by MapFeatureService (server), MovementController and
 -- MapLife (client).
 
--- A rope swing across the gap between two islands: a log beam on tall posts
--- at both edges and a rope hanging at each end. Walk into a rope's knot to
--- grab it and swing across (MovementController). Reserves both edges.
+-- A zipline across the gap between two islands: a steel gantry at each edge
+-- and two cables (one each way), each running from high on its start
+-- gantry down to the far one. Walk into the handle at the start to grab it
+-- and slide across (MovementController). Reserves both edges.
 function ArenaKit.AddRopeSwing(A: any, B: any, parent: Instance)
 	local folder = Instance.new("Folder")
-	folder.Name = "RopeSwing"
+	folder.Name = "Zipline"
 	folder.Parent = parent
 	local aAng, bAng = ArenaKit.AngleTo(A.pos, B.pos), ArenaKit.AngleTo(B.pos, A.pos)
 	table.insert(A.reserved, aAng)
 	table.insert(B.reserved, bAng)
 	local ea, eb = ArenaKit.Polar(A, aAng, A.r - 2.5), ArenaKit.Polar(B, bAng, B.r - 2.5)
-	local top = math.max(ea.Y, eb.Y) + 24
 	local u = Vector3.new(eb.X - ea.X, 0, eb.Z - ea.Z).Unit
 	local side = Vector3.new(-u.Z, 0, u.X)
-	local wood, dark, rope = Color3.fromRGB(150, 104, 62), Color3.fromRGB(98, 66, 40), Color3.fromRGB(196, 166, 116)
+	local steel, dark, yellow = Color3.fromRGB(150, 156, 168), Color3.fromRGB(60, 62, 70), Color3.fromRGB(255, 200, 40)
+	local HIGH, LOW = 12, 7 -- cable height over the start / the end
 	for _, e in ipairs({ ea, eb }) do
 		for _, s in ipairs({ -1, 1 }) do
 			local p = e + side * s * 3.6
-			ArenaKit.NewPart("SwingPost", Vector3.new(1.2, top - e.Y + 1, 1.2), CFrame.new(Vector3.new(p.X, (top + e.Y) / 2, p.Z)), dark, Enum.Material.Wood, folder)
+			ArenaKit.NewPart("ZipPost", Vector3.new(1, HIGH + 1.5, 1), CFrame.new(Vector3.new(p.X, e.Y + (HIGH + 1.5) / 2 - 0.5, p.Z)), steel, Enum.Material.Metal, folder)
 		end
-		ArenaKit.Beam("SwingCross", Vector3.new(e.X, top, e.Z) - side * 4, Vector3.new(e.X, top, e.Z) + side * 4, 1, dark, Enum.Material.Wood, folder)
+		ArenaKit.Beam("ZipBar", Vector3.new(e.X, e.Y + HIGH + 0.6, e.Z) - side * 4, Vector3.new(e.X, e.Y + HIGH + 0.6, e.Z) + side * 4, 0.8, dark, Enum.Material.Metal, folder)
+		ArenaKit.Beam("ZipBarLow", Vector3.new(e.X, e.Y + LOW + 0.4, e.Z) - side * 4, Vector3.new(e.X, e.Y + LOW + 0.4, e.Z) + side * 4, 0.6, dark, Enum.Material.Metal, folder)
 	end
-	ArenaKit.Beam("SwingLog", Vector3.new(ea.X, top + 0.4, ea.Z), Vector3.new(eb.X, top + 0.4, eb.Z), 1.4, wood, Enum.Material.Wood, folder)
-	local mid = Vector3.new((ea.X + eb.X) / 2, top, (ea.Z + eb.Z) / 2)
 	for _, d in ipairs({ { ea, eb, 1 }, { eb, ea, -1 } }) do
 		local from, to, s = d[1], d[2], d[3]
-		local pivot = mid + side * s * 2.2
-		local grab = from + side * s * 2.2 + Vector3.new(0, 2.6, 0)
-		local r = swimDeco(ArenaKit.Beam("SwingRope", pivot, grab, 0.3, rope, Enum.Material.Fabric, folder))
-		r:SetAttribute("Pivot", pivot)
-		r:SetAttribute("Grab", grab)
-		r:SetAttribute("Land", to + u * s * 3.5 + side * s * 2.2 + Vector3.new(0, 2.6, 0))
-		CollectionService:AddTag(r, "RopeSwing")
-		local knot = ArenaKit.NewPart("SwingKnot", Vector3.one * 0.9, CFrame.new(grab), rope, Enum.Material.Fabric, folder) :: Part
-		knot.Shape = Enum.PartType.Ball
-		swimDeco(knot)
+		local off = side * s * 2
+		local top = Vector3.new(from.X, from.Y + HIGH, from.Z) + off
+		local bottom = Vector3.new(to.X, to.Y + LOW, to.Z) + off
+		ArenaKit.Beam("ZipCable", top, bottom, 0.22, Color3.fromRGB(30, 30, 34), Enum.Material.Metal, folder)
+		-- The handle hanging at the start: yellow, easy to spot.
+		local grab = from + off + Vector3.new(0, 2.6, 0)
+		local handle = swimDeco(ArenaKit.NewPart("ZipHandle", Vector3.new(2.4, 0.4, 0.4), CFrame.lookAt(grab + Vector3.new(0, 1.6, 0), grab + Vector3.new(0, 1.6, 0) + side), yellow, Enum.Material.SmoothPlastic, folder))
+		swimDeco(ArenaKit.Beam("ZipStrap", top, handle.Position, 0.12, yellow, Enum.Material.Fabric, folder))
+		handle:SetAttribute("Zip", true)
+		handle:SetAttribute("Grab", grab)
+		handle:SetAttribute("HangA", top - Vector3.new(0, 3, 0))
+		handle:SetAttribute("HangB", bottom - Vector3.new(0, 3, 0))
+		handle:SetAttribute("Land", to + u * s * 3.5 + off + Vector3.new(0, 2.6, 0))
+		CollectionService:AddTag(handle, "RopeSwing")
 	end
 end
 
