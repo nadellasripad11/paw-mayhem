@@ -109,7 +109,7 @@ function DuelVote.Build()
 			end
 			if mine then
 				UIUtil.label({
-					Parent = b, Text = "✔", Font = Theme.Font.Title, TextScaled = true, TextColor3 = Color3.fromRGB(120, 255, 140),
+					Parent = b, Text = "VOTED", Font = Theme.Font.Title, TextScaled = true, TextColor3 = Color3.fromRGB(120, 255, 140),
 					Position = UDim2.new(0, 8, 0, 6), Size = UDim2.fromOffset(34, 34),
 				})
 			end
@@ -132,7 +132,7 @@ function DuelVote.Build()
 	task.spawn(function()
 		while g.Parent do
 			if g.Enabled then
-				timerPill.Text = string.format("⌛ %.1f", math.max(0, endsAt - Workspace:GetServerTimeNow()))
+				timerPill.Text = string.format("%.1f s", math.max(0, endsAt - Workspace:GetServerTimeNow()))
 			end
 			task.wait(0.1)
 		end

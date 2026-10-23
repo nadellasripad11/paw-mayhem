@@ -398,7 +398,7 @@ function MainMenu.Build()
 		Size = UDim2.new(1, -60, 1, 0), ZIndex = 13,
 	})
 	local cancel = UIUtil.make("TextButton", {
-		Parent = search, Text = "✕", Font = Theme.Font.Bold, TextSize = 16, TextColor3 = Color3.new(1, 1, 1),
+		Parent = search, Text = "X", Font = Theme.Font.Bold, TextSize = 16, TextColor3 = Color3.new(1, 1, 1),
 		AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(30, 30),
 		BackgroundColor3 = Theme.Color.Red, AutoButtonColor = true, BorderSizePixel = 0, ZIndex = 13,
 	}) :: TextButton
