@@ -521,6 +521,7 @@ local function modeOptions(): { any }
 	for _, m in ipairs(MODES) do
 		table.insert(opts, { id = m.id, name = m.name, desc = m.desc })
 	end
+	table.insert(opts, { id = "Random", name = "RANDOM" })
 	return opts
 end
 
@@ -596,7 +597,7 @@ local function tickVotes()
 				for n, p in ipairs(l.players) do
 					table.insert(teams[n % 2 == 1 and "Blue" or "Red"], p)
 				end
-				createDuel(l.kind, teams, per, l.map, pick)
+				createDuel(l.kind, teams, per, l.map, pick == "Random" and MODES[math.random(1, #MODES)].id or pick)
 			end
 		end
 	end
