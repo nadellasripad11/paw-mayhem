@@ -460,6 +460,18 @@ local function buildMobile(parent)
 	})
 	refs.pounceButton = { lit = pounceLit, timer = pounceTimer }
 
+	-- EMOTE: opens the emote picker.
+	local emote, _, emotePressed = touchButton(parent, "EmoteButton", UDim2.new(1, -150, 1, -232), 50, Color3.fromRGB(255, 160, 220), "Smiley", "EMOTE")
+	emote.InputBegan:Connect(function(input)
+		if isPress(input) then
+			emotePressed(true)
+			require(script.Parent.EmotePicker).Toggle()
+		end
+	end)
+	emote.InputEnded:Connect(function(input)
+		if isPress(input) then emotePressed(false) end
+	end)
+
 	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -58, 1, -268), 58, Theme.Color.Warn, "Dash", "RUN")
 	run.InputBegan:Connect(function(input)
 		if isPress(input) then

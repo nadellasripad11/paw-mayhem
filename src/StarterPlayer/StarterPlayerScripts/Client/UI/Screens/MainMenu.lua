@@ -43,6 +43,7 @@ local Tutorial = require(script.Parent.Tutorial)
 local Intro = require(script.Parent.Intro)
 local PlayMenu = require(script.Parent.PlayMenu)
 local DuelVote = require(script.Parent.DuelVote)
+local EmotePicker = require(script.Parent.EmotePicker)
 
 local MainMenu = {}
 local player = Players.LocalPlayer
@@ -486,7 +487,7 @@ function MainMenu.Build()
 		end)
 	end
 	-- Top right: small round buttons (VIP, Leaderboard, Settings).
-	local iconGroup, iconScale = scaled({ Parent = gui, Name = "IconGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(200, 40), ZIndex = 10 })
+	local iconGroup, iconScale = scaled({ Parent = gui, Name = "IconGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(260, 40), ZIndex = 10 })
 	UIUtil.listLayout(iconGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	local function roundButton(name: string, order: number, tip: string, draw: (Frame) -> (), onClick: () -> ()): TextButton
 		return UIUtil.iconButton({ Parent = iconGroup, Name = name, LayoutOrder = order, ZIndex = 10 }, draw, tip, onClick)
@@ -522,6 +523,14 @@ function MainMenu.Build()
 	end
 	player:GetAttributeChangedSignal("VIP"):Connect(refreshVip)
 	refreshVip()
+
+	-- Emotes: a picker of the ones you own (easy on phones too).
+	pcall(EmotePicker.Build)
+	roundButton("EmotesIcon", 10, "Emotes", function(slot: Frame)
+		Icons.Place("Smiley", slot, 22, Color3.new(1, 1, 1))
+	end, function()
+		EmotePicker.Toggle()
+	end)
 
 	-- Leaderboard + Settings at the far right.
 	for i, spec in ipairs({ { "Leaderboard", "Podium", "Leaderboard" }, { "Settings", "Gear", "Settings" } }) do
@@ -759,7 +768,7 @@ function MainMenu.Build()
 		Parent = saver, Name = "Dismiss", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 48),
 		Size = UDim2.fromOffset(38, 38), ZIndex = 37,
 	}, function(slot: Frame)
-		UIUtil.label({ Parent = slot, Text = "✕", Font = Theme.Font.Bold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 38 })
+		UIUtil.label({ Parent = slot, Text = "X", Font = Theme.Font.Title, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 38 })
 	end, nil, function()
 		saver.Visible = false
 	end)
@@ -787,7 +796,7 @@ function MainMenu.Build()
 	local header, headerScale = scaled({ Parent = backdrop, Name = "Header", Size = UDim2.fromOffset(520, 44), ZIndex = 12 })
 	local close = UIUtil.iconButton({ Parent = header, Name = "Close", Size = UDim2.fromOffset(44, 44), ZIndex = 12 }, function(slot: Frame)
 		UIUtil.label({
-			Parent = slot, Text = "✕", Font = Theme.Font.Bold, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+			Parent = slot, Text = "X", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
 			Size = UDim2.fromScale(1, 1), ZIndex = 13,
 		})
 	end, nil, function()
