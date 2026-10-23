@@ -1,14 +1,14 @@
 --!strict
--- DuelMaps: the small arenas 1v1 / 2v2 duels are fought on. Each duel gets
--- its own copy, built far away from everything else when it starts and
--- removed when it ends, so any number of duels can run at once. Every map is
--- two sides facing each other across something you can get knocked off:
---   * Sky Bridge: two garden islands joined by plank bridges with a small
---     round island halfway; crates and a rock to duck behind
---   * Rooftop Duel: two neon-lit roofs over a foggy drop, a steel beam and a
---     plank across the gap, AC units and a water tank for cover
---   * Crystal Ring: one round slate platform over the void with a glowing
---     crystal in the middle and four small ones round it
+-- DuelMaps: the arenas 1v1 - 5v5 duels are fought on, built the same way as
+-- Sky Islands: grassy floating islands with cliffs underneath, joined by stone
+-- stairs and rope bridges, dressed with round trees, bushes, flowers, rocks,
+-- lamps and crate cover, swimmable waterfalls off the side islands, a sea of
+-- clouds below and scenery islands drifting round. Each duel gets its own
+-- copy, built far away when it starts and removed when it ends.
+--   * Meadow       (green)  - two bases, a raised centre hill, two flanks
+--   * Sakura Garden (pink)  - two bases, twin middle terraces, a top perch
+--   * Autumn Ridge (orange) - the Meadow layout in autumn colours, with pines
+--   * Frost Peaks  (snow)   - the terrace layout in snow, pines and ice
 -- Blue starts on the -Z side, Red on the +Z side.
 
 local ArenaKit = require(script.Parent.ArenaKit)
@@ -19,23 +19,103 @@ export type Layout = { name: string, spawns: { [string]: { CFrame } }, killY: nu
 
 local BLUE = Color3.fromRGB(70, 150, 255)
 local RED = Color3.fromRGB(255, 80, 90)
-local WOOD = Color3.fromRGB(150, 104, 68)
-local WOOD_DARK = Color3.fromRGB(104, 70, 46)
-local STONE = Color3.fromRGB(176, 172, 166)
-local GRASS: ArenaKit.Palette = {
-	Top = Color3.fromRGB(134, 196, 112), TopDark = Color3.fromRGB(96, 170, 86),
-	Stone = Color3.fromRGB(150, 144, 136), StoneDark = Color3.fromRGB(118, 112, 110),
-	Wood = WOOD, WoodDark = WOOD_DARK,
+local LAMP = Color3.fromRGB(255, 214, 140)
+local IRON = Color3.fromRGB(58, 56, 60)
+local WHITE = Color3.new(1, 1, 1)
+
+type Theme = {
+	name: string,
+	palette: ArenaKit.Palette,
+	top: Enum.Material,
+	style: ArenaKit.IslandStyle,
+	leaves: { Color3 },
+	trunk: Color3,
+	flowers: { Color3 },
+	pines: boolean,
+	snowy: boolean,
+	stairs: ArenaKit.StairStyle,
+	clouds: Color3,
+}
+
+local COBBLE = Color3.fromRGB(184, 176, 162)
+local function stairStyle(step: Color3, wall: Color3, under: Color3): ArenaKit.StairStyle
+	return { step = step, stepAlt = step:Lerp(Color3.new(0, 0, 0), 0.12), wall = wall, under = under, material = Enum.Material.Slate }
+end
+
+local THEMES: { [string]: Theme } = {
+	Meadow = {
+		name = "MEADOW",
+		palette = {
+			Top = Color3.fromRGB(108, 188, 74), TopDark = Color3.fromRGB(80, 158, 60),
+			Stone = Color3.fromRGB(158, 136, 118), StoneDark = Color3.fromRGB(100, 86, 88),
+			Wood = Color3.fromRGB(164, 114, 68), WoodDark = Color3.fromRGB(104, 68, 42),
+		},
+		top = Enum.Material.Grass,
+		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(86, 164, 62) },
+		leaves = { Color3.fromRGB(58, 146, 58), Color3.fromRGB(82, 170, 64), Color3.fromRGB(122, 198, 80) },
+		trunk = Color3.fromRGB(122, 84, 54),
+		flowers = { Color3.fromRGB(255, 132, 190), Color3.fromRGB(255, 222, 84), Color3.fromRGB(196, 140, 255), Color3.fromRGB(250, 250, 250) },
+		pines = false, snowy = false,
+		stairs = stairStyle(COBBLE, Color3.fromRGB(196, 186, 168), Color3.fromRGB(100, 86, 88)),
+		clouds = WHITE,
+	},
+	Sakura = {
+		name = "SAKURA GARDEN",
+		palette = {
+			Top = Color3.fromRGB(150, 206, 120), TopDark = Color3.fromRGB(122, 184, 100),
+			Stone = Color3.fromRGB(170, 150, 150), StoneDark = Color3.fromRGB(118, 100, 108),
+			Wood = Color3.fromRGB(150, 94, 70), WoodDark = Color3.fromRGB(96, 58, 46),
+		},
+		top = Enum.Material.Grass,
+		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(120, 186, 96) },
+		leaves = { Color3.fromRGB(255, 186, 210), Color3.fromRGB(252, 160, 190), Color3.fromRGB(255, 220, 232) },
+		trunk = Color3.fromRGB(96, 62, 50),
+		flowers = { Color3.fromRGB(255, 160, 200), Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 210, 120) },
+		pines = false, snowy = false,
+		stairs = stairStyle(Color3.fromRGB(200, 190, 186), Color3.fromRGB(176, 120, 110), Color3.fromRGB(118, 100, 108)),
+		clouds = Color3.fromRGB(255, 236, 244),
+	},
+	Autumn = {
+		name = "AUTUMN RIDGE",
+		palette = {
+			Top = Color3.fromRGB(170, 172, 84), TopDark = Color3.fromRGB(146, 140, 66),
+			Stone = Color3.fromRGB(150, 128, 108), StoneDark = Color3.fromRGB(96, 80, 72),
+			Wood = Color3.fromRGB(140, 94, 58), WoodDark = Color3.fromRGB(90, 58, 36),
+		},
+		top = Enum.Material.Grass,
+		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(176, 150, 70) },
+		leaves = { Color3.fromRGB(240, 130, 40), Color3.fromRGB(220, 80, 40), Color3.fromRGB(250, 186, 60) },
+		trunk = Color3.fromRGB(100, 66, 44),
+		flowers = { Color3.fromRGB(255, 200, 60), Color3.fromRGB(230, 90, 50), Color3.fromRGB(250, 240, 200) },
+		pines = true, snowy = false,
+		stairs = stairStyle(Color3.fromRGB(176, 160, 140), Color3.fromRGB(150, 120, 96), Color3.fromRGB(96, 80, 72)),
+		clouds = Color3.fromRGB(255, 240, 220),
+	},
+	Frost = {
+		name = "FROST PEAKS",
+		palette = {
+			Top = Color3.fromRGB(236, 242, 248), TopDark = Color3.fromRGB(210, 222, 236),
+			Stone = Color3.fromRGB(140, 150, 168), StoneDark = Color3.fromRGB(96, 104, 124),
+			Wood = Color3.fromRGB(130, 96, 70), WoodDark = Color3.fromRGB(84, 60, 44),
+		},
+		top = Enum.Material.Snow,
+		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(230, 238, 248) },
+		leaves = { Color3.fromRGB(44, 110, 76), Color3.fromRGB(60, 130, 90), Color3.fromRGB(80, 150, 106) },
+		trunk = Color3.fromRGB(90, 64, 48),
+		flowers = { Color3.fromRGB(170, 220, 255), Color3.fromRGB(255, 255, 255) },
+		pines = true, snowy = true,
+		stairs = stairStyle(Color3.fromRGB(200, 210, 224), Color3.fromRGB(150, 160, 180), Color3.fromRGB(96, 104, 124)),
+		clouds = Color3.fromRGB(236, 244, 255),
+	},
 }
 
 local rng = Random.new()
 
--- Solid, walkable / cover part.
+-- ── parts ────────────────────────────────────────────────────────────────────
 local function solid(name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material, parent: Instance): BasePart
 	return ArenaKit.NewPart(name, size, cf, color, material, parent)
 end
 
--- Decoration you pass through.
 local function deco(name: string, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material, parent: Instance): BasePart
 	local p = ArenaKit.NewPart(name, size, cf, color, material, parent)
 	p.CanCollide = false
@@ -44,174 +124,311 @@ local function deco(name: string, size: Vector3, cf: CFrame, color: Color3, mate
 	return p
 end
 
--- Turn a part into a cylinder (its X axis is the cylinder axis).
-local function cyl(p: BasePart): BasePart
-	local part = p :: Part
-	part.Shape = Enum.PartType.Cylinder
-	return p
-end
-
-local function ball(d: number, pos: Vector3, color: Color3, parent: Instance): BasePart
-	local p = deco("Leaves", Vector3.one * d, CFrame.new(pos), color, Enum.Material.SmoothPlastic, parent)
+local function ball(name: string, d: number, pos: Vector3, color: Color3, parent: Instance): BasePart
+	local p = deco(name, Vector3.one * d, CFrame.new(pos), color, Enum.Material.SmoothPlastic, parent)
 	;(p :: Part).Shape = Enum.PartType.Ball
 	p.CastShadow = false
 	return p
 end
 
--- Two spawns per side, facing the other side.
-local function spawnPair(center: Vector3, facing: number): { CFrame }
-	local out = {}
-	for _, x in ipairs({ -3, 3 }) do
-		local p = center + Vector3.new(x, 1.9, 0)
-		table.insert(out, CFrame.lookAt(p, p + Vector3.new(0, 0, facing)))
-	end
-	return out
+local function disc(name: string, d: number, h: number, pos: Vector3, color: Color3, material: Enum.Material, parent: Instance): BasePart
+	local p = ArenaKit.NewDisc(name, d, h, pos, color, material, parent)
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	return p
 end
 
-local function blossom(pos: Vector3, parent: Instance)
-	deco("Trunk", Vector3.new(0.9, 5, 0.9), CFrame.new(pos + Vector3.new(0, 2.5, 0)), WOOD_DARK, Enum.Material.Wood, parent)
-	local top = pos + Vector3.new(0, 6.2, 0)
-	ball(6, top, Color3.fromRGB(255, 196, 214), parent)
+-- ── props (the Sky Islands set, themed) ──────────────────────────────────────
+local function tree(th: Theme, pos: Vector3, s: number, parent: Instance)
+	local m = Instance.new("Model")
+	m.Name = "Tree"
+	m.Parent = parent
+	local h = 5.6 * s
+	solid("Trunk", Vector3.new(1.3 * s, h, 1.3 * s), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), th.trunk, Enum.Material.Wood, m)
+	deco("Roots", Vector3.new(2.3 * s, 0.7 * s, 2.3 * s), CFrame.new(pos + Vector3.new(0, 0.3 * s, 0)) * CFrame.Angles(0, math.rad(45), 0), th.trunk:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Wood, m)
+	local top = pos + Vector3.new(0, h + 1.9 * s, 0)
+	ball("Crown", 7.4 * s, top, th.leaves[2], m)
 	for k = 1, 4 do
-		local a = k / 4 * math.pi * 2
-		ball(4, top + Vector3.new(math.cos(a) * 2.4, rng:NextNumber(-0.8, 0.6), math.sin(a) * 2.4), k % 2 == 0 and Color3.fromRGB(252, 170, 196) or Color3.fromRGB(255, 222, 232), parent)
+		local a = k * math.pi / 2 + rng:NextNumber(-0.45, 0.45)
+		ball("Leaf", rng:NextNumber(4.2, 5.6) * s, top + Vector3.new(math.cos(a) * 3 * s, rng:NextNumber(-1.3, 0.3) * s, math.sin(a) * 3 * s), th.leaves[rng:NextInteger(1, #th.leaves)], m)
+	end
+	if th.snowy then
+		ball("Snow", 5 * s, top + Vector3.new(0, 2.4 * s, 0), WHITE, m)
 	end
 end
 
--- ── Sky Bridge ───────────────────────────────────────────────────────────────
-local function skyBridge(o: Vector3, f: Instance): Layout
-	local surf = o.Y + ArenaKit.SURFACE
-	local spawns = {}
-	for _, side in ipairs({ -1, 1 }) do
-		local team = side < 0 and "Blue" or "Red"
-		local c = o + Vector3.new(0, 0, side * 30)
-		ArenaKit.MakeIslandBase(c, 11, team .. "Isle", GRASS, Enum.Material.Grass, f)
-		deco("TeamStrip", Vector3.new(9, 0.2, 0.6), CFrame.new(o.X, surf + 0.06, c.Z - side * 9.6), side < 0 and BLUE or RED, Enum.Material.Neon, f)
-		blossom(Vector3.new(o.X + 6, surf, c.Z + side * 5), f)
-		solid("Crate", Vector3.new(3, 3, 3), CFrame.new(o.X - 5, surf + 1.5, c.Z - side * 4) * CFrame.Angles(0, 0.35 * side, 0), WOOD, Enum.Material.WoodPlanks, f)
-		solid("Crate", Vector3.new(2, 2, 2), CFrame.new(o.X - 3.2, surf + 1, c.Z - side * 5.5) * CFrame.Angles(0, -0.2 * side, 0), WOOD_DARK, Enum.Material.WoodPlanks, f)
-		-- Plank bridge from this island to the middle one (no rails).
-		local a, b = o.Z + side * 19.5, o.Z + side * 5.5
-		local len = math.abs(a - b)
-		solid("Bridge", Vector3.new(5, 0.6, len), CFrame.new(o.X, surf - 0.3, (a + b) / 2), WOOD, Enum.Material.WoodPlanks, f)
-		for k = 0, math.floor(len / 1.4) do
-			deco("Plank", Vector3.new(5.1, 0.08, 0.18), CFrame.new(o.X, surf + 0.01, math.min(a, b) + k * 1.4), WOOD_DARK, Enum.Material.Wood, f)
-		end
-		for _, x in ipairs({ -2.6, 2.6 }) do
-			for _, z in ipairs({ a, b }) do
-				deco("RopePost", Vector3.new(0.4, 2, 0.4), CFrame.new(o.X + x, surf + 1, z), WOOD_DARK, Enum.Material.Wood, f)
-			end
-		end
-		spawns[team] = spawnPair(Vector3.new(o.X, surf, c.Z + side * 4), -side)
-	end
-	ArenaKit.MakeIslandBase(o, 6, "MidIsle", GRASS, Enum.Material.Grass, f)
-	solid("MidRock", Vector3.new(4, 2.6, 1.8), CFrame.new(o.X, surf + 1.3, o.Z) * CFrame.Angles(0, 0.2, 0), STONE, Enum.Material.Slate, f)
-	return { name = "SKY BRIDGE", spawns = spawns, killY = o.Y - 35 }
-end
-
--- ── Rooftop Duel ─────────────────────────────────────────────────────────────
-local function rooftops(o: Vector3, f: Instance): Layout
-	local top = o.Y
-	local spawns = {}
-	local wall = Color3.fromRGB(46, 44, 62)
-	local roof = Color3.fromRGB(92, 92, 104)
-	local neon = { Color3.fromRGB(255, 90, 200), Color3.fromRGB(90, 220, 255), Color3.fromRGB(255, 210, 90) }
-	for _, side in ipairs({ -1, 1 }) do
-		local team = side < 0 and "Blue" or "Red"
-		local cz = o.Z + side * 20
-		solid("Roof", Vector3.new(22, 1, 18), CFrame.new(o.X, top - 0.5, cz), roof, Enum.Material.Concrete, f)
-		deco("Building", Vector3.new(22, 90, 18), CFrame.new(o.X, top - 46, cz), wall, Enum.Material.Concrete, f)
-		-- Lit windows on the face over the gap.
-		local face = cz - side * 9.05
-		for row = 1, 9 do
-			for col = -3, 3 do
-				if rng:NextNumber() < 0.55 then
-					deco("Window", Vector3.new(1.8, 1.3, 0.1), CFrame.new(o.X + col * 2.8, top - 4 - row * 4, face), neon[rng:NextInteger(1, #neon)], Enum.Material.Neon, f)
-				end
-			end
-		end
-		-- Low parapet on the three outer edges.
-		solid("Parapet", Vector3.new(22, 1.2, 0.6), CFrame.new(o.X, top + 0.6, cz + side * 8.7), roof, Enum.Material.Concrete, f)
-		for _, x in ipairs({ -10.7, 10.7 }) do
-			solid("Parapet", Vector3.new(0.6, 1.2, 18), CFrame.new(o.X + x, top + 0.6, cz), roof, Enum.Material.Concrete, f)
-		end
-		deco("TeamStrip", Vector3.new(20, 0.15, 0.5), CFrame.new(o.X, top + 0.02, cz - side * 8.5), side < 0 and BLUE or RED, Enum.Material.Neon, f)
-		-- Cover: an AC unit and a water tank on legs.
-		local ac = solid("ACUnit", Vector3.new(4, 2.6, 3), CFrame.new(o.X - 5, top + 1.3, cz - side * 2), Color3.fromRGB(190, 196, 204), Enum.Material.DiamondPlate, f)
-		deco("Fan", Vector3.new(0.1, 2, 2), CFrame.new(ac.Position + Vector3.new(0, 1.35, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 64, 72), Enum.Material.Metal, f)
-		cyl(solid("Tank", Vector3.new(5, 4.4, 4.4), CFrame.new(o.X + 7.5, top + 4.2, cz + side * 4) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(150, 110, 80), Enum.Material.Wood, f))
-		for _, lx in ipairs({ -1.6, 1.6 }) do
-			for _, lz in ipairs({ -1.6, 1.6 }) do
-				solid("TankLeg", Vector3.new(0.4, 2, 0.4), CFrame.new(o.X + 7.5 + lx, top + 1, cz + side * 4 + lz), Color3.fromRGB(60, 60, 70), Enum.Material.Metal, f)
-			end
-		end
-		-- A neon sign on the side of the building.
-		deco("Sign", Vector3.new(0.3, 3, 8), CFrame.new(o.X - side * 11.2, top - 6, cz), neon[side < 0 and 2 or 1], Enum.Material.Neon, f)
-		spawns[team] = spawnPair(Vector3.new(o.X, top, cz + side * 5), -side)
-	end
-	-- Across the gap: a steel beam and a narrow plank.
-	solid("Beam", Vector3.new(1.4, 0.8, 24), CFrame.new(o.X - 5, top - 0.4, o.Z), Color3.fromRGB(120, 70, 60), Enum.Material.Metal, f)
-	solid("Plank", Vector3.new(3, 0.4, 24), CFrame.new(o.X + 4, top - 0.2, o.Z), WOOD, Enum.Material.WoodPlanks, f)
-	-- Fog far below.
-	local fog = deco("Fog", Vector3.new(200, 2, 200), CFrame.new(o.X, top - 60, o.Z), Color3.fromRGB(120, 110, 150), Enum.Material.SmoothPlastic, f)
-	fog.Transparency = 0.35
-	return { name = "ROOFTOP DUEL", spawns = spawns, killY = top - 35 }
-end
-
--- ── Crystal Ring ─────────────────────────────────────────────────────────────
-local function crystalRing(o: Vector3, f: Instance): Layout
-	local surf = o.Y
-	local slate = Color3.fromRGB(58, 56, 76)
-	local glow = Color3.fromRGB(170, 120, 255)
-	local ice = Color3.fromRGB(200, 180, 255)
-	cyl(solid("Floor", Vector3.new(2, 40, 40), CFrame.new(o.X, surf - 1, o.Z) * CFrame.Angles(0, 0, math.rad(90)), slate, Enum.Material.Slate, f))
-	cyl(deco("Rim", Vector3.new(0.4, 40.8, 40.8), CFrame.new(o.X, surf - 0.9, o.Z) * CFrame.Angles(0, 0, math.rad(90)), glow, Enum.Material.Neon, f))
-	cyl(deco("Inlay", Vector3.new(0.1, 26, 26), CFrame.new(o.X, surf + 0.02, o.Z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(78, 74, 100), Enum.Material.Slate, f))
-	-- Tapering rock underneath.
-	local r, y = 19, surf - 2
-	for _ = 1, 4 do
-		r *= 0.7
-		cyl(deco("Under", Vector3.new(5, r * 2, r * 2), CFrame.new(o.X, y - 2.5, o.Z) * CFrame.Angles(0, 0, math.rad(90)), slate:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Slate, f))
-		y -= 5
-	end
-	-- The big crystal in the middle, and four small ones round it.
-	local function crystal(pos: Vector3, w: number, h: number)
-		local c = solid("Crystal", Vector3.new(w, h, w), CFrame.new(pos + Vector3.new(0, h / 2 - 0.3, 0)) * CFrame.Angles(0, math.rad(45), math.rad(rng:NextNumber(-6, 6))), ice, Enum.Material.Glass, f)
-		c.Transparency = 0.2
-		deco("Core", Vector3.new(w * 0.45, h * 0.8, w * 0.45), c.CFrame, glow, Enum.Material.Neon, f)
-	end
-	crystal(Vector3.new(o.X, surf, o.Z), 3.4, 9)
+local function pine(th: Theme, pos: Vector3, s: number, parent: Instance)
+	local m = Instance.new("Model")
+	m.Name = "Pine"
+	m.Parent = parent
+	solid("Trunk", Vector3.new(1.1 * s, 3.4 * s, 1.1 * s), CFrame.new(pos + Vector3.new(0, 1.7 * s, 0)), th.trunk, Enum.Material.Wood, m)
+	local green = th.snowy and th.leaves or { Color3.fromRGB(44, 116, 62), Color3.fromRGB(58, 136, 70) }
 	for k = 0, 3 do
-		local a = math.rad(45 + k * 90)
-		crystal(Vector3.new(o.X + math.cos(a) * 10, surf, o.Z + math.sin(a) * 10), 1.8, 4)
+		disc("Tier", (7.2 - k * 1.6) * s, 2.3 * s, pos + Vector3.new(0, (3.6 + k * 2.0) * s, 0), green[k % 2 + 1], Enum.Material.SmoothPlastic, m)
+		if th.snowy then
+			disc("SnowTier", (6.4 - k * 1.6) * s, 0.5 * s, pos + Vector3.new(0, (4.8 + k * 2.0) * s, 0), WHITE, Enum.Material.Snow, m)
+		end
 	end
+	ball("Tip", 1.4 * s, pos + Vector3.new(0, 11.4 * s, 0), th.snowy and WHITE or green[2], m)
+end
+
+local function bush(th: Theme, pos: Vector3, parent: Instance)
+	for k = 1, 3 do
+		local d = rng:NextNumber(2.2, 3.4)
+		local a = k * 2.1 + rng:NextNumber(0, 0.8)
+		ball("Bush", d, pos + Vector3.new(math.cos(a) * 1.1, d * 0.3, math.sin(a) * 1.1), th.snowy and th.leaves[rng:NextInteger(1, 3)] or th.leaves[rng:NextInteger(1, #th.leaves)]:Lerp(Color3.fromRGB(70, 150, 60), th.name == "SAKURA GARDEN" and 0.6 or 0), parent)
+	end
+end
+
+local function flowers(th: Theme, pos: Vector3, parent: Instance)
+	ball("FlowerLeaves", 1.8, pos + Vector3.new(0, 0.35, 0), Color3.fromRGB(80, 160, 60), parent)
+	local col = th.flowers[rng:NextInteger(1, #th.flowers)]
+	for _ = 1, 4 do
+		ball("Bloom", 0.62, pos + Vector3.new(rng:NextNumber(-1.2, 1.2), rng:NextNumber(0.5, 0.9), rng:NextNumber(-1.2, 1.2)), col, parent)
+	end
+end
+
+local function rock(th: Theme, pos: Vector3, s: number, parent: Instance)
+	for k = 1, 2 do
+		local sz = Vector3.new(rng:NextNumber(1.8, 3.2), rng:NextNumber(1.2, 2.2), rng:NextNumber(1.6, 2.8)) * s
+		local cf = CFrame.new(pos + Vector3.new((k - 1.5) * 1.2 * s, sz.Y * 0.25, rng:NextNumber(-0.5, 0.5) * s))
+			* CFrame.Angles(rng:NextNumber(-0.3, 0.3), rng:NextNumber(0, 6.28), rng:NextNumber(-0.3, 0.3))
+		deco("Rock", sz, cf, th.palette.Stone:Lerp(th.palette.StoneDark, rng:NextNumber()), Enum.Material.Slate, parent)
+	end
+end
+
+local function lamp(pos: Vector3, parent: Instance)
+	solid("LampBase", Vector3.new(1.4, 1, 1.4), CFrame.new(pos + Vector3.new(0, 0.5, 0)), Color3.fromRGB(196, 186, 168), Enum.Material.Slate, parent)
+	deco("LampPole", Vector3.new(0.45, 7, 0.45), CFrame.new(pos + Vector3.new(0, 4.5, 0)), IRON, Enum.Material.Metal, parent)
+	deco("LampCap", Vector3.new(1.6, 0.4, 1.6), CFrame.new(pos + Vector3.new(0, 9.9, 0)), IRON, Enum.Material.Metal, parent)
+	local glow = deco("Lantern", Vector3.new(1.1, 1.3, 1.1), CFrame.new(pos + Vector3.new(0, 9.1, 0)), LAMP, Enum.Material.Neon, parent)
+	glow.CastShadow = false
 	local light = Instance.new("PointLight")
-	light.Color = glow
-	light.Range = 30
-	light.Brightness = 1.2
-	light.Parent = f:FindFirstChild("Core")
-	-- Shards drifting round the edge.
-	for _ = 1, 10 do
+	light.Color = LAMP
+	light.Range = 16
+	light.Brightness = 0.8
+	light.Parent = glow
+end
+
+local function crates(th: Theme, pos: Vector3, parent: Instance)
+	local yaw = rng:NextNumber(0, 6.28)
+	solid("Crate", Vector3.new(3, 3, 3), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, yaw, 0), th.palette.Wood, Enum.Material.WoodPlanks, parent)
+	solid("Crate", Vector3.new(2.2, 2.2, 2.2), CFrame.new(pos + Vector3.new(1.4, 1.1, 1.6)) * CFrame.Angles(0, yaw + 0.5, 0), th.palette.WoodDark, Enum.Material.WoodPlanks, parent)
+end
+
+-- Scatter themed props on an island (keeping clear of paths and each other).
+local function dress(th: Theme, isle: any, trees: number, bushes: number, flowerN: number, rocks: number, minD: number, parent: Instance)
+	local function place(n: number, rad: number, fn: (Vector3) -> ())
+		for _ = 1, n do
+			local p = ArenaKit.TryPlace(isle, rng, minD, isle.r - 2.5, rad, 4.5)
+			if p then
+				ArenaKit.Reserve(isle, p, rad)
+				fn(p)
+			end
+		end
+	end
+	place(trees, 3.6, function(p)
+		if th.pines and rng:NextNumber() < 0.5 then
+			pine(th, p, rng:NextNumber(0.75, 1), parent)
+		else
+			tree(th, p, rng:NextNumber(0.7, 0.95), parent)
+		end
+	end)
+	place(bushes, 1.8, function(p)
+		bush(th, p, parent)
+	end)
+	place(flowerN, 1.3, function(p)
+		flowers(th, p, parent)
+	end)
+	place(rocks, 2.2, function(p)
+		rock(th, p, rng:NextNumber(0.7, 1.1), parent)
+	end)
+end
+
+-- ── the sky round the arena ──────────────────────────────────────────────────
+local function sky(th: Theme, o: Vector3, f: Instance)
+	-- A sea of clouds below.
+	for _ = 1, 26 do
 		local a = rng:NextNumber(0, math.pi * 2)
-		local d = rng:NextNumber(26, 40)
-		deco("Shard", Vector3.new(1, rng:NextNumber(2, 4), 1), CFrame.new(o.X + math.cos(a) * d, surf + rng:NextNumber(-8, 8), o.Z + math.sin(a) * d) * CFrame.Angles(rng:NextNumber(0, 1), rng:NextNumber(0, 3), 0), ice, Enum.Material.Glass, f).Transparency = 0.3
+		local r = rng:NextNumber(20, 130)
+		local c = o + Vector3.new(math.cos(a) * r, rng:NextNumber(-48, -30), math.sin(a) * r)
+		for _ = 1, 3 do
+			ball("Cloud", rng:NextNumber(12, 22), c + Vector3.new(rng:NextNumber(-10, 10), rng:NextNumber(-2, 3), rng:NextNumber(-10, 10)), th.clouds, f).Transparency = 0.18
+		end
 	end
-	local spawns = {}
-	for _, side in ipairs({ -1, 1 }) do
+	-- Scenery islands drifting further out, each with a tree.
+	for k = 1, 6 do
+		local a = k / 6 * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
+		local r = rng:NextNumber(95, 130)
+		local c = o + Vector3.new(math.cos(a) * r, rng:NextNumber(-6, 22), math.sin(a) * r)
+		local folder = ArenaKit.MakeIslandBase(c, rng:NextNumber(6, 10), "SceneryIsle", th.palette, th.top, f, th.style)
+		for _, d in ipairs(folder:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.CanCollide = false
+				d.CanQuery = false
+			end
+		end
+		local top = c + Vector3.new(0, ArenaKit.SURFACE, 0)
+		if th.pines then
+			pine(th, top, 0.8, folder)
+		else
+			tree(th, top, 0.8, folder)
+		end
+	end
+	-- High clouds.
+	for _ = 1, 8 do
+		local a = rng:NextNumber(0, math.pi * 2)
+		local r = rng:NextNumber(40, 110)
+		ball("HighCloud", rng:NextNumber(14, 24), o + Vector3.new(math.cos(a) * r, rng:NextNumber(40, 70), math.sin(a) * r), th.clouds, f).Transparency = 0.35
+	end
+end
+
+-- ── building one ─────────────────────────────────────────────────────────────
+-- \`shape\`: "Hill" (bases, a raised centre hill, two flanks) or "Terraces"
+-- (bases, twin middle terraces, a high perch between them).
+local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
+	local I: { [string]: any } = {}
+	local function isle(key: string, off: Vector3, r: number)
+		local pos = o + off
+		local folder = ArenaKit.MakeIslandBase(pos, r, key, th.palette, th.top, f, th.style)
+		I[key] = ArenaKit.NewIsle(pos, r, folder)
+	end
+	isle("baseB", Vector3.new(0, 0, -42), 14)
+	isle("baseR", Vector3.new(0, 0, 42), 14)
+	local links: { { any } }
+	if shape == "Hill" then
+		isle("center", Vector3.new(0, 6, 0), 13)
+		isle("flankL", Vector3.new(-31, 2, 0), 9)
+		isle("flankR", Vector3.new(31, 2, 0), 9)
+		links = {
+			{ "baseB", "center", "stairs" }, { "baseR", "center", "stairs" },
+			{ "baseB", "flankL", "bridge" }, { "baseB", "flankR", "bridge" },
+			{ "baseR", "flankL", "bridge" }, { "baseR", "flankR", "bridge" },
+		}
+	else
+		isle("midL", Vector3.new(-26, 3, -2), 10)
+		isle("midR", Vector3.new(26, 3, 2), 10)
+		isle("perch", Vector3.new(0, 11, 0), 6)
+		links = {
+			{ "baseB", "midL", "bridge" }, { "baseB", "midR", "bridge" },
+			{ "baseR", "midL", "bridge" }, { "baseR", "midR", "bridge" },
+			{ "midL", "perch", "stairs" }, { "midR", "perch", "stairs" },
+		}
+	end
+	for _, l in ipairs(links) do
+		ArenaKit.Link(I[l[1]], I[l[2]])
+	end
+	local paths = Instance.new("Folder")
+	paths.Name = "Paths"
+	paths.Parent = f
+	for _, l in ipairs(links) do
+		local A, B = I[l[1]], I[l[2]]
+		if l[3] == "stairs" then
+			ArenaKit.MakeStairs(A, B, paths, th.stairs)
+		else
+			local pa, pb = ArenaKit.EdgePoints(A, B, 2)
+			ArenaKit.MakeBridge(pa, pb, paths, th.palette)
+		end
+	end
+
+	-- Bases: a plaza for each team with its colour, lamps, crate cover.
+	local spawns: { [string]: { CFrame } } = {}
+	for _, key in ipairs({ "baseB", "baseR" }) do
+		local b = I[key]
+		local side = key == "baseB" and -1 or 1
 		local team = side < 0 and "Blue" or "Red"
-		deco("TeamArc", Vector3.new(8, 0.12, 0.5), CFrame.new(o.X, surf + 0.03, o.Z + side * 17), side < 0 and BLUE or RED, Enum.Material.Neon, f)
-		spawns[team] = spawnPair(Vector3.new(o.X, surf, o.Z + side * 15), -side)
+		local color = side < 0 and BLUE or RED
+		disc("Plaza", 12, 0.12, b.pos + Vector3.new(0, ArenaKit.SURFACE + 0.04, 0), th.stairs.step, Enum.Material.Slate, b.folder)
+		disc("TeamRing", 12.8, 0.08, b.pos + Vector3.new(0, ArenaKit.SURFACE + 0.02, 0), color, Enum.Material.Neon, b.folder).Transparency = 0.35
+		ArenaKit.Reserve(b, ArenaKit.Polar(b, 0, 0), 6.5)
+		local list = {}
+		for k = 0, 4 do
+			local a = k / 5 * math.pi * 2
+			local p = ArenaKit.Polar(b, a, 3.2, 1.9)
+			table.insert(list, CFrame.lookAt(p, p + Vector3.new(0, 0, -side)))
+		end
+		spawns[team] = list
+		for _, a in ipairs(ArenaKit.OpenAngles(b, 2)) do
+			local p = ArenaKit.Polar(b, a, b.r - 3)
+			lamp(p, b.folder)
+			ArenaKit.Reserve(b, p, 1.6)
+		end
+		for _ = 1, 2 do
+			local p = ArenaKit.TryPlace(b, rng, 7.5, b.r - 3, 2.5, 4.5)
+			if p then
+				ArenaKit.Reserve(b, p, 2.5)
+				crates(th, p, b.folder)
+			end
+		end
+		dress(th, b, 3, 3, 4, 1, 7.5, b.folder)
 	end
-	return { name = "CRYSTAL RING", spawns = spawns, killY = surf - 35 }
+
+	-- The middle: cover, trees, a landmark, waterfalls off the side islands.
+	local mid = shape == "Hill" and { "center", "flankL", "flankR" } or { "midL", "midR", "perch" }
+	for _, key in ipairs(mid) do
+		local m = I[key]
+		local big = m.r >= 12
+		if big then
+			-- Centre hill: a stone ring with a tree in it.
+			disc("HillPlaza", 10, 0.12, m.pos + Vector3.new(0, ArenaKit.SURFACE + 0.04, 0), th.stairs.step, Enum.Material.Slate, m.folder)
+			for k = 0, 7 do
+				local a = k / 8 * math.pi * 2
+				solid("StoneBlock", Vector3.new(1.6, 1.4, 1.6), CFrame.new(ArenaKit.Polar(m, a, 5.2, 0.7)) * CFrame.Angles(0, a, 0), th.palette.Stone, Enum.Material.Slate, m.folder)
+			end
+			if th.pines then
+				pine(th, ArenaKit.Polar(m, 0, 0), 1.1, m.folder)
+			else
+				tree(th, ArenaKit.Polar(m, 0, 0), 1.15, m.folder)
+			end
+			ArenaKit.Reserve(m, ArenaKit.Polar(m, 0, 0), 6.5)
+			dress(th, m, 2, 3, 4, 2, 7, m.folder)
+		elseif key == "perch" then
+			lamp(ArenaKit.Polar(m, 0, 0), m.folder)
+			ArenaKit.Reserve(m, ArenaKit.Polar(m, 0, 0), 2)
+			dress(th, m, 0, 2, 2, 0, 2.5, m.folder)
+		else
+			ArenaKit.AddSwimColumn("Water", m, ArenaKit.OpenAngles(m, 1)[1], m.folder)
+			local p = ArenaKit.TryPlace(m, rng, 2, m.r - 3, 2.5, 4.5)
+			if p then
+				ArenaKit.Reserve(m, p, 2.5)
+				crates(th, p, m.folder)
+			end
+			dress(th, m, 1, 2, 3, 1, 2.5, m.folder)
+		end
+	end
+	if th.snowy then
+		-- Ice crystals on the bases for Frost Peaks.
+		for _, key in ipairs({ "baseB", "baseR" }) do
+			local p = ArenaKit.TryPlace(I[key], rng, 7, I[key].r - 3, 2, 4.5)
+			if p then
+				local c = solid("Ice", Vector3.new(1.6, 4.5, 1.6), CFrame.new(p + Vector3.new(0, 2, 0)) * CFrame.Angles(0, math.rad(45), math.rad(8)), Color3.fromRGB(190, 230, 255), Enum.Material.Ice, I[key].folder)
+				c.Transparency = 0.15
+			end
+		end
+	end
+
+	sky(th, o, f)
+	-- (Deep enough that the bottom of a waterfall is still in play.)
+	return { name = th.name, spawns = spawns, killY = o.Y - 62 }
 end
 
 DuelMaps.List = {
-	{ Id = "SkyBridge", Name = "SKY BRIDGE", Build = skyBridge },
-	{ Id = "Rooftops", Name = "ROOFTOP DUEL", Build = rooftops },
-	{ Id = "CrystalRing", Name = "CRYSTAL RING", Build = crystalRing },
+	{ Id = "Meadow", Name = "MEADOW", Build = function(o: Vector3, f: Instance): Layout
+		return build(THEMES.Meadow, "Hill", o, f)
+	end },
+	{ Id = "Sakura", Name = "SAKURA GARDEN", Build = function(o: Vector3, f: Instance): Layout
+		return build(THEMES.Sakura, "Terraces", o, f)
+	end },
+	{ Id = "Autumn", Name = "AUTUMN RIDGE", Build = function(o: Vector3, f: Instance): Layout
+		return build(THEMES.Autumn, "Hill", o, f)
+	end },
+	{ Id = "Frost", Name = "FROST PEAKS", Build = function(o: Vector3, f: Instance): Layout
+		return build(THEMES.Frost, "Terraces", o, f)
+	end },
 }
 
--- Build duel map `id` (a random one if unknown) at `origin` into `parent`.
+-- Build duel map \`id\` (a random one if unknown) at \`origin\` into \`parent\`.
 function DuelMaps.Build(id: string?, origin: Vector3, parent: Instance): Layout
 	for _, def in ipairs(DuelMaps.List) do
 		if def.Id == id then
@@ -221,7 +438,7 @@ function DuelMaps.Build(id: string?, origin: Vector3, parent: Instance): Layout
 	return DuelMaps.BuildRandom(origin, parent)
 end
 
--- Build a random duel map at `origin` into `parent`.
+-- Build a random duel map at \`origin\` into \`parent\`.
 function DuelMaps.BuildRandom(origin: Vector3, parent: Instance): Layout
 	local def = DuelMaps.List[rng:NextInteger(1, #DuelMaps.List)]
 	return def.Build(origin, parent)
