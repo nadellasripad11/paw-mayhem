@@ -65,6 +65,8 @@ local function defaultProfile()
 				Accessory = Cats.Default.Accessory,
 				Emote = Cats.Default.Emote,
 			},
+			-- The (up to) six emotes in the emote picker; "" = an empty slot.
+			EmoteSlots = { "Happy", "Sit", "", "", "", "" },
 		},
 		RedeemedCodes = {}, -- reward codes already used (Config.Codes)
 		Receipts = {}, -- Robux purchase ids already granted (duplicate-safe)

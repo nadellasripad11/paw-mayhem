@@ -20,6 +20,7 @@ Remotes.Definitions = {
 	SetLoadout = "Event", -- {weaponId, skinId, cat = {...}}
 	PurchaseItem = "Function", -- {kind, id} -> {ok, reason}
 	EquipItem = "Function", -- {kind, id} -> {ok}
+	SetEmoteSlot = "Function", -- {slot = 1..6, id} -> {ok} (id "" empties the slot)
 	ClaimQuest = "Function", -- questId -> {ok, coins}
 	ClaimDaily = "Function", -- -> {ok, streak, coins, gems}
 	ClaimSeason = "Function", -- {tier, track} -> {ok, reason}

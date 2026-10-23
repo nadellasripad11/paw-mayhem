@@ -375,8 +375,49 @@ local function relayMoveFx(player: Player, kind: any)
 	end
 end
 
+-- Put an owned emote in one of the six emote slots ("" empties it). If it's
+-- already in another slot the two swap. Slot 1 is also what the emote key
+-- plays.
+local function setEmoteSlot(player: Player, data: any)
+	local profile = DataService.Get(player)
+	if not profile or typeof(data) ~= "table" then
+		return { ok = false }
+	end
+	local slot, id = tonumber(data.slot), data.id
+	if not slot or slot ~= math.floor(slot) or slot < 1 or slot > 6 or type(id) ~= "string" then
+		return { ok = false }
+	end
+	if id ~= "" and not EconomyService.Owns(player, "Emote", id) then
+		return { ok = false, reason = "not owned" }
+	end
+	local slots = profile.Loadout.EmoteSlots
+	if type(slots) ~= "table" then
+		slots = { "", "", "", "", "", "" }
+		profile.Loadout.EmoteSlots = slots
+	end
+	for i = 1, 6 do
+		if slots[i] == nil then
+			slots[i] = ""
+		end
+	end
+	if id ~= "" then
+		for i = 1, 6 do
+			if i ~= slot and slots[i] == id then
+				slots[i] = slots[slot]
+			end
+		end
+	end
+	slots[slot] = id
+	if slots[1] ~= "" then
+		profile.Loadout.Cat.Emote = slots[1]
+	end
+	EconomyService.Push(player)
+	return { ok = true }
+end
+
 function EconomyService.Start()
 	Remotes.Get("RedeemCode").OnServerInvoke = redeemCode
+	Remotes.Get("SetEmoteSlot").OnServerInvoke = setEmoteSlot
 	Remotes.Get("UseEmote").OnServerEvent:Connect(useEmote)
 	Remotes.Get("MoveFx").OnServerEvent:Connect(relayMoveFx)
 	game:GetService("Players").PlayerRemoving:Connect(function(p)

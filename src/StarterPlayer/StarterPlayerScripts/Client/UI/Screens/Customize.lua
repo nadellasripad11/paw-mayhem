@@ -44,6 +44,10 @@ local previewVF: ViewportFrame
 local previewName: TextLabel
 local railButtons: { [string]: any } = {}
 local tiles: { any } = {}
+-- The six emote slots (shown above the grid on the EMOTES tab).
+local slotBar: Frame? = nil
+local slotViews: { { button: TextButton, icon: Frame, stroke: UIStroke, scale: UIScale } } = {}
+local selectedSlot = 1
 local activeCat = CATEGORIES[1]
 local lastSig = ""
 
@@ -72,7 +76,82 @@ local function framingFor(kind: string, item): string
 	return "Bust"
 end
 
+-- Paint the six slots: their emotes, and which one is selected.
+local function paintSlots()
+	local slots = ClientActions.EmoteSlots()
+	for i, v in ipairs(slotViews) do
+		v.icon:ClearAllChildren()
+		local id = slots[i]
+		if id ~= "" then
+			Icons.Place(EMOTE_ICON[id] or "Smiley", v.icon, 30, Color3.new(1, 1, 1))
+		end
+		v.stroke.Color = i == selectedSlot and Color3.fromRGB(255, 210, 70) or TILE_STROKE
+		v.stroke.Thickness = i == selectedSlot and 3 or 1.5
+	end
+end
+
+-- Just added to a slot: the slot pops with a gold flash and "ADDED!" floats
+-- up, and the preview cat does the emote.
+local function addedEffect(i: number, id: string)
+	local TweenService = game:GetService("TweenService")
+	local v = slotViews[i]
+	if v then
+		v.scale.Scale = 1.4
+		TweenService:Create(v.scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		local flash = UIUtil.make("Frame", { Parent = v.button, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 220, 90), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 5 })
+		UIUtil.corner(UDim.new(0, 10), flash)
+		TweenService:Create(flash, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+		task.delay(0.55, function()
+			flash:Destroy()
+		end)
+		local added = UIUtil.label({
+			Parent = v.button, Text = "ADDED!", Font = Theme.Font.Title, TextSize = 16, TextColor3 = Color3.fromRGB(255, 220, 90),
+			TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -2),
+			Size = UDim2.fromOffset(90, 20), TextStrokeTransparency = 0.3, ZIndex = 6,
+		})
+		TweenService:Create(added, TweenInfo.new(0.9), { Position = UDim2.new(0.5, 0, 0, -26), TextTransparency = 1, TextStrokeTransparency = 1 }):Play()
+		task.delay(0.95, function()
+			added:Destroy()
+		end)
+	end
+	local cat = previewVF and previewVF:FindFirstChild("CatModel", true)
+	if cat then
+		cat:SetAttribute("Emote", id)
+		cat:SetAttribute("EmoteAt", workspace:GetServerTimeNow())
+	end
+	pcall(function()
+		require(script.Parent.Parent.Parent.Controllers.SoundController).Play("Pop")
+	end)
+end
+
+-- An emote tile was picked: buy it if needed, then put it in the selected
+-- slot (or the first empty one if that's taken).
+local function equipEmote(item)
+	if not ClientState.Owns("Emote", item.Id) and not Monetize.Buy("Emote", item.Id, item) then
+		return
+	end
+	local slots = ClientActions.EmoteSlots()
+	local target = selectedSlot
+	if slots[target] ~= "" and not table.find(slots, item.Id) then
+		for i = 1, 6 do
+			if slots[i] == "" then
+				target = i
+				break
+			end
+		end
+	end
+	local res = ClientActions.SetEmoteSlot(target, item.Id)
+	if res and res.ok then
+		selectedSlot = target
+		addedEffect(target, item.Id)
+	end
+end
+
 local function buyOrEquip(kind: string, item)
+	if kind == "Emote" then
+		equipEmote(item)
+		return
+	end
 	if ClientState.Owns(kind, item.Id) then
 		ClientActions.Equip(kind, item.Id)
 	elseif Monetize.Buy(kind, item.Id, item) then
@@ -85,7 +164,7 @@ local function refreshTiles()
 	local level = ClientState.Profile and ClientState.Profile.Level or 1
 	for _, t in ipairs(tiles) do
 		local owned = ClientState.Owns(t.kind, t.item.Id)
-		local equipped = ClientState.Equipped(t.kind) == t.item.Id
+		local equipped = if t.kind == "Emote" then table.find(ClientActions.EmoteSlots(), t.item.Id) ~= nil else ClientState.Equipped(t.kind) == t.item.Id
 		t.stroke.Color = equipped and EQUIP_GREEN or TILE_STROKE
 		t.stroke.Thickness = equipped and 3 or 1.5
 		t.stroke.Transparency = equipped and 0 or 0.35
@@ -195,7 +274,15 @@ local function loadCategory(cat)
 		b.stroke.Transparency = on and 0 or 0.5
 		b.glow.Visible = on
 	end
-	gridTitle.Text = cat.title
+	gridTitle.Text = cat.kind == "Emote" and "EMOTES  ·  tap a slot, then an emote (up to 6)" or cat.title
+	-- The emote tab shows the six slots above the grid.
+	local bar = slotBar
+	if bar then
+		bar.Visible = cat.kind == "Emote"
+		grid.Position = UDim2.fromOffset(394, cat.kind == "Emote" and 120 or 42)
+		grid.Size = UDim2.fromOffset(360, H - (cat.kind == "Emote" and 132 or 54))
+		paintSlots()
+	end
 	for _, child in ipairs(grid:GetChildren()) do
 		if child:IsA("GuiObject") then
 			child:Destroy()
@@ -218,6 +305,9 @@ local function refreshPreview()
 end
 
 local function onProfileChanged()
+	if slotBar and slotBar.Visible then
+		paintSlots()
+	end
 	local sig = catSig()
 	if sig ~= lastSig then
 		lastSig = sig
@@ -348,6 +438,31 @@ function Customize.Build(parent)
 	gpad.PaddingBottom = UDim.new(0, 8)
 	gpad.Parent = grid
 	UIUtil.gridLayout(grid, UDim2.fromOffset(TILE, TILE), UDim2.fromOffset(10, 10))
+	-- The six emote slots (EMOTES tab): tap one to choose where the next
+	-- emote goes.
+	local bar = UIUtil.make("Frame", { Parent = stage, Position = UDim2.fromOffset(398, 44), Size = UDim2.fromOffset(352, 66), BackgroundTransparency = 1, Visible = false }) :: Frame
+	UIUtil.listLayout(bar, 6, Enum.FillDirection.Horizontal)
+	for i = 1, 6 do
+		local b = UIUtil.make("TextButton", {
+			Parent = bar, LayoutOrder = i, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(53, 62),
+			BackgroundColor3 = Color3.fromRGB(20, 30, 52), BorderSizePixel = 0,
+		}) :: TextButton
+		UIUtil.corner(UDim.new(0, 10), b)
+		local st = UIUtil.stroke(TILE_STROKE, 1.5, b)
+		local sc = Instance.new("UIScale")
+		sc.Parent = b
+		local icon = UIUtil.make("Frame", { Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1 }) :: Frame
+		UIUtil.label({
+			Parent = b, Text = tostring(i), Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim,
+			TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -2), Size = UDim2.new(1, 0, 0, 12),
+		})
+		b.MouseButton1Click:Connect(function()
+			selectedSlot = i
+			paintSlots()
+		end)
+		slotViews[i] = { button = b, icon = icon, stroke = st, scale = sc }
+	end
+	slotBar = bar
 
 	lastSig = catSig()
 	refreshPreview()

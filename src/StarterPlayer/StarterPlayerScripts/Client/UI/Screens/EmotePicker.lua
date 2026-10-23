@@ -1,5 +1,6 @@
 --!strict
--- EmotePicker: a small window of the emotes you own (tap one to play it).
+-- EmotePicker: a small window of your six emote slots (tap one to play it;
+-- change them in Customize -> Emotes).
 -- Opened by the EMOTES button in the lobby's top right and by the emote
 -- button in the phone controls during a match; X or picking one closes it.
 
@@ -40,8 +41,11 @@ local function fill()
 		end
 	end
 	local order = 0
-	for _, e in ipairs(Cats.Emotes) do
-		if ClientState.Owns("Emote", e.Id) then
+	-- Your six emote slots (set in Customize).
+	local slots = require(script.Parent.Parent.Parent.ClientActions).EmoteSlots()
+	for _, id in ipairs(slots) do
+		local e = Cats.EmoteById[id]
+		if e and ClientState.Owns("Emote", e.Id) then
 			order += 1
 			local b = UIUtil.make("TextButton", {
 				Parent = g, LayoutOrder = order, Text = "", AutoButtonColor = true, BorderSizePixel = 0,
