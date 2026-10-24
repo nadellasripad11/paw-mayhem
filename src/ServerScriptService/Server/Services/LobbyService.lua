@@ -1341,6 +1341,171 @@ local function buildAmbience(f: Instance)
 	e.Parent = dust
 end
 
+-- ── finishing: walls and side rooms ──────────────────────────────────────────
+-- Pipe runs along the top of every steel wall, framed posters on the side
+-- walls; the Weapons room gets a workbench, a floor mat and work lamps; the
+-- Market a red carpet, a velvet rope round the statue, spotlit cases and
+-- framed portraits of legendary cats.
+local POSTERS = {
+	{ "BLAST 'EM OFF!", Color3.fromRGB(230, 70, 80) },
+	{ "STAY FLUFFY", Color3.fromRGB(110, 170, 255) },
+	{ "SEASON 1", GOLD },
+	{ "1v1 ME", Color3.fromRGB(170, 110, 255) },
+	{ "NO CLAWS IN THE LOBBY", Color3.fromRGB(90, 200, 120) },
+	{ "WANTED: GOLDEN PURR", GOLD },
+	{ "PAW MAYHEM", CYAN },
+	{ "RINGOUT CHAMPS", Color3.fromRGB(255, 150, 70) },
+}
+
+local function poster(pos: Vector3, normal: Vector3, idx: number, parent: Instance)
+	local face = CFrame.lookAt(pos, pos + normal)
+	local p = POSTERS[(idx - 1) % #POSTERS + 1]
+	part("PosterFrame", Vector3.new(5.4, 7, 0.25), face * CFrame.new(0, 0, 0.12), STEEL_DARK, Enum.Material.Metal, parent)
+	local board = part("Poster", Vector3.new(4.8, 6.4, 0.1), face * CFrame.new(0, 0, -0.05), p[2]:Lerp(Color3.new(0, 0, 0), 0.55), Enum.Material.SmoothPlastic, parent)
+	sign(board, Enum.NormalId.Front, {
+		{ text = "🐾", size = 60, color = p[2] },
+		{ text = p[1], size = 34, color = WHITE },
+	})
+end
+
+local function pendantLamp(pos: Vector3, parent: Instance)
+	part("LampCord", Vector3.new(0.12, HEIGHT - pos.Y + SURFACE_Y, 0.12), CFrame.new(Vector3.new(pos.X, (pos.Y + SURFACE_Y + HEIGHT) / 2, pos.Z)), INK, Enum.Material.SmoothPlastic, parent)
+	local shade = part("LampShade", Vector3.new(1.6, 2.4, 2.4), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(40, 44, 54), Enum.Material.Metal, parent) :: Part
+	shade.Shape = Enum.PartType.Cylinder
+	local bulb = ball("LampBulb", 1, pos - Vector3.new(0, 0.7, 0), Color3.fromRGB(255, 226, 170), parent)
+	bulb.Material = Enum.Material.Neon
+	local sl = Instance.new("SpotLight")
+	sl.Face = Enum.NormalId.Bottom
+	sl.Color = Color3.fromRGB(255, 226, 180)
+	sl.Range = 22
+	sl.Angle = 70
+	sl.Brightness = 1.4
+	sl.Parent = bulb
+end
+
+local function buildFinish(f: Instance)
+	-- Pipes and posters round the steel walls.
+	local idx = 0
+	for i, a in ipairs(OUTLINE) do
+		local b = OUTLINE[i % #OUTLINE + 1]
+		local pa, pb = Vector3.new(a[1], 0, a[2]), Vector3.new(b[1], 0, b[2])
+		local len = (pb - pa).Magnitude
+		local dir = (pb - pa).Unit
+		local normal = Vector3.new(-dir.Z, 0, dir.X)
+		local midXZ = (pa + pb) / 2
+		if not inside(midXZ.X + normal.X * 2, midXZ.Z + normal.Z * 2) then
+			normal = -normal
+		end
+		local navy = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
+		if not navy then
+			local base = at(midXZ.X, midXZ.Z)
+			for k, y in ipairs({ HEIGHT - 4.2, HEIGHT - 5.2 }) do
+				local c = base + normal * (0.7 + k * 0.1) + Vector3.new(0, y, 0)
+				local pipe = part("Pipe", Vector3.new(len, 0.55, 0.55), CFrame.lookAt(c, c + normal), k == 1 and Color3.fromRGB(150, 96, 60) or STEEL_DARK, Enum.Material.Metal, f) :: Part
+				pipe.Shape = Enum.PartType.Cylinder
+				for t = 4, len - 4, 8 do
+					part("PipeClamp", Vector3.new(0.3, 0.8, 0.8), CFrame.new(base - dir * (t - len / 2) + normal * (0.7 + k * 0.1) + Vector3.new(0, y, 0)), BEAM, Enum.Material.Metal, f)
+				end
+			end
+			-- Posters on the walls that run along the sides (|x| = 44 / 86, and
+			-- the side rooms' walls), between the pillars.
+			if math.abs(dir.Z) > 0.9 or math.abs(midXZ.Z) == 18 then
+				for t = 16, len - 8, 16 do
+					idx += 1
+					local p = base - dir * (t - len / 2) + normal * 0.25 + Vector3.new(0, 9, 0)
+					-- (skip the spots the lounges stand in front of)
+					local inLounge = math.abs(p.Z - (CENTER.Z + 22)) < 6 and math.abs(math.abs(p.X - CENTER.X) - 43) < 3
+					if not inLounge then
+						poster(p, normal, idx, f)
+					end
+				end
+			end
+		end
+	end
+
+	-- Weapons room: a workbench, a mat down the middle, work lamps.
+	local wr = Instance.new("Folder")
+	wr.Name = "WeaponsDressing"
+	wr.Parent = f
+	solid("Workbench", Vector3.new(8, 0.5, 2.6), CFrame.new(at(62, -16.2, 3.2)), WOOD, Enum.Material.WoodPlanks, wr)
+	for _, x in ipairs({ 58.6, 65.4 }) do
+		part("BenchLeg", Vector3.new(0.4, 3, 2.2), CFrame.new(at(x, -16.2, 1.5)), STEEL_DARK, Enum.Material.Metal, wr)
+	end
+	part("Pegboard", Vector3.new(8, 5, 0.2), CFrame.new(at(62, -17.7, 6.4)), Color3.fromRGB(150, 120, 90), Enum.Material.Wood, wr)
+	for k = 0, 5 do
+		part("Tool", Vector3.new(0.25, 1.4 + (k % 3) * 0.4, 0.15), CFrame.new(at(59.2 + k * 1.1, -17.55, 6.6)) * CFrame.Angles(0, 0, math.rad((k % 2 == 0) and 10 or -10)), k % 2 == 0 and Color3.fromRGB(200, 60, 50) or Color3.fromRGB(180, 186, 196), Enum.Material.Metal, wr)
+	end
+	do
+		local w = Weapons.List[2] or Weapons.List[1]
+		local pos = at(62, -16.2, 3.75)
+		local gun = BlasterBuilder.Build(w.Id, nil, CFrame.new(pos) * CFrame.Angles(0, math.rad(90), math.rad(90)), 0.9)
+		for _, d in ipairs(gun:GetDescendants()) do
+			if d:IsA("BasePart") then
+				deco(d)
+			end
+		end
+		gun.Parent = wr
+	end
+	part("WorkMat", Vector3.new(34, 0.06, 6), CFrame.new(at(65, 0, 0.03)), Color3.fromRGB(34, 36, 42), Enum.Material.Rubber, wr)
+	for _, z in ipairs({ -3, 3 }) do
+		part("MatEdge", Vector3.new(34, 0.07, 0.3), CFrame.new(at(65, z, 0.035)), CAUTION, Enum.Material.SmoothPlastic, wr)
+	end
+	for _, x in ipairs({ 56, 72 }) do
+		pendantLamp(at(x, 0, HEIGHT - 8), wr)
+	end
+
+	-- Market: carpet, velvet rope round the statue, spotlights, portraits.
+	local mk = Instance.new("Folder")
+	mk.Name = "MarketDressing"
+	mk.Parent = f
+	part("Carpet", Vector3.new(36, 0.06, 6), CFrame.new(at(-64, 0, 0.03)), Color3.fromRGB(150, 30, 46), Enum.Material.Fabric, mk)
+	for _, z in ipairs({ -3.1, 3.1 }) do
+		part("CarpetTrim", Vector3.new(36, 0.07, 0.25), CFrame.new(at(-64, z, 0.035)), GOLD, Enum.Material.SmoothPlastic, mk)
+	end
+	local plinth = at(-62, -4)
+	local posts = {}
+	for k = 0, 5 do
+		local a = k / 6 * math.pi * 2
+		local p = plinth + Vector3.new(math.cos(a) * 6.5, 0, math.sin(a) * 6.5)
+		part("RopePost", Vector3.new(0.35, 3, 0.35), CFrame.new(p + Vector3.new(0, 1.5, 0)), GOLD, Enum.Material.Metal, mk)
+		ball("RopePostTop", 0.6, p + Vector3.new(0, 3.1, 0), GOLD, mk).Material = Enum.Material.Metal
+		disc("RopePostBase", 1.2, 0.2, p + Vector3.new(0, 0.1, 0), GOLD, Enum.Material.Metal, mk)
+		table.insert(posts, p)
+	end
+	for k = 1, #posts do
+		local a, b = posts[k], posts[k % #posts + 1]
+		for s = 0, 5 do
+			local t0, t1 = s / 6, (s + 1) / 6
+			local sag = function(t: number): Vector3
+				return a:Lerp(b, t) + Vector3.new(0, 2.6 - math.sin(t * math.pi) * 0.6, 0)
+			end
+			local p0, p1 = sag(t0), sag(t1)
+			part("VelvetRope", Vector3.new(0.22, 0.22, (p1 - p0).Magnitude), CFrame.lookAt((p0 + p1) / 2, p1), Color3.fromRGB(170, 20, 40), Enum.Material.Fabric, mk)
+		end
+	end
+	for k = 1, 4 do
+		local holder = part("Spot", Vector3.one * 0.2, CFrame.new(at(-76, -13.5 + (k - 1) * 9, HEIGHT - 3)), WHITE, Enum.Material.SmoothPlastic, mk)
+		holder.Transparency = 1
+		local sl = Instance.new("SpotLight")
+		sl.Face = Enum.NormalId.Bottom
+		sl.Color = Color3.fromRGB(255, 236, 200)
+		sl.Range = 24
+		sl.Angle = 40
+		sl.Brightness = 2
+		sl.Parent = holder
+	end
+	for k, name in ipairs({ "GALAXY", "SAKURA", "MIDNIGHT", "ROYAL GOLD" }) do
+		local pos = at(-52 - (k - 1) * 8, -17.6, 9)
+		local face = CFrame.lookAt(pos, pos + Vector3.new(0, 0, 1))
+		part("PortraitFrame", Vector3.new(5, 5.6, 0.3), face * CFrame.new(0, 0, 0.1), GOLD, Enum.Material.Metal, mk)
+		local art = part("Portrait", Vector3.new(4.3, 4.9, 0.1), face * CFrame.new(0, 0, -0.1), Color3.fromRGB(30, 24, 40), Enum.Material.SmoothPlastic, mk)
+		sign(art, Enum.NormalId.Front, {
+			{ text = "🐱", size = 70, color = WHITE },
+			{ text = name, size = 26, color = GOLD },
+		})
+	end
+end
+
 local function buildLobby()
 	local f = Instance.new("Folder")
 	f.Name = "Lobby"
@@ -1361,6 +1526,7 @@ local function buildLobby()
 	buildBoards(plaza)
 	buildDisplays(plaza)
 	buildAmbience(plaza)
+	buildFinish(plaza)
 	buildGuns(f)
 	buildCollection(f)
 	buildPractice(f)
