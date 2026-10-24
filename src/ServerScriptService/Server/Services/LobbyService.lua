@@ -1140,6 +1140,207 @@ local function hitDummy(shooter: Player, model: Model, weapon: any, dir: Vector3
 end
 
 -- ── putting it together ──────────────────────────────────────────────────────
+-- ── life round the plaza ─────────────────────────────────────────────────────
+-- A spinning hologram logo over the spawn, two big news screens on the back
+-- wall (cycling tips and news), a lounge corner each side with a vending
+-- machine (opens the Shop) and a bench, hanging team banners, planters,
+-- paw-print trails to the side rooms, two bounce springs to play on and
+-- dust drifting in the light.
+local newsLabels: { TextLabel } = {}
+local NEWS = {
+	{ "NEW: 1v1 - 5v5", "Press PLAY and pick a mode. Bots fill in after 15 s!" },
+	{ "WEEKEND MAYHEM", "Low gravity and bonus coins every Saturday and Sunday" },
+	{ "TIP: CLIMB", "Push into a wall and hold jump to climb it" },
+	{ "TIP: ABILITIES", "Z boost  ·  X jumps  ·  C fly  -  each every 15 s" },
+	{ "FREE CODES", "Try the ARCADE machine by the spawn" },
+	{ "DAILY TASKS", "Finish them for coins - new ones every day" },
+	{ "SHOOTING RANGE", "Through the glass behind the spawn" },
+}
+
+local function buildAmbience(f: Instance)
+	local spawnAt = at(0, 0)
+
+	-- Hologram logo turning over the spawn (the client spins it).
+	local logo = Instance.new("Model")
+	logo.Name = "HoloLogo"
+	local card = part("HoloCard", Vector3.new(16, 4.4, 0.1), CFrame.new(at(0, 0, 13)), CYAN, Enum.Material.SmoothPlastic, logo)
+	card.Transparency = 1
+	for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.LightInfluence = 0
+		gui.PixelsPerStud = 40
+		gui.Parent = card
+		local l = Instance.new("TextLabel")
+		l.Size = UDim2.fromScale(1, 1)
+		l.BackgroundTransparency = 1
+		l.Text = "PAW MAYHEM"
+		l.Font = Enum.Font.FredokaOne
+		l.TextScaled = true
+		l.TextColor3 = Color3.fromRGB(190, 240, 255)
+		l.TextStrokeColor3 = CYAN
+		l.TextStrokeTransparency = 0.2
+		l.TextTransparency = 0.1
+		l.Parent = gui
+	end
+	logo.PrimaryPart = card
+	logo.Parent = f
+	spinning(logo)
+	disc("HoloRing", 9, 0.12, at(0, 0, 10), CYAN, Enum.Material.Neon, f).Transparency = 0.4
+	disc("HoloRing", 6, 0.12, at(0, 0, 10.6), CYAN, Enum.Material.Neon, f).Transparency = 0.55
+	local beamFrom = part("HoloEmitter", Vector3.one * 0.2, CFrame.new(at(0, 0, 0.7)), CYAN, Enum.Material.SmoothPlastic, f)
+	beamFrom.Transparency = 1
+	local a0 = Instance.new("Attachment")
+	a0.Parent = beamFrom
+	local a1 = Instance.new("Attachment")
+	a1.Parent = beamFrom
+	a1.WorldPosition = at(0, 0, 10)
+	local beam = Instance.new("Beam")
+	beam.Attachment0, beam.Attachment1 = a0, a1
+	beam.Width0, beam.Width1 = 2, 9
+	beam.Color = ColorSequence.new(CYAN)
+	beam.Transparency = NumberSequence.new(0.85, 0.95)
+	beam.LightEmission = 1
+	beam.FaceCamera = true
+	beam.Parent = beamFrom
+
+	-- News screens on the back wall either side of the range door.
+	for _, x in ipairs({ -30, 30 }) do
+		local pos = at(x, -39.4, 11)
+		local face = CFrame.lookAt(pos, at(x, 0, 11))
+		part("ScreenFrame", Vector3.new(15, 9, 0.4), face * CFrame.new(0, 0, 0.2), STEEL_DARK, Enum.Material.Metal, f)
+		local screen = part("NewsScreen", Vector3.new(14, 8, 0.2), face, Color3.fromRGB(10, 14, 24), Enum.Material.SmoothPlastic, f)
+		light(screen, BLUE, 16, 0.6)
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = Enum.NormalId.Front
+		gui.LightInfluence = 0
+		gui.PixelsPerStud = 30
+		gui.Parent = screen
+		local bar = Instance.new("Frame")
+		bar.Size = UDim2.fromScale(1, 0.18)
+		bar.BackgroundColor3 = BLUE
+		bar.BorderSizePixel = 0
+		bar.Parent = gui
+		local live = Instance.new("TextLabel")
+		live.Size = UDim2.fromScale(1, 1)
+		live.BackgroundTransparency = 1
+		live.Text = "PAW NEWS"
+		live.Font = Enum.Font.FredokaOne
+		live.TextScaled = true
+		live.TextColor3 = WHITE
+		live.Parent = bar
+		local head = Instance.new("TextLabel")
+		head.Name = "Head"
+		head.Position = UDim2.fromScale(0.05, 0.24)
+		head.Size = UDim2.fromScale(0.9, 0.34)
+		head.BackgroundTransparency = 1
+		head.Font = Enum.Font.FredokaOne
+		head.TextScaled = true
+		head.TextColor3 = GOLD
+		head.Parent = gui
+		local body = Instance.new("TextLabel")
+		body.Name = "Body"
+		body.Position = UDim2.fromScale(0.07, 0.62)
+		body.Size = UDim2.fromScale(0.86, 0.3)
+		body.BackgroundTransparency = 1
+		body.Font = Enum.Font.GothamBold
+		body.TextScaled = true
+		body.TextWrapped = true
+		body.TextColor3 = WHITE
+		body.Parent = gui
+		table.insert(newsLabels, head)
+		table.insert(newsLabels, body)
+	end
+
+	-- Lounge corners: a vending machine (opens the Shop) and a bench.
+	for _, s in ipairs({ -1, 1 }) do
+		local pos = at(s * 42.4, 22)
+		local face = CFrame.lookAt(pos, Vector3.new(spawnAt.X, pos.Y, pos.Z))
+		local body = solid("VendingMachine", Vector3.new(3.4, 6.2, 2.4), face * CFrame.new(0, 3.1, 0), s < 0 and Color3.fromRGB(200, 40, 60) or Color3.fromRGB(40, 110, 220), Enum.Material.SmoothPlastic, f)
+		local glass = part("VendingGlass", Vector3.new(2.2, 3.8, 0.1), face * CFrame.new(-0.4, 3.6, -1.22), Color3.fromRGB(180, 230, 255), Enum.Material.Neon, f)
+		glass.Transparency = 0.45
+		for row = 0, 3 do
+			for col = 0, 2 do
+				ball("Snack", 0.45, (face * CFrame.new(-1.1 + col * 0.7, 2.2 + row * 0.9, -1.1)).Position, ({ GOLD, PURPLE, CYAN, Color3.fromRGB(255, 120, 140) })[(row + col) % 4 + 1], f)
+			end
+		end
+		local logoPart = part("VendingLogo", Vector3.new(3.2, 0.9, 0.1), face * CFrame.new(0, 5.8, -1.22), WHITE, Enum.Material.SmoothPlastic, f)
+		sign(logoPart, Enum.NormalId.Front, { { text = s < 0 and "MEOW COLA" or "FISH SNAX", size = 30, color = s < 0 and Color3.fromRGB(200, 40, 60) or Color3.fromRGB(40, 110, 220) } })
+		light(glass, Color3.fromRGB(180, 230, 255), 10, 0.8)
+		prompt(body, "Shop", "Vending machine", "Shop")
+		-- Bench beside it.
+		local bench = face * CFrame.new(5, 0, -0.5)
+		solid("Bench", Vector3.new(5, 0.4, 1.6), bench * CFrame.new(0, 1.3, 0), WOOD, Enum.Material.WoodPlanks, f)
+		part("BenchBack", Vector3.new(5, 1.4, 0.3), bench * CFrame.new(0, 2.4, 0.75), WOOD, Enum.Material.WoodPlanks, f)
+		for _, x in ipairs({ -2.1, 2.1 }) do
+			part("BenchLeg", Vector3.new(0.3, 1.2, 1.4), bench * CFrame.new(x, 0.6, 0), STEEL_DARK, Enum.Material.Metal, f)
+		end
+	end
+
+	-- Team banners hanging from the girders.
+	for i, x in ipairs({ -32, -16, 16, 32 }) do
+		for _, z in ipairs({ -26, 18 }) do
+			local color = (i + (z > 0 and 1 or 0)) % 2 == 0 and BLUE or Color3.fromRGB(230, 70, 80)
+			local p = at(x, z, HEIGHT - 6)
+			part("BannerRod", Vector3.new(4.4, 0.25, 0.25), CFrame.new(p + Vector3.new(0, 3.6, 0)), STEEL_DARK, Enum.Material.Metal, f)
+			local cloth = part("Banner", Vector3.new(3.6, 7, 0.12), CFrame.new(p), color, Enum.Material.Fabric, f)
+			for _, faceId in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
+				sign(cloth, faceId, { { text = "🐾", size = 60, color = WHITE } })
+			end
+			part("BannerTip", Vector3.new(3.6, 0.6, 0.12), CFrame.new(p - Vector3.new(0, 3.8, 0)), GOLD, Enum.Material.SmoothPlastic, f)
+		end
+	end
+
+	-- Planters with neon-edged pots.
+	for _, p in ipairs({ { 40, -24 }, { -40, -24 }, { 14, -36 }, { -14, -36 } }) do
+		local c = at(p[1], p[2])
+		solid("Planter", Vector3.new(3.4, 1.6, 3.4), CFrame.new(c + Vector3.new(0, 0.8, 0)), STEEL_DARK, Enum.Material.Metal, f)
+		part("PlanterGlow", Vector3.new(3.6, 0.15, 3.6), CFrame.new(c + Vector3.new(0, 1.62, 0)), CYAN, Enum.Material.Neon, f)
+		for k = 1, 4 do
+			local a = k * math.pi / 2 + rng:NextNumber(-0.4, 0.4)
+			ball("Leaves", rng:NextNumber(1.6, 2.4), c + Vector3.new(math.cos(a) * 0.7, 2.4 + rng:NextNumber(0, 0.8), math.sin(a) * 0.7), Color3.fromRGB(60, 150, 80):Lerp(Color3.fromRGB(110, 200, 90), rng:NextNumber()), f)
+		end
+		part("PlantStem", Vector3.new(0.4, 3, 0.4), CFrame.new(c + Vector3.new(0, 3, 0)), Color3.fromRGB(80, 60, 40), Enum.Material.Wood, f)
+		ball("Leaves", 2.6, c + Vector3.new(0, 4.6, 0), Color3.fromRGB(70, 170, 90), f)
+	end
+
+	-- Paw-print trails from the spawn to the side rooms.
+	for _, s in ipairs({ -1, 1 }) do
+		for k = 0, 7 do
+			local x = s * (17 + k * 3.3)
+			local z = (k % 2 == 0) and 1.2 or -1.2
+			local c = at(x, z, 0.03)
+			local paw = Color3.fromRGB(110, 120, 140)
+			disc("PawPrint", 1.5, 0.04, c, paw, Enum.Material.SmoothPlastic, f)
+			for _, t in ipairs({ { -0.7, 0.9 }, { -0.25, 1.2 }, { 0.25, 1.2 }, { 0.7, 0.9 } }) do
+				disc("PawToe", 0.55, 0.04, c + Vector3.new(t[2] * s, 0, t[1]), paw, Enum.Material.SmoothPlastic, f)
+			end
+		end
+	end
+
+	-- Two bounce springs to mess about on.
+	for _, x in ipairs({ -12, 12 }) do
+		ArenaKit.AddSpring(at(x, -30), 95, f)
+	end
+
+	-- Dust drifting in the light.
+	local dust = part("Dust", Vector3.new(80, 14, 66), CFrame.new(at(0, -5, 10)), WHITE, Enum.Material.SmoothPlastic, f)
+	dust.Transparency = 1
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+	e.Color = ColorSequence.new(Color3.fromRGB(220, 230, 255))
+	e.Size = NumberSequence.new(0.12, 0.06)
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.3, 0.5), NumberSequenceKeypoint.new(1, 1) })
+	e.Speed = NumberRange.new(0.2, 0.8)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Lifetime = NumberRange.new(5, 8)
+	e.Rate = 18
+	e.LightEmission = 0.6
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+	e.Parent = dust
+end
+
 local function buildLobby()
 	local f = Instance.new("Folder")
 	f.Name = "Lobby"
@@ -1159,6 +1360,7 @@ local function buildLobby()
 	buildGate(plaza)
 	buildBoards(plaza)
 	buildDisplays(plaza)
+	buildAmbience(plaza)
 	buildGuns(f)
 	buildCollection(f)
 	buildPractice(f)
@@ -1224,6 +1426,19 @@ function LobbyService.Start()
 		while true do
 			task.wait(2)
 			refreshLive()
+		end
+	end)
+	task.spawn(function()
+		local i = 0
+		while true do
+			i = i % #NEWS + 1
+			for k = 1, #newsLabels, 2 do
+				-- (the two screens show different stories)
+				local item = NEWS[(i + (k - 1) // 2 * 3 - 1) % #NEWS + 1]
+				newsLabels[k].Text = item[1]
+				newsLabels[k + 1].Text = item[2]
+			end
+			task.wait(6)
 		end
 	end)
 
