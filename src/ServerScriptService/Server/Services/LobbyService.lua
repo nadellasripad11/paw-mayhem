@@ -450,35 +450,85 @@ end
 
 -- ── the middle: spawn ────────────────────────────────────────────────────────
 local function buildSpawn(f: Instance)
-	-- A round raised steel platform: grates between radial ribs (every fourth
-	-- one lit), a thin lit ring round the edge and our paw on the hub.
+	-- Like a Rivals spawn: a stepped round platform, dark grate panels split
+	-- by steel ribs (every third one lit thin blue), a raised inner ring, and
+	-- PAW MAYHEM written big on the floor in the middle, facing the duel hall
+	-- so it reads the right way round as you spawn. Light posts round the rim.
 	local c = at(0, 0)
-	ArenaKit.NewDisc("SpawnPlatform", 30, 0.5, c + Vector3.new(0, 0.25, 0), Color3.fromRGB(44, 47, 56), Enum.Material.DiamondPlate, f)
-	disc("SpawnRim", 31.2, 0.3, c + Vector3.new(0, 0.15, 0), BEAM, Enum.Material.Metal, f)
-	disc("SpawnGlow", 29.2, 0.06, c + Vector3.new(0, 0.53, 0), BLUE, Enum.Material.Neon, f).CastShadow = false
-	disc("SpawnGrate", 28.2, 0.08, c + Vector3.new(0, 0.55, 0), Color3.fromRGB(30, 32, 38), Enum.Material.Metal, f)
 	local rib = Color3.fromRGB(78, 82, 96)
-	for k = 0, 15 do
-		local a = k / 16 * math.pi * 2
+	local grate = Color3.fromRGB(30, 32, 38)
+	-- The step all round, then the platform (both walkable).
+	ArenaKit.NewDisc("SpawnStep", 35, 0.3, c + Vector3.new(0, 0.15, 0), Color3.fromRGB(56, 60, 70), Enum.Material.DiamondPlate, f)
+	ArenaKit.NewDisc("SpawnPlatform", 30, 0.6, c + Vector3.new(0, 0.3, 0), Color3.fromRGB(44, 47, 56), Enum.Material.DiamondPlate, f)
+	disc("SpawnRim", 30.8, 0.5, c + Vector3.new(0, 0.3, 0), BEAM, Enum.Material.Metal, f)
+	disc("SpawnGlow", 29.4, 0.08, c + Vector3.new(0, 0.62, 0), BLUE, Enum.Material.Neon, f).CastShadow = false
+	disc("SpawnGrate", 28.6, 0.1, c + Vector3.new(0, 0.64, 0), grate, Enum.Material.Metal, f)
+	-- Grate texture: thin bars across each panel.
+	for k = 0, 23 do
+		local a = (k + 0.5) / 24 * math.pi * 2
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		local mid = c + dir * 8.75 + Vector3.new(0, 0.6, 0)
-		local lit = k % 4 == 0
-		part("SpawnRib", Vector3.new(lit and 0.25 or 0.4, 0.06, 10.5), CFrame.lookAt(mid, mid + dir), lit and BLUE or rib, lit and Enum.Material.Neon or Enum.Material.Metal, f).CastShadow = false
-	end
-	for _, r in ipairs({ 7.5, 11 }) do
-		local n = math.floor(r * 2 * math.pi / 1.6)
-		for k = 0, n - 1 do
-			local a = (k + 0.5) / n * math.pi * 2
-			local p = c + Vector3.new(math.cos(a) * r, 0.6, math.sin(a) * r)
-			part("SpawnRing", Vector3.new(0.3, 0.05, 2 * math.pi * r / n + 0.05), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), rib, Enum.Material.Metal, f).CastShadow = false
+		for r = 8.2, 13.6, 1.1 do
+			local p = c + dir * r + Vector3.new(0, 0.7, 0)
+			part("GrateBar", Vector3.new(0.16, 0.04, 2 * math.pi * r / 24 * 0.8), CFrame.lookAt(p, p + Vector3.new(-dir.Z, 0, dir.X)), Color3.fromRGB(48, 52, 62), Enum.Material.Metal, f).CastShadow = false
 		end
 	end
-	disc("SpawnHub", 7, 0.12, c + Vector3.new(0, 0.6, 0), Color3.fromRGB(70, 74, 88), Enum.Material.Metal, f)
-	local paw = c + Vector3.new(0, 0.68, -0.4)
-	local pale = Color3.fromRGB(236, 240, 248)
-	disc("Paw", 2.6, 0.06, paw, pale, Enum.Material.SmoothPlastic, f)
-	for _, t in ipairs({ { -1.3, 1.3 }, { -0.45, 1.9 }, { 0.45, 1.9 }, { 1.3, 1.3 } }) do
-		disc("PawToe", 1, 0.06, paw + Vector3.new(t[1], 0, t[2]), pale, Enum.Material.SmoothPlastic, f)
+	-- Ribs.
+	for k = 0, 11 do
+		local a = k / 12 * math.pi * 2
+		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
+		local mid = c + dir * 10.8 + Vector3.new(0, 0.72, 0)
+		part("SpawnRib", Vector3.new(0.6, 0.12, 7.4), CFrame.lookAt(mid, mid + dir), rib, Enum.Material.Metal, f).CastShadow = false
+		if k % 3 == 0 then
+			part("SpawnRibGlow", Vector3.new(0.14, 0.13, 7.2), CFrame.lookAt(mid, mid + dir), BLUE, Enum.Material.Neon, f).CastShadow = false
+		end
+	end
+	-- The raised inner ring the logo sits in.
+	local r = 7.4
+	local n = 36
+	for k = 0, n - 1 do
+		local a = (k + 0.5) / n * math.pi * 2
+		local p = c + Vector3.new(math.cos(a) * r, 0.78, math.sin(a) * r)
+		part("SpawnRing", Vector3.new(0.7, 0.28, 2 * math.pi * r / n + 0.06), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), rib, Enum.Material.Metal, f).CastShadow = false
+	end
+	-- The floor logo.
+	disc("LogoDisc", 14.2, 0.1, c + Vector3.new(0, 0.66, 0), Color3.fromRGB(20, 22, 30), Enum.Material.SmoothPlastic, f)
+	local logo = part("SpawnLogo", Vector3.new(12, 0.05, 12), CFrame.lookAt(c + Vector3.new(0, 0.74, 0), c + Vector3.new(0, 0.74, 1)), Color3.fromRGB(20, 22, 30), Enum.Material.SmoothPlastic, f)
+	logo.Transparency = 1
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = Enum.NormalId.Top
+	gui.LightInfluence = 0.2
+	gui.PixelsPerStud = 40
+	gui.Parent = logo
+	local paw = Instance.new("TextLabel")
+	paw.BackgroundTransparency = 1
+	paw.Position = UDim2.fromScale(0.3, 0.06)
+	paw.Size = UDim2.fromScale(0.4, 0.3)
+	paw.Text = "🐾"
+	paw.TextScaled = true
+	paw.Font = Enum.Font.FredokaOne
+	paw.TextColor3 = BLUE
+	paw.Parent = gui
+	for i, word in ipairs({ "PAW", "MAYHEM" }) do
+		local l = Instance.new("TextLabel")
+		l.BackgroundTransparency = 1
+		l.Position = UDim2.fromScale(0.08, 0.36 + (i - 1) * 0.28)
+		l.Size = UDim2.fromScale(0.84, 0.28)
+		l.Text = word
+		l.TextScaled = true
+		l.Font = Enum.Font.FredokaOne
+		l.TextColor3 = Color3.fromRGB(236, 240, 248)
+		l.TextStrokeColor3 = BLUE
+		l.TextStrokeTransparency = 0.3
+		l.Parent = gui
+	end
+	-- Light posts round the step.
+	for k = 0, 7 do
+		local a = (k + 0.5) / 8 * math.pi * 2
+		local p = c + Vector3.new(math.cos(a) * 16.6, 0, math.sin(a) * 16.6)
+		solid("SpawnPost", Vector3.new(0.9, 2.2, 0.9), CFrame.new(p + Vector3.new(0, 1.4, 0)), STEEL_DARK, Enum.Material.Metal, f)
+		local cap = part("SpawnPostLight", Vector3.new(1, 0.3, 1), CFrame.new(p + Vector3.new(0, 2.6, 0)), Color3.fromRGB(220, 230, 255), Enum.Material.Neon, f)
+		cap.CastShadow = false
+		light(cap, Color3.fromRGB(200, 220, 255), 10, 0.5)
 	end
 	-- Crates and barrels in the corners.
 	for _, p in ipairs({ { 39, -35 }, { -39, -35 }, { 25, -37 }, { -25, -37 } }) do
@@ -1141,7 +1191,7 @@ end
 
 -- ── putting it together ──────────────────────────────────────────────────────
 -- ── life round the plaza ─────────────────────────────────────────────────────
--- A spinning hologram logo over the spawn, two big news screens on the back
+-- Two big news screens on the back
 -- wall (cycling tips and news), a lounge corner each side with a vending
 -- machine (opens the Shop) and a bench, hanging team banners, planters,
 -- paw-print trails to the side rooms, two bounce springs to play on and
@@ -1159,50 +1209,6 @@ local NEWS = {
 
 local function buildAmbience(f: Instance)
 	local spawnAt = at(0, 0)
-
-	-- Hologram logo turning over the spawn (the client spins it).
-	local logo = Instance.new("Model")
-	logo.Name = "HoloLogo"
-	local card = part("HoloCard", Vector3.new(16, 4.4, 0.1), CFrame.new(at(0, 0, 13)), CYAN, Enum.Material.SmoothPlastic, logo)
-	card.Transparency = 1
-	for _, face in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
-		local gui = Instance.new("SurfaceGui")
-		gui.Face = face
-		gui.LightInfluence = 0
-		gui.PixelsPerStud = 40
-		gui.Parent = card
-		local l = Instance.new("TextLabel")
-		l.Size = UDim2.fromScale(1, 1)
-		l.BackgroundTransparency = 1
-		l.Text = "PAW MAYHEM"
-		l.Font = Enum.Font.FredokaOne
-		l.TextScaled = true
-		l.TextColor3 = Color3.fromRGB(190, 240, 255)
-		l.TextStrokeColor3 = CYAN
-		l.TextStrokeTransparency = 0.2
-		l.TextTransparency = 0.1
-		l.Parent = gui
-	end
-	logo.PrimaryPart = card
-	logo.Parent = f
-	spinning(logo)
-	disc("HoloRing", 9, 0.12, at(0, 0, 10), CYAN, Enum.Material.Neon, f).Transparency = 0.4
-	disc("HoloRing", 6, 0.12, at(0, 0, 10.6), CYAN, Enum.Material.Neon, f).Transparency = 0.55
-	local beamFrom = part("HoloEmitter", Vector3.one * 0.2, CFrame.new(at(0, 0, 0.7)), CYAN, Enum.Material.SmoothPlastic, f)
-	beamFrom.Transparency = 1
-	local a0 = Instance.new("Attachment")
-	a0.Parent = beamFrom
-	local a1 = Instance.new("Attachment")
-	a1.Parent = beamFrom
-	a1.WorldPosition = at(0, 0, 10)
-	local beam = Instance.new("Beam")
-	beam.Attachment0, beam.Attachment1 = a0, a1
-	beam.Width0, beam.Width1 = 2, 9
-	beam.Color = ColorSequence.new(CYAN)
-	beam.Transparency = NumberSequence.new(0.85, 0.95)
-	beam.LightEmission = 1
-	beam.FaceCamera = true
-	beam.Parent = beamFrom
 
 	-- News screens on the back wall either side of the range door.
 	for _, x in ipairs({ -30, 30 }) do
