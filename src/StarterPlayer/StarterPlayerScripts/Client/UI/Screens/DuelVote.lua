@@ -84,7 +84,7 @@ function DuelVote.Build()
 			local list = {}
 			for _, o in ipairs(options) do
 				local isRandom = o.id == "Random"
-				local t = MapTile.New(grid, tostring(o.name), isRandom and "Random" or nil, COLOR[o.id] or Color3.fromRGB(80, 120, 200), GREEN, function()
+				local t = MapTile.New(grid, tostring(o.name), isRandom and "Random" or (data.stage == "Map" and o.id or nil), COLOR[o.id] or Color3.fromRGB(80, 120, 200), GREEN, function()
 					Remotes.Get("DuelVote"):FireServer({ choice = o.id })
 				end)
 				if o.desc and not isRandom then

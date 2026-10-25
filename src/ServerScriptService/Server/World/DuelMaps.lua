@@ -246,15 +246,140 @@ local function dress(th: Theme, isle: any, trees: number, bushes: number, flower
 	end)
 end
 
+-- ── finishing touches ────────────────────────────────────────────────────────
+-- A stone path from an island's middle to each way off it.
+local function paths(th: Theme, isle: any, parent: Instance)
+	for _, a in ipairs(isle.links) do
+		local from, to = ArenaKit.Polar(isle, a, 4, 0.04), ArenaKit.Polar(isle, a, isle.r - 1, 0.04)
+		deco("Path", Vector3.new(4.2, 0.08, (to - from).Magnitude), CFrame.lookAt((from + to) / 2, to), th.stairs.step, Enum.Material.Slate, parent)
+		for k = 1, math.floor((to - from).Magnitude / 2.2) do
+			local p = from:Lerp(to, k / ((to - from).Magnitude / 2.2))
+			deco("PathStone", Vector3.new(4.3, 0.1, 0.18), CFrame.lookAt(p, to) + Vector3.new(0, 0.01, 0), th.stairs.stepAlt, Enum.Material.Slate, parent)
+		end
+	end
+end
+
+-- A low wooden fence round the rim, leaving the ways off open.
+local function fence(th: Theme, isle: any, parent: Instance)
+	local r = isle.r - 1.2
+	local step = math.rad(360 / math.max(16, math.floor(2 * math.pi * r / 4.5)))
+	local prev: Vector3? = nil
+	for a = 0, math.pi * 2 + step * 0.5, step do
+		if ArenaKit.Blocked(isle, a, r, 5.5) then
+			prev = nil
+		else
+			local p = ArenaKit.Polar(isle, a, r)
+			deco("FencePost", Vector3.new(0.45, 2.4, 0.45), CFrame.new(p + Vector3.new(0, 1.2, 0)), th.palette.WoodDark, Enum.Material.Wood, parent)
+			if prev then
+				for _, y in ipairs({ 0.9, 1.9 }) do
+					deco("FenceRail", Vector3.new(0.25, 0.25, (p - prev).Magnitude), CFrame.lookAt((prev + p) / 2 + Vector3.new(0, y, 0), p + Vector3.new(0, y, 0)), th.palette.Wood, Enum.Material.Wood, parent)
+				end
+			end
+			prev = p
+		end
+	end
+end
+
+-- A little gazebo (solid posts, a peaked roof) - cover and a landmark.
+local function gazebo(th: Theme, pos: Vector3, color: Color3, parent: Instance)
+	for _, c in ipairs({ { -2.2, -2.2 }, { 2.2, -2.2 }, { -2.2, 2.2 }, { 2.2, 2.2 } }) do
+		solid("GazeboPost", Vector3.new(0.6, 5, 0.6), CFrame.new(pos + Vector3.new(c[1], 2.5, c[2])), th.palette.Wood, Enum.Material.Wood, parent)
+	end
+	deco("GazeboRoof", Vector3.new(6.4, 0.5, 6.4), CFrame.new(pos + Vector3.new(0, 5.2, 0)), th.palette.WoodDark, Enum.Material.Wood, parent)
+	for k = 0, 3 do
+		local w = 6 - k * 1.5
+		deco("GazeboTop", Vector3.new(w, 0.7, w), CFrame.new(pos + Vector3.new(0, 5.7 + k * 0.6, 0)) * CFrame.Angles(0, math.rad(45 * (k % 2)), 0), color, Enum.Material.SmoothPlastic, parent)
+	end
+end
+
+-- A team flag on a pole.
+local function flag(pos: Vector3, color: Color3, parent: Instance)
+	deco("FlagPole", Vector3.new(0.35, 9, 0.35), CFrame.new(pos + Vector3.new(0, 4.5, 0)), Color3.fromRGB(230, 230, 236), Enum.Material.Metal, parent)
+	deco("Flag", Vector3.new(0.1, 2.2, 3.4), CFrame.new(pos + Vector3.new(0, 7.6, 1.7)), color, Enum.Material.Fabric, parent)
+	ball("FlagTop", 0.6, pos + Vector3.new(0, 9.1, 0), Color3.fromRGB(255, 210, 80), parent)
+end
+
+-- A stone lookout tower with a ladder up to its top deck.
+local function lookout(th: Theme, isle: any, parent: Instance)
+	local base = ArenaKit.Polar(isle, 0, 0)
+	local tower = ArenaKit.NewDisc("TowerBody", 5, 10, base + Vector3.new(0, 5, 0), th.palette.Stone, Enum.Material.Slate, parent)
+	tower.CanCollide = true
+	ArenaKit.NewDisc("Platform", 8, 0.6, base + Vector3.new(0, 10.3, 0), th.palette.Wood, Enum.Material.WoodPlanks, parent)
+	for k = 0, 7 do
+		local a = k / 8 * math.pi * 2
+		deco("Rail", Vector3.new(0.3, 1.2, 3.2), CFrame.new(base + Vector3.new(math.cos(a) * 3.8, 11.2, math.sin(a) * 3.8)) * CFrame.Angles(0, -a, 0), th.palette.WoodDark, Enum.Material.Wood, parent)
+	end
+	for k = 0, 2 do
+		disc("TowerRoof", 7 - k * 2, 0.8, base + Vector3.new(0, 14.4 + k * 0.8, 0), th.palette.WoodDark:Lerp(Color3.fromRGB(184, 74, 56), 0.6), Enum.Material.SmoothPlastic, parent)
+	end
+	for _, c in ipairs({ { -3.4, -3.4 }, { 3.4, 3.4 } }) do
+		deco("RoofPost", Vector3.new(0.35, 3.6, 0.35), CFrame.new(base + Vector3.new(c[1], 12.4, c[2])), th.palette.WoodDark, Enum.Material.Wood, parent)
+	end
+	ArenaKit.AddLadder(base + Vector3.new(0, 0, -5), 11, Vector3.new(0, 0, -1), parent)
+end
+
+-- A small waterfall spilling off an island's edge (just to look at).
+local function miniFall(isle: any, angle: number, parent: Instance)
+	local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
+	local lip = ArenaKit.Polar(isle, angle, isle.r + 0.6)
+	local water = Color3.fromRGB(118, 204, 242)
+	local fall = deco("Fall", Vector3.new(3.4, 30, 0.8), CFrame.lookAt(lip - Vector3.new(0, 15, 0), lip - Vector3.new(0, 15, 0) + out), water, Enum.Material.Glass, parent)
+	fall.Transparency = 0.2
+	fall.CastShadow = false
+	deco("FallFoam", Vector3.new(4, 0.8, 1.4), CFrame.lookAt(lip, lip + out), WHITE, Enum.Material.SmoothPlastic, parent).CastShadow = false
+	local from = ArenaKit.Polar(isle, angle, isle.r * 0.6, 0.1)
+	deco("Stream", Vector3.new(2.6, 0.2, (lip - from).Magnitude), CFrame.lookAt((from + lip) / 2 + Vector3.new(0, 0.1, 0), lip + Vector3.new(0, 0.1, 0)), water, Enum.Material.Glass, parent).Transparency = 0.15
+end
+
+-- Weather for the theme: petals, leaves, snow or sparkles drifting down.
+local function weather(th: Theme, o: Vector3, f: Instance)
+	local p = deco("Weather", Vector3.new(150, 1, 150), CFrame.new(o + Vector3.new(0, 45, 0)), WHITE, Enum.Material.SmoothPlastic, f)
+	p.Transparency = 1
+	local e = Instance.new("ParticleEmitter")
+	e.EmissionDirection = Enum.NormalId.Bottom
+	e.Lifetime = NumberRange.new(10, 14)
+	e.Speed = NumberRange.new(3, 6)
+	e.Rotation = NumberRange.new(0, 360)
+	e.RotSpeed = NumberRange.new(-60, 60)
+	e.Acceleration = Vector3.new(1.5, 0, 0.8)
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.Rate = 25
+	if th.snowy then
+		e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		e.Color = ColorSequence.new(WHITE)
+		e.Size = NumberSequence.new(0.35)
+		e.Rate = 60
+	elseif th.name == "SAKURA GARDEN" then
+		e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		e.Color = ColorSequence.new(Color3.fromRGB(255, 180, 210))
+		e.Size = NumberSequence.new(0.5)
+	elseif th.pines then
+		e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		e.Color = ColorSequence.new(Color3.fromRGB(240, 140, 50), Color3.fromRGB(220, 80, 40))
+		e.Size = NumberSequence.new(0.6)
+	else
+		e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		e.Color = ColorSequence.new(Color3.fromRGB(255, 255, 210))
+		e.Size = NumberSequence.new(0.25)
+		e.LightEmission = 0.8
+		e.Rate = 12
+	end
+	e.Parent = p
+end
+
 -- ── the sky round the arena ──────────────────────────────────────────────────
 local function sky(th: Theme, o: Vector3, f: Instance)
-	-- A sea of clouds below.
-	for _ = 1, 26 do
+	-- A sea of clouds well below: wide, flat banks rather than balls.
+	for _ = 1, 22 do
 		local a = rng:NextNumber(0, math.pi * 2)
-		local r = rng:NextNumber(20, 130)
-		local c = o + Vector3.new(math.cos(a) * r, rng:NextNumber(-48, -30), math.sin(a) * r)
+		local r = rng:NextNumber(30, 170)
+		local c = o + Vector3.new(math.cos(a) * r, rng:NextNumber(-62, -48), math.sin(a) * r)
 		for _ = 1, 3 do
-			ball("Cloud", rng:NextNumber(12, 22), c + Vector3.new(rng:NextNumber(-10, 10), rng:NextNumber(-2, 3), rng:NextNumber(-10, 10)), th.clouds, f).Transparency = 0.18
+			local d = rng:NextNumber(26, 44)
+			local cloud = deco("Cloud", Vector3.new(d, d * 0.28, d * 0.8), CFrame.new(c + Vector3.new(rng:NextNumber(-14, 14), rng:NextNumber(-2, 2), rng:NextNumber(-14, 14))) * CFrame.Angles(0, rng:NextNumber(0, 3), 0), th.clouds, Enum.Material.SmoothPlastic, f) :: Part
+			cloud.Shape = Enum.PartType.Ball
+			cloud.Transparency = 0.12
+			cloud.CastShadow = false
 		end
 	end
 	-- Scenery islands drifting further out, each with a tree.
@@ -276,11 +401,15 @@ local function sky(th: Theme, o: Vector3, f: Instance)
 			tree(th, top, 0.8, folder)
 		end
 	end
-	-- High clouds.
-	for _ = 1, 8 do
+	-- A few thin high clouds far out.
+	for _ = 1, 6 do
 		local a = rng:NextNumber(0, math.pi * 2)
-		local r = rng:NextNumber(40, 110)
-		ball("HighCloud", rng:NextNumber(14, 24), o + Vector3.new(math.cos(a) * r, rng:NextNumber(40, 70), math.sin(a) * r), th.clouds, f).Transparency = 0.35
+		local r = rng:NextNumber(110, 180)
+		local d = rng:NextNumber(30, 50)
+		local cloud = deco("HighCloud", Vector3.new(d, d * 0.22, d * 0.6), CFrame.new(o + Vector3.new(math.cos(a) * r, rng:NextNumber(45, 75), math.sin(a) * r)), th.clouds, Enum.Material.SmoothPlastic, f) :: Part
+		cloud.Shape = Enum.PartType.Ball
+		cloud.Transparency = 0.4
+		cloud.CastShadow = false
 	end
 end
 
@@ -294,22 +423,22 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 		local folder = ArenaKit.MakeIslandBase(pos, r, key, th.palette, th.top, f, th.style)
 		I[key] = ArenaKit.NewIsle(pos, r, folder)
 	end
-	isle("baseB", Vector3.new(0, 0, -42), 14)
-	isle("baseR", Vector3.new(0, 0, 42), 14)
+	isle("baseB", Vector3.new(0, 0, -46), 16)
+	isle("baseR", Vector3.new(0, 0, 46), 16)
 	local links: { { any } }
 	if shape == "Hill" then
-		isle("center", Vector3.new(0, 6, 0), 13)
-		isle("flankL", Vector3.new(-31, 2, 0), 9)
-		isle("flankR", Vector3.new(31, 2, 0), 9)
+		isle("center", Vector3.new(0, 6, 0), 15)
+		isle("flankL", Vector3.new(-35, 2, 0), 11)
+		isle("flankR", Vector3.new(35, 2, 0), 11)
 		links = {
 			{ "baseB", "center", "stairs" }, { "baseR", "center", "stairs" },
 			{ "baseB", "flankL", "bridge" }, { "baseB", "flankR", "bridge" },
 			{ "baseR", "flankL", "bridge" }, { "baseR", "flankR", "bridge" },
 		}
 	else
-		isle("midL", Vector3.new(-26, 3, -2), 10)
-		isle("midR", Vector3.new(26, 3, 2), 10)
-		isle("perch", Vector3.new(0, 11, 0), 6)
+		isle("midL", Vector3.new(-29, 3, -2), 11)
+		isle("midR", Vector3.new(29, 3, 2), 11)
+		isle("perch", Vector3.new(0, 11, 0), 7)
 		links = {
 			{ "baseB", "midL", "bridge" }, { "baseB", "midR", "bridge" },
 			{ "baseR", "midL", "bridge" }, { "baseR", "midR", "bridge" },
@@ -361,7 +490,21 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 				crates(th, p, b.folder)
 			end
 		end
-		dress(th, b, 3, 3, 4, 1, 7.5, b.folder)
+		do
+			local p = ArenaKit.TryPlace(b, rng, 8, b.r - 4, 3.6, 5)
+			if p then
+				ArenaKit.Reserve(b, p, 3.6)
+				gazebo(th, p, color, b.folder)
+			end
+		end
+		for _, a in ipairs(ArenaKit.OpenAngles(b, 2)) do
+			flag(ArenaKit.Polar(b, a, b.r - 2.2), color, b.folder)
+			ArenaKit.Reserve(b, ArenaKit.Polar(b, a, b.r - 2.2), 1.2)
+		end
+		local fa = ArenaKit.OpenAngles(b, 1)[1]
+		table.insert(b.reserved, fa)
+		miniFall(b, fa, b.folder)
+		dress(th, b, 4, 4, 6, 2, 7.5, b.folder)
 	end
 
 	-- The middle: cover, trees, a landmark, waterfalls off the side islands.
@@ -376,16 +519,12 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 				local a = k / 8 * math.pi * 2
 				solid("StoneBlock", Vector3.new(1.6, 1.4, 1.6), CFrame.new(ArenaKit.Polar(m, a, 5.2, 0.7)) * CFrame.Angles(0, a, 0), th.palette.Stone, Enum.Material.Slate, m.folder)
 			end
-			if th.pines then
-				pine(th, ArenaKit.Polar(m, 0, 0), 1.1, m.folder)
-			else
-				tree(th, ArenaKit.Polar(m, 0, 0), 1.15, m.folder)
-			end
+			lookout(th, m, m.folder)
 			ArenaKit.Reserve(m, ArenaKit.Polar(m, 0, 0), 6.5)
-			dress(th, m, 2, 3, 4, 2, 7, m.folder)
+			dress(th, m, 3, 4, 6, 2, 7, m.folder)
 		elseif key == "perch" then
-			lamp(ArenaKit.Polar(m, 0, 0), m.folder)
-			ArenaKit.Reserve(m, ArenaKit.Polar(m, 0, 0), 2)
+			gazebo(th, ArenaKit.Polar(m, 0, 0), Color3.fromRGB(255, 200, 90), m.folder)
+			ArenaKit.Reserve(m, ArenaKit.Polar(m, 0, 0), 3.6)
 			dress(th, m, 0, 2, 2, 0, 2.5, m.folder)
 		else
 			ArenaKit.AddSwimColumn("Water", m, ArenaKit.OpenAngles(m, 1)[1], m.folder)
@@ -394,9 +533,15 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 				ArenaKit.Reserve(m, p, 2.5)
 				crates(th, p, m.folder)
 			end
-			dress(th, m, 1, 2, 3, 1, 2.5, m.folder)
+			dress(th, m, 2, 3, 4, 1, 2.5, m.folder)
 		end
 	end
+	-- Paths to every way off, fences round the rims.
+	for _, isle in pairs(I) do
+		paths(th, isle, isle.folder)
+		fence(th, isle, isle.folder)
+	end
+	weather(th, o, f)
 	if th.snowy then
 		-- Ice crystals on the bases for Frost Peaks.
 		for _, key in ipairs({ "baseB", "baseR" }) do

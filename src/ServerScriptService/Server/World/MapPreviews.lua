@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 
 local ArenaBuilder = require(script.Parent.ArenaBuilder)
+local DuelMaps = require(script.Parent.DuelMaps)
 
 local MapPreviews = {}
 
@@ -31,7 +32,7 @@ local function skipped(p: BasePart): boolean
 	return false
 end
 
-local function snapshot(arena: Instance, id: string): Model
+local function snapshot(arena: Instance, id: string, focusAt: Vector3?): Model
 	-- The play area: every island floor players can stand on.
 	local minV, maxV = Vector3.one * math.huge, -Vector3.one * math.huge
 	for _, f in ipairs(CollectionService:GetTagged("DropZone")) do
@@ -40,6 +41,11 @@ local function snapshot(arena: Instance, id: string): Model
 			minV = minV:Min(f.Position - half)
 			maxV = maxV:Max(f.Position + half)
 		end
+	end
+	if focusAt then
+		-- (Duel maps: the islands sit round their build origin.)
+		minV = focusAt - Vector3.new(58, 30, 62)
+		maxV = focusAt + Vector3.new(58, 40, 62)
 	end
 	local hasFocus = minV.X < math.huge
 	local pad = Vector3.new(30, 60, 30)
@@ -99,6 +105,21 @@ function MapPreviews.Build()
 		end)
 		if not ok then
 			warn("[PAW MAYHEM] Map preview failed for " .. id .. ": " .. tostring(err))
+		end
+	end
+	-- The duel maps too (1v1 - 5v5 votes show them in 3D).
+	for _, def in ipairs(DuelMaps.List) do
+		local ok, err = pcall(function()
+			local temp = Instance.new("Folder")
+			temp.Name = "DuelPreviewBuild"
+			temp.Parent = workspace
+			local origin = Vector3.new(-6000, 150, -6000)
+			def.Build(origin, temp)
+			snapshot(temp, def.Id, origin).Parent = folder
+			temp:Destroy()
+		end)
+		if not ok then
+			warn("[PAW MAYHEM] Duel map preview failed for " .. def.Id .. ": " .. tostring(err))
 		end
 	end
 	folder.Parent = ReplicatedStorage
