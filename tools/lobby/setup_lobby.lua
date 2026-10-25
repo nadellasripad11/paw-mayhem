@@ -53,8 +53,12 @@ for _, name in ipairs(NAMES) do
 			local holder = p:FindFirstAncestorOfClass("Model")
 			local rel = holder and holder:GetPivot():ToObjectSpace(p.CFrame) or p.CFrame
 			p:SetAttribute("ImportTurn", snap(rel))
-			if holder and holder:IsDescendantOf(workspace) then
-				leftovers[holder] = true
+			local top = holder
+			while top and top.Parent and top.Parent ~= workspace and top.Parent:IsA("Model") do
+				top = top.Parent
+			end
+			if top and top:IsDescendantOf(workspace) then
+				leftovers[top] = true
 			end
 			local old = meshes:FindFirstChild(name)
 			if old then
