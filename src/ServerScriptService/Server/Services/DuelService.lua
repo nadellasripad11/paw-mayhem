@@ -76,10 +76,10 @@ end
 -- split across the middle into two sides (blue towards the spawn, red
 -- towards the far end, matching the screen above); each player spot is a round emblem
 -- that fills with its team colour when someone stands on it.
-local PAD_PLATE = Color3.fromRGB(40, 44, 60)
-local PAD_RIM = Color3.fromRGB(196, 200, 214)
-local SPOT_RING = Color3.fromRGB(230, 232, 240)
-local SPOT_EMPTY = Color3.fromRGB(58, 64, 86)
+local PAD_PLATE = Color3.fromRGB(26, 34, 70) -- navy (the lobby's colours)
+local PAD_RIM = Color3.fromRGB(206, 164, 72) -- gold
+local SPOT_RING = Color3.fromRGB(236, 206, 130)
+local SPOT_EMPTY = Color3.fromRGB(40, 50, 92)
 
 local function buildPad(def: any, parent: Instance)
 	local at = LobbyService.At

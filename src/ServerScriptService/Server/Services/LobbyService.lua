@@ -1515,6 +1515,123 @@ local function buildFinish(f: Instance)
 	end
 end
 
+-- ── the grand touches: duel hall, plaza ──────────────────────────────────────
+-- The duel hall gets a royal runner, stone pilasters with gold lamps between
+-- the pads, team pennants strung across and a trophy at the far end; the
+-- plaza gold chandeliers, a gold border round its floor, a gold inlay ring
+-- round the spawn and gold trim on the duel arch.
+local function goldLamp(pos: Vector3, toward: Vector3, parent: Instance)
+	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z))
+	part("SconceArm", Vector3.new(0.3, 0.3, 1.2), face * CFrame.new(0, 0, -0.6), BEAM, Enum.Material.Metal, parent)
+	local cup = part("SconceCup", Vector3.new(0.9, 0.5, 0.9), face * CFrame.new(0, 0.1, -1.2), BEAM, Enum.Material.Metal, parent)
+	local flame = ball("SconceLight", 0.6, (face * CFrame.new(0, 0.55, -1.2)).Position, Color3.fromRGB(255, 220, 150), parent)
+	flame.Material = Enum.Material.Neon
+	light(cup, Color3.fromRGB(255, 214, 150), 14, 0.7)
+end
+
+local function chandelier(pos: Vector3, parent: Instance)
+	part("ChainLink", Vector3.new(0.2, SURFACE_Y + HEIGHT - pos.Y, 0.2), CFrame.new(Vector3.new(pos.X, (pos.Y + SURFACE_Y + HEIGHT) / 2, pos.Z)), BEAM, Enum.Material.Metal, parent)
+	local hub = ball("ChandelierHub", 1.4, pos, BEAM, parent)
+	hub.Material = Enum.Material.Metal
+	for k = 0, 7 do
+		local a = k / 8 * math.pi * 2
+		local tip = pos + Vector3.new(math.cos(a) * 3.4, -0.6, math.sin(a) * 3.4)
+		part("ChandelierArm", Vector3.new(0.2, 0.2, 3.4), CFrame.lookAt((pos + tip) / 2, tip), BEAM, Enum.Material.Metal, parent)
+		local candle = ball("ChandelierLight", 0.6, tip + Vector3.new(0, 0.45, 0), Color3.fromRGB(255, 226, 160), parent)
+		candle.Material = Enum.Material.Neon
+	end
+	disc("ChandelierRing", 7.2, 0.25, pos - Vector3.new(0, 0.6, 0), BEAM, Enum.Material.Metal, parent)
+	local l = Instance.new("PointLight")
+	l.Color = Color3.fromRGB(255, 226, 170)
+	l.Range = 34
+	l.Brightness = 0.9
+	l.Parent = hub
+end
+
+local function trophy(pos: Vector3, parent: Instance)
+	solid("TrophyPlinth", Vector3.new(3.6, 3, 3.6), CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(236, 232, 224), Enum.Material.Marble, parent)
+	part("TrophyTrim", Vector3.new(3.8, 0.3, 3.8), CFrame.new(pos + Vector3.new(0, 3.05, 0)), BEAM, Enum.Material.Metal, parent)
+	local cupColor = Color3.fromRGB(240, 196, 70)
+	disc("TrophyBase", 1.8, 0.5, pos + Vector3.new(0, 3.45, 0), Color3.fromRGB(40, 30, 20), Enum.Material.Wood, parent)
+	part("TrophyStem", Vector3.new(0.5, 1.4, 0.5), CFrame.new(pos + Vector3.new(0, 4.4, 0)), cupColor, Enum.Material.Metal, parent)
+	local cup = ArenaKit.NewDisc("TrophyCup", 2.4, 2.2, pos + Vector3.new(0, 6.1, 0), cupColor, Enum.Material.Metal, parent)
+	cup.CanCollide = false
+	for _, s in ipairs({ -1, 1 }) do
+		part("TrophyHandle", Vector3.new(0.3, 1.4, 0.3), CFrame.new(pos + Vector3.new(s * 1.45, 6.2, 0)) * CFrame.Angles(0, 0, math.rad(s * 20)), cupColor, Enum.Material.Metal, parent)
+	end
+	local spot = part("TrophySpot", Vector3.one * 0.2, CFrame.new(pos + Vector3.new(0, 14, 0)), WHITE, Enum.Material.SmoothPlastic, parent)
+	spot.Transparency = 1
+	local sl = Instance.new("SpotLight")
+	sl.Face = Enum.NormalId.Bottom
+	sl.Range = 16
+	sl.Angle = 30
+	sl.Brightness = 3
+	sl.Color = Color3.fromRGB(255, 236, 190)
+	sl.Parent = spot
+end
+
+local function buildGrand(f: Instance)
+	-- Duel hall: runner, pilasters with lamps, pennants, trophy.
+	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), Color3.fromRGB(36, 56, 130), Enum.Material.Fabric, f)
+	for _, x in ipairs({ -4.1, 4.1 }) do
+		part("RunnerTrim", Vector3.new(0.35, 0.08, 76), CFrame.new(at(x, 70, 0.055)), BEAM, Enum.Material.SmoothPlastic, f)
+	end
+	for _, z in ipairs({ 35, 49, 63, 77.5, 92.5, 107 }) do
+		for _, side in ipairs({ -1, 1 }) do
+			local x = side * 19.4
+			solid("Pilaster", Vector3.new(1.2, HALL_WALL, 1.6), CFrame.new(at(x, z, HALL_WALL / 2)), STONE, Enum.Material.Slate, f)
+			part("PilasterCap", Vector3.new(1.6, 0.6, 2), CFrame.new(at(x, z, HALL_WALL - 0.3)), BEAM, Enum.Material.Metal, f)
+			goldLamp(at(x - side * 0.6, z, 7), at(0, z, 7), f)
+		end
+	end
+	for _, z in ipairs({ 47, 78, 97 }) do
+		local a, b = at(-19, z, HALL_WALL - 1.5), at(19, z, HALL_WALL - 1.5)
+		local n = 14
+		for k = 0, n - 1 do
+			local t = (k + 0.5) / n
+			local p = a:Lerp(b, t) - Vector3.new(0, math.sin(t * math.pi) * 1.2, 0)
+			local tri = ArenaKit.NewWedge("Pennant", Vector3.new(0.1, 1.4, 1.4), CFrame.new(p - Vector3.new(0, 0.7, 0)) * CFrame.Angles(math.rad(180), math.rad(90), 0), k % 2 == 0 and BLUE or Color3.fromRGB(230, 70, 80), Enum.Material.Fabric, f)
+			deco(tri)
+		end
+		local cord = part("PennantCord", Vector3.new(38, 0.1, 0.1), CFrame.new(at(0, z, HALL_WALL - 2)), WHITE, Enum.Material.SmoothPlastic, f)
+		cord.Transparency = 0.3
+	end
+	trophy(at(0, 106), f)
+
+	-- Duel arch: gold trim and caps.
+	part("ArchTrim", Vector3.new(40.4, 0.5, 2.4), CFrame.new(at(0, 30, 14.2)), BEAM, Enum.Material.Metal, f)
+	part("ArchTrimTop", Vector3.new(40.4, 0.5, 2.4), CFrame.new(at(0, 30, HEIGHT - 0.4)), BEAM, Enum.Material.Metal, f)
+	for _, x in ipairs({ -22, 22 }) do
+		part("ArchCap", Vector3.new(4.6, 0.8, 4.6), CFrame.new(at(x, 30, HEIGHT - 0.4)), BEAM, Enum.Material.Metal, f)
+		part("ArchBase", Vector3.new(4.6, 1, 4.6), CFrame.new(at(x, 30, 0.5)), BEAM, Enum.Material.Metal, f)
+	end
+
+	-- Plaza: chandeliers, a gold border round the floor, an inlay ring.
+	for _, p in ipairs({ { -24, -4 }, { 24, -4 } }) do
+		chandelier(at(p[1], p[2], HEIGHT - 6), f)
+	end
+	local r = PLAZA
+	local inset = 1.6
+	local w, d = r[2] - r[1] - inset * 2, r[4] - r[3] - inset * 2
+	local cx, cz = (r[1] + r[2]) / 2, (r[3] + r[4]) / 2
+	for _, e in ipairs({ { cx, r[3] + inset, w, 0.5 }, { cx, r[4] - inset, w, 0.5 }, { r[1] + inset, cz, 0.5, d }, { r[2] - inset, cz, 0.5, d } }) do
+		part("FloorBorder", Vector3.new(e[3], 0.06, e[4]), CFrame.new(at(e[1], e[2], 0.04)), BEAM, Enum.Material.SmoothPlastic, f)
+	end
+	local ringR = 20.5
+	local n = 48
+	for k = 0, n - 1 do
+		local a = (k + 0.5) / n * math.pi * 2
+		local p = at(math.cos(a) * ringR, math.sin(a) * ringR, 0.04)
+		part("InlayRing", Vector3.new(0.45, 0.06, 2 * math.pi * ringR / n + 0.05), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), BEAM, Enum.Material.SmoothPlastic, f)
+	end
+	for k = 0, 7 do
+		local a = k / 8 * math.pi * 2 + math.pi / 8
+		local p = at(math.cos(a) * ringR, math.sin(a) * ringR, 0.05)
+		local star = part("InlayStar", Vector3.new(1.2, 0.07, 1.2), CFrame.new(p) * CFrame.Angles(0, math.rad(45), 0), Color3.fromRGB(236, 206, 130), Enum.Material.SmoothPlastic, f)
+		star.CastShadow = false
+	end
+end
+
 local function buildLobby()
 	local f = Instance.new("Folder")
 	f.Name = "Lobby"
@@ -1536,6 +1653,7 @@ local function buildLobby()
 	buildDisplays(plaza)
 	buildAmbience(plaza)
 	buildFinish(plaza)
+	buildGrand(plaza)
 	buildGuns(f)
 	buildCollection(f)
 	buildPractice(f)
