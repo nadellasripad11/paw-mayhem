@@ -396,7 +396,7 @@ local function buildMobile(parent)
 
 	-- FIRE tracks the exact touch, so sliding a finger off the button still
 	-- stops firing when it lifts.
-	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -66, 1, -96), 92, Theme.Color.Danger, "Reticle", "FIRE")
+	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -70, 1, -100), 92, Theme.Color.Danger, "Reticle", "FIRE")
 	local fireInput: InputObject? = nil
 	fire.InputBegan:Connect(function(input)
 		if isPress(input) and not fireInput then
@@ -413,7 +413,7 @@ local function buildMobile(parent)
 		end
 	end)
 
-	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -160, 1, -50), 66, Theme.Color.Accent, "JumpArrow", "JUMP")
+	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -182, 1, -54), 66, Theme.Color.Accent, "JumpArrow", "JUMP")
 	jump.InputBegan:Connect(function(input)
 		if isPress(input) then
 			jumpPressed(true)
@@ -428,7 +428,7 @@ local function buildMobile(parent)
 		end
 	end)
 
-	local dash, dashLit, dashPressed = touchButton(parent, "DashButton", UDim2.new(1, -58, 1, -192), 58, Color3.fromRGB(120, 220, 255), "Bolt", "DASH")
+	local dash, dashLit, dashPressed = touchButton(parent, "DashButton", UDim2.new(1, -66, 1, -212), 58, Color3.fromRGB(120, 220, 255), "Bolt", "DASH")
 	dash.InputBegan:Connect(function(input)
 		if isPress(input) then
 			dashPressed(true)
@@ -444,7 +444,7 @@ local function buildMobile(parent)
 	})
 	refs.dashButton = { lit = dashLit, timer = dashTimer, button = dash }
 
-	local pounce, pounceLit, pouncePressed = touchButton(parent, "PounceButton", UDim2.new(1, -150, 1, -150), 58, Color3.fromRGB(255, 200, 110), "JumpArrow", "POUNCE")
+	local pounce, pounceLit, pouncePressed = touchButton(parent, "PounceButton", UDim2.new(1, -182, 1, -166), 58, Color3.fromRGB(255, 200, 110), "JumpArrow", "POUNCE")
 	pounce.InputBegan:Connect(function(input)
 		if isPress(input) then
 			pouncePressed(true)
@@ -460,19 +460,7 @@ local function buildMobile(parent)
 	})
 	refs.pounceButton = { lit = pounceLit, timer = pounceTimer }
 
-	-- EMOTE: opens the emote picker.
-	local emote, _, emotePressed = touchButton(parent, "EmoteButton", UDim2.new(1, -150, 1, -232), 50, Color3.fromRGB(255, 160, 220), "Smiley", "EMOTE")
-	emote.InputBegan:Connect(function(input)
-		if isPress(input) then
-			emotePressed(true)
-			require(script.Parent.EmotePicker).Toggle()
-		end
-	end)
-	emote.InputEnded:Connect(function(input)
-		if isPress(input) then emotePressed(false) end
-	end)
-
-	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -58, 1, -268), 58, Theme.Color.Warn, "Dash", "RUN")
+	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -66, 1, -298), 58, Theme.Color.Warn, "Dash", "RUN")
 	run.InputBegan:Connect(function(input)
 		if isPress(input) then
 			runPressed(true)
@@ -718,43 +706,48 @@ local ABILITY_LOOK = {
 	Fly = { icon = "Sparkle", key = "C", color = Color3.fromRGB(190, 150, 255) },
 }
 local function buildAbilities(parent)
+	-- Cards like the reference: a round picture, "ABILITY", the name, a
+	-- READY / countdown line, and a bar along the bottom that fills as it
+	-- recharges. Click or tap one (or Z / X / C).
+	local NAMES = { Boost = "BOOST", Jumps = "MULTI JUMP", Fly = "FLY" }
+	local CARD_W, CARD_H, GAP = 196, 66, 14
 	local row = UIUtil.make("Frame", {
 		Parent = parent, Name = "Abilities", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -48),
-		Size = UDim2.fromOffset(3 * 58 + 2 * 10, 58), BackgroundTransparency = 1,
+		Size = UDim2.fromOffset(3 * CARD_W + 2 * GAP, CARD_H), BackgroundTransparency = 1,
 	})
 	row:SetAttribute("HudPart", "Abilities")
-	UIUtil.listLayout(row, 10, Enum.FillDirection.Horizontal)
+	local rs = Instance.new("UIScale")
+	rs.Scale = isMobile() and 0.7 or 1
+	rs.Parent = row
+	UIUtil.listLayout(row, GAP, Enum.FillDirection.Horizontal)
 	local slots = {}
 	for i, name in ipairs(MovementController.Abilities) do
 		local look = ABILITY_LOOK[name]
-		local b = UIUtil.make("TextButton", {
-			Parent = row, Name = name, LayoutOrder = i, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(58, 58),
-			BackgroundColor3 = Color3.fromRGB(16, 22, 40), BackgroundTransparency = 0.2, BorderSizePixel = 0,
+		local card = UIUtil.make("TextButton", {
+			Parent = row, Name = name, LayoutOrder = i, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(CARD_W, CARD_H),
+			BackgroundColor3 = Color3.fromRGB(14, 18, 30), BackgroundTransparency = 0.1, BorderSizePixel = 0, ClipsDescendants = true,
 		}) :: TextButton
-		UIUtil.corner(UDim.new(0, 12), b)
-		local ring = UIUtil.stroke(look.color, 2, b)
-		Icons.Place(look.icon, b, 30, Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.45))
-		local shade = UIUtil.make("Frame", {
-			Parent = b, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0),
-			BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 3,
+		UIUtil.corner(UDim.new(0, 10), card)
+		local edge = UIUtil.stroke(Color3.fromRGB(10, 10, 14), 2, card)
+		UIUtil.gradient(look.color:Lerp(Color3.fromRGB(14, 18, 30), 0.65), Color3.fromRGB(14, 18, 30), 0, card)
+		local pic = UIUtil.make("Frame", {
+			Parent = card, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0.5, -2), Size = UDim2.fromOffset(50, 50),
+			BackgroundColor3 = look.color:Lerp(Color3.new(0, 0, 0), 0.35), BorderSizePixel = 0,
 		})
-		UIUtil.corner(UDim.new(0, 12), shade)
-		local timer = UIUtil.label({
-			Parent = b, Text = "", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
-			Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, ZIndex = 4,
-		})
-		if not isMobile() then
-			local key = UIUtil.label({
-				Parent = b, Text = look.key, Font = Theme.Font.Title, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center,
-				Position = UDim2.fromOffset(3, 3), Size = UDim2.fromOffset(15, 15), BackgroundTransparency = 0,
-				BackgroundColor3 = look.color, TextColor3 = Color3.fromRGB(10, 20, 40), ZIndex = 5,
-			})
-			UIUtil.corner(UDim.new(0, 4), key)
-		end
-		b.MouseButton1Click:Connect(function()
+		UIUtil.corner(UDim.new(1, 0), pic)
+		UIUtil.stroke(look.color, 2, pic)
+		Icons.Place(look.icon, pic, 30, Color3.new(1, 1, 1))
+		UIUtil.label({ Parent = card, Text = "ABILITY", Font = Theme.Font.Bold, TextSize = 10, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(66, 6), Size = UDim2.fromOffset(100, 12) })
+		UIUtil.label({ Parent = card, Text = NAMES[name] or name, Font = Theme.Font.Title, TextSize = 17, Position = UDim2.fromOffset(66, 18), Size = UDim2.new(1, -72, 0, 20) })
+		local status = UIUtil.label({ Parent = card, Text = "", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = look.color, Position = UDim2.fromOffset(66, 39), Size = UDim2.new(1, -72, 0, 14) })
+		local track = UIUtil.make("Frame", { Parent = card, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 8, 1, -4), Size = UDim2.new(1, -16, 0, 4), BackgroundColor3 = Color3.fromRGB(40, 44, 56), BorderSizePixel = 0 })
+		UIUtil.corner(UDim.new(1, 0), track)
+		local fill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(1, 1), BackgroundColor3 = look.color, BorderSizePixel = 0 })
+		UIUtil.corner(UDim.new(1, 0), fill)
+		card.MouseButton1Click:Connect(function()
 			MovementController.UseAbility(name)
 		end)
-		slots[name] = { shade = shade, timer = timer, ring = ring }
+		slots[name] = { status = status, fill = fill, edge = edge, key = look.key, color = look.color }
 	end
 	task.spawn(function()
 		while row.Parent do
@@ -762,14 +755,43 @@ local function buildAbilities(parent)
 				for name, s in pairs(slots) do
 					local cd = MovementController.AbilityCooldown(name)
 					local active = MovementController.AbilityActive(name)
-					s.shade.Size = UDim2.fromScale(1, math.clamp(cd / 15, 0, 1))
-					s.timer.Text = active > 0 and "" or cd > 0 and tostring(math.ceil(cd)) or ""
-					s.ring.Thickness = active > 0 and 4 or 2
-					s.ring.Transparency = (cd > 0 and active <= 0) and 0.6 or 0
+					s.fill.Size = UDim2.fromScale(1 - math.clamp(cd / 15, 0, 1), 1)
+					local key = isMobile() and "" or ("  ·  " .. s.key)
+					s.status.Text = active > 0 and ("ACTIVE " .. math.ceil(active) .. "s") or cd > 0 and (math.ceil(cd) .. "s") or ("READY" .. key)
+					s.status.TextColor3 = cd > 0 and active <= 0 and Theme.Color.TextDim or s.color
+					s.edge.Color = active > 0 and s.color or Color3.fromRGB(10, 10, 14)
 				end
 			end
 			task.wait(0.1)
 		end
+	end)
+end
+
+-- ── top bar in a match: QUESTS on the left, EMOTES and SETTINGS on the right ─
+local function buildTopBar(parent)
+	local inset = UIUtil.topInset()
+	local function pill(name: string, text: string, icon: string, pos: UDim2, anchor: Vector2, onClick: () -> ())
+		local b = UIUtil.make("TextButton", {
+			Parent = parent, Name = name, Text = "", AutoButtonColor = true, AnchorPoint = anchor, Position = pos,
+			Size = UDim2.fromOffset(140, 44), BackgroundColor3 = Color3.fromRGB(14, 18, 30), BackgroundTransparency = 0.15, BorderSizePixel = 0,
+		}) :: TextButton
+		b:SetAttribute("HudPart", "TopBar")
+		UIUtil.corner(UDim.new(0, 10), b)
+		UIUtil.stroke(Color3.fromRGB(60, 70, 96), 1.5, b)
+		local slot = UIUtil.make("Frame", { Parent = b, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1 })
+		Icons.Place(icon, slot, 22, Color3.new(1, 1, 1))
+		UIUtil.label({ Parent = b, Text = text, Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(42, 0), Size = UDim2.new(1, -48, 1, 0) })
+		b.MouseButton1Click:Connect(onClick)
+	end
+	local y = math.max(inset - 40, 10)
+	pill("QuestsButton", "QUESTS", "Check", UDim2.new(0, 240, 0, y), Vector2.new(0, 0), function()
+		require(script.Parent.MainMenu).OpenInGame("Quests")
+	end)
+	pill("SettingsButton", "SETTINGS", "Gear", UDim2.new(1, -12, 0, y), Vector2.new(1, 0), function()
+		require(script.Parent.MainMenu).OpenInGame("Settings")
+	end)
+	pill("EmotesButton", "EMOTES", "Smiley", UDim2.new(1, -166, 0, y), Vector2.new(1, 0), function()
+		require(script.Parent.EmotePicker).Toggle()
 	end)
 end
 
@@ -1111,8 +1133,8 @@ end
 -- Which parts each place shows: the whole HUD in a match, the crosshair and
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
-	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true },
-	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true },
+	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
+	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
 	Range = { Aim = true, Weapon = true, Moves = true, Abilities = true },
 	Lobby = { Moves = true },
 }
@@ -1150,6 +1172,7 @@ function HUD.Build()
 	buildAmmo(gui)
 	buildDashChip(gui)
 	buildAbilities(gui)
+	buildTopBar(gui)
 	buildLoadoutButton(gui)
 	buildRangeHint(gui)
 	buildBanners(gui)
