@@ -1707,7 +1707,7 @@ end
 
 -- ── the 3D models and PBR materials ─────────────────────────────────────────
 -- Once assets/LobbyMeshes.glb has been imported into ReplicatedStorage
--- .LobbyMeshes (and tools/lobby/setup_materials.lua run on it), the lobby
+-- .LobbyMeshes (and tools/lobby/setup_lobby.lua run on it), the lobby
 -- swaps its block-built columns, pilasters, arch, spawn dais, chandeliers,
 -- trophy, planters and mouldings for the sculpted models, and every stone,
 -- plaster, metal, marble and fabric surface gets its PBR material (tinted by
@@ -1729,13 +1729,14 @@ local VARIANT_FOR: { [Enum.Material]: string } = {
 }
 
 local function applyMaterials(lib: Instance, roots: { Instance })
+	-- setup_lobby.lua puts them in MaterialService; a copy rides along in
+	-- the library in case the place is rebuilt from Lobby.rbxm.
 	local mats = lib:FindFirstChild("Materials", true)
-	if not mats then
-		return
-	end
-	for _, mv in ipairs(mats:GetChildren()) do
-		if mv:IsA("MaterialVariant") and not MaterialService:FindFirstChild(mv.Name) then
-			mv:Clone().Parent = MaterialService
+	if mats then
+		for _, mv in ipairs(mats:GetChildren()) do
+			if mv:IsA("MaterialVariant") and not MaterialService:FindFirstChild(mv.Name) then
+				mv:Clone().Parent = MaterialService
+			end
 		end
 	end
 	local stone = MaterialService:FindFirstChild("PawStone") ~= nil
@@ -1758,24 +1759,48 @@ local function applyMaterials(lib: Instance, roots: { Instance })
 	end
 end
 
+-- If the importer's textures didn't come through, a piece still looks right
+-- in Roblox's own material and the lobby's colours.
+local FALLBACK: { [string]: { any } } = {
+	Gold = { BEAM, Enum.Material.Metal },
+	StoneBlock = { STONE, Enum.Material.Slate },
+	Navy = { NAVY, Enum.Material.Plaster },
+	Cream = { Color3.fromRGB(246, 236, 214), Enum.Material.SmoothPlastic },
+}
+
+-- One model piece: `size` and `cf` in the lobby's axes. The importer may
+-- have turned a mesh inside its part (setup_lobby.lua stores that turn as
+-- the ImportTurn attribute); the size is given in the part's own axes.
+local function spawnPiece(src: MeshPart, mat: string?, size: Vector3, cf: CFrame, parent: Instance)
+	local m = src:Clone()
+	for _, c in ipairs(m:GetChildren()) do
+		if not c:IsA("SurfaceAppearance") then
+			c:Destroy()
+		end
+	end
+	local turn = src:GetAttribute("ImportTurn")
+	local t: CFrame = if typeof(turn) == "CFrame" then turn else CFrame.identity
+	local s = t:Inverse():VectorToWorldSpace(size)
+	m.Anchored = true
+	m.CanCollide = false
+	m.CanQuery = false
+	m.CanTouch = false
+	m.CastShadow = true
+	m.Size = Vector3.new(math.abs(s.X), math.abs(s.Y), math.abs(s.Z))
+	m.CFrame = cf * t
+	local fb = mat and FALLBACK[mat]
+	if fb and not m:FindFirstChildOfClass("SurfaceAppearance") then
+		m.Color = if m.TextureID ~= "" then Color3.new(1, 1, 1) else fb[1]
+		m.Material = fb[2]
+	end
+	m.Parent = parent
+end
+
 local function placeGroup(lib: Instance, group: string, cf: CFrame, scale: Vector3, parent: Instance)
 	for _, piece in ipairs(LobbyMeshData[group].Pieces) do
 		local src = lib:FindFirstChild(piece.Name, true)
 		if src and src:IsA("MeshPart") then
-			local m = src:Clone()
-			for _, c in ipairs(m:GetChildren()) do
-				if not c:IsA("SurfaceAppearance") then
-					c:Destroy()
-				end
-			end
-			m.Anchored = true
-			m.CanCollide = false
-			m.CanQuery = false
-			m.CanTouch = false
-			m.CastShadow = true
-			m.Size = piece.Size * scale
-			m.CFrame = cf * CFrame.new(piece.Center * scale)
-			m.Parent = parent
+			spawnPiece(src, piece.Mat, piece.Size * scale, cf * CFrame.new(piece.Center * scale), parent)
 		end
 	end
 end
@@ -1850,14 +1875,7 @@ local function applyMeshes(lib: Instance, plaza: Instance)
 		local piece = LobbyMeshData.Moulding.Pieces[p.Name == "WallCap" and 1 or 2]
 		local src = lib:FindFirstChild(piece.Name, true)
 		if src and src:IsA("MeshPart") then
-			local m = src:Clone()
-			m.Anchored = true
-			m.CanCollide = false
-			m.CanQuery = false
-			m.CanTouch = false
-			m.Size = p.Size
-			m.CFrame = p.CFrame
-			m.Parent = models
+			spawnPiece(src, piece.Mat, p.Size, p.CFrame, models)
 			retire(p)
 		end
 	end

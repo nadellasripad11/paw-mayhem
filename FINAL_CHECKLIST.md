@@ -111,7 +111,7 @@ Copy every red line from the Output window and send it over.
 
 ## Dashboard (you)
 - [ ] Import `assets/CatMeshes.glb` (drag the model into ReplicatedStorage → CatMeshes).
-- [ ] Import `assets/LobbyMeshes.glb` into ReplicatedStorage → LobbyMeshes, run `tools/lobby/setup_materials.lua` in the command bar, save as `assets/LobbyMeshes/Lobby.rbxm` (docs/LOBBY_ART.md).
+- [ ] Import `assets/LobbyMeshes.glb` (Home → Import 3D), then paste `tools/lobby/setup_lobby.lua` into the command bar (docs/LOBBY_ART.md).
 - [ ] Lighting → Technology = Future.
 - [ ] Game Settings → Communication → Microphone ON (proximity voice).
 - [ ] Places → Server Size 12–16. Private servers on (cheap).

@@ -5,7 +5,7 @@
 // Writes tools/lobby/textures/<Set>_{color,normal,orm}.png. Two kinds:
 //   * tiling sets (Stone, Plaster, Metal, Marble, Fabric): near-white colour
 //     maps that the part's own Color tints, turned into MaterialVariants
-//     (PawStone, PawPlaster, ...) by tools/lobby/setup_materials.lua;
+//     (PawStone, PawPlaster, ...) by tools/lobby/setup_lobby.lua;
 //   * baked sets (Gold, StoneBlock, Navy): real colours for the lobby meshes.
 // "orm" is glTF's metallicRoughness map: G = roughness, B = metalness.
 // Everything tiles seamlessly.

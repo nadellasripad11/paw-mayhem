@@ -230,7 +230,7 @@ function mouldings() {
   return { CrownMould: ['Gold', crown], RailMould: ['Gold', rail] };
 }
 
-// ── Swatches: one cube per tiling material (setup_materials.lua turns their
+// ── Swatches: one cube per tiling material (setup_lobby.lua turns their
 // SurfaceAppearances into MaterialVariants). Never placed in the world.
 function swatches() {
   const out = {};
@@ -324,7 +324,7 @@ function writeGlb() {
       const c = b.min.map((v, k) => (v + b.max[k]) / 2);
       const s = b.min.map((v, k) => b.max[k] - v);
       const f = (v) => v.map((x) => x.toFixed(4)).join(', ');
-      rows.push(`\t\t\t{ Name = "${name}", Center = Vector3.new(${f(c)}), Size = Vector3.new(${f(s)}) },`);
+      rows.push(`\t\t\t{ Name = "${name}", Mat = "${mat}", Center = Vector3.new(${f(c)}), Size = Vector3.new(${f(s)}) },`);
       if (idx.length / 3 > 20000) throw new Error(name + ' is over 20k triangles');
     }
     const box = BOX[group] ? `Vector3.new(${BOX[group].join(', ')})` : 'nil';
