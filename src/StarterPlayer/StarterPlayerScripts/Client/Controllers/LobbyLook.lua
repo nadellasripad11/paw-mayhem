@@ -7,20 +7,20 @@
 -- loading), the new values are remembered and come back instead. It also
 -- turns the lobby's floating displays (tagged LobbySpin) while you're there.
 
+-- The values themselves live in Shared/LobbyLighting. Tick the LobbyTuning
+-- attribute on Lighting (Studio, while playing) and this stops holding them,
+-- so they can be tuned by eye (docs/LOBBY_ART.md).
+
 local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LobbyLighting = require(ReplicatedStorage.Shared.LobbyLighting)
 
 local LobbyLook = {}
 
-local LIGHTING = {
-	Brightness = 2,
-	Ambient = Color3.fromRGB(50, 50, 62),
-	OutdoorAmbient = Color3.fromRGB(78, 78, 92),
-	ExposureCompensation = -0.1,
-	EnvironmentDiffuseScale = 1,
-	EnvironmentSpecularScale = 1,
-}
+local LIGHTING: { [string]: any } = LobbyLighting.Lighting
 local ATMOSPHERE = { Density = 0.15, Haze = 0, Glare = 0 }
 
 local active = false
@@ -42,7 +42,7 @@ local function takeAtmosphere(a: Atmosphere)
 		savedAtmosphere[prop] = (a :: any)[prop]
 		set(a, prop, value)
 		a:GetPropertyChangedSignal(prop):Connect(function()
-			if applying or not active or atmosphere ~= a then
+			if applying or not active or atmosphere ~= a or Lighting:GetAttribute("LobbyTuning") then
 				return
 			end
 			savedAtmosphere[prop] = (a :: any)[prop] -- the server's new value
@@ -54,17 +54,17 @@ end
 local function bloom(on: boolean)
 	local b = Lighting:FindFirstChild("PawBloom")
 	if b and b:IsA("BloomEffect") then
-		b.Intensity = on and 0.05 or 0.55
-		b.Threshold = on and 3 or 1.6
+		b.Intensity = on and LobbyLighting.Bloom.Intensity or 0.55
+		b.Threshold = on and LobbyLighting.Bloom.Threshold or 1.6
 	end
 	-- A touch more contrast in the lobby so it reads in 3D.
 	local cc = Lighting:FindFirstChild("PawLobbyGrade")
 	if on and not cc then
 		local c = Instance.new("ColorCorrectionEffect")
 		c.Name = "PawLobbyGrade"
-		c.Contrast = 0.14
-		c.Saturation = 0.04
-		c.Brightness = 0.01
+		c.Contrast = LobbyLighting.Grade.Contrast
+		c.Saturation = LobbyLighting.Grade.Saturation
+		c.Brightness = LobbyLighting.Grade.Brightness
 		c.Parent = Lighting
 	elseif not on and cc then
 		cc:Destroy()
@@ -103,7 +103,7 @@ end
 function LobbyLook.Start()
 	for prop, value in pairs(LIGHTING) do
 		Lighting:GetPropertyChangedSignal(prop):Connect(function()
-			if applying or not active then
+			if applying or not active or Lighting:GetAttribute("LobbyTuning") then
 				return
 			end
 			savedLighting[prop] = (Lighting :: any)[prop] -- the server's new value

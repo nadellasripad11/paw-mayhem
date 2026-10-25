@@ -23,6 +23,7 @@ local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MaterialService = game:GetService("MaterialService")
 
 local Shared = ReplicatedStorage.Shared
 local Remotes = require(Shared.Net.Remotes)
@@ -31,6 +32,8 @@ local BlasterBuilder = require(Shared.Character.BlasterBuilder)
 local Knockback = require(Shared.Character.Knockback)
 local Weapons = require(Shared.Config.Weapons)
 local Ranks = require(Shared.Config.Ranks)
+local LobbyLighting = require(Shared.LobbyLighting)
+local LobbyMeshData = require(Shared.LobbyMeshData)
 
 local PlayerService = require(script.Parent.PlayerService)
 local DataService = require(script.Parent.DataService)
@@ -447,11 +450,6 @@ local function buildGround(f: Instance)
 			solid("OpeningPillar", Vector3.new(3, HEIGHT, 3), CFrame.new(at(x, z, HEIGHT / 2)), STONE, Enum.Material.Slate, f)
 		end
 	end
-	for _, p in ipairs({ { 0, 0 }, { -24, -24 }, { 24, -24 }, { -24, 18 }, { 24, 18 }, { 65, 0 }, { -65, 0 } }) do
-		local holder = part("CeilingLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(at(p[1], p[2], HEIGHT - 3)), WHITE, Enum.Material.SmoothPlastic, f)
-		holder.Transparency = 1
-		light(holder, Color3.fromRGB(235, 240, 255), 36, 0.7)
-	end
 
 end
 
@@ -644,11 +642,6 @@ local function buildMatchHall(f: Instance)
 	end
 	for _, x in ipairs({ -12, 12 }) do
 		part("RoofRail", Vector3.new(0.8, 0.8, 80), CFrame.new(at(x, 72, HALL_WALL + 1.6)), METAL, Enum.Material.Metal, f).CastShadow = false
-	end
-	for z = 40, 104, 16 do
-		local holder = part("HallLight", Vector3.new(0.2, 0.2, 0.2), CFrame.new(at(0, z, HALL_WALL - 1)), WHITE, Enum.Material.SmoothPlastic, f)
-		holder.Transparency = 1
-		light(holder, Color3.fromRGB(190, 210, 255), 26, 0.9)
 	end
 
 	-- The far end of the hall: a big screen.
@@ -1688,19 +1681,216 @@ local function depthPass(root: Instance)
 	end
 end
 
--- Warm pools of light: the room is dim overall, the places that matter lit.
-local function lightPools(f: Instance)
-	for _, p in ipairs({ { 0, 0, 34, 1.6 }, { 0, 26, 24, 1.2 }, { 38, 0, 22, 1 }, { -38, 0, 22, 1 }, { 0, -36, 20, 1 } }) do
-		local holder = part("LightPool", Vector3.one * 0.2, CFrame.new(at(p[1], p[2], HEIGHT - 4)), WHITE, Enum.Material.SmoothPlastic, f)
+-- ── the room lights (LobbyLighting) ─────────────────────────────────────────
+-- Each hangs from its own invisible holder in Plaza.LightRig, so they can be
+-- moved and tuned live in Studio and exported back (docs/LOBBY_ART.md).
+local function buildLightRig(f: Instance)
+	local rig = Instance.new("Folder")
+	rig.Name = "LightRig"
+	rig.Parent = f
+	for i, def in ipairs(LobbyLighting.Lights) do
+		local holder = part("Light" .. i, Vector3.one * 0.4, CFrame.new(at(def.Offset.X, def.Offset.Z, def.Offset.Y)), WHITE, Enum.Material.SmoothPlastic, rig)
 		holder.Transparency = 1
-		local sl = Instance.new("SpotLight")
-		sl.Face = Enum.NormalId.Bottom
-		sl.Angle = 70
-		sl.Range = p[3]
-		sl.Brightness = p[4]
-		sl.Color = Color3.fromRGB(255, 222, 170)
-		sl.Parent = holder
+		holder.CastShadow = false
+		local l = Instance.new(def.Kind) :: any
+		l.Color = def.Color
+		l.Range = def.Range
+		l.Brightness = def.Brightness
+		l.Shadows = def.Shadows == true
+		if def.Kind ~= "PointLight" then
+			l.Angle = def.Angle or 90
+			l.Face = (Enum.NormalId :: any)[def.Face or "Bottom"]
+		end
+		l.Parent = holder
 	end
+end
+
+-- ── the 3D models and PBR materials ─────────────────────────────────────────
+-- Once assets/LobbyMeshes.glb has been imported into ReplicatedStorage
+-- .LobbyMeshes (and tools/lobby/setup_materials.lua run on it), the lobby
+-- swaps its block-built columns, pilasters, arch, spawn dais, chandeliers,
+-- trophy, planters and mouldings for the sculpted models, and every stone,
+-- plaster, metal, marble and fabric surface gets its PBR material (tinted by
+-- the part's own colour, so the palette stays as it is). Without the import
+-- nothing changes. Solid parts a model replaces stay as invisible collision.
+local function meshLibrary(): Instance?
+	local lib = ReplicatedStorage:FindFirstChild("LobbyMeshes")
+	if lib and lib:FindFirstChild("ColumnStone", true) then
+		return lib
+	end
+	return nil
+end
+
+local VARIANT_FOR: { [Enum.Material]: string } = {
+	[Enum.Material.Plaster] = "PawPlaster",
+	[Enum.Material.Metal] = "PawMetal",
+	[Enum.Material.Marble] = "PawMarble",
+	[Enum.Material.Fabric] = "PawFabric",
+}
+
+local function applyMaterials(lib: Instance, roots: { Instance })
+	local mats = lib:FindFirstChild("Materials", true)
+	if not mats then
+		return
+	end
+	for _, mv in ipairs(mats:GetChildren()) do
+		if mv:IsA("MaterialVariant") and not MaterialService:FindFirstChild(mv.Name) then
+			mv:Clone().Parent = MaterialService
+		end
+	end
+	local stone = MaterialService:FindFirstChild("PawStone") ~= nil
+	for _, root in ipairs(roots) do
+		for _, p in ipairs(root:GetDescendants()) do
+			if p:IsA("BasePart") and not p:IsA("MeshPart") and p.Transparency < 1 then
+				local name = VARIANT_FOR[p.Material]
+				if p.Material == Enum.Material.Slate then
+					name = string.sub(p.Name, 1, 5) == "Floor" and "PawStone" or "PawGrain"
+				end
+				if name and MaterialService:FindFirstChild(name) then
+					p.MaterialVariant = name
+				end
+				-- the stone texture has its own joints
+				if stone and p.Name == "Grout" then
+					p:Destroy()
+				end
+			end
+		end
+	end
+end
+
+local function placeGroup(lib: Instance, group: string, cf: CFrame, scale: Vector3, parent: Instance)
+	for _, piece in ipairs(LobbyMeshData[group].Pieces) do
+		local src = lib:FindFirstChild(piece.Name, true)
+		if src and src:IsA("MeshPart") then
+			local m = src:Clone()
+			for _, c in ipairs(m:GetChildren()) do
+				if not c:IsA("SurfaceAppearance") then
+					c:Destroy()
+				end
+			end
+			m.Anchored = true
+			m.CanCollide = false
+			m.CanQuery = false
+			m.CanTouch = false
+			m.CastShadow = true
+			m.Size = piece.Size * scale
+			m.CFrame = cf * CFrame.new(piece.Center * scale)
+			m.Parent = parent
+		end
+	end
+end
+
+-- A part the model replaces: decoration goes, solid parts stay to walk on.
+local function retire(p: Instance)
+	if p:IsA("BasePart") and p.CanCollide then
+		p.Transparency = 1
+		for _, c in ipairs(p:GetChildren()) do
+			if c:IsA("SurfaceGui") or c:IsA("Decal") or c:IsA("Texture") then
+				c:Destroy()
+			end
+		end
+	else
+		p:Destroy()
+	end
+end
+
+local function named(root: Instance, names: { [string]: boolean }): { BasePart }
+	local out = {}
+	for _, p in ipairs(root:GetDescendants()) do
+		if p:IsA("BasePart") and names[p.Name] then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
+-- Fit a group to the part it replaces: its bottom centre, scaled to its size.
+local function onto(lib: Instance, group: string, target: BasePart, parent: Instance)
+	local box = LobbyMeshData[group].Box :: Vector3
+	placeGroup(lib, group, target.CFrame * CFrame.new(0, -target.Size.Y / 2, 0), target.Size / box, parent)
+	retire(target)
+end
+
+local function near(root: Instance, names: { [string]: boolean }, pos: Vector3, r: number): { BasePart }
+	local out = {}
+	for _, p in ipairs(named(root, names)) do
+		if (p.Position - pos).Magnitude < r then
+			table.insert(out, p)
+		end
+	end
+	return out
+end
+
+local function applyMeshes(lib: Instance, plaza: Instance)
+	local models = Instance.new("Folder")
+	models.Name = "Models"
+	models.Parent = plaza
+	-- Spawn dais.
+	placeGroup(lib, "Dais", CFrame.new(at(0, 0)), Vector3.one, models)
+	for _, p in ipairs(named(plaza, { SpawnStep = true, SpawnPlatform = true, SpawnRim = true })) do
+		retire(p)
+	end
+	-- Columns at the arch and the room openings, pilasters along the walls
+	-- and down the hall, the arch itself, planters.
+	for _, p in ipairs(named(plaza, { ArchPillar = true, OpeningPillar = true })) do
+		onto(lib, "Column", p, models)
+	end
+	for _, p in ipairs(named(plaza, { Pillar = true, Pilaster = true })) do
+		onto(lib, "Pilaster", p, models)
+	end
+	for _, p in ipairs(named(plaza, { PillarCap = true, PilasterCap = true, ArchCap = true, ArchBase = true, PlanterGlow = true })) do
+		retire(p)
+	end
+	placeGroup(lib, "Arch", CFrame.new(at(0, 30)), Vector3.one, models)
+	for _, p in ipairs(named(plaza, { Planter = true })) do
+		onto(lib, "Planter", p, models)
+	end
+	-- Mouldings along the walls: one stretched to each cap and rail.
+	for _, p in ipairs(named(plaza, { WallCap = true, WallRail = true })) do
+		local piece = LobbyMeshData.Moulding.Pieces[p.Name == "WallCap" and 1 or 2]
+		local src = lib:FindFirstChild(piece.Name, true)
+		if src and src:IsA("MeshPart") then
+			local m = src:Clone()
+			m.Anchored = true
+			m.CanCollide = false
+			m.CanQuery = false
+			m.CanTouch = false
+			m.Size = p.Size
+			m.CFrame = p.CFrame
+			m.Parent = models
+			retire(p)
+		end
+	end
+	-- Chandeliers: the sculpted frame and candles, the flames moved onto them.
+	for _, hub in ipairs(named(plaza, { ChandelierHub = true })) do
+		local pos = hub.Position
+		placeGroup(lib, "Chandelier", CFrame.new(pos), Vector3.one, models)
+		for _, p in ipairs(near(plaza, { ChandelierArm = true, ChandelierRing = true }, pos, 6)) do
+			retire(p)
+		end
+		for _, flame in ipairs(near(plaza, { ChandelierLight = true }, pos, 6)) do
+			flame.Size = Vector3.one * 0.28
+			flame.Position = flame.Position + Vector3.new(0, 0.35, 0)
+		end
+		hub.Transparency = 1 -- keeps its light
+	end
+	-- The trophy at the end of the hall.
+	for _, trim in ipairs(named(plaza, { TrophyTrim = true })) do
+		local top = trim.Position + Vector3.new(0, trim.Size.Y / 2, 0)
+		placeGroup(lib, "Trophy", CFrame.new(top), Vector3.one, models)
+		for _, p in ipairs(near(plaza, { TrophyBase = true, TrophyStem = true, TrophyCup = true, TrophyHandle = true }, top, 6)) do
+			retire(p)
+		end
+	end
+end
+
+local function applyLobbyArt(f: Instance, plaza: Instance)
+	local lib = meshLibrary()
+	if not lib then
+		return
+	end
+	applyMeshes(lib, plaza)
+	applyMaterials(lib, { plaza, f:FindFirstChild("Guns") or plaza, f:FindFirstChild("Collection") or plaza })
 end
 
 local function buildLobby()
@@ -1726,7 +1916,7 @@ local function buildLobby()
 	buildFinish(plaza)
 	buildGrand(plaza)
 	buildHallDepth(plaza)
-	lightPools(plaza)
+	buildLightRig(plaza)
 	buildGuns(f)
 	buildCollection(f)
 	buildPractice(f)
@@ -1737,6 +1927,7 @@ local function buildLobby()
 			depthPass(r)
 		end
 	end
+	applyLobbyArt(f, plaza)
 end
 
 -- ── players ──────────────────────────────────────────────────────────────────
