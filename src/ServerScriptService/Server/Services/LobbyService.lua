@@ -1633,6 +1633,57 @@ local function buildGrand(f: Instance)
 	end
 end
 
+-- ── the duel hall in 3D: framed wall panels, a spotlight over every pad ─────
+local function buildHallDepth(f: Instance)
+	for _, z in ipairs({ 42, 56, 70, 85, 100 }) do
+		for _, side in ipairs({ -1, 1 }) do
+			-- A recessed panel behind each pad's screen: a gold frame and a
+			-- darker inset.
+			local x = side * 19.85
+			part("WallInset", Vector3.new(0.12, 9.5, 11), CFrame.new(at(x, z, 6.5)), Color3.fromRGB(18, 24, 50), Enum.Material.Plaster, f)
+			for _, e in ipairs({ { 11.4, 0.4, 0, 11.2 }, { 11.4, 0.4, 0, 1.8 }, { 0.4, 9.8, 5.6, 6.5 }, { 0.4, 9.8, -5.6, 6.5 } }) do
+				part("InsetFrame", Vector3.new(0.3, e[2], e[1]), CFrame.new(at(x - side * 0.1, z + e[3], e[4])), BEAM, Enum.Material.Metal, f)
+			end
+		end
+		-- A hanging spotlight over the pad.
+		for _, side in ipairs({ -1, 1 }) do
+			local p = at(side * 11, z, HALL_WALL - 2.5)
+			part("SpotCable", Vector3.new(0.12, 3, 0.12), CFrame.new(p + Vector3.new(0, 1.8, 0)), INK, Enum.Material.SmoothPlastic, f)
+			local shade = part("SpotShade", Vector3.new(1.6, 2, 2), CFrame.new(p) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(30, 36, 66), Enum.Material.Metal, f) :: Part
+			shade.Shape = Enum.PartType.Cylinder
+			local sl = Instance.new("SpotLight")
+			sl.Face = Enum.NormalId.Bottom
+			sl.Angle = 50
+			sl.Range = 20
+			sl.Brightness = 1.6
+			sl.Color = Color3.fromRGB(255, 236, 200)
+			local holder = part("SpotBulb", Vector3.new(0.8, 0.2, 0.8), CFrame.new(p - Vector3.new(0, 0.9, 0)), Color3.fromRGB(255, 240, 210), Enum.Material.SmoothPlastic, f)
+			sl.Parent = holder
+		end
+	end
+	-- Polished marble down the hall (over the old flat floor).
+	part("HallMarble", Vector3.new(39.6, 0.04, 81.6), CFrame.new(at(0, 71, 0.02)), Color3.fromRGB(34, 40, 72), Enum.Material.Marble, f)
+	for z = 34, 110, 6 do
+		part("HallSeam", Vector3.new(39.6, 0.05, 0.1), CFrame.new(at(0, z, 0.025)), Color3.fromRGB(60, 68, 108), Enum.Material.SmoothPlastic, f)
+	end
+end
+
+-- Every surface gets material shading and casts shadows (flat plastic with
+-- no shadows is what made it all read as 2D). Signs and glass keep theirs.
+local function depthPass(root: Instance)
+	for _, p in ipairs(root:GetDescendants()) do
+		if p:IsA("BasePart") and p.Transparency < 0.5 and p.Material ~= Enum.Material.Neon and p.Material ~= Enum.Material.Glass then
+			if p.Material == Enum.Material.SmoothPlastic and not p:FindFirstChildOfClass("SurfaceGui") then
+				p.Material = Enum.Material.Plastic
+			end
+			local big = math.max(p.Size.X, p.Size.Y, p.Size.Z) > 1.2
+			if big and string.sub(p.Name, 1, 4) ~= "Roof" and p.Name ~= "Dust" then
+				p.CastShadow = true
+			end
+		end
+	end
+end
+
 local function buildLobby()
 	local f = Instance.new("Folder")
 	f.Name = "Lobby"
@@ -1655,9 +1706,17 @@ local function buildLobby()
 	buildAmbience(plaza)
 	buildFinish(plaza)
 	buildGrand(plaza)
+	buildHallDepth(plaza)
 	buildGuns(f)
 	buildCollection(f)
 	buildPractice(f)
+	depthPass(plaza)
+	for _, room in ipairs({ "Guns", "Collection" }) do
+		local r = f:FindFirstChild(room)
+		if r then
+			depthPass(r)
+		end
+	end
 end
 
 -- ── players ──────────────────────────────────────────────────────────────────

@@ -101,13 +101,26 @@ local function buildPad(def: any, parent: Instance)
 		return p
 	end
 
-	-- The plate: light rim, dark top, a thin line down the middle.
-	flat("PadRim", Vector3.new(w, 0.24, d), Vector3.new(0, 0.12, 0), PAD_RIM)
-	flat("PadPlate", Vector3.new(w - 0.6, 0.26, d - 0.6), Vector3.new(0, 0.13, 0), PAD_PLATE)
-	flat("PadLine", Vector3.new(w - 1.4, 0.27, 0.18), Vector3.new(0, 0.135, 0), PAD_RIM)
+	-- The plate: a thick gold-rimmed base (a bevelled edge round it), a dark
+	-- metal top, a line down the middle and a post at each corner.
+	local skirt = flat("PadSkirt", Vector3.new(w + 0.8, 0.18, d + 0.8), Vector3.new(0, 0.09, 0), PAD_PLATE:Lerp(Color3.new(0, 0, 0), 0.3))
+	skirt.Material = Enum.Material.Metal
+	local rim = flat("PadRim", Vector3.new(w, 0.5, d), Vector3.new(0, 0.25, 0), PAD_RIM)
+	rim.Material = Enum.Material.Metal
+	rim.CastShadow = true
+	local plate = flat("PadPlate", Vector3.new(w - 0.6, 0.54, d - 0.6), Vector3.new(0, 0.27, 0), PAD_PLATE)
+	plate.Material = Enum.Material.DiamondPlate
+	flat("PadLine", Vector3.new(w - 1.4, 0.56, 0.18), Vector3.new(0, 0.28, 0), PAD_RIM).Material = Enum.Material.Metal
+	for _, c in ipairs({ { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }) do
+		local post = ArenaKit.NewDisc("PadPost", 0.9, 1.6, center + Vector3.new(c[1] * (w / 2 + 0.2), 0.8, c[2] * (d / 2 + 0.2)), PAD_PLATE, Enum.Material.Metal, parent)
+		post.CanQuery = false
+		local cap = ArenaKit.NewDisc("PadPostCap", 1.1, 0.25, center + Vector3.new(c[1] * (w / 2 + 0.2), 1.7, c[2] * (d / 2 + 0.2)), PAD_RIM, Enum.Material.Metal, parent)
+		cap.CanCollide = false
+		cap.CanQuery = false
+	end
 	-- A thin team-coloured strip along each outer end, so you can tell the sides.
 	for _, side in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
-		flat("PadSide", Vector3.new(w - 1.4, 0.27, 0.35), Vector3.new(0, 0.135, side[2] * (d / 2 - 0.75)), TEAM_COLOR[side[1]])
+		flat("PadSide", Vector3.new(w - 1.4, 0.56, 0.35), Vector3.new(0, 0.28, side[2] * (d / 2 - 0.75)), TEAM_COLOR[side[1]])
 	end
 
 	local pad: Pad = { kind = def.kind, slots = {}, counts = {}, sub = nil :: any, startAt = nil }
@@ -116,9 +129,11 @@ local function buildPad(def: any, parent: Instance)
 	for _, o in ipairs(offsets) do
 		-- Emblem: a light ring, a dark centre that takes the team colour
 		-- when someone stands on it, and a small team dot.
-		round("SpotRing", 3.6, 0.29, o[2], o[3], SPOT_RING)
-		local fill = round("SpotFill", 3.1, 0.31, o[2], o[3], SPOT_EMPTY)
-		round("SpotDot", 0.9, 0.33, o[2], o[3], TEAM_COLOR[o[1]])
+		local ring = round("SpotRing", 3.6, 0.6, o[2], o[3], SPOT_RING)
+		ring.Size = Vector3.new(0.16, ring.Size.Y, ring.Size.Z)
+		ring.Material = Enum.Material.Metal
+		local fill = round("SpotFill", 3.1, 0.63, o[2], o[3], SPOT_EMPTY)
+		round("SpotDot", 0.9, 0.66, o[2], o[3], TEAM_COLOR[o[1]])
 		table.insert(pad.slots, { team = o[1], pos = center + Vector3.new(o[2], 0, o[3]), part = fill, player = nil })
 	end
 
@@ -126,8 +141,16 @@ local function buildPad(def: any, parent: Instance)
 	-- (like 0/1 | 0/1), and what the pad is waiting for.
 	local wallX = def.screenX or def.wall * 16.75
 	local screenPos = at(wallX, def.z, 7)
-	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0))
-	local frame = ArenaKit.NewPart("ScreenFrame", Vector3.new(8.6, 5.4, 0.2), face * CFrame.new(0, 0, 0.2), Color3.fromRGB(70, 76, 98), Enum.Material.SmoothPlastic, parent)
+	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0)) * CFrame.Angles(math.rad(-8), 0, 0)
+	local frame = ArenaKit.NewPart("ScreenFrame", Vector3.new(9, 5.8, 0.9), face * CFrame.new(0, 0, 0.5), PAD_PLATE, Enum.Material.Metal, parent)
+	for _, e in ipairs({ { 0, 2.95, 9.2, 0.25 }, { 0, -2.95, 9.2, 0.25 }, { 4.55, 0, 0.25, 6 }, { -4.55, 0, 0.25, 6 } }) do
+		local trim = ArenaKit.NewPart("ScreenTrim", Vector3.new(e[3], e[4], 1), face * CFrame.new(e[1], e[2], 0.45), PAD_RIM, Enum.Material.Metal, parent)
+		trim.CanCollide = false
+		trim.CanQuery = false
+	end
+	local arm = ArenaKit.NewPart("ScreenArm", Vector3.new(1.2, 1.2, 1.4), face * CFrame.new(0, 0, 1.4), PAD_PLATE, Enum.Material.Metal, parent)
+	arm.CanCollide = false
+	arm.CanQuery = false
 	frame.CanCollide = false
 	frame.CanQuery = false
 	local screen = ArenaKit.NewPart("PadScreen", Vector3.new(8, 4.8, 0.3), face, Color3.fromRGB(16, 18, 28), Enum.Material.SmoothPlastic, parent)
