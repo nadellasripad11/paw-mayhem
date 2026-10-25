@@ -412,6 +412,18 @@ local function step(dt: number)
 
 	updateGamepad(dt)
 	aimAssist(dt, char)
+	-- Lobby, third person, cursor free: the view swings round behind the cat
+	-- as you walk (A / D steer, the camera follows), and holding right mouse
+	-- still turns it by hand.
+	do
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum and freeMouse and not turning and not firstPerson() and hum.MoveDirection.Magnitude > 0.1 and hum.MoveDirection:Dot(CFrame.Angles(0, yaw, 0).LookVector) > -0.3 then -- (not when backing up)
+			local look = root.CFrame.LookVector
+			local want = math.atan2(-look.X, -look.Z)
+			local diff = (want - yaw + math.pi) % (math.pi * 2) - math.pi
+			yaw += diff * math.clamp(dt * 2.2, 0, 1)
+		end
+	end
 
 	camera.CameraType = Enum.CameraType.Scriptable
 	-- Speed kick: a little wider when sprinting, more when dashing or launched.
