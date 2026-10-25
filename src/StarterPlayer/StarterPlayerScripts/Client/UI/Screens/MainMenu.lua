@@ -604,7 +604,7 @@ function MainMenu.Build()
 	-- NEW TASKS (R$): swap the ones you haven't finished.
 	local reroll = UIUtil.secondaryButton({
 		Parent = tasksGroup, Name = "Reroll", Size = UDim2.fromOffset(TASKS_W, 30), ZIndex = 11, TextSize = 13, Visible = false,
-	}, "↻  NEW TASKS   R$ " .. tostring(Monetization.Products.RerollTasks.Price), function()
+	}, "NEW TASKS   R$ " .. tostring(Monetization.Products.RerollTasks.Price), function()
 		Monetize.PromptProduct("RerollTasks")
 	end)
 	local duelsHolder = UIUtil.make("Frame", { Parent = tasksGroup, Size = UDim2.fromOffset(TASKS_W, 48), BackgroundTransparency = 1, ZIndex = 10 })

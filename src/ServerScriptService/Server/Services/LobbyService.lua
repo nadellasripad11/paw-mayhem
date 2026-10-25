@@ -75,11 +75,12 @@ end
 
 -- Colours (your reference): warm mid-tone stone floors and pillars, deep
 -- navy walls and ceiling, gold trim and beams, blue / purple light.
-local FLOOR_PLATE = Color3.fromRGB(172, 162, 144) -- warm stone floor
+local FLOOR_PLATE = Color3.fromRGB(150, 140, 124) -- warm stone floor
 local SEAM = Color3.fromRGB(138, 128, 112)
 local PANEL = Color3.fromRGB(30, 38, 76) -- navy wall panels
 local STEEL_DARK = Color3.fromRGB(20, 26, 54) -- deep navy (frames, posts)
-local BEAM = Color3.fromRGB(206, 164, 72) -- gold beams and trim
+local BEAM = Color3.fromRGB(176, 138, 66) -- gold trim (metallic, not flat yellow)
+local ROOF_BEAM = Color3.fromRGB(38, 46, 82) -- dark navy steel girders
 local STONE = Color3.fromRGB(184, 174, 156) -- stone pillars
 local CAUTION = Color3.fromRGB(255, 196, 40)
 local NAVY = Color3.fromRGB(22, 28, 56)
@@ -369,12 +370,12 @@ local function buildGround(f: Instance)
 		local span = long and w or d
 		for k = 4, span - 4, 8 do
 			local off = long and Vector3.new(r[1] + k - (r[1] + r[2]) / 2, 0, 0) or Vector3.new(0, 0, r[3] + k - (r[3] + r[4]) / 2)
-			part("RoofBeam", long and Vector3.new(1.4, 1.6, d) or Vector3.new(w, 1.6, 1.4), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.8, 0)), BEAM, Enum.Material.Metal, f).CastShadow = false
+			part("RoofBeam", long and Vector3.new(1.4, 1.6, d) or Vector3.new(w, 1.6, 1.4), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.8, 0)), ROOF_BEAM, Enum.Material.Metal, f).CastShadow = false
 		end
 		-- Light panels in the ceiling.
 		for x = r[1] + 11, r[2] - 5, 22 do
 			for z = r[3] + 11, r[4] - 5, 22 do
-				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), Color3.fromRGB(255, 236, 200), Enum.Material.Neon, f)
+				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), Color3.fromRGB(236, 226, 206), Enum.Material.SmoothPlastic, f)
 				lp.CastShadow = false
 				local sl = Instance.new("SurfaceLight")
 				sl.Face = Enum.NormalId.Bottom
@@ -416,7 +417,7 @@ local function buildGround(f: Instance)
 		local base = at(midXZ.X, midXZ.Z)
 		local navy = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
 		local c = base + Vector3.new(0, HEIGHT / 2, 0) - normal
-		solid("Wall", Vector3.new(2, HEIGHT, len + 2), CFrame.lookAt(c, c + dir), navy and NAVY or PANEL, Enum.Material.SmoothPlastic, f)
+		solid("Wall", Vector3.new(2, HEIGHT, len + 2), CFrame.lookAt(c, c + dir), navy and NAVY or PANEL, Enum.Material.Plaster, f)
 		local face = base + normal * 0.02
 		local along = CFrame.lookAt(face, face + dir)
 		part("WallBase", Vector3.new(0.2, 2.4, len), along * CFrame.new(0, 1.2, 0), navy and PANEL or STEEL_DARK, Enum.Material.Metal, f)
@@ -464,7 +465,7 @@ local function buildSpawn(f: Instance)
 	ArenaKit.NewDisc("SpawnStep", 35, 0.3, c + Vector3.new(0, 0.15, 0), Color3.fromRGB(150, 140, 124), Enum.Material.Slate, f)
 	ArenaKit.NewDisc("SpawnPlatform", 30, 0.6, c + Vector3.new(0, 0.3, 0), Color3.fromRGB(172, 162, 144), Enum.Material.Slate, f)
 	disc("SpawnRim", 30.8, 0.5, c + Vector3.new(0, 0.3, 0), BEAM, Enum.Material.Metal, f)
-	disc("SpawnGlow", 29.4, 0.08, c + Vector3.new(0, 0.62, 0), Color3.fromRGB(140, 110, 255), Enum.Material.Neon, f).CastShadow = false
+	disc("SpawnGlow", 29.4, 0.08, c + Vector3.new(0, 0.62, 0), BEAM, Enum.Material.Metal, f).CastShadow = false
 	disc("SpawnGrate", 28.6, 0.1, c + Vector3.new(0, 0.64, 0), grate, Enum.Material.Metal, f)
 	-- Grate texture: thin bars across each panel.
 	for k = 0, 23 do
@@ -482,7 +483,7 @@ local function buildSpawn(f: Instance)
 		local mid = c + dir * 10.8 + Vector3.new(0, 0.72, 0)
 		part("SpawnRib", Vector3.new(0.6, 0.12, 7.4), CFrame.lookAt(mid, mid + dir), rib, Enum.Material.Metal, f).CastShadow = false
 		if k % 3 == 0 then
-			part("SpawnRibGlow", Vector3.new(0.14, 0.13, 7.2), CFrame.lookAt(mid, mid + dir), Color3.fromRGB(140, 110, 255), Enum.Material.Neon, f).CastShadow = false
+			part("SpawnRibGlow", Vector3.new(0.14, 0.13, 7.2), CFrame.lookAt(mid, mid + dir), Color3.fromRGB(120, 140, 200), Enum.Material.Metal, f).CastShadow = false
 		end
 	end
 	-- The raised inner ring the logo sits in.
@@ -636,7 +637,7 @@ local function buildMatchHall(f: Instance)
 	end
 	-- An open roof of beams with light strips under them.
 	for z = 34, 110, 8 do
-		part("RoofBeam", Vector3.new(41, 1, 1.2), CFrame.new(at(0, z, HALL_WALL + 0.8)), BEAM, Enum.Material.Metal, f).CastShadow = false
+		part("RoofBeam", Vector3.new(41, 1, 1.2), CFrame.new(at(0, z, HALL_WALL + 0.8)), ROOF_BEAM, Enum.Material.Metal, f).CastShadow = false
 	end
 	for _, x in ipairs({ -12, 12 }) do
 		part("RoofRail", Vector3.new(0.8, 0.8, 80), CFrame.new(at(x, 72, HALL_WALL + 1.6)), METAL, Enum.Material.Metal, f).CastShadow = false
@@ -1574,7 +1575,7 @@ local function buildGrand(f: Instance)
 	-- Duel hall: runner, pilasters with lamps, pennants, trophy.
 	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), Color3.fromRGB(36, 56, 130), Enum.Material.Fabric, f)
 	for _, x in ipairs({ -4.1, 4.1 }) do
-		part("RunnerTrim", Vector3.new(0.35, 0.08, 76), CFrame.new(at(x, 70, 0.055)), BEAM, Enum.Material.SmoothPlastic, f)
+		part("RunnerTrim", Vector3.new(0.35, 0.08, 76), CFrame.new(at(x, 70, 0.055)), BEAM, Enum.Material.Metal, f)
 	end
 	for _, z in ipairs({ 35, 49, 63, 77.5, 92.5, 107 }) do
 		for _, side in ipairs({ -1, 1 }) do
@@ -1615,14 +1616,14 @@ local function buildGrand(f: Instance)
 	local w, d = r[2] - r[1] - inset * 2, r[4] - r[3] - inset * 2
 	local cx, cz = (r[1] + r[2]) / 2, (r[3] + r[4]) / 2
 	for _, e in ipairs({ { cx, r[3] + inset, w, 0.5 }, { cx, r[4] - inset, w, 0.5 }, { r[1] + inset, cz, 0.5, d }, { r[2] - inset, cz, 0.5, d } }) do
-		part("FloorBorder", Vector3.new(e[3], 0.06, e[4]), CFrame.new(at(e[1], e[2], 0.04)), BEAM, Enum.Material.SmoothPlastic, f)
+		part("FloorBorder", Vector3.new(e[3], 0.06, e[4]), CFrame.new(at(e[1], e[2], 0.04)), BEAM, Enum.Material.Metal, f)
 	end
 	local ringR = 20.5
 	local n = 48
 	for k = 0, n - 1 do
 		local a = (k + 0.5) / n * math.pi * 2
 		local p = at(math.cos(a) * ringR, math.sin(a) * ringR, 0.04)
-		part("InlayRing", Vector3.new(0.45, 0.06, 2 * math.pi * ringR / n + 0.05), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), BEAM, Enum.Material.SmoothPlastic, f)
+		part("InlayRing", Vector3.new(0.45, 0.06, 2 * math.pi * ringR / n + 0.05), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), BEAM, Enum.Material.Metal, f)
 	end
 	for k = 0, 7 do
 		local a = k / 8 * math.pi * 2 + math.pi / 8

@@ -15,9 +15,11 @@ local LobbyLook = {}
 
 local LIGHTING = {
 	Brightness = 2,
-	Ambient = Color3.fromRGB(92, 90, 98),
-	OutdoorAmbient = Color3.fromRGB(128, 126, 134),
-	ExposureCompensation = -0.2,
+	Ambient = Color3.fromRGB(62, 62, 74),
+	OutdoorAmbient = Color3.fromRGB(96, 96, 108),
+	ExposureCompensation = -0.1,
+	EnvironmentDiffuseScale = 1,
+	EnvironmentSpecularScale = 1,
 }
 local ATMOSPHERE = { Density = 0.15, Haze = 0, Glare = 0 }
 
@@ -52,8 +54,20 @@ end
 local function bloom(on: boolean)
 	local b = Lighting:FindFirstChild("PawBloom")
 	if b and b:IsA("BloomEffect") then
-		b.Intensity = on and 0.15 or 0.55
-		b.Threshold = on and 2.4 or 1.6
+		b.Intensity = on and 0.05 or 0.55
+		b.Threshold = on and 3 or 1.6
+	end
+	-- A touch more contrast in the lobby so it reads in 3D.
+	local cc = Lighting:FindFirstChild("PawLobbyGrade")
+	if on and not cc then
+		local c = Instance.new("ColorCorrectionEffect")
+		c.Name = "PawLobbyGrade"
+		c.Contrast = 0.14
+		c.Saturation = 0.04
+		c.Brightness = 0.01
+		c.Parent = Lighting
+	elseif not on and cc then
+		cc:Destroy()
 	end
 end
 
