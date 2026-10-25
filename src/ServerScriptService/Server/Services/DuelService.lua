@@ -42,7 +42,7 @@ local BOT_WAIT = 15 -- seconds alone on a pad before bots fill it
 local TEAM_COLOR = { Blue = Color3.fromRGB(70, 150, 255), Red = Color3.fromRGB(255, 80, 90) }
 
 type Slot = { team: string, pos: Vector3, part: BasePart, player: Player? }
-type Pad = { kind: string, slots: { Slot }, counts: { [string]: TextLabel }, sub: TextLabel, startAt: number?, waitingSince: number? }
+type Pad = { kind: string, slots: { Slot }, counts: { [string]: TextLabel }, sub: TextLabel, big: TextLabel, startAt: number?, waitingSince: number?, center: Vector3, w: number, d: number }
 type Duel = {
 	id: number,
 	place: number,
@@ -81,81 +81,82 @@ local PAD_RIM = Color3.fromRGB(206, 164, 72) -- gold
 local SPOT_RING = Color3.fromRGB(236, 206, 130)
 local SPOT_EMPTY = Color3.fromRGB(40, 50, 92)
 
+local SPOT_DARK = Color3.fromRGB(16, 18, 26)
+local SCREEN_BLUE = Color3.fromRGB(90, 170, 255)
+
+-- A pad like Rivals': a dark plate, a glowing target emblem for each spot
+-- (it lights up in the team colour when someone's on it), bright team lines
+-- along the edges; above it on the wall a big angled screen with a glowing
+-- blue frame showing each side's count, and the countdown when it's full.
 local function buildPad(def: any, parent: Instance)
 	local at = LobbyService.At
 	local is2v2 = def.kind == "2v2"
 	local w, d = is2v2 and 11 or 9, is2v2 and 12.5 or 12
 	local center = at(def.x, def.z)
-	local function flat(name: string, size: Vector3, offset: Vector3, color: Color3): BasePart
-		local p = ArenaKit.NewPart(name, size, CFrame.new(center + offset), color, Enum.Material.SmoothPlastic, parent)
+	local function flat(name: string, size: Vector3, offset: Vector3, color: Color3, material: Enum.Material?): BasePart
+		local p = ArenaKit.NewPart(name, size, CFrame.new(center + offset), color, material or Enum.Material.Metal, parent)
 		p.CanCollide = false
 		p.CanQuery = false
 		p.CastShadow = false
 		return p
 	end
-	local function round(name: string, diameter: number, y: number, x: number, z: number, color: Color3): BasePart
-		local p = ArenaKit.NewDisc(name, diameter, 0.04, center + Vector3.new(x, y, z), color, Enum.Material.SmoothPlastic, parent)
+	local function ring(name: string, diameter: number, y: number, x: number, z: number, color: Color3, material: Enum.Material): BasePart
+		local p = ArenaKit.NewDisc(name, diameter, 0.04, center + Vector3.new(x, y, z), color, material, parent)
 		p.CanCollide = false
 		p.CanQuery = false
 		p.CastShadow = false
 		return p
 	end
 
-	-- The plate: a thick gold-rimmed base (a bevelled edge round it), a dark
-	-- metal top, a line down the middle and a post at each corner.
-	local skirt = flat("PadSkirt", Vector3.new(w + 0.8, 0.18, d + 0.8), Vector3.new(0, 0.09, 0), PAD_PLATE:Lerp(Color3.new(0, 0, 0), 0.3))
-	skirt.Material = Enum.Material.Metal
-	local rim = flat("PadRim", Vector3.new(w, 0.5, d), Vector3.new(0, 0.25, 0), PAD_RIM)
-	rim.Material = Enum.Material.Metal
-	rim.CastShadow = true
-	local plate = flat("PadPlate", Vector3.new(w - 0.6, 0.54, d - 0.6), Vector3.new(0, 0.27, 0), PAD_PLATE)
-	plate.Material = Enum.Material.DiamondPlate
-	flat("PadLine", Vector3.new(w - 1.4, 0.56, 0.18), Vector3.new(0, 0.28, 0), PAD_RIM).Material = Enum.Material.Metal
-	for _, c in ipairs({ { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }) do
-		local post = ArenaKit.NewDisc("PadPost", 0.9, 1.6, center + Vector3.new(c[1] * (w / 2 + 0.2), 0.8, c[2] * (d / 2 + 0.2)), PAD_PLATE, Enum.Material.Metal, parent)
-		post.CanQuery = false
-		local cap = ArenaKit.NewDisc("PadPostCap", 1.1, 0.25, center + Vector3.new(c[1] * (w / 2 + 0.2), 1.7, c[2] * (d / 2 + 0.2)), PAD_RIM, Enum.Material.Metal, parent)
-		cap.CanCollide = false
-		cap.CanQuery = false
-	end
-	-- A thin team-coloured strip along each outer end, so you can tell the sides.
+	-- The plate.
+	flat("PadSkirt", Vector3.new(w + 0.6, 0.16, d + 0.6), Vector3.new(0, 0.08, 0), Color3.fromRGB(12, 13, 18))
+	flat("PadPlate", Vector3.new(w, 0.3, d), Vector3.new(0, 0.15, 0), Color3.fromRGB(24, 26, 36), Enum.Material.DiamondPlate)
+	flat("PadSplit", Vector3.new(w - 0.6, 0.32, 0.14), Vector3.new(0, 0.16, 0), Color3.fromRGB(70, 74, 92))
+	-- Team lines along the two long edges, each half in its colour.
 	for _, side in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
-		flat("PadSide", Vector3.new(w - 1.4, 0.56, 0.35), Vector3.new(0, 0.28, side[2] * (d / 2 - 0.75)), TEAM_COLOR[side[1]])
+		for _, x in ipairs({ -w / 2 + 0.25, w / 2 - 0.25 }) do
+			flat("PadEdge", Vector3.new(0.28, 0.33, d / 2 - 0.4), Vector3.new(x, 0.165, side[2] * d / 4), TEAM_COLOR[side[1]], Enum.Material.Neon)
+		end
+		flat("PadEnd", Vector3.new(w - 0.5, 0.33, 0.28), Vector3.new(0, 0.165, side[2] * (d / 2 - 0.25)), TEAM_COLOR[side[1]], Enum.Material.Neon)
 	end
 
-	local pad: Pad = { kind = def.kind, slots = {}, counts = {}, sub = nil :: any, startAt = nil }
+	local pad: Pad = { kind = def.kind, slots = {}, counts = {}, sub = nil :: any, big = nil :: any, startAt = nil, center = center, w = w, d = d }
 	local offsets = is2v2 and { { "Blue", -2.6, -3.1 }, { "Blue", 2.6, -3.1 }, { "Red", -2.6, 3.1 }, { "Red", 2.6, 3.1 } }
 		or { { "Blue", 0, -3 }, { "Red", 0, 3 } }
 	for _, o in ipairs(offsets) do
-		-- Emblem: a light ring, a dark centre that takes the team colour
-		-- when someone stands on it, and a small team dot.
-		local ring = round("SpotRing", 3.6, 0.6, o[2], o[3], SPOT_RING)
-		ring.Size = Vector3.new(0.16, ring.Size.Y, ring.Size.Z)
-		ring.Material = Enum.Material.Metal
-		local fill = round("SpotFill", 3.1, 0.63, o[2], o[3], SPOT_EMPTY)
-		round("SpotDot", 0.9, 0.66, o[2], o[3], TEAM_COLOR[o[1]])
+		-- A target: glowing outer ring, dark, glowing inner ring, dark, and a
+		-- centre that lights up when someone's in this spot.
+		local col = TEAM_COLOR[o[1]]
+		ring("SpotOuter", 4, 0.32, o[2], o[3], col, Enum.Material.Neon)
+		ring("SpotGap", 3.4, 0.34, o[2], o[3], SPOT_DARK, Enum.Material.Metal)
+		ring("SpotInner", 2.5, 0.36, o[2], o[3], col, Enum.Material.Neon)
+		ring("SpotGap2", 2, 0.38, o[2], o[3], SPOT_DARK, Enum.Material.Metal)
+		local fill = ring("SpotFill", 1.3, 0.4, o[2], o[3], SPOT_EMPTY, Enum.Material.Neon)
 		table.insert(pad.slots, { team = o[1], pos = center + Vector3.new(o[2], 0, o[3]), part = fill, player = nil })
 	end
 
-	-- The screen above it on the side wall: the mode, and each side's count
-	-- (like 0/1 | 0/1), and what the pad is waiting for.
+	-- The screen: big, high on the wall, turned toward you as you walk in.
 	local wallX = def.screenX or def.wall * 16.75
-	local screenPos = at(wallX, def.z, 7)
-	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, 0)) * CFrame.Angles(math.rad(-8), 0, 0)
-	local frame = ArenaKit.NewPart("ScreenFrame", Vector3.new(9, 5.8, 0.9), face * CFrame.new(0, 0, 0.5), PAD_PLATE, Enum.Material.Metal, parent)
-	for _, e in ipairs({ { 0, 2.95, 9.2, 0.25 }, { 0, -2.95, 9.2, 0.25 }, { 4.55, 0, 0.25, 6 }, { -4.55, 0, 0.25, 6 } }) do
-		local trim = ArenaKit.NewPart("ScreenTrim", Vector3.new(e[3], e[4], 1), face * CFrame.new(e[1], e[2], 0.45), PAD_RIM, Enum.Material.Metal, parent)
-		trim.CanCollide = false
-		trim.CanQuery = false
+	local screenPos = at(wallX - def.wall * 0.6, def.z, 8.6)
+	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, -0.45)) * CFrame.Angles(math.rad(-10), 0, 0)
+	local back = ArenaKit.NewPart("ScreenBack", Vector3.new(10.6, 7, 0.8), face * CFrame.new(0, 0, 0.5), Color3.fromRGB(14, 16, 24), Enum.Material.Metal, parent)
+	back.CanCollide = false
+	back.CanQuery = false
+	for _, e in ipairs({ { 0, 3.35, 10.4, 0.22 }, { 0, -3.35, 10.4, 0.22 }, { 5.1, 0, 0.22, 6.9 }, { -5.1, 0, 0.22, 6.9 } }) do
+		local glow = ArenaKit.NewPart("ScreenGlow", Vector3.new(e[3], e[4], 0.2), face * CFrame.new(e[1], e[2], -0.02), SCREEN_BLUE, Enum.Material.Neon, parent)
+		glow.CanCollide = false
+		glow.CanQuery = false
+		glow.CastShadow = false
 	end
-	local arm = ArenaKit.NewPart("ScreenArm", Vector3.new(1.2, 1.2, 1.4), face * CFrame.new(0, 0, 1.4), PAD_PLATE, Enum.Material.Metal, parent)
-	arm.CanCollide = false
-	arm.CanQuery = false
-	frame.CanCollide = false
-	frame.CanQuery = false
-	local screen = ArenaKit.NewPart("PadScreen", Vector3.new(8, 4.8, 0.3), face, Color3.fromRGB(16, 18, 28), Enum.Material.SmoothPlastic, parent)
+	local screen = ArenaKit.NewPart("PadScreen", Vector3.new(10, 6.4, 0.2), face, Color3.fromRGB(10, 16, 30), Enum.Material.SmoothPlastic, parent)
 	screen.CanCollide = false
 	screen.CanQuery = false
+	local light = Instance.new("SurfaceLight")
+	light.Face = Enum.NormalId.Front
+	light.Color = SCREEN_BLUE
+	light.Range = 12
+	light.Brightness = 0.6
+	light.Parent = screen
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = Enum.NormalId.Front
 	gui.LightInfluence = 0
@@ -169,24 +170,29 @@ local function buildPad(def: any, parent: Instance)
 		t.Font = font
 		t.TextScaled = true
 		t.TextColor3 = color
+		t.TextStrokeColor3 = Color3.fromRGB(10, 30, 70)
+		t.TextStrokeTransparency = 0.2
 		t.Text = text
 		t.Parent = gui
 		return t
 	end
 	local need = #pad.slots // 2
-	label(string.upper(def.kind), 0, 0.04, 1, 0.2, Enum.Font.FredokaOne, Color3.fromRGB(235, 238, 248))
+	label(string.upper(def.kind), 0, 0.05, 1, 0.16, Enum.Font.FredokaOne, Color3.fromRGB(200, 225, 255))
 	-- (Facing a left-wall screen the spawn end is on your left; facing a
 	-- right-wall one it's on your right. Each count sits over its own half.)
 	local blueLeft = def.wall > 0
-	pad.counts.Blue = label("0/" .. need, blueLeft and 0.06 or 0.52, 0.27, 0.42, 0.42, Enum.Font.GothamBlack, TEAM_COLOR.Blue)
-	pad.counts.Red = label("0/" .. need, blueLeft and 0.52 or 0.06, 0.27, 0.42, 0.42, Enum.Font.GothamBlack, TEAM_COLOR.Red)
+	pad.counts.Blue = label("0/" .. need, blueLeft and 0.04 or 0.52, 0.24, 0.44, 0.5, Enum.Font.FredokaOne, Color3.fromRGB(150, 205, 255))
+	pad.counts.Red = label("0/" .. need, blueLeft and 0.52 or 0.04, 0.24, 0.44, 0.5, Enum.Font.FredokaOne, Color3.fromRGB(255, 160, 170))
 	local bar = Instance.new("Frame")
-	bar.BackgroundColor3 = Color3.fromRGB(90, 96, 120)
+	bar.BackgroundColor3 = SCREEN_BLUE
 	bar.BorderSizePixel = 0
-	bar.Position = UDim2.fromScale(0.495, 0.3)
-	bar.Size = UDim2.fromScale(0.01, 0.36)
+	bar.Position = UDim2.fromScale(0.495, 0.28)
+	bar.Size = UDim2.fromScale(0.01, 0.42)
 	bar.Parent = gui
-	pad.sub = label("Step on a pad", 0, 0.76, 1, 0.17, Enum.Font.GothamBold, Color3.fromRGB(200, 204, 220))
+	-- The countdown: one huge number over everything when the pad is full.
+	pad.big = label("", 0, 0.12, 1, 0.66, Enum.Font.FredokaOne, Color3.fromRGB(255, 220, 90))
+	pad.big.Visible = false
+	pad.sub = label("Step on a pad", 0, 0.8, 1, 0.14, Enum.Font.GothamBold, Color3.fromRGB(190, 210, 240))
 	table.insert(pads, pad)
 end
 
@@ -690,10 +696,23 @@ end
 local function tickPads()
 	local now = os.clock()
 	local taken: { [Player]: boolean } = {}
+	-- Standing anywhere on a pad counts (not just the exact circle): which
+	-- half you're on, or nil if you're off it.
+	local function onPad(p: Player, pad: Pad): number?
+		local root = p.Character and p.Character.PrimaryPart
+		if not root then
+			return nil
+		end
+		local off = root.Position - pad.center
+		if math.abs(off.X) <= pad.w / 2 + 0.8 and math.abs(off.Z) <= pad.d / 2 + 0.8 and math.abs(off.Y) < 6 then
+			return off.Z < 0 and -1 or 1
+		end
+		return nil
+	end
 	for _, pad in ipairs(pads) do
 		for _, slot in ipairs(pad.slots) do
 			local p = slot.player
-			if p and (not p.Parent or not eligible(p) or not onSlot(p, slot)) then
+			if p and (not p.Parent or not eligible(p) or not onPad(p, pad)) then
 				slot.player = nil
 			elseif p then
 				taken[p] = true
@@ -703,9 +722,27 @@ local function tickPads()
 	for _, p in ipairs(Players:GetPlayers()) do
 		if not taken[p] and eligible(p) then
 			for _, pad in ipairs(pads) do
-				for _, slot in ipairs(pad.slots) do
-					if not taken[p] and not slot.player and onSlot(p, slot) then
-						slot.player = p
+				local side = not taken[p] and onPad(p, pad)
+				if side then
+					-- A free spot on the half you're on, else any free spot.
+					local want = side < 0 and "Blue" or "Red"
+					local pick: Slot? = nil
+					for _, slot in ipairs(pad.slots) do
+						if not slot.player and slot.team == want then
+							pick = slot
+							break
+						end
+					end
+					if not pick then
+						for _, slot in ipairs(pad.slots) do
+							if not slot.player then
+								pick = slot
+								break
+							end
+						end
+					end
+					if pick then
+						pick.player = p
 						taken[p] = true
 					end
 				end
@@ -715,7 +752,7 @@ local function tickPads()
 	for _, pad in ipairs(pads) do
 		local filled = 0
 		for _, slot in ipairs(pad.slots) do
-			slot.part.Color = slot.player and TEAM_COLOR[slot.team] or SPOT_EMPTY
+			slot.part.Color = slot.player and Color3.new(1, 1, 1):Lerp(TEAM_COLOR[slot.team], 0.4) or SPOT_EMPTY
 			if slot.player then
 				filled += 1
 			end
@@ -731,6 +768,9 @@ local function tickPads()
 			end
 			pad.counts[team].Text = n .. "/" .. per
 		end
+		pad.big.Visible = need == 0
+		pad.counts.Blue.Visible = need > 0
+		pad.counts.Red.Visible = need > 0
 		if need > 0 then
 			pad.startAt = nil
 			if filled == 0 then
@@ -748,7 +788,8 @@ local function tickPads()
 		else
 			pad.startAt = pad.startAt or (now + COUNTDOWN)
 			local left = math.ceil((pad.startAt :: number) - now)
-			pad.sub.Text = "Starting in " .. math.max(left, 1)
+			pad.sub.Text = "Get ready!"
+			pad.big.Text = tostring(math.max(left, 1))
 			if now >= (pad.startAt :: number) then
 				startDuel(pad)
 				pad.sub.Text = "Step on a pad"

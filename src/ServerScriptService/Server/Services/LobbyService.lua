@@ -1573,9 +1573,10 @@ end
 
 local function buildGrand(f: Instance)
 	-- Duel hall: runner, pilasters with lamps, pennants, trophy.
-	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), Color3.fromRGB(36, 56, 130), Enum.Material.Fabric, f)
-	for _, x in ipairs({ -4.1, 4.1 }) do
-		part("RunnerTrim", Vector3.new(0.35, 0.08, 76), CFrame.new(at(x, 70, 0.055)), BEAM, Enum.Material.Metal, f)
+	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), Color3.fromRGB(22, 24, 30), Enum.Material.Asphalt, f)
+	for _, e in ipairs({ { -4.2, Color3.fromRGB(150, 90, 255) }, { 4.2, Color3.fromRGB(255, 200, 60) } }) do
+		local line = part("RunnerTrim", Vector3.new(0.3, 0.08, 76), CFrame.new(at(e[1], 70, 0.06)), e[2], Enum.Material.Neon, f)
+		line.CastShadow = false
 	end
 	for _, z in ipairs({ 35, 49, 63, 77.5, 92.5, 107 }) do
 		for _, side in ipairs({ -1, 1 }) do
@@ -1662,7 +1663,7 @@ local function buildHallDepth(f: Instance)
 		end
 	end
 	-- Polished marble down the hall (over the old flat floor).
-	part("HallMarble", Vector3.new(39.6, 0.04, 81.6), CFrame.new(at(0, 71, 0.02)), Color3.fromRGB(34, 40, 72), Enum.Material.Marble, f)
+	part("HallMarble", Vector3.new(39.6, 0.04, 81.6), CFrame.new(at(0, 71, 0.02)), Color3.fromRGB(36, 38, 48), Enum.Material.Concrete, f)
 	for z = 34, 110, 6 do
 		part("HallSeam", Vector3.new(39.6, 0.05, 0.1), CFrame.new(at(0, z, 0.025)), Color3.fromRGB(60, 68, 108), Enum.Material.SmoothPlastic, f)
 	end
