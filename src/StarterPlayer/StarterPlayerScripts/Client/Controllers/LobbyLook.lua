@@ -15,8 +15,8 @@ local LobbyLook = {}
 
 local LIGHTING = {
 	Brightness = 2,
-	Ambient = Color3.fromRGB(62, 62, 74),
-	OutdoorAmbient = Color3.fromRGB(96, 96, 108),
+	Ambient = Color3.fromRGB(50, 50, 62),
+	OutdoorAmbient = Color3.fromRGB(78, 78, 92),
 	ExposureCompensation = -0.1,
 	EnvironmentDiffuseScale = 1,
 	EnvironmentSpecularScale = 1,
