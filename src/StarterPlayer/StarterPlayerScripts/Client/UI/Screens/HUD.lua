@@ -340,7 +340,7 @@ local function touchButton(parent, name: string, pos: UDim2, d: number, color: C
 	b.BackgroundColor3 = Color3.fromRGB(16, 22, 40)
 	b.BackgroundTransparency = 0.3
 	b.BorderSizePixel = 0
-	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or "Moves")
+	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or name == "JumpButton" and "Jump" or "Moves")
 	b.Parent = parent
 	UIUtil.corner(UDim.new(1, 0), b)
 	local ring = UIUtil.stroke(color, 3, b)
@@ -1133,10 +1133,12 @@ end
 -- Which parts each place shows: the whole HUD in a match, the crosshair and
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
-	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
-	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
-	Range = { Aim = true, Weapon = true, Moves = true, Abilities = true },
-	Lobby = { Moves = true },
+	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Jump = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
+	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Jump = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
+	Range = { Aim = true, Weapon = true, Moves = true, Jump = true, Abilities = true },
+	-- In the lobby menu only JUMP stays (run / dash / pounce come back in a
+	-- match, a duel and the range).
+	Lobby = { Jump = true },
 }
 function HUD.SetMode(mode: string)
 	hudMode = mode
