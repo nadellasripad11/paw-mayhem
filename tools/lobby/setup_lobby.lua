@@ -147,14 +147,10 @@ for name, def in pairs(VARIANTS) do
 		mv:Destroy()
 	end
 end
-pcall(function()
-	game:GetService("Lighting").Technology = Enum.Technology.Future
-end)
 print("==== PAW MAYHEM lobby setup ====")
 print(("Models found: %d / %d"):format(found, #NAMES))
 print(("With full PBR textures: %d   colour texture only: %d   no texture (uses built-in materials): %d"):format(textured, colourOnly, found - textured - colourOnly))
 print(("Lobby materials made: %d / 6"):format(made))
-print("Lighting.Technology: " .. game:GetService("Lighting").Technology.Name)
 if #missing > 0 then
 	warn("MISSING: " .. table.concat(missing, ", ") .. "  -> import assets/LobbyMeshes.glb (Home > Import 3D) and run this again")
 elseif made < 6 then

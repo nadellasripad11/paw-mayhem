@@ -71,7 +71,7 @@ for _, v in ipairs({ "PawStone", "PawGrain", "PawPlaster", "PawMetal", "PawMarbl
 	check(RS.LobbyMeshes.Materials:FindFirstChild(v) ~= nil, "variant stored in library: " .. v)
 end
 check(MS.PawStone.BaseMaterial == Enum.Material.Slate and MS.PawStone.StudsPerTile == 12, "PawStone settings")
-check(game:GetService("Lighting").Technology == Enum.Technology.Future, "Future lighting")
+
 print("-- run again (nothing new imported)")
 runSetup()
 check(#RS.LobbyMeshes.Meshes:GetChildren() == #NAMES, "re-run keeps exactly one of each mesh")
