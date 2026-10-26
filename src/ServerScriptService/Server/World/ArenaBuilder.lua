@@ -47,7 +47,7 @@ local function freeMovement(arena: Instance)
 				p.CanCollide = true
 			elseif p.CanCollide and not WALKABLE[p.Name] then
 				local biggest = math.max(p.Size.X, p.Size.Y, p.Size.Z)
-				if isDecor(p.Name) or biggest < 3 or p.Transparency >= 0.95 then
+				if isDecor(p.Name) or biggest < 3 or (p.Transparency >= 0.95 and not p:GetAttribute("MeshProxy")) then
 					p.CanCollide = false
 				end
 			end

@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const file = path.join(__dirname, '..', '..', 'assets', 'LobbyMeshes.glb');
+const file = process.argv[2] ? path.resolve(process.argv[2]) : path.join(__dirname, '..', '..', 'assets', 'LobbyMeshes.glb');
 const buf = fs.readFileSync(file);
 const errors = [];
 const err = (m) => errors.push(m);
@@ -73,7 +73,7 @@ for (const node of json.nodes) {
     console.log(`  ${node.name.padEnd(18)} ${String(tris).padStart(6)} tris  ${String(vc).padStart(6)} verts  ${mat.name}`);
   }
 }
-for (const img of json.images) {
+for (const img of json.images || []) {
   const bv = json.bufferViews[img.bufferView];
   const head = bin.slice(bv.byteOffset, bv.byteOffset + 24);
   if (head.readUInt32BE(0) !== 0x89504e47) err(img.name + ': not a PNG');
@@ -82,11 +82,11 @@ for (const img of json.images) {
 }
 for (const m of json.materials) {
   const p = m.pbrMetallicRoughness;
-  for (const t of [p.baseColorTexture, p.metallicRoughnessTexture, m.normalTexture]) if (!t || !json.textures[t.index]) err(m.name + ': missing texture');
+  if (json.images) for (const t of [p.baseColorTexture, p.metallicRoughnessTexture, m.normalTexture]) if (!t || !json.textures[t.index]) err(m.name + ': missing texture');
 }
-console.log(`${json.nodes.length} meshes, ${total} triangles, ${json.images.length} images, ${(buf.length / 1e6).toFixed(1)} MB`);
+console.log(`${json.nodes.length} meshes, ${total} triangles, ${(json.images || []).length} images, ${(buf.length / 1e6).toFixed(1)} MB`);
 if (errors.length) {
   console.log('FAIL\n' + errors.join('\n'));
   process.exit(1);
 }
-console.log('OK: LobbyMeshes.glb is valid');
+console.log('OK: ' + path.basename(file) + ' is valid');

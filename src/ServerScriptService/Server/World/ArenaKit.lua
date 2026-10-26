@@ -6,6 +6,9 @@
 -- identically instead of being re-derived (and possibly re-broken) per map.
 
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local MeshLib = require(ReplicatedStorage.Shared.MeshLib)
 
 local ArenaKit = {}
 
@@ -70,6 +73,8 @@ export type IslandStyle = {
 	seam: Color3?, -- glowing cracks between cliff columns + under the rim
 	drip: Color3?, -- grass tufts hanging over the lip
 	depth: number?,
+	meshes: boolean?, -- sculpted rock cliffs, underside and grass lip (MeshLib)
+	softBlocks: boolean?, -- cliffs as soft rounded toy blocks (MeshLib)
 }
 
 -- Floating island: one solid round walkable top (the only collider), an
@@ -82,6 +87,8 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 
 	local topMat = topMaterial or Enum.Material.Grass
 	local cliffMat = st.cliffMaterial or Enum.Material.Slate
+	local rocky = st.meshes == true and MeshLib.Has("U_Cliff1")
+	local soft = st.softBlocks == true and MeshLib.Has("U_SoftBlock")
 	local rng = Random.new(math.floor(center.X * 7 + center.Y * 3 + center.Z * 13 + radius * 31))
 	local surf = center.Y + ArenaKit.SURFACE
 	local function shade(): Color3
@@ -89,7 +96,11 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 	end
 
 	ArenaKit.NewDisc("Floor", radius * 2, 3, Vector3.new(center.X, surf - 1.5, center.Z), palette.Top, topMat, folder)
-	ArenaKit.NewDisc("Lip", radius * 2 + 1.6, 1.6, Vector3.new(center.X, surf - 1.0, center.Z), palette.TopDark, topMat, folder).CanCollide = false
+	if rocky then
+		MeshLib.Fill("U_GrassLip", CFrame.new(center.X, surf - 1.0, center.Z), Vector3.new(radius * 2 + 1.6, 1.6, radius * 2 + 1.6), palette.TopDark, topMat, folder)
+	else
+		ArenaKit.NewDisc("Lip", radius * 2 + 1.6, 1.6, Vector3.new(center.X, surf - 1.0, center.Z), palette.TopDark, topMat, folder).CanCollide = false
+	end
 
 	local depth = st.depth or 1
 	local colH = (7 + radius * 0.32) * depth
@@ -103,7 +114,14 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		local h = colH * rng:NextNumber(0.7, 1.15)
 		local out = Vector3.new(math.cos(a), 0, math.sin(a))
 		local pos = Vector3.new(center.X, colTop - h / 2, center.Z) + out * (ringR + rng:NextNumber(-0.3, 0.5))
-		ArenaKit.NewPart("Cliff" .. i, Vector3.new(colW, h, colD), CFrame.lookAt(pos, pos + out), shade(), cliffMat, folder).CanCollide = false
+		local cliffCF, cliffSize, cliffColor = CFrame.lookAt(pos, pos + out), Vector3.new(colW, h, colD), shade()
+		if rocky then
+			MeshLib.Fill("U_Cliff" .. (i % 3 + 1), cliffCF, cliffSize, cliffColor, cliffMat, folder)
+		elseif soft then
+			MeshLib.Fill("U_SoftBlock", cliffCF, cliffSize, cliffColor, cliffMat, folder)
+		else
+			ArenaKit.NewPart("Cliff" .. i, cliffSize, cliffCF, cliffColor, cliffMat, folder).CanCollide = false
+		end
 		if st.seam and i % 3 == 0 then
 			local sa = a + math.pi / n
 			local sOut = Vector3.new(math.cos(sa), 0, math.sin(sa))
@@ -121,14 +139,22 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 	end
 
 	local coreR = ringR - colD / 2 + 1
-	ArenaKit.NewDisc("Core", coreR * 2, colH * 0.9, Vector3.new(center.X, colTop - colH * 0.45, center.Z), palette.StoneDark, cliffMat, folder).CanCollide = false
+	if rocky then
+		MeshLib.Fill("U_RockDrum", CFrame.new(center.X, colTop - colH * 0.45, center.Z), Vector3.new(coreR * 2, colH * 0.9, coreR * 2), palette.StoneDark, cliffMat, folder)
+	else
+		ArenaKit.NewDisc("Core", coreR * 2, colH * 0.9, Vector3.new(center.X, colTop - colH * 0.45, center.Z), palette.StoneDark, cliffMat, folder).CanCollide = false
+	end
 
 	local y = colTop - colH * 0.9
 	local r = ringR
 	for k = 1, 2 do
 		r *= 0.66
 		local h = 3 + radius * 0.14
-		ArenaKit.NewDisc("Taper" .. k, r * 2, h, Vector3.new(center.X, y - h / 2, center.Z), shade(), cliffMat, folder).CanCollide = false
+		if rocky then
+			MeshLib.Fill("U_RockDrum", CFrame.new(center.X, y - h / 2, center.Z) * CFrame.Angles(0, k * 1.3, 0), Vector3.new(r * 2, h, r * 2), shade(), cliffMat, folder)
+		else
+			ArenaKit.NewDisc("Taper" .. k, r * 2, h, Vector3.new(center.X, y - h / 2, center.Z), shade(), cliffMat, folder).CanCollide = false
+		end
 		y -= h
 	end
 
@@ -140,7 +166,12 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		local h = rng:NextNumber(0.5, 1.3) * (colH * 0.6 + radius * 0.25)
 		local w = math.max(2.5, radius * rng:NextNumber(0.16, 0.3))
 		local pos = Vector3.new(center.X + math.cos(a) * dist, hangTop - h / 2, center.Z + math.sin(a) * dist)
-		ArenaKit.NewPart("Hang" .. i, Vector3.new(w, h, w * rng:NextNumber(0.8, 1.2)), CFrame.new(pos) * CFrame.Angles(0, a, 0), shade(), cliffMat, folder).CanCollide = false
+		local hangSize = Vector3.new(w, h, w * rng:NextNumber(0.8, 1.2))
+		if rocky then
+			MeshLib.Fill("U_Hang" .. (i % 2 + 1), CFrame.new(pos) * CFrame.Angles(0, a, 0), hangSize, shade(), cliffMat, folder)
+		else
+			ArenaKit.NewPart("Hang" .. i, hangSize, CFrame.new(pos) * CFrame.Angles(0, a, 0), shade(), cliffMat, folder).CanCollide = false
+		end
 	end
 
 	if st.seam then

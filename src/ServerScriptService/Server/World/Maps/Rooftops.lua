@@ -23,6 +23,7 @@ local TEAM = { Blue = Color3.fromRGB(64, 150, 255), Red = Color3.fromRGB(255, 82
 
 local rng = Random.new(20260925)
 local NP = ArenaKit.NewPart
+local MeshLib = require(game:GetService("ReplicatedStorage").Shared.MeshLib)
 
 -- name, centre (x, z), roof top height, size (x, z), team
 local ROOFS = {
@@ -84,13 +85,30 @@ end
 
 -- Rooftop cover: an AC unit (with a fan grille) or a water tank on legs.
 local function acUnit(pos: Vector3, parent: Instance)
-	NP("Crate", Vector3.new(4.5, 3, 3.4), CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(180, 186, 196), Enum.Material.Metal, parent)
+	local box = NP("Crate", Vector3.new(4.5, 3, 3.4), CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(180, 186, 196), Enum.Material.Metal, parent)
+	if MeshLib.Has("ACBody") then
+		-- A real AC unit: finned sides, a fan in a ring on top.
+		MeshLib.Hide(box)
+		MeshLib.Place("ACBody", CFrame.new(pos), 1, Color3.fromRGB(180, 186, 196), Enum.Material.Metal, parent)
+		MeshLib.Place("ACFan", CFrame.new(pos), 1, Color3.fromRGB(60, 64, 74), Enum.Material.Metal, parent)
+		return
+	end
 	local fan = NP("Fan", Vector3.new(0.2, 2.2, 2.2), CFrame.new(pos + Vector3.new(0, 3.05, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(60, 64, 74), Enum.Material.DiamondPlate, parent)
 	fan.Shape = Enum.PartType.Cylinder
 	fan.CanCollide = false
 end
 
 local function waterTank(pos: Vector3, parent: Instance)
+	if MeshLib.Has("TankWood") then
+		-- A wooden water tank: staves with iron bands, a cone roof, braced legs.
+		local tank = NP("Barrel", Vector3.new(4.5, 4, 4), CFrame.new(pos + Vector3.new(0, 5, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(150, 104, 76), Enum.Material.WoodPlanks, parent)
+		tank.Shape = Enum.PartType.Cylinder
+		MeshLib.Hide(tank)
+		MeshLib.Place("TankWood", CFrame.new(pos), 1, Color3.fromRGB(150, 104, 76), Enum.Material.Wood, parent)
+		MeshLib.Place("TankMetal", CFrame.new(pos), 1, Color3.fromRGB(70, 66, 70), Enum.Material.Metal, parent)
+		MeshLib.Place("TankRoof", CFrame.new(pos), 1, Color3.fromRGB(110, 76, 58), Enum.Material.Wood, parent)
+		return
+	end
 	for _, o in ipairs({ { 1.3, 1.3 }, { -1.3, 1.3 }, { 1.3, -1.3 }, { -1.3, -1.3 } }) do
 		NP("Post", Vector3.new(0.3, 3, 0.3), CFrame.new(pos + Vector3.new(o[1], 1.5, o[2])), Color3.fromRGB(90, 70, 60), Enum.Material.Wood, parent)
 	end

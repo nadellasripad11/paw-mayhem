@@ -20,6 +20,10 @@
       "LobbyMeshes": {
         "$path": "assets/LobbyMeshes",
         "$ignoreUnknownInstances": true
+      },
+      "GameMeshes": {
+        "$path": "assets/GameMeshes",
+        "$ignoreUnknownInstances": true
       }
     },
 

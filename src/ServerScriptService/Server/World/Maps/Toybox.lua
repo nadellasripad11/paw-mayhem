@@ -5,7 +5,9 @@
 -- two maps (ArenaKit.StandardLayout); completely different theme.
 
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ArenaKit = require(script.Parent.Parent.ArenaKit)
+local MeshLib = require(ReplicatedStorage.Shared.MeshLib)
 
 local Toybox = { Id = "Toybox", Name = "Toybox" }
 
@@ -22,12 +24,25 @@ local BLOCK_COLORS = {
 	Color3.fromRGB(255, 120, 150), Color3.fromRGB(120, 200, 255),
 	Color3.fromRGB(255, 210, 90), Color3.fromRGB(170, 130, 255),
 }
+-- Islands with soft rounded toy-block cliffs (once the models are imported).
+local TOY_ISLE: ArenaKit.IslandStyle = { softBlocks = true }
+
+-- Swap a block for a soft, rounded toy block (MeshLib); the block itself stays
+-- as invisible collision. No-op until the models are imported.
+local function soften(p: BasePart, mesh: string?)
+	if MeshLib.Fill(mesh or "U_SoftBlock", p.CFrame, p.Size, p.Color, p.Material, p.Parent) then
+		MeshLib.Hide(p)
+	end
+end
 
 -- A big toy balloon on a string, in place of a tree.
 local function makeBalloon(pos: Vector3, parent: Instance)
 	local color = BALLOON_COLORS[math.random(1, #BALLOON_COLORS)]
 	local h = 4 + math.random() * 2
 	ArenaKit.NewPart("String", Vector3.new(0.15, h, 0.15), CFrame.new(pos + Vector3.new(0, h / 2, 0)), Color3.fromRGB(230, 230, 230), Enum.Material.SmoothPlastic, parent)
+	if MeshLib.Place("Balloon", CFrame.new(pos + Vector3.new(0, h + 1.6 - 1.8, 0)), 1, color, Enum.Material.SmoothPlastic, parent) then
+		return
+	end
 	local balloon = ArenaKit.NewPart("Balloon", Vector3.new(3, 3.6, 3), CFrame.new(pos + Vector3.new(0, h + 1.6, 0)), color, Enum.Material.SmoothPlastic, parent)
 	balloon.Shape = Enum.PartType.Ball
 	balloon.CanCollide = false
@@ -36,7 +51,7 @@ end
 -- A small colorful toy block, in place of a flower.
 local function makeBlock(pos: Vector3, parent: Instance)
 	local color = BLOCK_COLORS[math.random(1, #BLOCK_COLORS)]
-	ArenaKit.NewPart("ToyBlock", Vector3.new(0.9, 0.9, 0.9), CFrame.new(pos + Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, math.rad(math.random(0, 45)), 0), color, Enum.Material.SmoothPlastic, parent)
+	soften(ArenaKit.NewPart("ToyBlock", Vector3.new(0.9, 0.9, 0.9), CFrame.new(pos + Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, math.rad(math.random(0, 45)), 0), color, Enum.Material.SmoothPlastic, parent))
 end
 
 local function scatterDecor(center: Vector3, radius: number, parent: Instance, balloons: number, blocks: number)
@@ -54,8 +69,10 @@ end
 
 local function makeCrate(pos: Vector3, parent: Instance)
 	local color = BLOCK_COLORS[math.random(1, #BLOCK_COLORS)]
-	ArenaKit.NewPart("ToyCrate", Vector3.new(4, 4, 4), CFrame.new(pos + Vector3.new(0, 3.6, 0)), color, Enum.Material.SmoothPlastic, parent).CanCollide = true
-	ArenaKit.NewPart("Trim", Vector3.new(4.1, 0.4, 4.1), CFrame.new(pos + Vector3.new(0, 5.4, 0)), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, parent)
+	local box = ArenaKit.NewPart("ToyCrate", Vector3.new(4, 4, 4), CFrame.new(pos + Vector3.new(0, 3.6, 0)), color, Enum.Material.SmoothPlastic, parent)
+	box.CanCollide = true
+	soften(box)
+	soften(ArenaKit.NewPart("Trim", Vector3.new(4.1, 0.4, 4.1), CFrame.new(pos + Vector3.new(0, 5.4, 0)), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, parent))
 end
 
 local function makeToyHouse(pos: Vector3, parent: Instance, scale: number?)
@@ -66,6 +83,7 @@ local function makeToyHouse(pos: Vector3, parent: Instance, scale: number?)
 	local colors = BLOCK_COLORS
 	local body = ArenaKit.NewPart("HouseBlock", Vector3.new(7 * s, 5 * s, 6 * s), CFrame.new(pos + Vector3.new(0, 2.5 * s, 0)), colors[math.random(1, #colors)], Enum.Material.SmoothPlastic, folder)
 	body.CanCollide = true
+	soften(body)
 	local roof = Instance.new("WedgePart")
 	roof.Name = "HouseRoof"
 	roof.Size = Vector3.new(9 * s, 3.5 * s, 7 * s)
@@ -86,7 +104,9 @@ local function makeToyHouse(pos: Vector3, parent: Instance, scale: number?)
 end
 
 local function makePlatform(pos: Vector3, size: Vector3, parent: Instance)
-	ArenaKit.NewPart("Platform", size, CFrame.new(pos), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, parent).CanCollide = true
+	local top = ArenaKit.NewPart("Platform", size, CFrame.new(pos), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, parent)
+	top.CanCollide = true
+	soften(top)
 	for _, ox in ipairs({ -1, 1 }) do
 		for _, oz in ipairs({ -1, 1 }) do
 			ArenaKit.NewPart("Leg", Vector3.new(0.8, pos.Y + 1.6, 0.8), CFrame.new(pos.X + ox * (size.X / 2 - 1), pos.Y / 2, pos.Z + oz * (size.Z / 2 - 1)), PALETTE.Wood, Enum.Material.SmoothPlastic, parent)
@@ -105,6 +125,7 @@ local function makeBlockTower(pos: Vector3, parent: Instance)
 		local size = 6 - i * 0.6
 		local block = ArenaKit.NewPart("Block" .. i, Vector3.new(size, 4, size), CFrame.new(pos + Vector3.new(0, 2 + i * 4, 0)), stackColors[i + 1], Enum.Material.SmoothPlastic, folder)
 		block.CanCollide = true
+		soften(block)
 	end
 
 	local hub = ArenaKit.NewPart("Hub", Vector3.new(0.8, 0.8, 0.8), CFrame.new(pos + Vector3.new(0, 18, 0)), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, folder)
@@ -151,9 +172,11 @@ local function makeToyRail(origin: Vector3, length: number, parent: Instance)
 	for _, x in ipairs({ -length / 2, length / 2 }) do
 		local post = ArenaKit.NewPart("ToyRailPost", Vector3.new(0.6, 3.2, 0.6), CFrame.new(origin + Vector3.new(x, 1.6, 0)), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, parent)
 		post.CanCollide = true
+		soften(post)
 	end
 	local rail = ArenaKit.NewPart("ToyRail", Vector3.new(length, 0.5, 0.5), CFrame.new(origin + Vector3.new(0, 2.8, 0)), Color3.fromRGB(255, 120, 150), Enum.Material.SmoothPlastic, parent)
 	rail.CanCollide = true
+	soften(rail)
 end
 
 local function makeToySlide(pos: Vector3, parent: Instance, color: Color3)
@@ -173,6 +196,7 @@ end
 local function makeToyDice(pos: Vector3, parent: Instance)
 	local dice = ArenaKit.NewPart("GiantDice", Vector3.new(5.2, 5.2, 5.2), CFrame.new(pos + Vector3.new(0, 2.6, 0)) * CFrame.Angles(0, math.rad(18), 0), Color3.fromRGB(255, 255, 255), Enum.Material.SmoothPlastic, parent)
 	dice.CanCollide = true
+	soften(dice, "U_Dice")
 	for _, side in ipairs({ Vector3.new(0, 0, -2.66), Vector3.new(0, 0, 2.66), Vector3.new(-2.66, 0, 0) }) do
 		local pip = ArenaKit.NewPart("DicePip", Vector3.new(0.65, 0.65, 0.12), CFrame.new(pos + Vector3.new(0, 2.6, 0) + side), Color3.fromRGB(90, 130, 220), Enum.Material.Neon, parent)
 		pip.Shape = Enum.PartType.Ball
@@ -185,9 +209,11 @@ local function makeToyArch(pos: Vector3, parent: Instance)
 	for i, x in ipairs({ -4, 0, 4 }) do
 		local pillar = ArenaKit.NewPart("ToyArchBlock", Vector3.new(2.2, 7 + (i % 2) * 2, 2.2), CFrame.new(pos + Vector3.new(x, 3.5 + (i % 2), 0)), colors[i], Enum.Material.SmoothPlastic, parent)
 		pillar.CanCollide = true
+		soften(pillar)
 	end
 	local top = ArenaKit.NewPart("ToyArchTop", Vector3.new(10, 1.8, 2.4), CFrame.new(pos + Vector3.new(0, 8.4, 0)), Color3.fromRGB(170, 130, 255), Enum.Material.SmoothPlastic, parent)
 	top.CanCollide = true
+	soften(top)
 end
 
 local function makeToyTeamMarker(pos: Vector3, teamId: string, parent: Instance)
@@ -228,6 +254,12 @@ local function lollipop(pos: Vector3, s: number, parent: Instance)
 	local top = pos + Vector3.new(0, 8.6 * s, 0)
 	local face = CFrame.new(top) * CFrame.Angles(0, toyRng:NextNumber(0, 6.28), 0)
 	local c1, c2 = toyColor(), Color3.new(1, 1, 1)
+	if MeshLib.Has("LollipopDisc") then
+		local o = face * CFrame.Angles(0, math.pi / 2, 0)
+		MeshLib.Place("LollipopDisc", o, s, c1, Enum.Material.SmoothPlastic, parent)
+		MeshLib.Place("LollipopStripe", o, s, c2, Enum.Material.SmoothPlastic, parent)
+		return
+	end
 	for i, d in ipairs({ 5.2, 4.1, 3, 1.9, 0.9 }) do
 		local disc = toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(0.6 + i * 0.02, d * s, d * s), face, i % 2 == 1 and c1 or c2, Enum.Material.SmoothPlastic, parent)) :: Part
 		disc.Shape = Enum.PartType.Cylinder
@@ -256,12 +288,22 @@ local function abcBlocks(pos: Vector3, parent: Instance)
 			l.TextStrokeTransparency = 0.6
 			l.Parent = gui
 		end
+		soften(b)
 	end
 end
 
 -- A crayon standing up (a tall pillar with a pointed tip).
 local function crayon(pos: Vector3, h: number, parent: Instance)
 	local c = toyColor()
+	if MeshLib.Has("CrayonBody") then
+		local proxy = ArenaKit.NewPart("Crayon", Vector3.new(1.6, h, 1.6), CFrame.new(pos + Vector3.new(0, h / 2, 0)), c, Enum.Material.SmoothPlastic, parent)
+		MeshLib.Hide(proxy)
+		local o = CFrame.new(pos) * CFrame.Angles(0, toyRng:NextNumber(0, 6.28), 0)
+		MeshLib.Place("CrayonBody", o, Vector3.new(1, h, 1), c, Enum.Material.SmoothPlastic, parent)
+		MeshLib.Place("CrayonBands", o, Vector3.new(1, h, 1), c:Lerp(Color3.new(0, 0, 0), 0.35), Enum.Material.SmoothPlastic, parent)
+		MeshLib.Place("CrayonTip", o + Vector3.new(0, h, 0), 1, c, Enum.Material.SmoothPlastic, parent)
+		return
+	end
 	local body = ArenaKit.NewPart("Crayon", Vector3.new(h, 1.6, 1.6), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), c, Enum.Material.SmoothPlastic, parent) :: Part
 	body.Shape = Enum.PartType.Cylinder
 	for _, y in ipairs({ h * 0.15, h * 0.85 }) do
@@ -275,13 +317,31 @@ end
 local function balloons(pos: Vector3, parent: Instance)
 	for k = 1, 3 do
 		local top = pos + Vector3.new(toyRng:NextNumber(-1.6, 1.6), 9 + k * 1.2, toyRng:NextNumber(-1.6, 1.6))
-		toyBall(2.4, top, toyColor(), parent).Material = Enum.Material.Glass
+		local color = toyColor()
+		if not MeshLib.Place("Balloon", CFrame.new(top - Vector3.new(0, 1.8 * 0.8, 0)), 0.8, color, Enum.Material.Glass, parent) then
+			toyBall(2.4, top, color, parent).Material = Enum.Material.Glass
+		end
 		toyDeco(ArenaKit.Beam("String", pos + Vector3.new(0, 0.2, 0), top - Vector3.new(0, 1.2, 0), 0.06, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent))
 	end
 end
 
 -- A candy-cane lamp (red and white stripes, a warm light on top).
 local function candyLamp(pos: Vector3, parent: Instance)
+	if MeshLib.Has("CandyCaneWhite") then
+		-- A real candy cane: a striped pole with the hook, the light hanging
+		-- from it.
+		local o = CFrame.new(pos) * CFrame.Angles(0, toyRng:NextNumber(0, 6.28), 0)
+		MeshLib.Place("CandyCaneWhite", o, 1, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent)
+		MeshLib.Place("CandyCaneRed", o, 1, Color3.fromRGB(240, 60, 70), Enum.Material.SmoothPlastic, parent)
+		local bulb = toyBall(0.9, (o * CFrame.new(1.2, 6.5, 0)).Position, Color3.fromRGB(255, 236, 170), parent)
+		bulb.Material = Enum.Material.Neon
+		local l = Instance.new("PointLight")
+		l.Color = Color3.fromRGB(255, 220, 160)
+		l.Range = 16
+		l.Brightness = 0.8
+		l.Parent = bulb
+		return
+	end
 	for i = 0, 6 do
 		toyDeco(ArenaKit.NewPart("Post", Vector3.new(0.5, 1, 0.5), CFrame.new(pos + Vector3.new(0, 0.5 + i, 0)), i % 2 == 0 and Color3.fromRGB(240, 60, 70) or Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent))
 	end
@@ -389,6 +449,14 @@ end
 -- A giant rubber duck bobbing in the clouds.
 local function giantDuck(pos: Vector3, parent: Instance)
 	local yellow, orange = Color3.fromRGB(255, 214, 50), Color3.fromRGB(255, 140, 40)
+	if MeshLib.Has("DuckBody") then
+		MeshLib.Place("DuckBody", CFrame.new(pos), 1, yellow, Enum.Material.SmoothPlastic, parent)
+		MeshLib.Place("DuckBeak", CFrame.new(pos), 1, orange, Enum.Material.SmoothPlastic, parent)
+		for _, s in ipairs({ -1, 1 }) do
+			toyBall(1.4, pos + Vector3.new(s * 2.2, 9.6, -7.9), Color3.fromRGB(20, 20, 30), parent)
+		end
+		return
+	end
 	toyBall(14, pos, yellow, parent)
 	toyBall(9, pos + Vector3.new(0, 8, -4), yellow, parent)
 	toyDeco(ArenaKit.NewPart("Bloom", Vector3.new(4, 1.4, 3.2), CFrame.new(pos + Vector3.new(0, 7.4, -8.6)), orange, Enum.Material.SmoothPlastic, parent))
@@ -447,7 +515,7 @@ function Toybox.Build(): Folder
 
 	local centerPos = layout.Center.pos
 	local centerR = layout.Center.r
-	local center = ArenaKit.MakeIslandBase(centerPos, centerR, "CenterIsland", PALETTE, Enum.Material.SmoothPlastic, arena)
+	local center = ArenaKit.MakeIslandBase(centerPos, centerR, "CenterIsland", PALETTE, Enum.Material.SmoothPlastic, arena, TOY_ISLE)
 	scatterDecor(centerPos, centerR, center, 8, 30)
 	makeBlockTower(centerPos + Vector3.new(0, 1.6, 0), center)
 	makeToyHouse(Vector3.new(-16, 1.6, -8), center, 0.9)
@@ -467,7 +535,7 @@ function Toybox.Build(): Folder
 	local outerFolders: { Folder } = {}
 	local satFolders: { Folder } = {}
 	for i, o in ipairs(layout.Outer) do
-		local isl = ArenaKit.MakeIslandBase(o.pos, o.r, "Island" .. i, PALETTE, Enum.Material.SmoothPlastic, arena)
+		local isl = ArenaKit.MakeIslandBase(o.pos, o.r, "Island" .. i, PALETTE, Enum.Material.SmoothPlastic, arena, TOY_ISLE)
 		outerFolders[i] = isl
 		scatterDecor(o.pos, o.r, isl, 5, 16)
 		-- The two side islands get a bubble tube you can swim up (turned off
@@ -506,7 +574,7 @@ function Toybox.Build(): Folder
 	end
 
 	for si, s in ipairs(layout.Satellites) do
-		local isl = ArenaKit.MakeIslandBase(s.pos, s.r, "Satellite" .. si, PALETTE, Enum.Material.SmoothPlastic, arena)
+		local isl = ArenaKit.MakeIslandBase(s.pos, s.r, "Satellite" .. si, PALETTE, Enum.Material.SmoothPlastic, arena, TOY_ISLE)
 		satFolders[si] = isl
 		scatterDecor(s.pos, s.r, isl, 1, 6)
 	end

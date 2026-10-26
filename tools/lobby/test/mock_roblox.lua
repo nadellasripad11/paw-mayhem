@@ -24,6 +24,7 @@ Vector3.__eq = function(a, b) return a.X == b.X and a.Y == b.Y and a.Z == b.Z en
 Vector3.__tostring = function(a) return ("%g, %g, %g"):format(a.X, a.Y, a.Z) end
 Vector3.__index = function(t, k)
 	if k == "Magnitude" then return math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z) end
+	if k == "Unit" then local m = math.sqrt(t.X * t.X + t.Y * t.Y + t.Z * t.Z) return v3(t.X / m, t.Y / m, t.Z / m) end
 	return rawget(Vector3, k)
 end
 function Vector3.Dot(a, b) return a.X * b.X + a.Y * b.Y + a.Z * b.Z end
@@ -78,6 +79,8 @@ function CFrame.Inverse(c)
 end
 function CFrame.ToObjectSpace(a, b) return a:Inverse() * b end
 function CFrame.VectorToWorldSpace(c, v) return rot(c, v) end
+function CFrame.VectorToObjectSpace(c, v) return v3(c.r:Dot(v), c.u:Dot(v), c.b:Dot(v)) end
+CFrame.__eq = function(a, b) return a.p == b.p and a.r == b.r and a.u == b.u and a.b == b.b end
 
 local Color3 = {}
 Color3.new = function(r, g, b) return { R = r, G = g, B = b } end
@@ -112,6 +115,7 @@ Inst.__index = function(t, k)
 	local m = rawget(Inst, k)
 	if m then return m end
 	local props = rawget(t, "_props")
+	if k == "Position" and props.CFrame then return props.CFrame.Position end
 	if props[k] ~= nil then return props[k] end
 	local c = t:FindFirstChild(k)
 	if c then return c end

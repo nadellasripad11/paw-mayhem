@@ -111,6 +111,7 @@ Copy every red line from the Output window and send it over.
 
 ## Dashboard (you)
 - [ ] Import `assets/CatMeshes.glb` (drag the model into ReplicatedStorage → CatMeshes).
+- [ ] Import `assets/GameMeshes.glb` (Home → Import 3D), wait for it to finish, then paste `tools/models/setup_game.lua` into the command bar (docs/GAME_MODELS.md).
 - [ ] Import `assets/LobbyMeshes.glb` (Home → Import 3D), then paste `tools/lobby/setup_lobby.lua` into the command bar (docs/LOBBY_ART.md).
 - [ ] Lighting → Technology = Future.
 - [ ] Game Settings → Communication → Microphone ON (proximity voice).

@@ -11,7 +11,10 @@
 --   * Frost Peaks  (snow)   - the terrace layout in snow, pines and ice
 -- Blue starts on the -Z side, Red on the +Z side.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ArenaKit = require(script.Parent.ArenaKit)
+local MeshLib = require(ReplicatedStorage.Shared.MeshLib)
 
 local DuelMaps = {}
 
@@ -51,7 +54,7 @@ local THEMES: { [string]: Theme } = {
 			Wood = Color3.fromRGB(164, 114, 68), WoodDark = Color3.fromRGB(104, 68, 42),
 		},
 		top = Enum.Material.Grass,
-		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(86, 164, 62) },
+		style = { meshes = true, cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(86, 164, 62) },
 		leaves = { Color3.fromRGB(58, 146, 58), Color3.fromRGB(82, 170, 64), Color3.fromRGB(122, 198, 80) },
 		trunk = Color3.fromRGB(122, 84, 54),
 		flowers = { Color3.fromRGB(255, 132, 190), Color3.fromRGB(255, 222, 84), Color3.fromRGB(196, 140, 255), Color3.fromRGB(250, 250, 250) },
@@ -67,7 +70,7 @@ local THEMES: { [string]: Theme } = {
 			Wood = Color3.fromRGB(150, 94, 70), WoodDark = Color3.fromRGB(96, 58, 46),
 		},
 		top = Enum.Material.Grass,
-		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(120, 186, 96) },
+		style = { meshes = true, cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(120, 186, 96) },
 		leaves = { Color3.fromRGB(255, 186, 210), Color3.fromRGB(252, 160, 190), Color3.fromRGB(255, 220, 232) },
 		trunk = Color3.fromRGB(96, 62, 50),
 		flowers = { Color3.fromRGB(255, 160, 200), Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 210, 120) },
@@ -83,7 +86,7 @@ local THEMES: { [string]: Theme } = {
 			Wood = Color3.fromRGB(140, 94, 58), WoodDark = Color3.fromRGB(90, 58, 36),
 		},
 		top = Enum.Material.Grass,
-		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(176, 150, 70) },
+		style = { meshes = true, cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(176, 150, 70) },
 		leaves = { Color3.fromRGB(240, 130, 40), Color3.fromRGB(220, 80, 40), Color3.fromRGB(250, 186, 60) },
 		trunk = Color3.fromRGB(100, 66, 44),
 		flowers = { Color3.fromRGB(255, 200, 60), Color3.fromRGB(230, 90, 50), Color3.fromRGB(250, 240, 200) },
@@ -99,7 +102,7 @@ local THEMES: { [string]: Theme } = {
 			Wood = Color3.fromRGB(130, 96, 70), WoodDark = Color3.fromRGB(84, 60, 44),
 		},
 		top = Enum.Material.Snow,
-		style = { cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(230, 238, 248) },
+		style = { meshes = true, cliffMaterial = Enum.Material.Slate, drip = Color3.fromRGB(230, 238, 248) },
 		leaves = { Color3.fromRGB(44, 110, 76), Color3.fromRGB(60, 130, 90), Color3.fromRGB(80, 150, 106) },
 		trunk = Color3.fromRGB(90, 64, 48),
 		flowers = { Color3.fromRGB(170, 220, 255), Color3.fromRGB(255, 255, 255) },
@@ -145,6 +148,19 @@ local function tree(th: Theme, pos: Vector3, s: number, parent: Instance)
 	m.Name = "Tree"
 	m.Parent = parent
 	local h = 5.6 * s
+	if MeshLib.Has("TreeTrunk") then
+		-- The sculpted tree: a rooted trunk and a full, lumpy canopy. The old
+		-- trunk stays as invisible collision.
+		local yaw = CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
+		solid("Trunk", Vector3.new(1.3 * s, h, 1.3 * s), CFrame.new(pos + Vector3.new(0, h / 2, 0)), th.trunk, Enum.Material.Wood, m).Transparency = 1
+		MeshLib.Place("TreeTrunk", CFrame.new(pos) * yaw, s, th.trunk, Enum.Material.Wood, m)
+		local top = CFrame.new(pos + Vector3.new(0, h + 1.9 * s, 0)) * yaw
+		MeshLib.Place(rng:NextNumber() < 0.5 and "TreeCanopyA" or "TreeCanopyB", top, s, th.leaves[rng:NextInteger(1, #th.leaves)], Enum.Material.SmoothPlastic, m)
+		if th.snowy then
+			ball("Snow", 5 * s, top.Position + Vector3.new(0, 2.6 * s, 0), WHITE, m)
+		end
+		return
+	end
 	solid("Trunk", Vector3.new(1.3 * s, h, 1.3 * s), CFrame.new(pos + Vector3.new(0, h / 2, 0)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), th.trunk, Enum.Material.Wood, m)
 	deco("Roots", Vector3.new(2.3 * s, 0.7 * s, 2.3 * s), CFrame.new(pos + Vector3.new(0, 0.3 * s, 0)) * CFrame.Angles(0, math.rad(45), 0), th.trunk:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Wood, m)
 	local top = pos + Vector3.new(0, h + 1.9 * s, 0)
@@ -162,6 +178,16 @@ local function pine(th: Theme, pos: Vector3, s: number, parent: Instance)
 	local m = Instance.new("Model")
 	m.Name = "Pine"
 	m.Parent = parent
+	if MeshLib.Has("PineFoliage") then
+		local yaw = CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
+		solid("Trunk", Vector3.new(1.1 * s, 3.4 * s, 1.1 * s), CFrame.new(pos + Vector3.new(0, 1.7 * s, 0)), th.trunk, Enum.Material.Wood, m).Transparency = 1
+		MeshLib.Place("PineTrunk", yaw, s, th.trunk, Enum.Material.Wood, m)
+		MeshLib.Place("PineFoliage", yaw, s, th.snowy and th.leaves[1] or Color3.fromRGB(48, 122, 66), Enum.Material.SmoothPlastic, m)
+		if th.snowy then
+			MeshLib.Place("PineSnow", yaw, s, WHITE, Enum.Material.Snow, m)
+		end
+		return
+	end
 	solid("Trunk", Vector3.new(1.1 * s, 3.4 * s, 1.1 * s), CFrame.new(pos + Vector3.new(0, 1.7 * s, 0)), th.trunk, Enum.Material.Wood, m)
 	local green = th.snowy and th.leaves or { Color3.fromRGB(44, 116, 62), Color3.fromRGB(58, 136, 70) }
 	for k = 0, 3 do
@@ -174,6 +200,11 @@ local function pine(th: Theme, pos: Vector3, s: number, parent: Instance)
 end
 
 local function bush(th: Theme, pos: Vector3, parent: Instance)
+	if MeshLib.Has("BushA") then
+		local color = th.snowy and th.leaves[rng:NextInteger(1, 3)] or th.leaves[rng:NextInteger(1, #th.leaves)]:Lerp(Color3.fromRGB(70, 150, 60), th.name == "SAKURA GARDEN" and 0.6 or 0)
+		MeshLib.Place("BushA", CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), rng:NextNumber(0.85, 1.25), color, Enum.Material.SmoothPlastic, parent)
+		return
+	end
 	for k = 1, 3 do
 		local d = rng:NextNumber(2.2, 3.4)
 		local a = k * 2.1 + rng:NextNumber(0, 0.8)
@@ -190,6 +221,14 @@ local function flowers(th: Theme, pos: Vector3, parent: Instance)
 end
 
 local function rock(th: Theme, pos: Vector3, s: number, parent: Instance)
+	if MeshLib.Has("RockA") then
+		local names = { "RockA", "RockB", "RockC" }
+		for k = 1, 2 do
+			local p = pos + Vector3.new((k - 1.5) * 1.3 * s, 0, rng:NextNumber(-0.5, 0.5) * s)
+			MeshLib.Place(names[rng:NextInteger(1, 3)], CFrame.new(p) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), s * rng:NextNumber(0.75, 1.1), th.palette.Stone:Lerp(th.palette.StoneDark, rng:NextNumber()), Enum.Material.Slate, parent)
+		end
+		return
+	end
 	for k = 1, 2 do
 		local sz = Vector3.new(rng:NextNumber(1.8, 3.2), rng:NextNumber(1.2, 2.2), rng:NextNumber(1.6, 2.8)) * s
 		local cf = CFrame.new(pos + Vector3.new((k - 1.5) * 1.2 * s, sz.Y * 0.25, rng:NextNumber(-0.5, 0.5) * s))
@@ -199,10 +238,20 @@ local function rock(th: Theme, pos: Vector3, s: number, parent: Instance)
 end
 
 local function lamp(pos: Vector3, parent: Instance)
-	solid("LampBase", Vector3.new(1.4, 1, 1.4), CFrame.new(pos + Vector3.new(0, 0.5, 0)), Color3.fromRGB(196, 186, 168), Enum.Material.Slate, parent)
-	deco("LampPole", Vector3.new(0.45, 7, 0.45), CFrame.new(pos + Vector3.new(0, 4.5, 0)), IRON, Enum.Material.Metal, parent)
-	deco("LampCap", Vector3.new(1.6, 0.4, 1.6), CFrame.new(pos + Vector3.new(0, 9.9, 0)), IRON, Enum.Material.Metal, parent)
-	local glow = deco("Lantern", Vector3.new(1.1, 1.3, 1.1), CFrame.new(pos + Vector3.new(0, 9.1, 0)), LAMP, Enum.Material.Neon, parent)
+	local base = solid("LampBase", Vector3.new(1.4, 1, 1.4), CFrame.new(pos + Vector3.new(0, 0.5, 0)), Color3.fromRGB(196, 186, 168), Enum.Material.Slate, parent)
+	local glow
+	if MeshLib.Has("LampIron") then
+		-- The sculpted lamp: a stone plinth, a tapered iron post and a lantern
+		-- cage round the glowing glass.
+		base.Transparency = 1
+		MeshLib.Place("LampStone", CFrame.new(pos), 1, Color3.fromRGB(196, 186, 168), Enum.Material.Slate, parent)
+		MeshLib.Place("LampIron", CFrame.new(pos), 1, IRON, Enum.Material.Metal, parent)
+		glow = deco("Lantern", Vector3.new(1, 1.3, 1), CFrame.new(pos + Vector3.new(0, 9.15, 0)), LAMP, Enum.Material.Neon, parent)
+	else
+		deco("LampPole", Vector3.new(0.45, 7, 0.45), CFrame.new(pos + Vector3.new(0, 4.5, 0)), IRON, Enum.Material.Metal, parent)
+		deco("LampCap", Vector3.new(1.6, 0.4, 1.6), CFrame.new(pos + Vector3.new(0, 9.9, 0)), IRON, Enum.Material.Metal, parent)
+		glow = deco("Lantern", Vector3.new(1.1, 1.3, 1.1), CFrame.new(pos + Vector3.new(0, 9.1, 0)), LAMP, Enum.Material.Neon, parent)
+	end
 	glow.CastShadow = false
 	local light = Instance.new("PointLight")
 	light.Color = LAMP
@@ -213,8 +262,18 @@ end
 
 local function crates(th: Theme, pos: Vector3, parent: Instance)
 	local yaw = rng:NextNumber(0, 6.28)
-	solid("Crate", Vector3.new(3, 3, 3), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, yaw, 0), th.palette.Wood, Enum.Material.WoodPlanks, parent)
-	solid("Crate", Vector3.new(2.2, 2.2, 2.2), CFrame.new(pos + Vector3.new(1.4, 1.1, 1.6)) * CFrame.Angles(0, yaw + 0.5, 0), th.palette.WoodDark, Enum.Material.WoodPlanks, parent)
+	local a = solid("Crate", Vector3.new(3, 3, 3), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, yaw, 0), th.palette.Wood, Enum.Material.WoodPlanks, parent)
+	local b = solid("Crate", Vector3.new(2.2, 2.2, 2.2), CFrame.new(pos + Vector3.new(1.4, 1.1, 1.6)) * CFrame.Angles(0, yaw + 0.5, 0), th.palette.WoodDark, Enum.Material.WoodPlanks, parent)
+	if MeshLib.Has("CrateBody") then
+		-- Framed, braced wooden crates; the boxes stay as invisible cover.
+		for _, c in ipairs({ { a, 1, th.palette.Wood }, { b, 2.2 / 3, th.palette.WoodDark } }) do
+			local box: BasePart, s: number = c[1], c[2]
+			local bottom = box.CFrame * CFrame.new(0, -box.Size.Y / 2, 0)
+			box.Transparency = 1
+			MeshLib.Place("CrateBody", bottom, s, c[3], Enum.Material.Wood, parent)
+			MeshLib.Place("CrateFrame", bottom, s, c[3]:Lerp(Color3.new(0, 0, 0), 0.3), Enum.Material.Wood, parent)
+		end
+	end
 end
 
 -- Scatter themed props on an island (keeping clear of paths and each other).
