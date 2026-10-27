@@ -191,19 +191,19 @@ end
 function CombatController.MuzzleFlash(pos: Vector3, weapon)
 	local flash = Instance.new("Part")
 	flash.Shape = Enum.PartType.Ball
-	flash.Size = Vector3.new(1.4, 1.4, 1.4)
+	flash.Size = Vector3.new(0.8, 0.8, 0.8)
 	flash.Position = pos
 	flash.Color = weapon.MuzzleColor
 	flash.Material = Enum.Material.Neon
 	flash.Anchored = true
 	flash.CanCollide = false
 	flash.CanQuery = false
-	flash.Transparency = 0.1
+	flash.Transparency = 0.35
 	flash.Parent = workspace
 	task.spawn(function()
-		for i = 1, 6 do
-			flash.Size = flash.Size + Vector3.new(0.3, 0.3, 0.3)
-			flash.Transparency = 0.1 + i * 0.15
+		for i = 1, 4 do
+			flash.Size = flash.Size + Vector3.new(0.15, 0.15, 0.15)
+			flash.Transparency = 0.35 + i * 0.16
 			task.wait()
 		end
 		flash:Destroy()

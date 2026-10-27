@@ -318,7 +318,7 @@ local function ringout(pos: Vector3, color: Color3)
 	local glow = Instance.new("PointLight")
 	glow.Color = color
 	glow.Range = 45
-	glow.Brightness = 6
+	glow.Brightness = 1.8
 	glow.Parent = holder
 	TweenService:Create(glow, TweenInfo.new(0.7), { Brightness = 0 }):Play()
 	for _, p in ipairs({ flash, ring, beam, holder }) do

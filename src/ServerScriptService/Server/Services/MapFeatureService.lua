@@ -64,7 +64,7 @@ local function geyserLoop(vent: BasePart)
 			end
 			TweenService:Create(vent, TweenInfo.new(2), { Transparency = 0, Color = Color3.fromRGB(255, 220, 120) }):Play()
 			if glow then
-				TweenService:Create(glow, TweenInfo.new(2), { Brightness = 5, Range = 22 }):Play()
+				TweenService:Create(glow, TweenInfo.new(2), { Brightness = 2, Range = 22 }):Play()
 			end
 			task.wait(2)
 			if not live(vent) then
@@ -152,7 +152,7 @@ local function billboardLoop(panel: BasePart)
 				sparks:Emit(80)
 			end
 			if flash then
-				flash.Brightness = 8
+				flash.Brightness = 2.5
 				TweenService:Create(flash, TweenInfo.new(0.6), { Brightness = 0 }):Play()
 			end
 			local center = panel:GetAttribute("BlastAt")

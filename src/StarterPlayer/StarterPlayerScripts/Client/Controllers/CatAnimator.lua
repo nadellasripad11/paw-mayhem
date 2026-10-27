@@ -115,8 +115,8 @@ local function blastOff(pos: Vector3)
 	star.Parent = Workspace
 	local light = Instance.new("PointLight")
 	light.Color = star.Color
-	light.Range = 40
-	light.Brightness = 6
+	light.Range = 30
+	light.Brightness = 1.5
 	light.Parent = star
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
@@ -369,7 +369,6 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		if mo.minVy < -28 then
 			mo.landAt = now
 			mo.landAmt = math.clamp((-mo.minVy - 20) / 80, 0.25, 1)
-			puff(root.Position - Vector3.new(0, 2.1, 0), Color3.fromRGB(235, 230, 220), math.floor(6 + mo.landAmt * 10), 6 + mo.landAmt * 8)
 			if model == player.Character and mo.landAmt > 0.5 then
 				SoundController.Play("Land", 0.85)
 			end

@@ -56,14 +56,15 @@ end
 
 local function applyPostFX(quality: string)
 	local bloom = effect("BloomEffect", "PawBloom")
-	bloom.Intensity, bloom.Size, bloom.Threshold = 0.55, 22, 1.6
+	-- (soft: only the brightest neon blooms, nothing glares)
+	bloom.Intensity, bloom.Size, bloom.Threshold = 0.18, 18, 2.4
 	bloom.Enabled = quality ~= "Low"
 	local grade = effect("ColorCorrectionEffect", "PawGrade")
 	grade.Saturation, grade.Contrast, grade.Brightness = 0.12, 0.08, 0.02
 	grade.TintColor = Color3.fromRGB(255, 250, 244)
 	grade.Enabled = quality ~= "Low"
 	local rays = effect("SunRaysEffect", "PawSunRays")
-	rays.Intensity, rays.Spread = 0.05, 0.6
+	rays.Intensity, rays.Spread = 0.02, 0.4
 	rays.Enabled = quality == "High"
 	Lighting.EnvironmentDiffuseScale = quality == "Low" and 0 or 0.6
 	Lighting.EnvironmentSpecularScale = quality == "Low" and 0 or 0.8 -- metal blasters reflect the sky

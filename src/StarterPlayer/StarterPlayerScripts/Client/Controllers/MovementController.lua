@@ -311,7 +311,6 @@ local function tryDoubleJump()
 	local v = root.AssemblyLinearVelocity
 	root.AssemblyLinearVelocity = Vector3.new(v.X, GameConfig.Movement.DoubleJumpSpeed, v.Z)
 	hum:ChangeState(Enum.HumanoidStateType.Jumping)
-	ringFx(root.Position - Vector3.new(0, 1.4, 0), Color3.new(1, 1, 1), 5)
 	moveFx("Flip")
 end
 
@@ -346,7 +345,6 @@ local function tryWallJump(root: BasePart, hum: Humanoid): boolean
 	root.AssemblyLinearVelocity = Vector3.new(v.X, cfg.WallJumpUp, v.Z)
 	startCarry(n * cfg.WallJumpOut)
 	hum:ChangeState(Enum.HumanoidStateType.Jumping)
-	ringFx(root.Position - n * 1.2, Color3.new(1, 1, 1), 4)
 	require(script.Parent.SoundController).Play("Jump")
 	moveFx("WallKick")
 	return true

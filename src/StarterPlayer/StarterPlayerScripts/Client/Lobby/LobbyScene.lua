@@ -843,16 +843,16 @@ local function buildPostEffects()
 	dof.FocusDistance = 27
 	dof.InFocusRadius = 7
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.32
-	bloom.Size = 26
-	bloom.Threshold = 1.9
+	bloom.Intensity = 0.14
+	bloom.Size = 20
+	bloom.Threshold = 2.4
 	local cc = Instance.new("ColorCorrectionEffect")
 	cc.Saturation = 0.1
 	cc.Contrast = 0.04
 	cc.Brightness = 0
 	cc.TintColor = Color3.fromRGB(255, 246, 232)
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.09
+	rays.Intensity = 0.03
 	rays.Spread = 0.7
 	for _, e in ipairs({ dof, bloom, cc, rays } :: { any }) do
 		e.Name = "CattoLobby" .. e.ClassName

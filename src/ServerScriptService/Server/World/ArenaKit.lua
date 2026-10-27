@@ -638,8 +638,8 @@ function ArenaKit.ApplyAtmosphere(opts: any)
 	atmosphere.Offset = opts.Offset or 0.15
 	atmosphere.Color = opts.Color or Color3.fromRGB(200, 220, 255)
 	atmosphere.Decay = opts.Decay or Color3.fromRGB(95, 140, 200)
-	atmosphere.Glare = opts.Glare or 0.25
-	atmosphere.Haze = opts.Haze or 1.4
+	atmosphere.Glare = math.min(opts.Glare or 0.25, 0.08) -- (glare and haze were blinding with Future lighting)
+	atmosphere.Haze = math.min(opts.Haze or 1.4, 1)
 	atmosphere.Parent = Lighting
 
 	if opts.Ambient then

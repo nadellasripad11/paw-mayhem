@@ -54,8 +54,8 @@ end
 local function bloom(on: boolean)
 	local b = Lighting:FindFirstChild("PawBloom")
 	if b and b:IsA("BloomEffect") then
-		b.Intensity = on and LobbyLighting.Bloom.Intensity or 0.55
-		b.Threshold = on and LobbyLighting.Bloom.Threshold or 1.6
+		b.Intensity = on and LobbyLighting.Bloom.Intensity or 0.18
+		b.Threshold = on and LobbyLighting.Bloom.Threshold or 2.4
 	end
 	-- A touch more contrast in the lobby so it reads in 3D.
 	local cc = Lighting:FindFirstChild("PawLobbyGrade")
