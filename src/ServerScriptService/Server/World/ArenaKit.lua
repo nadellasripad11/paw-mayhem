@@ -428,7 +428,8 @@ function ArenaKit.MakeStairs(A: any, B: any, parent: Instance, st: StairStyle)
 		ArenaKit.NewPart("Step", Vector3.new(8.4, 1.4, runV.Magnitude / n + 0.1), CFrame.new(p.X, top - 0.7, p.Z) * rot, k % 2 == 0 and st.step or st.stepAlt, st.material, f).CanCollide = false
 	end
 	local under = (lo + hi) / 2 - Vector3.new(0, rise * 0.5 + 2.2, 0)
-	ArenaKit.NewPart("Support", Vector3.new(7.6, 3, runV.Magnitude * 0.7), CFrame.new(under) * rot, st.under, st.material, f).CanCollide = false
+	-- (solid: it can end up standing on the lower island, where you walked into it)
+	ArenaKit.NewPart("Support", Vector3.new(7.6, 3, runV.Magnitude * 0.7), CFrame.new(under) * rot, st.under, st.material, f)
 	local right = rot.RightVector
 	for _, x in ipairs({ -4.6, 4.6 }) do
 		local p0, p1 = lo + right * x, hi + right * x

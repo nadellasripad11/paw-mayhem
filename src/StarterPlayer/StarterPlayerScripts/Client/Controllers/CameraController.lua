@@ -94,7 +94,9 @@ end
 -- Called for every local shot; `kickDeg` is the recoil kick.
 function CameraController.OnShot(kickDeg: number?)
 	assistUntil = os.clock() + 0.35
-	kick = math.min(kick + math.rad(kickDeg or 0), math.rad(4))
+	-- (small and quick to settle: the crosshair rides up with it, the shots
+	-- don't, so a big kick made long bursts land under the crosshair)
+	kick = math.min(kick + math.rad((kickDeg or 0) * 0.35), math.rad(0.8))
 end
 
 local function isEnemy(model: Model, char: Model): boolean

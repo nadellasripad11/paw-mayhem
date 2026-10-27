@@ -27,7 +27,6 @@ local CombatController = {}
 local player = Players.LocalPlayer
 local firing = false
 local lastShot = 0
-local streak = 0 -- shots fired in a row (spread opens up with it)
 local enabled = false
 local powerUp = { id = "", untilT = 0 } -- mirrors the server's active power-up for fire rate
 
@@ -137,16 +136,11 @@ local function tryFire()
 	if now - lastShot < interval then
 		return
 	end
-	-- Spread grows only while you hold the trigger: the first shot goes
-	-- exactly where the crosshair is, then it opens up over a few shots
-	-- (spray weapons with several pellets always spread).
-	if now - lastShot < interval * 1.8 then
-		streak += 1
-	else
-		streak = 0
-	end
+	-- Single-shot blasters go exactly where the crosshair is, every shot, no
+	-- matter how long you hold the trigger (spray weapons with several pellets
+	-- still spread).
 	lastShot = now
-	local spreadScale = (weapon.Pellets + extraPellets) > 1 and 1 or math.clamp(streak / 4, 0, 1)
+	local spreadScale = (weapon.Pellets + extraPellets) > 1 and 1 or 0
 
 	local muzzle = muzzlePosition()
 	local dir = CameraController.GetShootDirection(muzzle)
