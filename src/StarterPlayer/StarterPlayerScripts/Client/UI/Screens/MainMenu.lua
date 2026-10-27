@@ -269,9 +269,9 @@ local function navButton(parent: Instance, item, order: number)
 	stroke.Transparency = 1
 	local white = Color3.new(1, 1, 1)
 	-- The icon pokes up above the bar.
-	local iconSize, iconPos = UDim2.fromOffset(78, 66), UDim2.fromOffset(3, -24)
+	local iconSize, iconPos = UDim2.fromOffset(92, 80), UDim2.fromOffset(-4, -40)
 	if item.icon3d == "Gun" then
-		local vf = GunView.Create(b, ClientState.Equipped("Weapon") or "PawBlaster", ClientState.Equipped("Skin"), UDim2.fromOffset(84, 56), UDim2.fromOffset(0, -16))
+		local vf = GunView.Create(b, ClientState.Equipped("Weapon") or "PawBlaster", ClientState.Equipped("Skin"), UDim2.fromOffset(96, 64), UDim2.fromOffset(-6, -26))
 		vf.ZIndex = 12
 		ClientState.ProfileChanged:Connect(function()
 			GunView.Set(vf, ClientState.Equipped("Weapon") or "PawBlaster", ClientState.Equipped("Skin"))
@@ -676,7 +676,7 @@ function MainMenu.Build()
 			Parent = toDuels, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, 0.5), Size = UDim2.fromOffset(22, 22),
 			BackgroundTransparency = 1, ZIndex = 14,
 		})
-		Icons.Place("Sparkle", spark, 22, Color3.new(1, 1, 1))
+		Icons.Place("Burst", spark, 22, Color3.new(1, 1, 1))
 	end
 
 	-- The TASKS tile shows how many are ready to claim.
@@ -726,13 +726,17 @@ function MainMenu.Build()
 		local icon = UIUtil.make("Frame", { Parent = row, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, -3), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, ZIndex = 12 })
 		Icons.Place(taskIcon(tostring(q.Text)), icon, 24, dim)
 		UIUtil.label({
-			Parent = row, Text = tostring(q.Text), Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(34, 2),
-			Size = UDim2.new(1, -150, 0, 24), TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12,
+			Parent = row, Name = "TaskName", Text = tostring(q.Text), Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(34, 2),
+			Size = UDim2.new(1, -182, 0, 24), TextScaled = true, ZIndex = 12,
 			TextColor3 = dim, TextStrokeTransparency = 0.6,
 		})
+		local fit = Instance.new("UITextSizeConstraint")
+		fit.MaxTextSize = 16
+		fit.MinTextSize = 10
+		fit.Parent = row:FindFirstChild("TaskName")
 		-- a thin progress line under the name
 		local bar = UIUtil.make("Frame", {
-			Parent = row, Position = UDim2.fromOffset(34, 30), Size = UDim2.new(1, -150, 0, 4),
+			Parent = row, Position = UDim2.fromOffset(34, 30), Size = UDim2.new(1, -182, 0, 4),
 			BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.85, BorderSizePixel = 0, ZIndex = 12,
 		})
 		UIUtil.corner(UDim.new(1, 0), bar)
