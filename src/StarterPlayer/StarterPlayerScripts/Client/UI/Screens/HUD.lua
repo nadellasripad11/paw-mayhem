@@ -354,9 +354,34 @@ local function actionButton(parent, name: string, pos: UDim2, d: number, iconNam
 	b:SetAttribute("NoPolish", true)
 	b.Parent = parent
 	local radius = o.square and UDim.new(0, math.floor(d * 0.26)) or UDim.new(1, 0)
+	local accent: Color3 = o.accent or Color3.new(1, 1, 1)
 	UIUtil.corner(radius, b)
-	local ring = UIUtil.stroke(Color3.new(1, 1, 1), 1.6, b)
-	ring.Transparency = 0.35
+	-- a soft drop shadow under it (a sibling, so it sits behind)
+	local shadow = UIUtil.make("Frame", {
+		Parent = parent, Name = name .. "Shadow", AnchorPoint = b.AnchorPoint, Position = pos + UDim2.fromOffset(0, 3),
+		Size = UDim2.fromOffset(d + 6, d + 6), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.72, BorderSizePixel = 0,
+		ZIndex = math.max(0, b.ZIndex - 1),
+	})
+	shadow:SetAttribute("NoPolish", true)
+	UIUtil.corner(o.square and UDim.new(0, math.floor(d * 0.26) + 3) or UDim.new(1, 0), shadow)
+	b:GetPropertyChangedSignal("Visible"):Connect(function()
+		shadow.Visible = b.Visible
+	end)
+	-- glassy: a touch lighter at the top
+	local glass = Instance.new("UIGradient")
+	glass.Rotation = 90
+	glass.Color = ColorSequence.new(Color3.fromRGB(70, 78, 104), Color3.fromRGB(8, 10, 18))
+	glass.Parent = b
+	local ring = UIUtil.stroke(Color3.new(1, 1, 1), 1.8, b)
+	ring.Transparency = 0.3
+	-- a thin inner highlight ring (a bevelled edge) tinted with the action's colour
+	local inner = UIUtil.make("Frame", {
+		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -6, 1, -6),
+		BackgroundColor3 = accent, BackgroundTransparency = 0.9, BorderSizePixel = 0, ZIndex = 1,
+	})
+	UIUtil.corner(o.square and UDim.new(0, math.max(2, math.floor(d * 0.26) - 3)) or UDim.new(1, 0), inner)
+	local innerRing = UIUtil.stroke(accent, 1.2, inner)
+	innerRing.Transparency = 0.55
 	-- the cooldown: a dark fill from the bottom that drains away
 	local drainHolder = UIUtil.make("Frame", { Parent = b, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 2 })
 	UIUtil.corner(radius, drainHolder)
@@ -364,7 +389,22 @@ local function actionButton(parent, name: string, pos: UDim2, d: number, iconNam
 		Parent = drainHolder, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0),
 		BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 2,
 	})
-	local icon = Icons.Place(iconName, b, math.floor(d * (o.iconScale or 0.5)), Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.5))
+	-- the icon, with a soft shadow under it so it pops
+	local iconSize = math.floor(d * (o.iconScale or 0.5))
+	local iconShadow = Icons.Place(iconName, b, iconSize, Color3.new(0, 0, 0), nil, UDim2.new(0.5, 0, 0.5, 2))
+	if iconShadow then
+		for _, c in ipairs(iconShadow:GetDescendants()) do
+			if c:IsA("GuiObject") then
+				c.ZIndex = 3
+				if c.BackgroundTransparency < 1 then
+					c.BackgroundTransparency = 1 - (1 - c.BackgroundTransparency) * 0.45
+				end
+			elseif c:IsA("UIStroke") then
+				c.Transparency = math.max(c.Transparency, 0.55)
+			end
+		end
+	end
+	local icon = Icons.Place(iconName, b, iconSize, Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.5))
 	if icon then
 		icon.ZIndex = 3
 		for _, c in ipairs(icon:GetDescendants()) do
@@ -380,10 +420,13 @@ local function actionButton(parent, name: string, pos: UDim2, d: number, iconNam
 	if o.key then
 		local badge = UIUtil.label({
 			Parent = b, Name = "Key", Text = o.key, Font = Theme.Font.Title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
-			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(o.key == "SHIFT" and 38 or 20, 20),
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -5, 0, 5), Size = UDim2.fromOffset(o.key == "SHIFT" and 38 or 21, 21),
 			BackgroundTransparency = 0, BackgroundColor3 = Color3.new(1, 1, 1), TextColor3 = Color3.fromRGB(14, 16, 24), ZIndex = 6,
 		})
 		UIUtil.corner(UDim.new(0, 6), badge)
+		-- glossy: white at the top, a little grey at the foot, a dark rim
+		UIUtil.gradient(Color3.new(1, 1, 1), Color3.fromRGB(200, 206, 220), 90, badge)
+		UIUtil.stroke(Color3.fromRGB(14, 16, 24), 1.5, badge).Transparency = 0.2
 	end
 	local scale = Instance.new("UIScale")
 	scale.Parent = b
@@ -391,11 +434,16 @@ local function actionButton(parent, name: string, pos: UDim2, d: number, iconNam
 	local function setLit(on: boolean)
 		lit = on
 		ring.Transparency = on and 0.25 or 0.6
-		b.BackgroundTransparency = on and 0.42 or 0.55
+		b.BackgroundTransparency = on and 0.4 or 0.55
+		-- ready: the action's colour glows faintly round the inside
+		innerRing.Transparency = on and 0.4 or 0.85
+		inner.BackgroundTransparency = on and 0.86 or 0.95
 	end
 	local function setPressed(on: boolean)
 		TweenService:Create(scale, TweenInfo.new(on and 0.06 or 0.18, on and Enum.EasingStyle.Quad or Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = on and 0.88 or 1 }):Play()
 		ring.Transparency = on and 0 or (lit and 0.25 or 0.6)
+		-- held: it fills with its colour for a moment
+		TweenService:Create(inner, TweenInfo.new(on and 0.05 or 0.25), { BackgroundTransparency = on and 0.45 or (lit and 0.86 or 0.95) }):Play()
 	end
 	local maxSeen, wasCooling = 0, false
 	local function setCooldown(left: number)
@@ -430,8 +478,8 @@ end
 
 -- ── mobile controls ──────────────────────────────────────────────────────────
 -- (kept for callers: a phone button, now in the Rivals style)
-local function touchButton(parent, name: string, pos: UDim2, d: number, _color: Color3, iconName: string, _label: string)
-	local b, setLit, setPressed, setCooldown = actionButton(parent, name, pos, d, iconName)
+local function touchButton(parent, name: string, pos: UDim2, d: number, color: Color3, iconName: string, _label: string)
+	local b, setLit, setPressed, setCooldown = actionButton(parent, name, pos, d, iconName, { accent = color })
 	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or name == "JumpButton" and "Jump" or "Moves")
 	return b, setLit, setPressed, setCooldown
 end
@@ -483,7 +531,7 @@ local function buildMobile(parent)
 		end
 	end)
 
-	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -196, 1, -64), 78, Theme.Color.Accent, "JumpArrow", "JUMP")
+	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -196, 1, -64), 78, Color3.new(1, 1, 1), "JumpArrow", "JUMP")
 	jump.InputBegan:Connect(function(input)
 		if isPress(input) then
 			jumpPressed(true)
@@ -945,14 +993,14 @@ end
 -- ── PC: Rivals-style icon tiles with their keys (phones have the thumb arc) ───
 local function buildDashChip(parent)
 	if isMobile() then return end
-	local function tile(name: string, x: number, icon: string, key: string): (TextButton, any, any, any)
-		local b, lit, pressed, cool = actionButton(parent, name, UDim2.new(0.5, x, 1, -12), 54, icon, { square = true, key = key, anchor = Vector2.new(0.5, 1), iconScale = 0.52 })
+	local function tile(name: string, x: number, icon: string, key: string, accent: Color3): (TextButton, any, any, any)
+		local b, lit, pressed, cool = actionButton(parent, name, UDim2.new(0.5, x, 1, -12), 54, icon, { square = true, key = key, anchor = Vector2.new(0.5, 1), iconScale = 0.52, accent = accent })
 		b:SetAttribute("HudPart", "Keys")
 		return b, lit, pressed, cool
 	end
-	local pounce, pLit, pPressed, pCool = tile("PounceTile", -204, "Paw", "E")
-	local dash, dLit, dPressed, dCool = tile("DashTile", -142, "Bolt", "Q")
-	local view = tile("ViewTile", 142, "Reticle", "V")
+	local pounce, pLit, pPressed, pCool = tile("PounceTile", -204, "Paw", "E", Color3.fromRGB(255, 190, 90))
+	local dash, dLit, dPressed, dCool = tile("DashTile", -142, "Bolt", "Q", Color3.fromRGB(110, 210, 255))
+	local view = tile("ViewTile", 142, "Reticle", "V", Color3.fromRGB(190, 160, 255))
 	refs.dashChip = { lit = dLit, cool = dCool }
 	refs.pounceChip = { lit = pLit, cool = pCool }
 	-- (clicking them works too)
