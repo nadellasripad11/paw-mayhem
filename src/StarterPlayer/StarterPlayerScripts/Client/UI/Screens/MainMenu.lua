@@ -393,6 +393,14 @@ function MainMenu.Build()
 		Parent = playGroup, Name = "Play", Position = UDim2.fromOffset(76, 0), Size = UDim2.fromOffset(240, 62), ZIndex = 11, TextSize = 34, CornerRadius = UDim.new(0, 14),
 	}, "Play")
 	gloss(play, Theme.Color.PlayGreen, playLabel)
+	local queueGlow = UIUtil.make("Frame", {
+		Parent = playGroup, Name = "QueueGlow", Position = play.Position - UDim2.fromOffset(6, 6), Size = play.Size + UDim2.fromOffset(12, 12),
+		BackgroundTransparency = 1, ZIndex = 10, Visible = false,
+	})
+	queueGlow:SetAttribute("NoPolish", true)
+	UIUtil.corner(UDim.new(0, 18), queueGlow)
+	local queueStroke = UIUtil.stroke(Color3.fromRGB(170, 255, 140), 3, queueGlow)
+	TweenService:Create(queueStroke, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.85, Thickness = 6 }):Play()
 	local playSub = UIUtil.label({
 		Parent = playGroup, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(46, 70), Size = UDim2.fromOffset(300, 18),
@@ -468,6 +476,7 @@ function MainMenu.Build()
 	task.spawn(function()
 		while gui.Parent do
 			local m = ClientState.Match
+			queueGlow.Visible = player:GetAttribute("Queued") == true
 			if player:GetAttribute("Queued") == true then
 				playLabel.Text = "QUEUED"
 				local left = (m.timeLeft or 0) + (m.phase == "Intermission" and GameConfig.Match.CountdownSeconds or 0)
@@ -742,7 +751,9 @@ function MainMenu.Build()
 				local res = ClientActions.ClaimQuest(q.Id)
 				claiming = false
 				if type(res) == "table" and res.ok then
-					showToast(string.format("+%d coins", tonumber(res.coins) or tonumber(q.Coins) or 0))
+					local amount = tonumber(res.coins) or tonumber(q.Coins) or 0
+					showToast(string.format("+%d coins", amount))
+					require(script.Parent.Parent.Celebrate).CoinFly(claim.AbsolutePosition + claim.AbsoluteSize / 2, coinPill, amount)
 				end
 				rebuildTasks()
 			end)

@@ -67,6 +67,33 @@ function UIJuice.Enter(frame: GuiObject)
 	local target = UDim2.new() -- screens sit at the content origin
 	frame.Position = target + UDim2.fromOffset(0, 28)
 	TweenService:Create(frame, TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = target }):Play()
+	-- ...and its cards cascade in one after another (anything laid out by a
+	-- grid or a list: weapon cards, shop items, tasks, rows)
+	task.defer(function()
+		local cards = {}
+		for _, d in ipairs(frame:GetDescendants()) do
+			local p = d.Parent
+			if d:IsA("GuiObject") and d.Visible and p and (p:FindFirstChildOfClass("UIGridLayout") or p:FindFirstChildOfClass("UIListLayout")) and d.AbsoluteSize.Y >= 40 and not d:FindFirstChild("Cascade") then
+				table.insert(cards, d)
+				if #cards >= 24 then
+					break
+				end
+			end
+		end
+		for i, c in ipairs(cards) do
+			local sc = Instance.new("UIScale")
+			sc.Name = "Cascade"
+			sc.Scale = 0.6
+			sc.Parent = c
+			task.delay(0.03 * i, function()
+				local tw = TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+				tw.Completed:Connect(function()
+					sc:Destroy()
+				end)
+				tw:Play()
+			end)
+		end
+	end)
 end
 
 return UIJuice

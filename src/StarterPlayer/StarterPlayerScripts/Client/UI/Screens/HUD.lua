@@ -698,10 +698,24 @@ local function onDuelState(d: any)
 		r.sub.Text = "FIRST TO " .. tostring(d.target) .. "  ·  VS " .. string.upper(table.concat(foes, " & ")) .. (d.withBots and "  ·  NO TROPHIES" or "")
 	end
 	if d.started then
-		HUD.ShowBig(tostring(d.map or "DUEL"), Theme.Color.Text, 1.6)
-		task.delay(1.7, function()
-			HUD.ShowBig("FIGHT!", Theme.Color.Warn, 1.2)
-		end)
+		-- VS: your side and theirs slide in, VS slams down, then FIGHT!
+		local function people(list: any): { any }
+			local out = {}
+			if typeof(list) == "table" then
+				for _, nm in ipairs(list) do
+					local uid = 0
+					for _, p in ipairs(Players:GetPlayers()) do
+						if p.Name == nm or p.DisplayName == nm then
+							uid = p.UserId
+						end
+					end
+					table.insert(out, { name = nm, userId = uid })
+				end
+			end
+			return out
+		end
+		local teams = typeof(d.teams) == "table" and d.teams or {}
+		require(script.Parent.Parent.Celebrate).Versus(people(teams[mine]), people(teams[theirs]), tostring(d.map or "DUEL"))
 	elseif d.over then
 		-- The final score, then the winner (EndScreen).
 		local winnerTeam = typeof(d.winner) == "string" and d.winner or nil
@@ -1084,7 +1098,16 @@ local function buildKoPop(parent)
 		Parent = holder, Text = "", Font = Theme.Font.Heading, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
 		Position = UDim2.fromOffset(0, 54), Size = UDim2.new(1, 0, 0, 26), TextColor3 = Color3.new(1, 1, 1), TextStrokeTransparency = 0.4,
 	})
-	refs.koPop = { holder = holder, scale = scale, title = title, sub = sub, token = 0 }
+	-- a coloured slash behind the words
+	local slash = UIUtil.make("Frame", {
+		Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 30), Size = UDim2.new(0, 0, 0, 58),
+		BackgroundColor3 = Color3.fromRGB(255, 80, 60), BackgroundTransparency = 0.15, BorderSizePixel = 0, Rotation = -4, ZIndex = 0,
+	})
+	slash:SetAttribute("NoPolish", true)
+	UIUtil.corner(UDim.new(0, 8), slash)
+	title.ZIndex = 2
+	sub.ZIndex = 2
+	refs.koPop = { holder = holder, scale = scale, title = title, sub = sub, slash = slash, token = 0 }
 end
 
 local function showKo(data: any)
@@ -1102,11 +1125,31 @@ local function showKo(data: any)
 		k.sub.Text = "UNSTOPPABLE x" .. koChain
 	end
 	k.holder.Visible = true
-	k.scale.Scale = 1.6
-	TweenService:Create(k.scale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	k.holder.Rotation = -10
+	k.scale.Scale = 2.4
+	TweenService:Create(k.scale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = koChain >= 2 and 1.15 or 1 }):Play()
+	TweenService:Create(k.holder, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Rotation = -3 }):Play()
+	-- the slash wipes across behind it, redder for streaks
+	k.slash.BackgroundColor3 = data.ringout and Color3.fromRGB(255, 140, 40) or (koChain >= 2 and Color3.fromRGB(230, 40, 70) or Color3.fromRGB(255, 80, 60))
+	k.slash.Size = UDim2.new(0, 0, 0, 58)
+	TweenService:Create(k.slash, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(1.05, 0, 0, 58) }):Play()
+	-- streak: the subtitle punches in a beat later
+	k.sub.TextTransparency = 1
+	task.delay(0.15, function()
+		if token == k.token then
+			k.sub.TextTransparency = 0
+			k.sub.TextSize = koChain >= 2 and 30 or 20
+			k.sub.TextColor3 = koChain >= 2 and Color3.fromRGB(255, 220, 90) or Color3.new(1, 1, 1)
+		end
+	end)
+	CameraController.Punch(koChain >= 2 and 4 or 2)
 	task.delay(1.4, function()
 		if token == k.token then
-			k.holder.Visible = false
+			TweenService:Create(k.scale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0 }):Play()
+			task.wait(0.2)
+			if token == k.token then
+				k.holder.Visible = false
+			end
 		end
 	end)
 end
@@ -1349,8 +1392,14 @@ function HUD.Build()
 		end
 	end)
 
-	EffectsController.OnHitConfirm = function()
+	EffectsController.OnHitConfirm = function(data: any)
 		kickCrosshair()
+		-- white, then orange, then red as they get close to flying off
+		local acc = typeof(data) == "table" and tonumber(data.accumulated) or 0
+		local tint = (acc or 0) >= 100 and Color3.fromRGB(255, 70, 80) or (acc or 0) >= 60 and Color3.fromRGB(255, 170, 60) or Color3.new(1, 1, 1)
+		for _, t in ipairs(refs.hitTicks or {}) do
+			t.BackgroundColor3 = tint
+		end
 		showHitmarker()
 	end
 	CombatController.OnLocalShot = function()

@@ -384,6 +384,7 @@ function UIManager.Start()
 		warn("[PAW MAYHEM] HUD failed to build: " .. tostring(hudErr))
 	end
 	pcall(require(script.Parent.Screens.EndScreen).Build)
+	pcall(require(script.Parent.Celebrate).Build)
 	local resultsOk, resultsErr = pcall(Results.Build)
 	if not resultsOk then
 		warn("[PAW MAYHEM] Results screen failed to build: " .. tostring(resultsErr))
@@ -398,7 +399,7 @@ function UIManager.Start()
 	end
 	-- Every screen gets the raised, glossy finish (the in-match HUD only gets
 	-- the finish, nothing added; not the cinematic screens).
-	local SKIP_POLISH = { PawEndScreen = true, PawTutorial = true, PawIntro = true, PawReplay = true }
+	local SKIP_POLISH = { PawEndScreen = true, PawCelebrate = true, PawTutorial = true, PawIntro = true, PawReplay = true }
 	local function polishGui(g: Instance)
 		if g:IsA("ScreenGui") and string.sub(g.Name, 1, 3) == "Paw" and not SKIP_POLISH[g.Name] then
 			UIUtil.polish(g)
