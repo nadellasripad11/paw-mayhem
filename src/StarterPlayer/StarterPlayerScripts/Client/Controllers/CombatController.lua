@@ -27,6 +27,7 @@ local CombatController = {}
 local player = Players.LocalPlayer
 local firing = false
 local lastShot = 0
+local streak = 0 -- shots fired in a row (spread opens up with it)
 local enabled = false
 local powerUp = { id = "", untilT = 0 } -- mirrors the server's active power-up for fire rate
 
@@ -136,7 +137,16 @@ local function tryFire()
 	if now - lastShot < interval then
 		return
 	end
+	-- Spread grows only while you hold the trigger: the first shot goes
+	-- exactly where the crosshair is, then it opens up over a few shots
+	-- (spray weapons with several pellets always spread).
+	if now - lastShot < interval * 1.8 then
+		streak += 1
+	else
+		streak = 0
+	end
 	lastShot = now
+	local spreadScale = (weapon.Pellets + extraPellets) > 1 and 1 or math.clamp(streak / 4, 0, 1)
 
 	local muzzle = muzzlePosition()
 	local dir = CameraController.GetShootDirection(muzzle)
@@ -149,7 +159,7 @@ local function tryFire()
 	params.IgnoreWater = true
 	local pellets, tos = {}, {}
 	for _ = 1, weapon.Pellets + extraPellets do
-		local d = withSpread(dir, weapon.Spread + spreadAdd)
+		local d = withSpread(dir, (weapon.Spread + spreadAdd) * spreadScale)
 		local result = Workspace:Raycast(muzzle, d * weapon.Range, params)
 		if result and result.Instance.Name == "RangeTarget" then
 			require(script.Parent.MapLife).HitTarget(result.Instance)

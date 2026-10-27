@@ -43,6 +43,9 @@ local shake = 0 -- decaying shake magnitude
 local fovBoost = 0 -- extra field of view from speed
 local assistUntil = 0 -- aim help runs while you've shot recently
 local kick = 0 -- recoil: upward view kick (radians) that settles back
+-- Where the crosshair really points: the view before recoil kick and shake
+-- (those only move the picture, never where shots go).
+local aimCF: CFrame? = nil
 local punch = 0 -- big-hit zoom punch (degrees of FOV), settles back
 local parallax = Vector2.zero
 local camDist = 0
@@ -443,6 +446,7 @@ local function step(dt: number)
 		-- part: flips, tumbles and landings move the head and would swing the view.)
 		local eye = root.Position + Vector3.new(0, 1.47, 0)
 		local fpCF = CFrame.new(eye) * rot
+		aimCF = fpCF
 		if kick > 0.0001 then
 			fpCF = fpCF * CFrame.Angles(kick, 0, 0)
 			kick *= math.exp(-14 * dt)
@@ -484,6 +488,7 @@ local function step(dt: number)
 
 	local lookAt = focus + rot:VectorToWorldSpace(Vector3.new(shoulder.X, shoulder.Y, -20))
 	local finalCF = CFrame.lookAt(camPos, lookAt)
+	aimCF = finalCF
 
 	-- Recoil kick: tips the view up, then settles back quickly.
 	if kick > 0.0001 then
@@ -517,22 +522,43 @@ end
 
 -- Aim direction: the camera look vector (crosshair is centered).
 function CameraController.GetAimRay(): (Vector3, Vector3)
-	local origin = camera.CFrame.Position
-	local dir = camera.CFrame.LookVector
-	return origin, dir
+	local cf = (enabled and aimCF) or camera.CFrame
+	return cf.Position, cf.LookVector
 end
 
 -- Aim from the muzzle toward the crosshair world point.
+-- The crosshair ray starts level with the muzzle, not at the camera: the
+-- camera sits behind the cat, and anything between the two (the floor when
+-- looking down, a ledge, an invisible wall) used to become the target and
+-- sent shots sideways or backwards. Invisible parts are looked through.
 function CameraController.GetShootDirection(muzzlePos: Vector3): Vector3
 	local origin, dir = CameraController.GetAimRay()
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
+	local start = origin + dir * math.max(0, (muzzlePos - origin):Dot(dir))
+	local ignore: { Instance } = {}
 	local char = player.Character
 	if char then
-		params.FilterDescendantsInstances = { char }
+		table.insert(ignore, char)
 	end
-	local hit = Workspace:Raycast(origin, dir * 500, params)
-	local target = hit and hit.Position or (origin + dir * 500)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.IgnoreWater = true
+	local target = start + dir * 500
+	for _ = 1, 6 do
+		params.FilterDescendantsInstances = ignore
+		local hit = Workspace:Raycast(start, (origin + dir * 500) - start, params)
+		if not hit then
+			break
+		end
+		if hit.Instance.Transparency < 0.95 then
+			target = hit.Position
+			break
+		end
+		table.insert(ignore, hit.Instance)
+	end
+	-- Something right in front of the muzzle: just shoot straight ahead.
+	if (target - muzzlePos):Dot(dir) < 3 then
+		return dir
+	end
 	return (target - muzzlePos).Unit
 end
 
