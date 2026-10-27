@@ -447,7 +447,8 @@ local function buildGround(f: Instance)
 		neonSign(h[3] .. "Sign", at(x + side * 1.3, 0, 17.6), at(0, 0, 17.6), 22, 4.6, h[4], h[3], f)
 		caution("DoorStripe", CFrame.new(at(x, 0, 0.03)) * CFrame.Angles(0, math.rad(90), 0), 34, 1, f)
 		for _, z in ipairs({ -18.5, 18.5 }) do
-			solid("OpeningPillar", Vector3.new(3, HEIGHT, 3), CFrame.new(at(x, z, HEIGHT / 2)), STONE, Enum.Material.Slate, f)
+			-- (stood just clear of the wall, not half inside it)
+			solid("OpeningPillar", Vector3.new(3, HEIGHT, 3), CFrame.new(at(x - math.sign(x) * 2, z, HEIGHT / 2)), STONE, Enum.Material.Slate, f)
 		end
 	end
 
@@ -613,7 +614,8 @@ end
 local function buildMatchHall(f: Instance)
 	-- The entrance arch: stone pillars, a beam and the big sign.
 	for _, x in ipairs({ -22, 22 }) do
-		solid("ArchPillar", Vector3.new(4, HEIGHT, 4), CFrame.new(at(x, 30, HEIGHT / 2)), STONE, Enum.Material.Slate, f)
+		-- (in front of the wall, not half inside it)
+		solid("ArchPillar", Vector3.new(4, HEIGHT, 4), CFrame.new(at(x, 28.5, HEIGHT / 2)), STONE, Enum.Material.Slate, f)
 	end
 	solid("ArchHeader", Vector3.new(40, HEIGHT - 14, 2), CFrame.new(at(0, 30, 14 + (HEIGHT - 14) / 2)), NAVY, Enum.Material.SmoothPlastic, f)
 	-- The big DUELS sign over the way in, bolted up slightly crooked.
@@ -1405,12 +1407,40 @@ local function buildFinish(f: Instance)
 		local navy = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
 		if not navy then
 			local base = at(midXZ.X, midXZ.Z)
+			-- The wall's pillars (every 16 studs, see buildGround): the pipes run
+			-- between them rather than through them.
+			local pillarsAt = {}
+			for k = 8, len - 4, 16 do
+				table.insert(pillarsAt, k - len / 2)
+			end
+			local function clearOfPillars(s: number, gap: number): boolean
+				for _, ps in ipairs(pillarsAt) do
+					if math.abs(s - ps) < gap then
+						return false
+					end
+				end
+				return true
+			end
 			for k, y in ipairs({ HEIGHT - 4.2, HEIGHT - 5.2 }) do
-				local c = base + normal * (0.7 + k * 0.1) + Vector3.new(0, y, 0)
-				local pipe = part("Pipe", Vector3.new(len, 0.55, 0.55), CFrame.lookAt(c, c + normal), k == 1 and Color3.fromRGB(150, 96, 60) or STEEL_DARK, Enum.Material.Metal, f) :: Part
-				pipe.Shape = Enum.PartType.Cylinder
+				local off = normal * (0.7 + k * 0.1) + Vector3.new(0, y, 0)
+				local cuts = { -len / 2 }
+				for _, ps in ipairs(pillarsAt) do
+					table.insert(cuts, ps - 1.3)
+					table.insert(cuts, ps + 1.3)
+				end
+				table.insert(cuts, len / 2)
+				for j = 1, #cuts - 1, 2 do
+					local lo, hi = cuts[j], cuts[j + 1]
+					if hi - lo > 0.4 then
+						local c = base - dir * ((lo + hi) / 2) + off
+						local pipe = part("Pipe", Vector3.new(hi - lo, 0.55, 0.55), CFrame.lookAt(c, c + normal), k == 1 and Color3.fromRGB(150, 96, 60) or STEEL_DARK, Enum.Material.Metal, f) :: Part
+						pipe.Shape = Enum.PartType.Cylinder
+					end
+				end
 				for t = 4, len - 4, 8 do
-					part("PipeClamp", Vector3.new(0.3, 0.8, 0.8), CFrame.new(base - dir * (t - len / 2) + normal * (0.7 + k * 0.1) + Vector3.new(0, y, 0)), BEAM, Enum.Material.Metal, f)
+					if clearOfPillars(t - len / 2, 2) then
+						part("PipeClamp", Vector3.new(0.3, 0.8, 0.8), CFrame.new(base - dir * (t - len / 2) + off), BEAM, Enum.Material.Metal, f)
+					end
 				end
 			end
 			-- Posters on the walls that run along the sides (|x| = 44 / 86, and
@@ -1600,8 +1630,8 @@ local function buildGrand(f: Instance)
 	part("ArchTrim", Vector3.new(40.4, 0.5, 2.4), CFrame.new(at(0, 30, 14.2)), BEAM, Enum.Material.Metal, f)
 	part("ArchTrimTop", Vector3.new(40.4, 0.5, 2.4), CFrame.new(at(0, 30, HEIGHT - 0.4)), BEAM, Enum.Material.Metal, f)
 	for _, x in ipairs({ -22, 22 }) do
-		part("ArchCap", Vector3.new(4.6, 0.8, 4.6), CFrame.new(at(x, 30, HEIGHT - 0.4)), BEAM, Enum.Material.Metal, f)
-		part("ArchBase", Vector3.new(4.6, 1, 4.6), CFrame.new(at(x, 30, 0.5)), BEAM, Enum.Material.Metal, f)
+		part("ArchCap", Vector3.new(4.6, 0.8, 4.6), CFrame.new(at(x, 28.5, HEIGHT - 0.4)), BEAM, Enum.Material.Metal, f)
+		part("ArchBase", Vector3.new(4.6, 1, 4.6), CFrame.new(at(x, 28.5, 0.5)), BEAM, Enum.Material.Metal, f)
 	end
 
 	-- Plaza: chandeliers, a gold border round the floor, an inlay ring.
