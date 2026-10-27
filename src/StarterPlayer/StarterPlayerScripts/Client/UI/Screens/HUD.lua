@@ -489,6 +489,63 @@ local function hideCoreGui()
 	end
 end
 
+-- A score tile comes alive when its number goes up: it punches bigger and
+-- settles back, flashes white, the number glows gold for a moment and a
+-- "+1" floats up out of it.
+local function animateScore(label: TextLabel)
+	local tile = label.Parent :: GuiObject
+	local scale = Instance.new("UIScale")
+	scale.Parent = tile
+	local flash = UIUtil.make("Frame", {
+		Parent = tile, Name = "ScoreFlash", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = tile.ZIndex + 2,
+	})
+	flash:SetAttribute("NoPolish", true)
+	UIUtil.corner(UDim.new(0, 8), flash)
+	label.ZIndex = tile.ZIndex + 3
+	local last = tonumber(label.Text) or 0
+	local baseColor = label.TextColor3
+	label:GetPropertyChangedSignal("Text"):Connect(function()
+		local now = tonumber(label.Text)
+		if not now then
+			return
+		end
+		local gained = now - last
+		last = now
+		if gained <= 0 then
+			return
+		end
+		scale.Scale = 1.45
+		TweenService:Create(scale, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		flash.BackgroundTransparency = 0.25
+		TweenService:Create(flash, TweenInfo.new(0.4), { BackgroundTransparency = 1 }):Play()
+		label.TextColor3 = Theme.Color.Coin
+		TweenService:Create(label, TweenInfo.new(0.7), { TextColor3 = baseColor }):Play()
+		local plus = UIUtil.label({
+			Parent = tile, Text = "+" .. tostring(gained), Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
+			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(60, 22),
+			TextColor3 = Theme.Color.Coin, TextStrokeTransparency = 0.3, ZIndex = tile.ZIndex + 4,
+		})
+		TweenService:Create(plus, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new(0.5, 0, 1, 30), TextTransparency = 1, TextStrokeTransparency = 1,
+		}):Play()
+		task.delay(0.95, function()
+			plus:Destroy()
+		end)
+	end)
+end
+
+-- The bar drops in from the top when it appears.
+local function dropIn(bar: GuiObject)
+	local home = bar.Position
+	bar:GetPropertyChangedSignal("Visible"):Connect(function()
+		if bar.Visible then
+			bar.Position = home - UDim2.fromOffset(0, 70)
+			TweenService:Create(bar, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = home }):Play()
+		end
+	end)
+end
+
 -- ── top center: small scores + timer ─────────────────────────────────────────
 local function buildScoreBar(parent)
 	local bar = UIUtil.make("Frame", {
@@ -514,6 +571,9 @@ local function buildScoreBar(parent)
 	refs.timer = tile(53, 66, Theme.Color.PanelDark, Theme.Font.Heading, 16)
 	refs.timer.Text = "3:00"
 	refs.redScore, refs.redStroke = tile(124, 48, Theme.Color.Red, Theme.Font.Number, 18)
+	animateScore(refs.blueScore)
+	animateScore(refs.redScore)
+	dropIn(bar)
 	-- Mode name under the bar (FFA: left = your KOs, right = the leader's).
 	refs.modeLabel = UIUtil.label({
 		Parent = bar, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Color3.new(1, 1, 1),
@@ -544,6 +604,9 @@ local function buildDuelBar(parent)
 	local mineTile, mine = tile(0, 48, Theme.Font.Number, 18)
 	local _, clock = tile(53, 66, Theme.Font.Heading, 16)
 	local theirTile, theirs = tile(124, 48, Theme.Font.Number, 18)
+	animateScore(mine)
+	animateScore(theirs)
+	dropIn(bar)
 	local sub = UIUtil.label({
 		Parent = bar, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Color3.new(1, 1, 1),
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(-90, 32), Size = UDim2.new(1, 180, 0, 14),

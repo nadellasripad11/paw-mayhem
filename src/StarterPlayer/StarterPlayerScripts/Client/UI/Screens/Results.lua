@@ -82,7 +82,8 @@ local function boardRow(rank: number, e: any)
 		UIUtil.corner(UDim.new(1, 0), img)
 	end
 	UIUtil.label({ Parent = r, Text = (e.Display or e.Name or "?") .. (me and " (YOU)" or ""), Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(80, 0), Size = UDim2.new(1, -150, 1, 0), TextTruncate = Enum.TextTruncate.AtEnd })
-	UIUtil.label({ Parent = r, Text = tostring(e.Elims or 0), Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -38, 0, 0), Size = UDim2.fromOffset(50, 44) })
+	r:SetAttribute("Me", me)
+	UIUtil.label({ Parent = r, Name = "KOCount", Text = tostring(e.Elims or 0), Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -38, 0, 0), Size = UDim2.fromOffset(50, 44) })
 	UIUtil.label({ Parent = r, Text = "KO", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 0), Size = UDim2.fromOffset(24, 44) })
 end
 
@@ -168,6 +169,66 @@ function Results.Show(match)
 		TweenService:Create(boardPanel, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = home }):Play()
 		statLabel.Visible = true
 		returnLabel.Visible = true
+		-- the rows pop in one after another, top first
+		local rows = {}
+		for _, r in ipairs(boardList:GetChildren()) do
+			if r:IsA("Frame") then
+				table.insert(rows, r)
+			end
+		end
+		table.sort(rows, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		for i, r in ipairs(rows) do
+			local sc = r:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+			sc.Scale = 0
+			sc.Parent = r
+			-- the KO count ticks up from 0 as the row lands
+			local ko = r:FindFirstChild("KOCount") :: TextLabel?
+			local target = ko and tonumber(ko.Text) or 0
+			if ko then
+				ko.Text = "0"
+			end
+			task.delay(0.15 + (i - 1) * 0.07, function()
+				TweenService:Create(sc, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+				if ko and target > 0 then
+					local per = math.clamp(0.6 / target, 0.03, 0.15)
+					for v = 1, target do
+						task.wait(per)
+						if not ko.Parent then
+							return
+						end
+						ko.Text = tostring(v)
+					end
+				end
+				-- your row: a gold outline that pulses a few times
+				if r:GetAttribute("Me") then
+					local st = Instance.new("UIStroke")
+					st.Color = Color3.fromRGB(255, 208, 80)
+					st.Thickness = 3
+					st.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+					st.Parent = r
+					TweenService:Create(st, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 5, true), { Thickness = 0.5, Transparency = 0.5 }):Play()
+				end
+				-- the top row: a shine sweeps across it
+				if i == 1 then
+					local band = UIUtil.make("Frame", {
+						Parent = r, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(-0.1, 0, 0.5, 0), Size = UDim2.new(0, 40, 1.6, 0),
+						Rotation = 20, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.6, BorderSizePixel = 0, ZIndex = r.ZIndex + 3,
+					})
+					band:SetAttribute("NoPolish", true)
+					r.ClipsDescendants = true
+					local bg = Instance.new("UIGradient")
+					bg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.1), NumberSequenceKeypoint.new(1, 1) })
+					bg.Parent = band
+					local tw = TweenService:Create(band, TweenInfo.new(0.8, Enum.EasingStyle.Sine), { Position = UDim2.new(1.1, 0, 0.5, 0) })
+					tw.Completed:Connect(function()
+						band:Destroy()
+					end)
+					tw:Play()
+				end
+			end)
+		end
 	end)
 end
 
