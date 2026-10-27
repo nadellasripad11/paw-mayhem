@@ -154,6 +154,43 @@ BUILD.Gem = function(model)
 	return CFrame.Angles(0, math.rad(20), 0)
 end
 
+-- A grey gear (settings).
+BUILD.Gear = function(model)
+	local part = builder(model)
+	local steel, dark = C(196, 204, 220), C(70, 76, 92)
+	part(Vector3.new(0.6, 2.4, 2.4), CFrame.Angles(0, math.rad(90), 0), steel, { shape = Enum.PartType.Cylinder, material = Enum.Material.Metal, reflectance = 0.1 })
+	part(Vector3.new(0.66, 0.9, 0.9), CFrame.Angles(0, math.rad(90), 0), dark, { shape = Enum.PartType.Cylinder })
+	for k = 0, 7 do
+		local a = k * math.pi / 4
+		part(Vector3.new(0.7, 0.6, 0.6), CFrame.new(math.cos(a) * 1.35, math.sin(a) * 1.35, 0) * CFrame.Angles(0, 0, a), steel, { material = Enum.Material.Metal })
+	end
+	return CFrame.Angles(math.rad(-15), math.rad(-25), 0)
+end
+
+-- A gold / silver / bronze podium (leaderboard).
+BUILD.Podium = function(model)
+	local part = builder(model)
+	part(Vector3.new(1.1, 2.2, 1.1), CFrame.new(0, 1.1, 0), C(255, 200, 60), { material = Enum.Material.Metal, reflectance = 0.1 })
+	part(Vector3.new(1.1, 1.5, 1.1), CFrame.new(-1.15, 0.75, 0), C(200, 210, 225), { material = Enum.Material.Metal })
+	part(Vector3.new(1.1, 1.0, 1.1), CFrame.new(1.15, 0.5, 0), C(205, 130, 70), { material = Enum.Material.Metal })
+	part(Vector3.new(0.5, 0.5, 0.5), CFrame.new(0, 2.6, 0) * CFrame.Angles(0, 0, math.rad(45)), C(255, 230, 120))
+	return CFrame.Angles(math.rad(12), math.rad(-25), 0)
+end
+
+-- A yellow smiley (emotes).
+BUILD.Smiley = function(model)
+	local part = builder(model)
+	part(Vector3.new(2.4, 2.4, 2.4), CFrame.new(), C(255, 214, 60), { sphere = true })
+	for _, s in ipairs({ -1, 1 }) do
+		part(Vector3.new(0.3, 0.5, 0.2), CFrame.new(s * 0.45, 0.35, 1.1), C(40, 30, 30), { sphere = true })
+	end
+	for k = -2, 2 do
+		local a = k * 0.32
+		part(Vector3.new(0.24, 0.16, 0.16), CFrame.new(math.sin(a) * 0.7, -0.35 - math.cos(a) * 0.12 + 0.12, 1.08 - math.abs(k) * 0.05), C(40, 30, 30), { sphere = true })
+	end
+	return CFrame.Angles(0, math.rad(-18), 0)
+end
+
 local function frame(vf: ViewportFrame, model: Model, aspect: number, fill: number)
 	local cf, size = model:GetBoundingBox()
 	local cam = Instance.new("Camera")

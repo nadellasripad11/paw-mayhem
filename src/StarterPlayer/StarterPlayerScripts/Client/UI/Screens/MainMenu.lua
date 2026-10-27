@@ -300,36 +300,6 @@ local function navButton(parent: Instance, item, order: number)
 	navButtons[item.id] = { button = b, stroke = stroke, label = label }
 end
 
--- Tiny white glyphs for the round top-bar buttons: a podium (three bars)
--- and a gear (a ring with eight teeth).
-local function smallIcon(kind: string, parent: Instance)
-	local holder = UIUtil.make("Frame", { Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 11 })
-	local white = Color3.new(1, 1, 1)
-	if kind == "Podium" then
-		for i, h in ipairs({ 9, 16, 12 }) do
-			local bar = UIUtil.make("Frame", {
-				Parent = holder, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, (i - 1) * 7, 1, 0), Size = UDim2.fromOffset(6, h),
-				BackgroundColor3 = white, BorderSizePixel = 0, ZIndex = 11,
-			})
-			UIUtil.corner(UDim.new(0, 2), bar)
-		end
-	else
-		local ring = UIUtil.make("Frame", {
-			Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(12, 12),
-			BackgroundTransparency = 1, ZIndex = 12,
-		})
-		UIUtil.corner(UDim.new(1, 0), ring)
-		UIUtil.stroke(white, 3, ring)
-		for k = 0, 7 do
-			local a = k * math.pi / 4
-			local tooth = UIUtil.make("Frame", {
-				Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, math.cos(a) * 8.5, 0.5, math.sin(a) * 8.5),
-				Size = UDim2.fromOffset(4, 4), Rotation = math.deg(a), BackgroundColor3 = white, BorderSizePixel = 0, ZIndex = 11,
-			})
-			UIUtil.corner(UDim.new(0, 1), tooth)
-		end
-	end
-end
 
 -- A glossy finish on a big button: lighter at the top, a soft shine across
 -- the upper half, a dark outline and an outlined label - it reads as a
@@ -392,7 +362,7 @@ function MainMenu.Build()
 		Parent = playGroup, Name = "Avatar", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(62, 62),
 		BackgroundColor3 = Theme.Color.Surface2, BackgroundTransparency = 0.08, BorderSizePixel = 0, ZIndex = 11,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(0, 14), avatarBtn)
+	UIUtil.corner(UDim.new(1, 0), avatarBtn) -- round, like Rivals
 	UIUtil.hairline(avatarBtn)
 	UIUtil.feedback(avatarBtn)
 	UIUtil.tooltip(avatarBtn, "Customize your cat")
@@ -476,7 +446,7 @@ function MainMenu.Build()
 
 	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
 	local invite = UIUtil.iconButton({
-		Parent = playGroup, Name = "Invite", Position = UDim2.fromOffset(330, 0), Size = UDim2.fromOffset(62, 62), ZIndex = 11, CornerRadius = UDim.new(0, 14),
+		Parent = playGroup, Name = "Invite", Position = UDim2.fromOffset(330, 6), Size = UDim2.fromOffset(50, 50), ZIndex = 11, CornerRadius = UDim.new(1, 0),
 	}, function(slot: Frame)
 		Icons.Place("Plus", slot, 24, Color3.new(1, 1, 1))
 	end, "Invite friends", function()
@@ -581,7 +551,7 @@ function MainMenu.Build()
 	-- Emotes: a picker of the ones you own (easy on phones too).
 	pcall(EmotePicker.Build)
 	roundButton("EmotesIcon", 10, "Emotes", function(slot: Frame)
-		Icons.Place("Smiley", slot, 22, Color3.new(1, 1, 1))
+		Icon3D.Create("Smiley", slot, UDim2.fromScale(1.5, 1.5), UDim2.fromScale(-0.25, -0.25)).ZIndex = slot.ZIndex + 1
 	end, function()
 		EmotePicker.Toggle()
 	end)
@@ -589,7 +559,7 @@ function MainMenu.Build()
 	-- Leaderboard + Settings at the far right.
 	for i, spec in ipairs({ { "Leaderboard", "Podium", "Leaderboard" }, { "Settings", "Gear", "Settings" } }) do
 		roundButton(spec[1] .. "Icon", 10 + i, spec[3], function(slot: Frame)
-			smallIcon(spec[2], slot)
+			Icon3D.Create(spec[2], slot, UDim2.fromScale(1.5, 1.5), UDim2.fromScale(-0.25, -0.25)).ZIndex = slot.ZIndex + 1
 		end, function()
 			switchTo(spec[1])
 		end)

@@ -84,6 +84,11 @@ function UIUtil.padding(all: number, parent: Instance?): UIPadding
 end
 
 function UIUtil.gradient(c1: Color3, c2: Color3, rotation: number?, parent: Instance?): UIGradient
+	-- (only one gradient works per object: a new one replaces the old)
+	local old = parent and parent:FindFirstChildOfClass("UIGradient")
+	if old then
+		old:Destroy()
+	end
 	local g = Instance.new("UIGradient")
 	g.Color = ColorSequence.new(c1, c2)
 	g.Rotation = rotation or 90
@@ -570,6 +575,125 @@ function UIUtil.restyle(root: Instance)
 	end
 	root.DescendantAdded:Connect(function(d)
 		task.defer(restyleOne, d) -- after the builder has set its properties
+	end)
+end
+
+-- ── polish: the raised, glossy look for whole screens ───────────────────────
+-- Screens build their own buttons and cards; this goes over a screen and
+-- finishes them in one style:
+--   * coloured action buttons (BUY, EQUIP, CLAIM, vote...) get a gloss: lighter
+--     at the top, a soft shine across the upper half, a darker outline and an
+--     outlined label;
+--   * dark buttons and cards get a gentle top-lit gradient so they read as
+--     raised panels, not flat boxes.
+-- Anything with its own gradient, inside a 3D view, or marked NoPolish is
+-- left alone. UIUtil.polish(root) also catches cards made later.
+local function lum(c: Color3): number
+	return 0.3 * c.R + 0.59 * c.G + 0.11 * c.B
+end
+
+local function sat(c: Color3): number
+	return math.max(c.R, c.G, c.B) - math.min(c.R, c.G, c.B)
+end
+
+function UIUtil.gloss(b: GuiObject, color: Color3?)
+	if b:FindFirstChildOfClass("UIGradient") then
+		return
+	end
+	local c = color or b.BackgroundColor3
+	local white, black = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
+	-- (a UIGradient's colours multiply the background: light top, darker foot)
+	UIUtil.gradient(white, Color3.new(0.78, 0.78, 0.78), 90, b)
+	local shine = Instance.new("Frame")
+	shine.Name = "Shine"
+	shine.BorderSizePixel = 0
+	shine.BackgroundColor3 = white
+	shine.BackgroundTransparency = 0.78
+	shine.Position = UDim2.new(0, 4, 0, 3)
+	shine.Size = UDim2.new(1, -8, 0.44, 0)
+	shine.ZIndex = b.ZIndex
+	shine.Active = false
+	local corner = b:FindFirstChildOfClass("UICorner")
+	if corner then
+		local sc = Instance.new("UICorner")
+		sc.CornerRadius = UDim.new(corner.CornerRadius.Scale, math.max(0, corner.CornerRadius.Offset - 3))
+		sc.Parent = shine
+	end
+	local fade = Instance.new("UIGradient")
+	fade.Rotation = 90
+	fade.Transparency = NumberSequence.new(0.1, 1)
+	fade.Parent = shine
+	shine.Parent = b
+	local stroke = b:FindFirstChildOfClass("UIStroke")
+	if not stroke then
+		stroke = Instance.new("UIStroke")
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Parent = b
+	end
+	stroke.Color = c:Lerp(black, 0.5)
+	stroke.Transparency = 0.1
+	stroke.Thickness = math.max(stroke.Thickness, 2.6) -- (over 2.5: restyle leaves it alone)
+	local function outline(t: Instance)
+		if t:IsA("TextLabel") or t:IsA("TextButton") then
+			t.TextStrokeColor3 = c:Lerp(black, 0.6)
+			t.TextStrokeTransparency = math.min(t.TextStrokeTransparency, 0.3)
+		end
+	end
+	outline(b)
+	for _, ch in ipairs(b:GetChildren()) do
+		outline(ch)
+	end
+end
+
+local function raise(f: GuiObject)
+	if f:FindFirstChildOfClass("UIGradient") then
+		return
+	end
+	UIUtil.gradient(Color3.new(1, 1, 1), Color3.new(0.72, 0.72, 0.76), 90, f)
+end
+
+local function polishOne(inst: Instance)
+	if not inst:IsA("GuiObject") or inst:GetAttribute("NoPolish") or inst:FindFirstAncestorOfClass("ViewportFrame") then
+		return
+	end
+	local g = inst :: GuiObject
+	if g.BackgroundTransparency > 0.4 or not g:FindFirstChildOfClass("UICorner") or g.Name == "Shine" then
+		return
+	end
+	local size = g.AbsoluteSize
+	if size.X == 0 and size.Y == 0 then
+		-- (a hidden screen: go by its set size; a scaled size counts as big)
+		local function px(d: UDim): number
+			return d.Scale > 0 and 999 or d.Offset
+		end
+		size = Vector2.new(px(g.Size.X), px(g.Size.Y))
+	end
+	if size.Y < 18 or size.X < 18 then
+		return
+	end
+	local c = g.BackgroundColor3
+	if g:IsA("GuiButton") then
+		if sat(c) > 0.22 and lum(c) > 0.22 then
+			UIUtil.gloss(g)
+		else
+			raise(g)
+		end
+	elseif g:IsA("Frame") and size.Y >= 40 and size.X >= 60 and lum(c) < 0.3 then
+		raise(g)
+	end
+end
+
+function UIUtil.polish(root: Instance)
+	for _, d in ipairs(root:GetDescendants()) do
+		polishOne(d)
+	end
+	root.DescendantAdded:Connect(function(d)
+		-- (after the screen has finished setting it up)
+		task.defer(function()
+			if d.Parent then
+				polishOne(d)
+			end
+		end)
 	end)
 end
 
