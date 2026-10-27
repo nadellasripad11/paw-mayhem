@@ -578,8 +578,16 @@ local function onDuelState(d: any)
 			HUD.ShowBig("FIGHT!", Theme.Color.Warn, 1.2)
 		end)
 	elseif d.over then
-		local text = d.draw and "DRAW" or d.won and "VICTORY" or "DEFEAT"
-		HUD.ShowBig(text, d.draw and Theme.Color.Text or d.won and Theme.Color.Coin or Theme.Color.Danger, 3.5)
+		-- The final score, then the winner (EndScreen).
+		local winnerTeam = typeof(d.winner) == "string" and d.winner or nil
+		local foesTeam = mine == "Blue" and "Red" or "Blue"
+		require(script.Parent.EndScreen).Play({
+			score = typeof(d.score) == "table" and d.score or {}, won = d.won == true, draw = d.draw == true,
+			winnerTeam = winnerTeam, winners = typeof(d.winners) == "table" and d.winners or {},
+			blueName = mine == "Blue" and "YOU" or "THEM", redName = foesTeam == "Red" and "THEM" or "YOU",
+			subtitle = d.draw and "Nobody wins this one" or (d.won and "You win the duel!" or "Better luck next time"),
+			autoHide = 2,
+		})
 		local t = tonumber(d.trophies) or 0
 		if d.withBots then
 			HUD.ShowElim("BOT DUEL  ·  HALF REWARDS")

@@ -383,6 +383,7 @@ function UIManager.Start()
 	if not hudOk then
 		warn("[PAW MAYHEM] HUD failed to build: " .. tostring(hudErr))
 	end
+	pcall(require(script.Parent.Screens.EndScreen).Build)
 	local resultsOk, resultsErr = pcall(Results.Build)
 	if not resultsOk then
 		warn("[PAW MAYHEM] Results screen failed to build: " .. tostring(resultsErr))

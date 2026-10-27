@@ -263,6 +263,13 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 	duel.over = true
 	BotService.RemoveDuelBots(duel.id)
 	local pay = duel.withBots and 0.5 or 1
+	-- (who won, for everyone's end screen)
+	local winners = {}
+	for p, team in pairs(duel.members) do
+		if winner and team == winner and p.Parent then
+			table.insert(winners, { name = p.DisplayName, userId = p.UserId })
+		end
+	end
 	for p, team in pairs(duel.members) do
 		if p.Parent and inThisDuel(p, duel) then
 			local won = winner == team
@@ -287,12 +294,13 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 			EconomyService.Push(p)
 			Remotes.Get("DuelState"):FireClient(p, {
 				id = duel.id, over = true, winner = winner, won = won, draw = winner == nil,
-				forfeit = forfeit == true, trophies = delta, score = duel.score, myTeam = team, withBots = duel.withBots,
+				forfeit = forfeit == true, trophies = delta, score = duel.score, myTeam = team, withBots = duel.withBots, winners = winners,
 			})
 		end
 	end
-	-- A moment to celebrate, then everyone's back in the lobby.
-	task.delay(4, function()
+	-- Time for the final score and the winner (EndScreen), then everyone's
+	-- back in the lobby.
+	task.delay(7.5, function()
 		for p in pairs(duel.members) do
 			if inThisDuel(p, duel) then
 				LobbyService.Spawn(p)

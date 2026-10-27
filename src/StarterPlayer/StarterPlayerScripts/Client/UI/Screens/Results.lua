@@ -12,12 +12,13 @@ local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local Ranks = require(game:GetService("ReplicatedStorage").Shared.Config.Ranks)
+local EndScreen = require(script.Parent.EndScreen)
 
 local Results = {}
 local player = Players.LocalPlayer
 local gui: ScreenGui?
 local titleLabel: TextLabel, scoreLabel: TextLabel, subLabel: TextLabel, statLabel: TextLabel, returnLabel: TextLabel
-local banner: Frame, boardList: ScrollingFrame, confettiLayer: Frame
+local banner: Frame, boardList: ScrollingFrame, confettiLayer: Frame, boardPanel: Frame
 
 local BLUE = Color3.fromRGB(70, 150, 255)
 local RED = Color3.fromRGB(255, 86, 96)
@@ -140,12 +141,34 @@ function Results.Show(match)
 		statLabel.Text ..= string.format("   •   %s%d TROPHIES (%s)", delta >= 0 and "+" or "", delta, string.upper(tier.Name))
 	end
 	Results.Update(match)
+	-- First the final score and the winner (EndScreen), then the scoreboard
+	-- and your round slide in round the podium.
+	banner.Visible = false
+	confettiLayer:ClearAllChildren()
+	boardPanel.Visible = false
+	statLabel.Visible = false
+	returnLabel.Visible = false
 	gui.Enabled = true
-	if won then
-		burstConfetti()
-	else
-		confettiLayer:ClearAllChildren()
+	local winners = {}
+	for _, e in ipairs(match.board or {}) do
+		if (ffa and e.Name == winner) or (not ffa and winner and e.Team == winner) then
+			table.insert(winners, { name = e.Display or e.Name, userId = (not e.IsBot) and e.UserId or 0 })
+		end
 	end
+	EndScreen.Play({
+		score = match.scores, won = won, draw = winner == nil, winnerTeam = (not ffa) and winner or nil,
+		winners = winners, subtitle = subLabel.Text, ffa = ffa,
+	}, function()
+		if not gui or not gui.Enabled then
+			return
+		end
+		boardPanel.Visible = true
+		local home = boardPanel.Position
+		boardPanel.Position = home - UDim2.fromOffset(420, 0)
+		TweenService:Create(boardPanel, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Position = home }):Play()
+		statLabel.Visible = true
+		returnLabel.Visible = true
+	end)
 end
 
 function Results.Update(match)
@@ -156,6 +179,7 @@ end
 
 function Results.Hide()
 	if gui then gui.Enabled = false end
+	EndScreen.Hide()
 end
 
 function Results.Build()
@@ -189,9 +213,10 @@ function Results.Build()
 
 	-- Match scoreboard (left)
 	local panel = UIUtil.make("Frame", {
-		Parent = g, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 20, 0.55, 0), Size = UDim2.new(0, 330, 0.62, 0),
+		Parent = g, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 20, 0.6, 0), Size = UDim2.new(0, 300, 0.48, 0),
 		BackgroundColor3 = Color3.fromRGB(10, 18, 36), BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	})
+	boardPanel = panel :: Frame
 	UIUtil.corner(Theme.Corner, panel)
 	UIUtil.hairline(panel)
 	UIUtil.label({ Parent = panel, Text = "SCOREBOARD", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(16, 12), Size = UDim2.new(1, -32, 0, 22) })

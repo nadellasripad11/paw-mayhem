@@ -13,7 +13,7 @@ GameConfig.Match = {
 	IntermissionSeconds = 20,
 	CountdownSeconds = 3,
 	MatchSeconds = 180, -- 3:00 like the reference HUD
-	ResultsSeconds = 10,
+	ResultsSeconds = 15, -- (the final score + winner reveal take ~7s)
 	ScoreToWin = 40, -- team score that ends the match early
 	Teams = {
 		{ Id = "Blue", Name = "Blue Paws", Color = Color3.fromRGB(64, 132, 255) },
