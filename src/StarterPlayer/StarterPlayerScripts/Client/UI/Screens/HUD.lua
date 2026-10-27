@@ -328,44 +328,112 @@ function HUD.HideBig()
 	if refs.bigText then refs.bigText.Visible = false end
 end
 
--- ── mobile controls ──────────────────────────────────────────────────────────
-local function touchButton(parent, name: string, pos: UDim2, d: number, color: Color3, iconName: string, label: string)
+-- ── action buttons (phone and PC), Rivals-style ──────────────────────────────
+-- A clean dark see-through button with a thin white outline and a big white
+-- icon - no text. `square` = a rounded tile (PC) instead of a circle (phone);
+-- `key` = the keyboard key in a small corner badge (PC).
+-- Returns the button and its controls:
+--   setLit(on)        - ready (outline brighter) or not
+--   setPressed(on)    - squish while held
+--   setCooldown(left) - seconds left (0 = ready): a dark fill drains away as
+--                       it recharges, the seconds in the middle, and a ping
+--                       (the outline flashes) the moment it's ready again
+local function actionButton(parent, name: string, pos: UDim2, d: number, iconName: string, opts: { [string]: any }?)
+	local o = opts or {}
 	local b = Instance.new("TextButton")
 	b.Name = name
 	b.Text = ""
 	b.AutoButtonColor = false
-	b.AnchorPoint = Vector2.new(0.5, 0.5)
+	b.AnchorPoint = o.anchor or Vector2.new(0.5, 0.5)
 	b.Position = pos
 	b.Size = UDim2.fromOffset(d, d)
-	b.BackgroundColor3 = Color3.fromRGB(16, 22, 40)
-	b.BackgroundTransparency = 0.3
+	b.BackgroundColor3 = Color3.fromRGB(10, 12, 20)
+	b.BackgroundTransparency = 0.45
 	b.BorderSizePixel = 0
-	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or name == "JumpButton" and "Jump" or "Moves")
+	b.ClipsDescendants = false
+	b:SetAttribute("NoPolish", true)
 	b.Parent = parent
-	UIUtil.corner(UDim.new(1, 0), b)
-	local ring = UIUtil.stroke(color, 3, b)
-	local tint = UIUtil.make("Frame", {
-		Parent = b, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.new(1, -8, 1, -8), BackgroundColor3 = color, BackgroundTransparency = 0.72, BorderSizePixel = 0,
+	local radius = o.square and UDim.new(0, math.floor(d * 0.26)) or UDim.new(1, 0)
+	UIUtil.corner(radius, b)
+	local ring = UIUtil.stroke(Color3.new(1, 1, 1), 1.6, b)
+	ring.Transparency = 0.35
+	-- the cooldown: a dark fill from the bottom that drains away
+	local drainHolder = UIUtil.make("Frame", { Parent = b, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 2 })
+	UIUtil.corner(radius, drainHolder)
+	local drain = UIUtil.make("Frame", {
+		Parent = drainHolder, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0),
+		BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 2,
 	})
-	UIUtil.corner(UDim.new(1, 0), tint)
-	Icons.Place(iconName, b, math.floor(d * 0.46), Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.43))
-	UIUtil.label({
-		Parent = b, Text = label, Font = Theme.Font.Bold, TextSize = d >= 80 and 11 or 9,
-		TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.8),
-		Size = UDim2.new(1, 0, 0, 12), TextStrokeTransparency = 0.6,
+	local icon = Icons.Place(iconName, b, math.floor(d * (o.iconScale or 0.5)), Color3.new(1, 1, 1), nil, UDim2.fromScale(0.5, 0.5))
+	if icon then
+		icon.ZIndex = 3
+		for _, c in ipairs(icon:GetDescendants()) do
+			if c:IsA("GuiObject") then
+				c.ZIndex = 3
+			end
+		end
+	end
+	local timer = UIUtil.label({
+		Parent = b, Name = "Timer", Text = "", Font = Theme.Font.Title, TextSize = math.floor(d * 0.34), TextXAlignment = Enum.TextXAlignment.Center,
+		Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.2, ZIndex = 5,
 	})
+	if o.key then
+		local badge = UIUtil.label({
+			Parent = b, Name = "Key", Text = o.key, Font = Theme.Font.Title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(o.key == "SHIFT" and 38 or 20, 20),
+			BackgroundTransparency = 0, BackgroundColor3 = Color3.new(1, 1, 1), TextColor3 = Color3.fromRGB(14, 16, 24), ZIndex = 6,
+		})
+		UIUtil.corner(UDim.new(0, 6), badge)
+	end
 	local scale = Instance.new("UIScale")
 	scale.Parent = b
+	local lit = true
 	local function setLit(on: boolean)
-		tint.BackgroundTransparency = on and 0.35 or 0.72
-		ring.Thickness = on and 4 or 3
+		lit = on
+		ring.Transparency = on and 0.25 or 0.6
+		b.BackgroundTransparency = on and 0.42 or 0.55
 	end
 	local function setPressed(on: boolean)
-		scale.Scale = on and 0.92 or 1
+		TweenService:Create(scale, TweenInfo.new(on and 0.06 or 0.18, on and Enum.EasingStyle.Quad or Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = on and 0.88 or 1 }):Play()
+		ring.Transparency = on and 0 or (lit and 0.25 or 0.6)
 	end
-	return b, setLit, setPressed
+	local maxSeen, wasCooling = 0, false
+	local function setCooldown(left: number)
+		if left > 0 then
+			maxSeen = math.max(maxSeen, left)
+			drain.Size = UDim2.fromScale(1, math.clamp(left / maxSeen, 0, 1))
+			timer.Text = left < 1 and string.format("%.1f", left) or tostring(math.ceil(left))
+			if icon then
+				icon.Visible = false
+			end
+			wasCooling = true
+		else
+			drain.Size = UDim2.fromScale(1, 0)
+			timer.Text = ""
+			if icon then
+				icon.Visible = true
+			end
+			maxSeen = 0
+			if wasCooling then
+				-- ready again: a quick ping
+				wasCooling = false
+				ring.Transparency = 0
+				ring.Thickness = 4
+				scale.Scale = 1.12
+				TweenService:Create(ring, TweenInfo.new(0.4), { Thickness = 1.6, Transparency = 0.25 }):Play()
+				TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+			end
+		end
+	end
+	return b, setLit, setPressed, setCooldown
+end
+
+-- ── mobile controls ──────────────────────────────────────────────────────────
+-- (kept for callers: a phone button, now in the Rivals style)
+local function touchButton(parent, name: string, pos: UDim2, d: number, _color: Color3, iconName: string, _label: string)
+	local b, setLit, setPressed, setCooldown = actionButton(parent, name, pos, d, iconName)
+	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or name == "JumpButton" and "Jump" or "Moves")
+	return b, setLit, setPressed, setCooldown
 end
 
 -- Hides Roblox's built-in mobile jump button; ours replaces it.
@@ -396,7 +464,9 @@ local function buildMobile(parent)
 
 	-- FIRE tracks the exact touch, so sliding a finger off the button still
 	-- stops firing when it lifts.
-	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -70, 1, -100), 92, Theme.Color.Danger, "Reticle", "FIRE")
+	-- Rivals-style thumb arc: a big FIRE where the right thumb rests, JUMP to
+	-- its left, POUNCE and DASH arcing above it, RUN a small toggle.
+	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -82, 1, -104), 104, Theme.Color.Danger, "Reticle", "FIRE")
 	local fireInput: InputObject? = nil
 	fire.InputBegan:Connect(function(input)
 		if isPress(input) and not fireInput then
@@ -413,7 +483,7 @@ local function buildMobile(parent)
 		end
 	end)
 
-	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -182, 1, -54), 66, Theme.Color.Accent, "JumpArrow", "JUMP")
+	local jump, _, jumpPressed = touchButton(parent, "JumpButton", UDim2.new(1, -196, 1, -64), 78, Theme.Color.Accent, "JumpArrow", "JUMP")
 	jump.InputBegan:Connect(function(input)
 		if isPress(input) then
 			jumpPressed(true)
@@ -428,7 +498,7 @@ local function buildMobile(parent)
 		end
 	end)
 
-	local dash, dashLit, dashPressed = touchButton(parent, "DashButton", UDim2.new(1, -66, 1, -212), 58, Color3.fromRGB(120, 220, 255), "Bolt", "DASH")
+	local dash, dashLit, dashPressed, dashCool = touchButton(parent, "DashButton", UDim2.new(1, -70, 1, -222), 64, Color3.fromRGB(120, 220, 255), "Bolt", "DASH")
 	dash.InputBegan:Connect(function(input)
 		if isPress(input) then
 			dashPressed(true)
@@ -438,13 +508,9 @@ local function buildMobile(parent)
 	dash.InputEnded:Connect(function(input)
 		if isPress(input) then dashPressed(false) end
 	end)
-	local dashTimer = UIUtil.label({
-		Parent = dash, Text = "", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, ZIndex = 5,
-	})
-	refs.dashButton = { lit = dashLit, timer = dashTimer, button = dash }
+	refs.dashButton = { lit = dashLit, cool = dashCool, button = dash }
 
-	local pounce, pounceLit, pouncePressed = touchButton(parent, "PounceButton", UDim2.new(1, -182, 1, -166), 58, Color3.fromRGB(255, 200, 110), "JumpArrow", "POUNCE")
+	local pounce, pounceLit, pouncePressed, pounceCool = touchButton(parent, "PounceButton", UDim2.new(1, -174, 1, -182), 64, Color3.fromRGB(255, 200, 110), "Paw", "POUNCE")
 	pounce.InputBegan:Connect(function(input)
 		if isPress(input) then
 			pouncePressed(true)
@@ -454,13 +520,9 @@ local function buildMobile(parent)
 	pounce.InputEnded:Connect(function(input)
 		if isPress(input) then pouncePressed(false) end
 	end)
-	local pounceTimer = UIUtil.label({
-		Parent = pounce, Text = "", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center,
-		Size = UDim2.fromScale(1, 1), TextStrokeTransparency = 0.3, ZIndex = 5,
-	})
-	refs.pounceButton = { lit = pounceLit, timer = pounceTimer }
+	refs.pounceButton = { lit = pounceLit, cool = pounceCool }
 
-	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -66, 1, -298), 58, Theme.Color.Warn, "Dash", "RUN")
+	local run, runLit, runPressed = touchButton(parent, "RunButton", UDim2.new(1, -256, 1, -150), 52, Theme.Color.Warn, "Dash", "RUN")
 	run.InputBegan:Connect(function(input)
 		if isPress(input) then
 			runPressed(true)
@@ -866,51 +928,43 @@ local function buildTopBar(parent)
 	end)
 end
 
--- ── PC dash chip (mobile has its own button) ─────────────────────────────────
+-- ── PC: Rivals-style icon tiles with their keys (phones have the thumb arc) ───
 local function buildDashChip(parent)
 	if isMobile() then return end
-	local chip = UIUtil.make("Frame", {
-		Parent = parent, AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(0.5, -110, 1, -10),
-		Size = UDim2.fromOffset(62, 28), BackgroundColor3 = Theme.Color.PanelDark, BackgroundTransparency = 0.15, BorderSizePixel = 0,
-	})
-	chip:SetAttribute("HudPart", "Keys") -- (the clones below keep it)
-	UIUtil.corner(UDim.new(1, 0), chip)
-	UIUtil.stroke(Theme.Color.Stroke, 1.5, chip)
-	local key = UIUtil.label({
-		Parent = chip, Name = "Key", Text = "Q", Font = Theme.Font.Title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Center,
-		Position = UDim2.fromOffset(5, 4), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 0,
-		BackgroundColor3 = Color3.fromRGB(120, 220, 255), TextColor3 = Color3.fromRGB(10, 30, 50),
-	})
-	UIUtil.corner(UDim.new(0, 6), key)
-	local label = UIUtil.label({
-		Parent = chip, Name = "Label", Text = "DASH", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim,
-		Position = UDim2.fromOffset(29, 0), Size = UDim2.new(1, -32, 1, 0),
-	})
-	refs.dashChip = { key = key, label = label }
-
-	-- E: pounce, just left of the dash chip.
-	local pchip = chip:Clone()
-	pchip.Position = UDim2.new(0.5, -178, 1, -10)
-	pchip.Size = UDim2.fromOffset(76, 28)
-	pchip.Parent = parent
-	local pkey = pchip:FindFirstChild("Key") :: TextLabel
-	local pl = pchip:FindFirstChild("Label") :: TextLabel
-	pkey.Text = "E"
-
-	-- V: switch first / third person, right of the weapon pill.
-	local vchip = chip:Clone()
-	vchip.AnchorPoint = Vector2.new(0, 1)
-	vchip.Position = UDim2.new(0.5, 110, 1, -10)
-	vchip.Size = UDim2.fromOffset(70, 28)
-	vchip.Parent = parent
-	local vkey = vchip:FindFirstChild("Key") :: TextLabel
-	local vl = vchip:FindFirstChild("Label") :: TextLabel
-	vkey.Text = "V"
-	vkey.BackgroundColor3 = Color3.fromRGB(190, 160, 255)
-	vl.Text = "VIEW"
-	pkey.BackgroundColor3 = Color3.fromRGB(255, 200, 110)
-	pl.Text = "POUNCE"
-	refs.pounceChip = { key = pkey, label = pl }
+	local function tile(name: string, x: number, icon: string, key: string): (TextButton, any, any, any)
+		local b, lit, pressed, cool = actionButton(parent, name, UDim2.new(0.5, x, 1, -12), 54, icon, { square = true, key = key, anchor = Vector2.new(0.5, 1), iconScale = 0.52 })
+		b:SetAttribute("HudPart", "Keys")
+		return b, lit, pressed, cool
+	end
+	local pounce, pLit, pPressed, pCool = tile("PounceTile", -204, "Paw", "E")
+	local dash, dLit, dPressed, dCool = tile("DashTile", -142, "Bolt", "Q")
+	local view = tile("ViewTile", 142, "Reticle", "V")
+	refs.dashChip = { lit = dLit, cool = dCool }
+	refs.pounceChip = { lit = pLit, cool = pCool }
+	-- (clicking them works too)
+	dash.MouseButton1Click:Connect(function()
+		MovementController.Dash()
+	end)
+	pounce.MouseButton1Click:Connect(function()
+		MovementController.Pounce()
+	end)
+	view.MouseButton1Click:Connect(function()
+		CameraController.ToggleView()
+	end)
+	-- the tiles squish when their key is pressed
+	local KEYS = { [Enum.KeyCode.Q] = dPressed, [Enum.KeyCode.E] = pPressed }
+	UserInputService.InputBegan:Connect(function(input, processed)
+		local f = not processed and KEYS[input.KeyCode]
+		if f then
+			f(true)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		local f = KEYS[input.KeyCode]
+		if f then
+			f(false)
+		end
+	end)
 end
 
 -- ── Mayhem Mode: pulsing red glow around the screen edge ─────────────────────
@@ -1165,23 +1219,15 @@ end
 local function updateDash()
 	local cd = MovementController.DashCooldown()
 	local ready = cd <= 0
-	if refs.dashButton then
-		refs.dashButton.lit(ready)
-		refs.dashButton.timer.Text = ready and "" or string.format("%.1f", cd)
-	end
-	if refs.dashChip then
-		refs.dashChip.key.BackgroundTransparency = ready and 0 or 0.7
-		refs.dashChip.label.Text = ready and "DASH" or string.format("%.1f", cd)
-	end
 	local pcd = MovementController.PounceCooldown()
 	local pready = pcd <= 0
-	if refs.pounceButton then
-		refs.pounceButton.lit(pready)
-		refs.pounceButton.timer.Text = pready and "" or string.format("%.1f", pcd)
-	end
-	if refs.pounceChip then
-		refs.pounceChip.key.BackgroundTransparency = pready and 0 or 0.7
-		refs.pounceChip.label.Text = pready and "POUNCE" or string.format("%.1f", pcd)
+	-- (phones have the buttons, PCs the tiles: either may be missing)
+	for _, pair in ipairs({ { refs.dashButton, ready, cd }, { refs.dashChip, ready, cd }, { refs.pounceButton, pready, pcd }, { refs.pounceChip, pready, pcd } }) do
+		local r = pair[1]
+		if r then
+			r.lit(pair[2])
+			r.cool(pair[3])
+		end
 	end
 end
 
