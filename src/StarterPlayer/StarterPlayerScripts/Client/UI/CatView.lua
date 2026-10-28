@@ -1,5 +1,5 @@
 --!strict
--- CatView: renders the real in-game cat (CatBuilder) inside a ViewportFrame,
+-- catview: renders the real in-game cat (catbuilder) inside a viewportframe,
 -- framed full-body, as a head-and-shoulders portrait, or from behind (for
 -- back accessories).
 
@@ -27,8 +27,8 @@ function CatView.Create(parent: Instance, size: UDim2, position: UDim2): Viewpor
 	return vf
 end
 
--- Joints only move parts inside a WorldModel, so the cat lives in one (lets
--- CatAnimator pose previews too).
+-- joints only move parts inside a worldmodel, so the cat lives in one (lets
+-- catanimator pose previews too).
 local function world(vf: ViewportFrame): WorldModel
 	local w = vf:FindFirstChildOfClass("WorldModel")
 	if not w then
@@ -45,7 +45,7 @@ function CatView.SetYaw(vf: ViewportFrame, yaw: number)
 	end
 end
 
--- `custom` is a Loadout.Cat-style table: { Fur, Outfit, Hat, Accessory }.
+-- `custom` is a loadout.cat-style table: { fur, outfit, hat, accessory }.
 function CatView.Set(vf: ViewportFrame, custom: any, framing: string)
 	local w = world(vf)
 	w:ClearAllChildren()
@@ -67,7 +67,7 @@ function CatView.Set(vf: ViewportFrame, custom: any, framing: string)
 	local cam = Instance.new("Camera")
 	cam.FieldOfView = 30
 	local dist = (f.span / 2) / math.tan(math.rad(15))
-	-- The cat faces -Z, so the camera sits on that side looking back at it.
+	-- the cat faces -z, so the camera sits on that side looking back at it.
 	cam.CFrame = CFrame.lookAt(f.target + Vector3.new(0, 0.2, -dist), f.target)
 	cam.Parent = vf
 	vf.CurrentCamera = cam

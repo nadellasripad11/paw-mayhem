@@ -1,5 +1,5 @@
-// Renders the blaster and prop models to tools/models/preview_*.png (flat
-// colours, one key light) to check shapes without Studio.
+// renders the blaster and prop models to tools/models/preview_*.png (flat
+// colours, one key light) to check shapes without studio.
 //   node tools/models/preview.js
 const fs = require('fs');
 const path = require('path');
@@ -63,7 +63,7 @@ function render(file, items, W, H, yaw, pitch) {
   console.log(file);
 }
 
-// Guns: two rows of five, side-on with a slight 3/4 turn.
+// guns: two rows of five, side-on with a slight 3/4 turn.
 const items = [];
 Object.entries(GUNS).forEach(([id, g], i) => {
   const pal = DESIGNS.palettes[id];
@@ -77,7 +77,7 @@ Object.entries(GUNS).forEach(([id, g], i) => {
 });
 render('preview_guns.png', items, 1800, 700, 18, -12);
 
-// Props on a grid.
+// props on a grid.
 const PROP_COL = {
   TreeTrunk: [122, 84, 54], TreeCanopyA: [82, 170, 64], TreeCanopyB: [58, 146, 58], PineFoliage: [44, 116, 62], PineSnow: [240, 244, 250], PineTrunk: [100, 66, 44],
   BushA: [82, 170, 64], RockA: [158, 136, 118], RockB: [140, 120, 104], RockC: [120, 104, 96], CrateBody: [164, 114, 68], CrateFrame: [104, 68, 42],

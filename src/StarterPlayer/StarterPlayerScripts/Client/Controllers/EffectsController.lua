@@ -1,12 +1,12 @@
 --!strict
--- EffectsController: world + screen VFX driven by server events.
---   PlayEffect(Tracer)  -> neon bolt from muzzle to hit point
---   PlayEffect(Tracers) -> one shot's pellets (other players' shots; your own
---                          are drawn instantly by CombatController)
---   YouWereHit          -> camera shake + red screen flash
---   HitConfirm          -> hitmarker callback (HUD draws it)
---   PowerUpTaken/Spawned -> pickup sparkle
--- Purely cosmetic; no gameplay authority here.
+-- effectscontroller: world + screen vfx driven by server events.
+--   playeffect(tracer)  -> neon bolt from muzzle to hit point
+--   playeffect(tracers) -> one shot's pellets (other players' shots; your own
+--                          are drawn instantly by combatcontroller)
+--   youwerehit          -> camera shake + red screen flash
+--   hitconfirm          -> hitmarker callback (hud draws it)
+--   poweruptaken/spawned -> pickup sparkle
+-- purely cosmetic; no gameplay authority here.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,7 +27,7 @@ local ClientState = require(script.Parent.Parent.ClientState)
 local EffectsController = {}
 local player = Players.LocalPlayer
 
--- Callbacks the HUD can hook.
+-- callbacks the hud can hook.
 EffectsController.OnHitConfirm = nil :: ((data: any) -> ())?
 EffectsController.OnHurt = nil :: ((data: any) -> ())?
 
@@ -85,7 +85,7 @@ local function fxPart(shape: Enum.PartType?, size: Vector3, cf: CFrame, color: C
 	return p
 end
 
--- The cat a shot landed on (its body is within reach of the impact), if any.
+-- the cat a shot landed on (its body is within reach of the impact), if any.
 local function catAt(pos: Vector3): Model?
 	for _, m in ipairs(CollectionService:GetTagged("PawCat")) do
 		local r = m:IsA("Model") and m.PrimaryPart
@@ -96,7 +96,7 @@ local function catAt(pos: Vector3): Model?
 	return nil
 end
 
--- A burst of fur tufts in the struck cat's colour.
+-- a burst of fur tufts in the struck cat's colour.
 local function fluffPuff(pos: Vector3, cat: Model, amount: number)
 	local fur = cat:FindFirstChild("HeadFur", true) or cat:FindFirstChild("Head")
 	local color = fur and fur:IsA("BasePart") and fur.Color or Color3.fromRGB(255, 240, 225)
@@ -120,7 +120,7 @@ local function fluffPuff(pos: Vector3, cat: Model, amount: number)
 	Debris:AddItem(anchor, 1)
 end
 
--- One shot's bolt from `from` to `to`, drawn in its blaster's style.
+-- one shot's bolt from `from` to `to`, drawn in its blaster's style.
 local function drawTracer(from: Vector3, to: Vector3, color: Color3, weaponId: string?)
 	local dist = (to - from).Magnitude
 	if dist < 0.1 then
@@ -130,7 +130,7 @@ local function drawTracer(from: Vector3, to: Vector3, color: Color3, weaponId: s
 	local look = CFrame.lookAt(from, to)
 
 	if style.bubbles then
-		-- A stream of soapy bubbles drifting along the shot.
+		-- a stream of soapy bubbles drifting along the shot.
 		local n = math.clamp(math.floor(dist / 6), 3, 10)
 		for i = 1, n do
 			local pos = from:Lerp(to, i / n)
@@ -144,7 +144,7 @@ local function drawTracer(from: Vector3, to: Vector3, color: Color3, weaponId: s
 			Debris:AddItem(b, style.life + i * 0.03 + 0.05)
 		end
 	else
-		-- A soft glow around a crisp bright core.
+		-- a soft glow around a crisp bright core.
 		if style.glow > 0 then
 			local glow = fxPart(nil, Vector3.new(style.glow, style.glow, dist), look * CFrame.new(0, 0, -dist / 2), color)
 			glow.Transparency = 0.5
@@ -155,7 +155,7 @@ local function drawTracer(from: Vector3, to: Vector3, color: Color3, weaponId: s
 		Debris:AddItem(core, style.life)
 	end
 
-	-- Impact: sparks, a shock ring for heavy hitters, ice shards for frost.
+	-- impact: sparks, a shock ring for heavy hitters, ice shards for frost.
 	for i = 1, style.sparks do
 		local angle = (math.pi * 2 / style.sparks) * i
 		local spark = fxPart(Enum.PartType.Ball, Vector3.one * 0.55, CFrame.new(to), color)
@@ -228,8 +228,8 @@ local function pickupSparkle(pos: Vector3, color: Color3)
 	end
 end
 
--- Floating "+X%" that pops up over the cat you hit, coloured like its
--- knockback % (white -> yellow -> orange -> red). Hits on the same cat in
+-- floating "+x%" that pops up over the cat you hit, coloured like its
+-- knockback % (white -> yellow -> orange -> red). hits on the same cat in
 -- quick succession add into one number instead of flooding the screen.
 type Stack = { anchor: Part, label: TextLabel, scale: UIScale, total: number, at: number, fade: Tween? }
 local stacks: { [string]: Stack } = {}
@@ -290,7 +290,7 @@ local function percentNumber(key: string, pos: Vector3, amount: number, accumula
 	fade:Play()
 end
 
--- The knockout burst where a cat went off the map (or dropped): a white
+-- the knockout burst where a cat went off the map (or dropped): a white
 -- flash, a shock ring in its team colour, a column of light and sparks,
 -- with a boom and a shake if you're close.
 local function ringout(pos: Vector3, color: Color3)
@@ -331,7 +331,7 @@ local function ringout(pos: Vector3, color: Color3)
 	end
 end
 
--- Expanding flash for big pickups (supply crates).
+-- expanding flash for big pickups (supply crates).
 local function burst(pos: Vector3, color: Color3)
 	local ball = Instance.new("Part")
 	ball.Shape = Enum.PartType.Ball
@@ -353,7 +353,7 @@ local function burst(pos: Vector3, color: Color3)
 	pickupSparkle(pos, color)
 end
 
--- Gold coins tumbling down around the camera (Coin Rain purchase).
+-- gold coins tumbling down around the camera (coin rain purchase).
 local function coinRain()
 	local cam = workspace.CurrentCamera.CFrame.Position
 	for i = 1, 45 do
@@ -382,7 +382,7 @@ local function coinRain()
 	end
 end
 
--- Multi-coloured confetti burst (Trail Pack eliminations).
+-- multi-coloured confetti burst (trail pack eliminations).
 local function confetti(pos: Vector3)
 	local anchor = Instance.new("Part")
 	anchor.Size = Vector3.one * 0.2
@@ -416,7 +416,7 @@ local function confetti(pos: Vector3)
 	end)
 end
 
--- Draw one shot's bolts (all its pellets) from the muzzle.
+-- draw one shot's bolts (all its pellets) from the muzzle.
 function EffectsController.Tracers(from: Vector3, tos: { Vector3 }, color: Color3, weaponId: string?)
 	for _, to in ipairs(tos) do
 		drawTracer(from, to, color, weaponId)
@@ -450,7 +450,7 @@ function EffectsController.Start()
 	end)
 
 	Remotes.Get("YouWereHit").OnClientEvent:Connect(function(data)
-		-- The more fluff you carry, the harder each hit rocks the screen.
+		-- the more fluff you carry, the harder each hit rocks the screen.
 		local acc = type(data) == "table" and tonumber(data.accumulated) or 0
 		CameraController.AddShake(0.3 + math.min((acc or 0) / 150, 1) * 0.7)
 		if ClientState.Settings.ShowDamage then
@@ -465,7 +465,7 @@ function EffectsController.Start()
 		if type(data) == "table" and typeof(data.position) == "Vector3" and type(data.damage) == "number" then
 			percentNumber(tostring(data.victim or "?"), data.position, data.damage, tonumber(data.accumulated) or 0)
 		end
-		-- Landing a hit on a cat that's about to fly: punch the view in.
+		-- landing a hit on a cat that's about to fly: punch the view in.
 		local acc = type(data) == "table" and tonumber(data.accumulated) or 0
 		if acc and acc >= 90 then
 			CameraController.Punch(3 + math.min((acc - 90) / 30, 1) * 4)

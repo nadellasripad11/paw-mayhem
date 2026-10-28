@@ -1,18 +1,18 @@
 --!strict
--- HUD: in-match heads-up display, kept deliberately minimal:
---   * Small team scores + match timer (top center); in a duel, your side's
+-- hud: in-match heads-up display, kept deliberately minimal:
+--   * small team scores + match timer (top center); in a duel, your side's
 --     knockouts, the clock and theirs
---   * Center crosshair with shot/hit kick
---   * Compact health bar, your knockback % and active power-up (bottom left)
---   * Small weapon + ammo pill (bottom center)
---   * Mobile: FIRE / JUMP / RUN / DASH / POUNCE buttons (bottom right); PC: Q dash + E pounce chips
---   * A small LOADOUT button (top left, or B) to change blasters mid-match
---   * Announcements (supply drops, streaks, events, Mayhem Mode) under the timer
---   * Transient banners: countdown, Get Ready, Eliminated, notices
---   * Kill feed (top right) and a KNOCKOUT! / RING OUT! pop with multi-KOs
--- Roblox's player list, health bar, backpack and mobile jump button are hidden
+--   * center crosshair with shot/hit kick
+--   * compact health bar, your knockback % and active power-up (bottom left)
+--   * small weapon + ammo pill (bottom center)
+--   * mobile: fire / jump / run / dash / pounce buttons (bottom right); pc: q dash + e pounce chips
+--   * a small loadout button (top left, or b) to change blasters mid-match
+--   * announcements (supply drops, streaks, events, mayhem mode) under the timer
+--   * transient banners: countdown, get ready, eliminated, notices
+--   * kill feed (top right) and a knockout! / ring out! pop with multi-kos
+-- roblox's player list, health bar, backpack and mobile jump button are hidden
 -- so they don't duplicate or clutter it.
--- Outside a match it shrinks (HUD.SetMode): the practice range keeps the
+-- outside a match it shrinks (hud.setmode): the practice range keeps the
 -- crosshair and weapon, the rest of the lobby only the movement buttons.
 
 local Players = game:GetService("Players")
@@ -42,7 +42,7 @@ local player = Players.LocalPlayer
 
 local gui: ScreenGui
 local refs: any = {}
-local hudMode = "Match" -- see HUD.SetMode
+local hudMode = "Match" -- see hud.setmode
 local POWERUP_ICON = { RapidFire = "Bolt", MegaKnockback = "Burst", Shield = "Shield", SpeedBoost = "Bolt", MultiShot = "MultiShot", Overdrive = "Sparkle" }
 
 local function isMobile()
@@ -97,7 +97,7 @@ local function buildCrosshair(parent)
 	refs.crosshair = center
 	center:SetAttribute("HudPart", "Aim")
 
-	-- Hitmarker: four angled ticks that flash on a confirmed hit.
+	-- hitmarker: four angled ticks that flash on a confirmed hit.
 	local marker = UIUtil.make("Frame", {
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(44, 44), BackgroundTransparency = 1, Visible = false,
@@ -114,7 +114,7 @@ local function buildCrosshair(parent)
 		table.insert(refs.hitTicks, tick)
 	end
 	refs.hitmarker = marker
-	-- Knockout: a red ring that bursts out from the crosshair.
+	-- knockout: a red ring that bursts out from the crosshair.
 	local ring = UIUtil.make("Frame", {
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromOffset(30, 30), BackgroundTransparency = 1, Visible = false,
@@ -147,7 +147,7 @@ local function showHitmarker()
 	end)
 end
 
--- You knocked someone out: the hit marker goes red and bigger, and a red
+-- you knocked someone out: the hit marker goes red and bigger, and a red
 -- ring bursts out of the crosshair.
 local function showKoMarker()
 	local m, ring = refs.hitmarker, refs.koRing
@@ -176,9 +176,9 @@ local function showKoMarker()
 	end)
 end
 
--- The knockout that won the match or duel: a moment for everyone in it -
+-- the knockout that won the match or duel: a moment for everyone in it -
 -- the colour drains out and comes back, the view punches in, a deep boom,
--- FINAL KNOCKOUT! across the screen.
+-- final knockout! across the screen.
 local function finalKnockout()
 	HUD.ShowBig("FINAL KNOCKOUT!", Theme.Color.Coin, 2.2)
 	local cc = Instance.new("ColorCorrectionEffect")
@@ -236,7 +236,7 @@ local function buildHealth(parent)
 	UIUtil.corner(UDim.new(1, 0), power)
 	local powerIconSlot = UIUtil.make("Frame", { Parent = power, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 })
 
-	-- Your own knockback % (others see it above your head).
+	-- your own knockback % (others see it above your head).
 	local fluff = UIUtil.label({
 		Parent = wrap, Text = "0%", Font = Theme.Font.Title, TextSize = 20,
 		AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 168, 0.5, 0), Size = UDim2.fromOffset(42, 24),
@@ -328,14 +328,14 @@ function HUD.HideBig()
 	if refs.bigText then refs.bigText.Visible = false end
 end
 
--- ── action buttons (phone and PC), Rivals-style ──────────────────────────────
--- A clean dark see-through button with a thin white outline and a big white
--- icon - no text. `square` = a rounded tile (PC) instead of a circle (phone);
--- `key` = the keyboard key in a small corner badge (PC).
--- Returns the button and its controls:
---   setLit(on)        - ready (outline brighter) or not
---   setPressed(on)    - squish while held
---   setCooldown(left) - seconds left (0 = ready): a dark fill drains away as
+-- ── action buttons (phone and pc), rivals-style ──────────────────────────────
+-- a clean dark see-through button with a thin white outline and a big white
+-- icon - no text. `square` = a rounded tile (pc) instead of a circle (phone);
+-- `key` = the keyboard key in a small corner badge (pc).
+-- returns the button and its controls:
+--   setlit(on)        - ready (outline brighter) or not
+--   setpressed(on)    - squish while held
+--   setcooldown(left) - seconds left (0 = ready): a dark fill drains away as
 --                       it recharges, the seconds in the middle, and a ping
 --                       (the outline flashes) the moment it's ready again
 local function actionButton(parent, name: string, pos: UDim2, d: number, iconName: string, opts: { [string]: any }?)
@@ -477,14 +477,14 @@ local function actionButton(parent, name: string, pos: UDim2, d: number, iconNam
 end
 
 -- ── mobile controls ──────────────────────────────────────────────────────────
--- (kept for callers: a phone button, now in the Rivals style)
+-- (kept for callers: a phone button, now in the rivals style)
 local function touchButton(parent, name: string, pos: UDim2, d: number, color: Color3, iconName: string, _label: string)
 	local b, setLit, setPressed, setCooldown = actionButton(parent, name, pos, d, iconName, { accent = color })
 	b:SetAttribute("HudPart", name == "FireButton" and "Aim" or name == "JumpButton" and "Jump" or "Moves")
 	return b, setLit, setPressed, setCooldown
 end
 
--- Hides Roblox's built-in mobile jump button; ours replaces it.
+-- hides roblox's built-in mobile jump button; ours replaces it.
 local function hideDefaultJumpButton()
 	local pg = player:WaitForChild("PlayerGui")
 	local function hook(inst: Instance)
@@ -510,10 +510,10 @@ local function buildMobile(parent)
 		return input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1
 	end
 
-	-- FIRE tracks the exact touch, so sliding a finger off the button still
+	-- fire tracks the exact touch, so sliding a finger off the button still
 	-- stops firing when it lifts.
-	-- Rivals-style thumb arc: a big FIRE where the right thumb rests, JUMP to
-	-- its left, POUNCE and DASH arcing above it, RUN a small toggle.
+	-- rivals-style thumb arc: a big fire where the right thumb rests, jump to
+	-- its left, pounce and dash arcing above it, run a small toggle.
 	local fire, _, firePressed = touchButton(parent, "FireButton", UDim2.new(1, -82, 1, -104), 104, Theme.Color.Danger, "Reticle", "FIRE")
 	local fireInput: InputObject? = nil
 	fire.InputBegan:Connect(function(input)
@@ -586,7 +586,7 @@ local function buildMobile(parent)
 	task.spawn(hideDefaultJumpButton)
 end
 
--- Roblox's own player list / health bar / backpack would clutter the HUD.
+-- roblox's own player list / health bar / backpack would clutter the hud.
 local function hideCoreGui()
 	for _ = 1, 20 do
 		local ok = pcall(function()
@@ -599,7 +599,7 @@ local function hideCoreGui()
 	end
 end
 
--- A score tile comes alive when its number goes up: it punches bigger and
+-- a score tile comes alive when its number goes up: it punches bigger and
 -- settles back, flashes white, the number glows gold for a moment and a
 -- "+1" floats up out of it.
 local function animateScore(label: TextLabel)
@@ -645,7 +645,7 @@ local function animateScore(label: TextLabel)
 	end)
 end
 
--- The bar drops in from the top when it appears.
+-- the bar drops in from the top when it appears.
 local function dropIn(bar: GuiObject)
 	local home = bar.Position
 	bar:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -684,7 +684,7 @@ local function buildScoreBar(parent)
 	animateScore(refs.blueScore)
 	animateScore(refs.redScore)
 	dropIn(bar)
-	-- Mode name under the bar (FFA: left = your KOs, right = the leader's).
+	-- mode name under the bar (ffa: left = your kos, right = the leader's).
 	refs.modeLabel = UIUtil.label({
 		Parent = bar, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Color3.new(1, 1, 1),
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(-40, 32), Size = UDim2.new(1, 80, 0, 14),
@@ -692,7 +692,7 @@ local function buildScoreBar(parent)
 	})
 end
 
--- ── top center (duels): your side's KOs, the clock, theirs ───────────────────
+-- ── top center (duels): your side's kos, the clock, theirs ───────────────────
 local function buildDuelBar(parent)
 	local bar = UIUtil.make("Frame", {
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8),
@@ -725,7 +725,7 @@ local function buildDuelBar(parent)
 	refs.duel = { mineTile = mineTile, mine = mine, clock = clock, theirTile = theirTile, theirs = theirs, sub = sub }
 end
 
--- Duel updates from the server: the score, the clock, and the start / end.
+-- duel updates from the server: the score, the clock, and the start / end.
 local function onDuelState(d: any)
 	local r = refs.duel
 	if not r or typeof(d) ~= "table" then return end
@@ -746,7 +746,7 @@ local function onDuelState(d: any)
 		r.sub.Text = "FIRST TO " .. tostring(d.target) .. "  ·  VS " .. string.upper(table.concat(foes, " & ")) .. (d.withBots and "  ·  NO TROPHIES" or "")
 	end
 	if d.started then
-		-- VS: your side and theirs slide in, VS slams down, then FIGHT!
+		-- vs: your side and theirs slide in, vs slams down, then fight!
 		local function people(list: any): { any }
 			local out = {}
 			if typeof(list) == "table" then
@@ -765,7 +765,7 @@ local function onDuelState(d: any)
 		local teams = typeof(d.teams) == "table" and d.teams or {}
 		require(script.Parent.Parent.Celebrate).Versus(people(teams[mine]), people(teams[theirs]), tostring(d.map or "DUEL"))
 	elseif d.over then
-		-- The final score, then the winner (EndScreen).
+		-- the final score, then the winner (endscreen).
 		local winnerTeam = typeof(d.winner) == "string" and d.winner or nil
 		local foesTeam = mine == "Blue" and "Red" or "Blue"
 		require(script.Parent.EndScreen).Play({
@@ -835,7 +835,7 @@ function HUD.Announce(data: any)
 end
 
 -- ── practice range hint (top centre) ─────────────────────────────────────────
--- Your mouse locks for aiming inside the range, so say why and how to get it back.
+-- your mouse locks for aiming inside the range, so say why and how to get it back.
 local function buildRangeHint(parent)
 	local pill = UIUtil.make("Frame", {
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 10),
@@ -855,7 +855,7 @@ local function buildRangeHint(parent)
 end
 
 -- ── loadout button (top left, matches and duels) ─────────────────────────────
--- Set by UIManager: open the Loadout screen over the game.
+-- set by uimanager: open the loadout screen over the game.
 HUD.OnLoadout = nil :: (() -> ())?
 
 local function buildLoadoutButton(parent)
@@ -893,17 +893,17 @@ local function buildLoadoutButton(parent)
 end
 
 -- ── abilities: three buttons in the middle above the weapon ─────────────────
--- Boost / Jumps / Fly, each recharging in 15 s: the dark shade drains away
--- as it recharges, a glow while it's running. Click or tap (or Z / X / C).
+-- boost / jumps / fly, each recharging in 15 s: the dark shade drains away
+-- as it recharges, a glow while it's running. click or tap (or z / x / c).
 local ABILITY_LOOK = {
 	Boost = { icon = "Bolt", key = "Z", color = Color3.fromRGB(120, 220, 255) },
 	Jumps = { icon = "JumpArrow", key = "X", color = Color3.fromRGB(255, 214, 90) },
 	Fly = { icon = "Sparkle", key = "C", color = Color3.fromRGB(190, 150, 255) },
 }
 local function buildAbilities(parent)
-	-- Cards like the reference: a round picture, "ABILITY", the name, a
-	-- READY / countdown line, and a bar along the bottom that fills as it
-	-- recharges. Click or tap one (or Z / X / C).
+	-- cards like the reference: a round picture, "ability", the name, a
+	-- ready / countdown line, and a bar along the bottom that fills as it
+	-- recharges. click or tap one (or z / x / c).
 	local NAMES = { Boost = "BOOST", Jumps = "MULTI JUMP", Fly = "FLY" }
 	local CARD_W, CARD_H, GAP = 196, 66, 14
 	local row = UIUtil.make("Frame", {
@@ -962,7 +962,7 @@ local function buildAbilities(parent)
 	end)
 end
 
--- ── top bar in a match: QUESTS on the left, EMOTES and SETTINGS on the right ─
+-- ── top bar in a match: quests on the left, emotes and settings on the right ─
 local function buildTopBar(parent)
 	local inset = UIUtil.topInset()
 	local function pill(name: string, text: string, icon: string, pos: UDim2, anchor: Vector2, onClick: () -> ())
@@ -990,7 +990,7 @@ local function buildTopBar(parent)
 	end)
 end
 
--- ── PC: Rivals-style icon tiles with their keys (phones have the thumb arc) ───
+-- ── pc: rivals-style icon tiles with their keys (phones have the thumb arc) ───
 local function buildDashChip(parent)
 	if isMobile() then return end
 	local function tile(name: string, x: number, icon: string, key: string, accent: Color3): (TextButton, any, any, any)
@@ -1029,7 +1029,7 @@ local function buildDashChip(parent)
 	end)
 end
 
--- ── Mayhem Mode: pulsing red glow around the screen edge ─────────────────────
+-- ── mayhem mode: pulsing red glow around the screen edge ─────────────────────
 local function buildMayhemEdge(parent)
 	local edge = UIUtil.make("Frame", {
 		Parent = parent, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false,
@@ -1100,7 +1100,7 @@ local function addKillRow(data: any)
 		Icons.Place(w and w.Icon or "Gun", slot, 18, w and w.TrailColor or Color3.new(1, 1, 1), w and w.MuzzleColor or nil)
 	end
 	name(tostring(data.victim or "?"), data.victimTeam, 3)
-	-- Keep the feed short: oldest rows drop off.
+	-- keep the feed short: oldest rows drop off.
 	local rows = {}
 	for _, c in ipairs(kf.list:GetChildren()) do
 		if c:IsA("Frame") then
@@ -1126,7 +1126,7 @@ local function addKillRow(data: any)
 	end)
 end
 
--- ── your knockouts: KNOCKOUT! / RING OUT! with multi-KO chains ───────────────
+-- ── your knockouts: knockout! / ring out! with multi-ko chains ───────────────
 local KO_CHAIN = { "", "DOUBLE KO!", "TRIPLE KO!", "QUAD KO!" }
 local koChain, koLastAt = 0, 0
 
@@ -1224,7 +1224,7 @@ local function tipList(): { string }
 	}
 end
 
--- Shows the basics one at a time during a new player's first match, then
+-- shows the basics one at a time during a new player's first match, then
 -- marks the tutorial done.
 function HUD.StartTips()
 	local p = ClientState.Profile
@@ -1312,7 +1312,7 @@ local function updateDash()
 	local ready = cd <= 0
 	local pcd = MovementController.PounceCooldown()
 	local pready = pcd <= 0
-	-- (phones have the buttons, PCs the tiles: either may be missing)
+	-- (phones have the buttons, pcs the tiles: either may be missing)
 	for _, pair in ipairs({ { refs.dashButton, ready, cd }, { refs.dashChip, ready, cd }, { refs.pounceButton, pready, pcd }, { refs.pounceChip, pready, pcd } }) do
 		local r = pair[1]
 		if r then
@@ -1325,7 +1325,7 @@ end
 local function updateWeapon()
 	local profile = ClientState.Profile
 	if not refs.weaponName then return end
-	-- A supply-drop blaster (on the character) shows instead of the loadout.
+	-- a supply-drop blaster (on the character) shows instead of the loadout.
 	local char = player.Character
 	local override = char and char:GetAttribute("WeaponOverride")
 	local life = char and char:GetAttribute("Weapon")
@@ -1338,13 +1338,13 @@ local function updateWeapon()
 	end
 end
 
--- Which parts each place shows: the whole HUD in a match, the crosshair and
+-- which parts each place shows: the whole hud in a match, the crosshair and
 -- weapon at the practice range, only the movement buttons elsewhere in the lobby.
 local PARTS = {
 	Match = { Score = true, Aim = true, Health = true, Weapon = true, Moves = true, Jump = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
 	Duel = { Duel = true, Aim = true, Health = true, Weapon = true, Moves = true, Jump = true, Keys = true, Feed = true, Loadout = true, Abilities = true, TopBar = true },
 	Range = { Aim = true, Weapon = true, Moves = true, Jump = true, Abilities = true },
-	-- In the lobby menu only JUMP stays (run / dash / pounce come back in a
+	-- in the lobby menu only jump stays (run / dash / pounce come back in a
 	-- match, a duel and the range).
 	Lobby = { Jump = true },
 }
@@ -1422,7 +1422,7 @@ function HUD.Build()
 		HUD.ShowBig("ELIMINATED", Theme.Color.Danger, 2)
 	end)
 	Remotes.Get("Notify").OnClientEvent:Connect(function(data)
-		-- (In the lobby the menu's toast shows notices.)
+		-- (in the lobby the menu's toast shows notices.)
 		if hudMode == "Match" or hudMode == "Duel" then
 			HUD.ShowElim(data.text or "")
 		end

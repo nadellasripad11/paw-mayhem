@@ -1,51 +1,51 @@
 #!/usr/bin/env node
-// Scans every `X.Property = value` and `{ Property = value, ... }` table-prop
-// pattern in the client UI code and flags any property name that is NOT a
-// real Roblox GuiObject/Instance property. Catches typos my eyes keep
-// sliding past (e.g. a misspelled property) that a Lua syntax checker can't.
+// scans every `x.property = value` and `{ property = value, ... }` table-prop
+// pattern in the client ui code and flags any property name that is not a
+// real roblox guiobject/instance property. catches typos my eyes keep
+// sliding past (e.g. a misspelled property) that a lua syntax checker can't.
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..", "src", "StarterPlayer", "StarterPlayerScripts", "Client", "UI");
 
-// Known-valid properties across every ClassName used anywhere in this UI
-// codebase (Frame, TextLabel, TextButton, ScrollingFrame, UICorner, UIStroke,
-// UIGradient, UIPadding, UIListLayout, UIGridLayout, ImageLabel, ScreenGui).
+// known-valid properties across every classname used anywhere in this ui
+// codebase (frame, textlabel, textbutton, scrollingframe, uicorner, uistroke,
+// uigradient, uipadding, uilistlayout, uigridlayout, imagelabel, screengui).
 const VALID_PROPS = new Set([
-  // GuiObject base (shared by Frame/TextLabel/TextButton/ScrollingFrame)
+  // guiobject base (shared by frame/textlabel/textbutton/scrollingframe)
   "Name", "Parent", "Size", "Position", "AnchorPoint", "Rotation", "Visible",
   "BackgroundColor3", "BackgroundTransparency", "BorderColor3", "BorderSizePixel",
   "BorderMode", "ZIndex", "LayoutOrder", "ClipsDescendants", "Active", "Selectable",
   "AutomaticSize", "SizeConstraint",
-  // TextLabel/TextButton specific
+  // textlabel/textbutton specific
   "Text", "TextColor3", "TextSize", "TextTransparency", "Font", "TextWrapped",
   "TextXAlignment", "TextYAlignment", "TextTruncate", "TextStrokeTransparency",
   "TextStrokeColor3", "RichText", "TextScaled",
-  // TextButton specific
+  // textbutton specific
   "AutoButtonColor", "Modal",
-  // ScrollingFrame specific
+  // scrollingframe specific
   "ScrollBarThickness", "CanvasSize", "AutomaticCanvasSize", "ScrollBarImageColor3",
   "ScrollingDirection", "ScrollBarImageTransparency", "ElasticBehavior",
-  // ScreenGui
+  // screengui
   "IgnoreGuiInset", "ResetOnSpawn", "DisplayOrder", "Enabled",
-  // Shape-ish on Frame (not real, only Part has Shape) -- excluded intentionally
-  // UICorner
+  // shape-ish on frame (not real, only part has shape) -- excluded intentionally
+  // uicorner
   "CornerRadius",
-  // UIStroke
+  // uistroke
   "Color", "Thickness", "ApplyStrokeMode", "Transparency", "LineJoinMode",
-  // UIGradient
+  // uigradient
   "Rotation", "Offset", "Enabled",
-  // UIPadding
+  // uipadding
   "PaddingTop", "PaddingBottom", "PaddingLeft", "PaddingRight",
-  // UIListLayout / UIGridLayout
+  // uilistlayout / uigridlayout
   "FillDirection", "Padding", "SortOrder", "HorizontalAlignment", "VerticalAlignment",
   "CellSize", "CellPadding", "StartCorner", "FillDirectionMaxCells",
-  // ImageLabel (unused currently but harmless to allow)
+  // imagelabel (unused currently but harmless to allow)
   "Image", "ImageColor3", "ImageTransparency", "ScaleType",
 ]);
 
-// These identifiers are never property assignments even though they match the
-// `Word.Word = ` shape — skip them.
+// these identifiers are never property assignments even though they match the
+// `word.word = ` shape — skip them.
 const SKIP_LHS_ROOTS = new Set([
   "opts", "state", "self", "cfg", "config", "data", "props", "item", "cat",
   "entry", "profile", "t", "s", "q", "p", "w", "layer", "spec", "board",
@@ -57,14 +57,14 @@ function scanFile(file) {
   const findings = [];
 
   lines.forEach((line, i) => {
-    // Pattern A: table constructor field `PropName = ` inside { ... }
-    // Pattern B: direct assignment `var.PropName = `
+    // pattern a: table constructor field `propname = ` inside { ... }
+    // pattern b: direct assignment `var.propname = `
     const assignRe = /\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Z][A-Za-z0-9_]*)\s*=(?!=)/g;
     let m;
     while ((m = assignRe.exec(line))) {
       const [, lhsRoot, prop] = m;
       if (SKIP_LHS_ROOTS.has(lhsRoot)) continue;
-      if (prop === "Root") continue; // custom module fields like Loadout.Root
+      if (prop === "Root") continue; // custom module fields like loadout.root
       if (!VALID_PROPS.has(prop)) {
         findings.push({ line: i + 1, text: line.trim(), prop, lhsRoot });
       }

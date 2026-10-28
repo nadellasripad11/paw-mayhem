@@ -1,7 +1,7 @@
 --!strict
--- UIJuice: game-feel for every button in the game, automatically. Buttons
+-- uijuice: game-feel for every button in the game, automatically. buttons
 -- grow a little on hover, squish when pressed and spring back on release.
--- Buttons that already scale themselves (they own a UIScale) or that cover
+-- buttons that already scale themselves (they own a uiscale) or that cover
 -- big areas (full-screen click-catchers) are left alone.
 
 local Players = game:GetService("Players")
@@ -57,12 +57,12 @@ function UIJuice.Start()
 		hook(d)
 	end
 	gui.DescendantAdded:Connect(function(d)
-		-- Let the builder finish (it may add its own UIScale) before deciding.
+		-- let the builder finish (it may add its own uiscale) before deciding.
 		task.defer(hook, d)
 	end)
 end
 
--- Slide + fade a freshly opened screen into place.
+-- slide + fade a freshly opened screen into place.
 function UIJuice.Enter(frame: GuiObject)
 	local target = UDim2.new() -- screens sit at the content origin
 	frame.Position = target + UDim2.fromOffset(0, 28)

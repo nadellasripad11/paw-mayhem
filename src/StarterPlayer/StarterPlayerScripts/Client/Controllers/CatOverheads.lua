@@ -1,10 +1,10 @@
 --!strict
--- CatOverheads: floating info above every other cat in the arena.
+-- catoverheads: floating info above every other cat in the arena.
 --   * its name: red for enemies, blue for teammates, white in the lobby
---   * knockback % (the server's "Fluff" attribute): white at 0, heating up to
+--   * knockback % (the server's "fluff" attribute): white at 0, heating up to
 --     yellow, orange and red as the cat gets closer to flying off the map
---   * ON FIRE ×N with its bounty, plus a fire aura, while on a kill streak
--- Your own % is shown in the HUD instead.
+--   * on fire ×n with its bounty, plus a fire aura, while on a kill streak
+-- your own % is shown in the hud instead.
 
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
@@ -23,8 +23,8 @@ local ENEMY = Color3.fromRGB(255, 82, 92)
 local ALLY = Color3.fromRGB(110, 190, 255)
 local NEUTRAL = Color3.fromRGB(255, 255, 255)
 
--- Is this cat someone you're fighting? (Lobby cats and practice targets aren't
--- enemies; Free For All matches make everyone one.)
+-- is this cat someone you're fighting? (lobby cats and practice targets aren't
+-- enemies; free for all matches make everyone one.)
 local function relation(model: Model): Color3
 	local mine = player.Character and player.Character:GetAttribute("Team")
 	local theirs = model:GetAttribute("Team")
@@ -38,7 +38,7 @@ local function relation(model: Model): Color3
 	return theirs == mine and ALLY or ENEMY
 end
 
--- The name a cat goes by: the player's display name, or a bot's own name.
+-- the name a cat goes by: the player's display name, or a bot's own name.
 local function nameOf(model: Model): string
 	local owner = Players:GetPlayerFromCharacter(model)
 	if owner then
@@ -66,7 +66,7 @@ function CatOverheads.FluffColor(fluff: number): Color3
 end
 
 local function attach(model: Model)
-	-- Skip your own cat and the humanoid-less menu mascot.
+	-- skip your own cat and the humanoid-less menu mascot.
 	if model == player.Character or model.Name == player.Name or not model:IsDescendantOf(Workspace) or model:GetAttribute("NoOverhead") then
 		return
 	end
@@ -84,7 +84,7 @@ local function attach(model: Model)
 	gui.MaxDistance = 150
 	gui.LightInfluence = 0
 	gui.Parent = model
-	-- Hiding in a ball pit: no name tag.
+	-- hiding in a ball pit: no name tag.
 	local function paintHidden()
 		gui.Enabled = model:GetAttribute("Hidden") ~= true
 	end
@@ -172,7 +172,7 @@ local function attach(model: Model)
 		owner:GetAttributeChangedSignal("VIP"):Connect(refresh)
 	end
 	refresh()
-	-- Teams change on respawn and between lobby, match and duel: repaint now and then.
+	-- teams change on respawn and between lobby, match and duel: repaint now and then.
 	task.spawn(function()
 		while gui.Parent do
 			paintName()

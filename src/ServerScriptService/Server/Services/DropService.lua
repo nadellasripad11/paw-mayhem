@@ -1,13 +1,13 @@
 --!strict
--- DropService: sky supply crates and fish snacks during a match.
---   * A crate parachutes onto a random playable island every ~30s (every 8s
---     in Mayhem Mode). A golden light beam and ring mark the landing spot so
+-- dropservice: sky supply crates and fish snacks during a match.
+--   * a crate parachutes onto a random playable island every ~30s (every 8s
+--     in mayhem mode). a golden light beam and ring mark the landing spot so
 --     players race for it; the first cat to reach it gets a random reward: a
---     legendary blaster for the rest of that life, Overdrive, a full heal plus
+--     legendary blaster for the rest of that life, overdrive, a full heal plus
 --     shield, or a bag of coins.
---   * Fish snacks pop up around the map; eating one heals and sheds some
+--   * fish snacks pop up around the map; eating one heals and sheds some
 --     knockback damage.
--- Pickups are checked by distance on the server (reliable, no Touched spam).
+-- pickups are checked by distance on the server (reliable, no touched spam).
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -73,7 +73,7 @@ local function oval(name: string, size: Vector3, cf: CFrame, color: Color3, mate
 	return p
 end
 
--- Flat disc lying on the ground (cylinder axis rolled upright).
+-- flat disc lying on the ground (cylinder axis rolled upright).
 local function disc(name: string, diameter: number, thickness: number, pos: Vector3, color: Color3, parent: Instance): Part
 	local p = newPart(name, Vector3.new(thickness, diameter, diameter), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), color, Enum.Material.Neon, parent)
 	p.Shape = Enum.PartType.Cylinder
@@ -81,7 +81,7 @@ local function disc(name: string, diameter: number, thickness: number, pos: Vect
 	return p
 end
 
--- Weld every other part of `model` to `root` so moving the anchored root
+-- weld every other part of `model` to `root` so moving the anchored root
 -- carries the whole thing.
 local function rig(model: Model, root: BasePart)
 	for _, p in ipairs(model:GetDescendants()) do
@@ -97,7 +97,7 @@ local function rig(model: Model, root: BasePart)
 	end
 end
 
--- A random walkable spot on a playable island, away from team spawns and
+-- a random walkable spot on a playable island, away from team spawns and
 -- never on a roof or prop.
 function DropService.RandomSpot(): Vector3?
 	local zones = {}
@@ -125,7 +125,7 @@ function DropService.RandomSpot(): Vector3?
 	params.RespectCanCollide = true
 	for _ = 1, 24 do
 		local z = zones[rng:NextInteger(1, #zones)]
-		-- A spot well inside the floor (island disc or rooftop box).
+		-- a spot well inside the floor (island disc or rooftop box).
 		local r = FloorShape.Radius(z) * 0.72
 		local a, d = rng:NextNumber(0, math.pi * 2), math.sqrt(rng:NextNumber()) * r
 		local top = FloorShape.Top(z)
@@ -151,10 +151,10 @@ local function announce(title: string, sub: string?, color: Color3?, small: bool
 	Remotes.Get("Announce"):FireAllClients({ title = title, sub = sub, color = color, small = small })
 end
 
--- Where each live fish snack sits (bots go for them when hurt).
+-- where each live fish snack sits (bots go for them when hurt).
 local snackSpots: { [Model]: Vector3 } = {}
 
--- Set by BotService: a bot within `radius` of `pos` eats the snack.
+-- set by botservice: a bot within `radius` of `pos` eats the snack.
 DropService.BotEat = nil :: ((pos: Vector3, radius: number, heal: number, fluffCut: number) -> boolean)?
 
 function DropService.SnackSpots(): { Vector3 }
@@ -167,7 +167,7 @@ function DropService.SnackSpots(): { Vector3 }
 	return out
 end
 
--- Nearest live player (not bot) within reach of `pos`.
+-- nearest live player (not bot) within reach of `pos`.
 local function grabber(pos: Vector3, radius: number): Player?
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
@@ -262,7 +262,7 @@ local function buildCrate(parent: Instance, at: CFrame): (Model, BasePart, Model
 	sparkle.Rate = 12
 	sparkle.Parent = root
 
-	-- Parachute: striped canopy on four lines.
+	-- parachute: striped canopy on four lines.
 	local chute = Instance.new("Model")
 	chute.Name = "Parachute"
 	local canopyCF = at * CFrame.new(0, 7.2, 0)
@@ -291,7 +291,7 @@ local function dropCrate()
 	group.Name = "SupplyDrop"
 	group.Parent = folder()
 
-	-- Landing marker: a tall golden beam and a ring counting down.
+	-- landing marker: a tall golden beam and a ring counting down.
 	local beam = newPart("Beacon", Vector3.new(cfg.DropHeight, 1.6, 1.6), CFrame.new(spot + Vector3.new(0, cfg.DropHeight / 2, 0)) * CFrame.Angles(0, 0, math.rad(90)), GOLD, Enum.Material.Neon, group)
 	beam.Shape = Enum.PartType.Cylinder
 	beam.Transparency = 0.55

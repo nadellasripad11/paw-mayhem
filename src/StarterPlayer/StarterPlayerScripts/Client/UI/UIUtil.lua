@@ -1,6 +1,6 @@
 --!strict
--- UIUtil: small factory helpers so screens stay declarative and consistent.
--- Everything is built in code (no pre-made rbxm assets required).
+-- uiutil: small factory helpers so screens stay declarative and consistent.
+-- everything is built in code (no pre-made rbxm assets required).
 
 local TweenService = game:GetService("TweenService")
 local GuiService = game:GetService("GuiService")
@@ -9,7 +9,7 @@ local Icons = require(script.Parent.Icons)
 
 local UIUtil = {}
 
--- Icons that render in their own natural tones (a miniature "portrait" of the
+-- icons that render in their own natural tones (a miniature "portrait" of the
 -- item) rather than as a flat white glyph — every gun silhouette + the cat
 -- face preview.
 local NATURAL_TONE_ICONS = {
@@ -17,9 +17,9 @@ local NATURAL_TONE_ICONS = {
 	GunCannon = true, GunBubble = true, GunIce = true, GunGolden = true,
 }
 
--- The top inset Roblox reserves for its own topbar (avatar/menu/chat icons).
--- Any full-screen (IgnoreGuiInset = true) GUI must add this to top-anchored
--- content or Roblox's own chrome will render on top of it.
+-- the top inset roblox reserves for its own topbar (avatar/menu/chat icons).
+-- any full-screen (ignoreguiinset = true) gui must add this to top-anchored
+-- content or roblox's own chrome will render on top of it.
 function UIUtil.topInset(): number
 	local ok, inset = pcall(function()
 		return GuiService:GetGuiInset()
@@ -30,7 +30,7 @@ function UIUtil.topInset(): number
 	return 36
 end
 
--- Generic instance factory: UIUtil.make("Frame", {props}, {children})
+-- generic instance factory: uiutil.make("frame", {props}, {children})
 function UIUtil.make(className: string, props: { [string]: any }?, children: { Instance }?): Instance
 	local inst = Instance.new(className)
 	if props then
@@ -98,7 +98,7 @@ function UIUtil.gradient(c1: Color3, c2: Color3, rotation: number?, parent: Inst
 	return g
 end
 
--- A rounded panel with optional stroke.
+-- a rounded panel with optional stroke.
 function UIUtil.panel(props: { [string]: any }?): Frame
 	local f = UIUtil.make("Frame", props) :: Frame
 	f.BackgroundColor3 = (props and props.BackgroundColor3) or Theme.Color.Panel
@@ -120,7 +120,7 @@ function UIUtil.label(props: { [string]: any }?): TextLabel
 	return l
 end
 
--- A clickable button with hover/press feedback. Returns the TextButton.
+-- a clickable button with hover/press feedback. returns the textbutton.
 function UIUtil.button(props: { [string]: any }?, onClick: (() -> ())?): TextButton
 	local b = UIUtil.make("TextButton", props) :: TextButton
 	b.AutoButtonColor = false
@@ -149,7 +149,7 @@ function UIUtil.button(props: { [string]: any }?, onClick: (() -> ())?): TextBut
 	return b
 end
 
--- Horizontal stat bar (0..1). Returns {frame, set(fraction)}.
+-- horizontal stat bar (0..1). returns {frame, set(fraction)}.
 function UIUtil.statBar(parent: Instance, labelText: string, fraction: number, color: Color3?)
 	local row = UIUtil.make("Frame", {
 		Parent = parent,
@@ -210,10 +210,10 @@ function UIUtil.gridLayout(parent: Instance, cell: UDim2, pad: UDim2): UIGridLay
 	return g
 end
 
--- A catalog item card (weapon / skin / cosmetic). opts:
---   { title, subtitle, rarity, cost, owned, equipped, accent, icon, iconAccent }
--- `icon` is a string key into Icons.Registry (e.g. "Gun", "Sparkle", "CatFace").
--- onAction(kind) is called with "equip" or "buy". Returns { frame, refresh }.
+-- a catalog item card (weapon / skin / cosmetic). opts:
+--   { title, subtitle, rarity, cost, owned, equipped, accent, icon, iconaccent }
+-- `icon` is a string key into icons.registry (e.g. "gun", "sparkle", "catface").
+-- onaction(kind) is called with "equip" or "buy". returns { frame, refresh }.
 function UIUtil.itemCard(parent: Instance, opts: any, onAction: (action: string) -> ())
 	local card = UIUtil.panel({
 		Parent = parent,
@@ -231,7 +231,7 @@ function UIUtil.itemCard(parent: Instance, opts: any, onAction: (action: string)
 	UIUtil.corner(Theme.CornerSmall, swatch)
 	UIUtil.gradient(swatchColor:Lerp(Color3.new(1,1,1),0.2), swatchColor:Lerp(Color3.new(0,0,0),0.25), 90, swatch)
 	if opts.icon then
-		-- CatFace / Gun render in their own natural tones (a miniature "portrait"
+		-- catface / gun render in their own natural tones (a miniature "portrait"
 		-- of the item); every other icon reads as a flat white glyph on the
 		-- colored swatch so it stays legible at small sizes.
 		if NATURAL_TONE_ICONS[opts.icon] then
@@ -284,7 +284,7 @@ function UIUtil.itemCard(parent: Instance, opts: any, onAction: (action: string)
 	return { frame = card, refresh = refresh, button = btn }
 end
 
--- Tween helper.
+-- tween helper.
 function UIUtil.tween(inst: Instance, time: number, props: { [string]: any }, style: Enum.EasingStyle?)
 	local ti = TweenInfo.new(time, style or Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local t = TweenService:Create(inst, ti, props)
@@ -292,11 +292,11 @@ function UIUtil.tween(inst: Instance, time: number, props: { [string]: any }, st
 	return t
 end
 
--- ── the clean kit (flat, Rivals-like) ────────────────────────────────────────
--- Everything new is built from these so screens share one look: flat
+-- ── the clean kit (flat, rivals-like) ────────────────────────────────────────
+-- everything new is built from these so screens share one look: flat
 -- surfaces, a hairline outline, one radius scale, the same hover feedback.
 
--- A thin light outline (white at low opacity).
+-- a thin light outline (white at low opacity).
 function UIUtil.hairline(parent: Instance, transparency: number?): UIStroke
 	local s = Instance.new("UIStroke")
 	s.Color = Theme.Color.Line
@@ -307,7 +307,7 @@ function UIUtil.hairline(parent: Instance, transparency: number?): UIStroke
 	return s
 end
 
--- A flat surface: level 1 (screens), 2 (cards, buttons) or 3 (selected).
+-- a flat surface: level 1 (screens), 2 (cards, buttons) or 3 (selected).
 function UIUtil.surface(props: { [string]: any }, level: number?, radius: UDim?): Frame
 	local f = UIUtil.make("Frame", props) :: Frame
 	local lv = level or 2
@@ -318,7 +318,7 @@ function UIUtil.surface(props: { [string]: any }, level: number?, radius: UDim?)
 	return f
 end
 
--- Hover / press feedback for any button: a small scale pop and a brighter
+-- hover / press feedback for any button: a small scale pop and a brighter
 -- outline (if it has one).
 function UIUtil.feedback(b: GuiButton, scaleTo: number?)
 	local sc = b:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
@@ -345,7 +345,7 @@ function UIUtil.feedback(b: GuiButton, scaleTo: number?)
 	end)
 end
 
--- A small dark label that shows under `owner` while the mouse is over it.
+-- a small dark label that shows under `owner` while the mouse is over it.
 function UIUtil.tooltip(owner: GuiObject, text: string)
 	local tip = UIUtil.label({
 		Parent = owner, Name = "Tooltip", Text = text, Font = Theme.Font.Bold, TextSize = Theme.Text.Caption,
@@ -366,8 +366,8 @@ function UIUtil.tooltip(owner: GuiObject, text: string)
 	return tip
 end
 
--- A square icon button (rounded), e.g. the top bar's leaderboard / settings.
--- `draw(slot)` puts the icon in a centred slot. Returns the button.
+-- a square icon button (rounded), e.g. the top bar's leaderboard / settings.
+-- `draw(slot)` puts the icon in a centred slot. returns the button.
 function UIUtil.iconButton(props: { [string]: any }, draw: (Frame) -> (), tip: string?, onClick: (() -> ())?): TextButton
 	local size = props.Size or UDim2.fromOffset(40, 40)
 	local b = UIUtil.make("TextButton", props) :: TextButton
@@ -394,8 +394,8 @@ function UIUtil.iconButton(props: { [string]: any }, draw: (Frame) -> (), tip: s
 	return b
 end
 
--- A solid call-to-action button (green by default) with a darker lip under
--- it for depth. Returns the button and its label.
+-- a solid call-to-action button (green by default) with a darker lip under
+-- it for depth. returns the button and its label.
 function UIUtil.primaryButton(props: { [string]: any }, text: string, onClick: (() -> ())?, color: Color3?, lip: Color3?): (TextButton, TextLabel)
 	local b = UIUtil.make("TextButton", props) :: TextButton
 	b.Text = ""
@@ -403,7 +403,7 @@ function UIUtil.primaryButton(props: { [string]: any }, text: string, onClick: (
 	b.BorderSizePixel = 0
 	b.BackgroundColor3 = color or Theme.Color.PlayGreen
 	UIUtil.corner(props.CornerRadius or Theme.Corner, b)
-	-- (A sibling, not a child: children always draw on top of their parent.)
+	-- (a sibling, not a child: children always draw on top of their parent.)
 	local under = UIUtil.make("Frame", {
 		Parent = b.Parent, Name = b.Name .. "Lip", AnchorPoint = b.AnchorPoint, Position = b.Position + UDim2.fromOffset(0, 4),
 		Size = b.Size, BackgroundColor3 = lip or Theme.Color.PlayGreenDark, BorderSizePixel = 0, ZIndex = b.ZIndex - 1,
@@ -421,7 +421,7 @@ function UIUtil.primaryButton(props: { [string]: any }, text: string, onClick: (
 	return b, label
 end
 
--- A quiet button: a surface with a hairline and text.
+-- a quiet button: a surface with a hairline and text.
 function UIUtil.secondaryButton(props: { [string]: any }, text: string, onClick: (() -> ())?): TextButton
 	local b = UIUtil.make("TextButton", props) :: TextButton
 	b.Text = text
@@ -440,7 +440,7 @@ function UIUtil.secondaryButton(props: { [string]: any }, text: string, onClick:
 	return b
 end
 
--- A vertical rail of tabs. tabs = { { id, label } }; onSelect(id). Returns
+-- a vertical rail of tabs. tabs = { { id, label } }; onselect(id). returns
 -- select(id) so the screen can pick a tab itself.
 function UIUtil.tabRail(parent: Instance, tabs: { { id: string, label: string } }, onSelect: (string) -> ()): (string) -> ()
 	UIUtil.listLayout(parent, Theme.Space.S)
@@ -476,7 +476,7 @@ function UIUtil.tabRail(parent: Instance, tabs: { { id: string, label: string } 
 	return select
 end
 
--- A currency pill: icon, amount, optional "+" on the right. Returns the
+-- a currency pill: icon, amount, optional "+" on the right. returns the
 -- pill, the amount label and the "+" button (if any).
 function UIUtil.currencyPill(props: { [string]: any }, icon: string, iconColor: Color3, withPlus: boolean?): (Frame, TextLabel, TextButton?)
 	local pill = UIUtil.make("Frame", props) :: Frame
@@ -510,7 +510,7 @@ end
 
 
 -- ── restyle: bring older screens onto the clean look ────────────────────────
--- Older screens hard-code their own navy shades, bluish outlines and
+-- older screens hard-code their own navy shades, bluish outlines and
 -- gradients. restyle(root) maps every navy background onto the three surface
 -- levels (by brightness), turns bluish outlines into hairlines, drops navy
 -- gradients and swaps the old cyan highlight for the accent blue - now, for
@@ -579,15 +579,15 @@ function UIUtil.restyle(root: Instance)
 end
 
 -- ── polish: the raised, glossy look for whole screens ───────────────────────
--- Screens build their own buttons and cards; this goes over a screen and
+-- screens build their own buttons and cards; this goes over a screen and
 -- finishes them in one style:
---   * coloured action buttons (BUY, EQUIP, CLAIM, vote...) get a gloss: lighter
+--   * coloured action buttons (buy, equip, claim, vote...) get a gloss: lighter
 --     at the top, a soft shine across the upper half, a darker outline and an
 --     outlined label;
 --   * dark buttons and cards get a gentle top-lit gradient so they read as
 --     raised panels, not flat boxes.
--- Anything with its own gradient, inside a 3D view, or marked NoPolish is
--- left alone. UIUtil.polish(root) also catches cards made later.
+-- anything with its own gradient, inside a 3d view, or marked nopolish is
+-- left alone. uiutil.polish(root) also catches cards made later.
 local function lum(c: Color3): number
 	return 0.3 * c.R + 0.59 * c.G + 0.11 * c.B
 end
@@ -602,7 +602,7 @@ function UIUtil.gloss(b: GuiObject, color: Color3?)
 	end
 	local c = color or b.BackgroundColor3
 	local white, black = Color3.new(1, 1, 1), Color3.new(0, 0, 0)
-	-- (a UIGradient's colours multiply the background: light top, darker foot)
+	-- (a uigradient's colours multiply the background: light top, darker foot)
 	UIUtil.gradient(white, Color3.new(0.78, 0.78, 0.78), 90, b)
 	local shine = Instance.new("Frame")
 	shine.Name = "Shine"

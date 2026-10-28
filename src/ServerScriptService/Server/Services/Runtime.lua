@@ -1,12 +1,12 @@
 --!strict
--- Runtime: shared, mutable per-player combat state for the current match.
--- Kept dependency-free so any service can read/write it without circular
--- requires. Reset each life / match as appropriate.
+-- runtime: shared, mutable per-player combat state for the current match.
+-- kept dependency-free so any service can read/write it without circular
+-- requires. reset each life / match as appropriate.
 
 local Runtime = {}
 
 export type PlayerState = {
-	Team: string?, -- team id ("Blue"/"Red")
+	Team: string?, -- team id ("blue"/"red")
 	Alive: boolean,
 	Accumulated: number, -- fluff damage taken this life (drives knockback)
 	LastAttacker: Player?, -- for ringout kill credit
@@ -23,14 +23,14 @@ export type PlayerState = {
 	WeaponOverride: string?, -- supply-drop weapon held for the rest of this life
 	LifeWeapon: string?, -- the loadout blaster this life spawned with
 	SpawnedAt: number?, -- os.clock() of the last spawn (loadout changes apply at once shortly after)
-	Context: string?, -- where the cat is: "Lobby" | "Match" | "Duel"
-	DuelId: number?, -- which duel (Context "Duel")
+	Context: string?, -- where the cat is: "lobby" | "match" | "duel"
+	DuelId: number?, -- which duel (context "duel")
 	DuelTeam: string?, -- side in that duel
 }
 
 Runtime.States = {} :: { [Player]: PlayerState }
 
--- True during the final-seconds Mayhem Mode (double knockback, drop rain).
+-- true during the final-seconds mayhem mode (double knockback, drop rain).
 Runtime.Mayhem = false
 
 function Runtime.Ensure(player: Player): PlayerState
@@ -60,19 +60,19 @@ function Runtime.Ensure(player: Player): PlayerState
 end
 
 function Runtime.Get(player: Player): PlayerState?
-	-- Current game mode ("TDM" | "FFA" | "KOTH" | "Ringout") and the King of the
--- Hill centre, read by combat + bots.
+	-- current game mode ("tdm" | "ffa" | "koth" | "ringout") and the king of the
+-- hill centre, read by combat + bots.
 Runtime.Mode = "TDM"
 Runtime.HillPos = nil :: Vector3?
 
--- The most recent knockout in the match (MatchService turns it into the
--- FINAL KNOCKOUT moment when it ends the match).
+-- the most recent knockout in the match (matchservice turns it into the
+-- final knockout moment when it ends the match).
 Runtime.LastKO = nil :: { t: number, position: Vector3 }?
 
 return Runtime.States[player]
 end
 
--- Where a player is now (mirrored as the player's "Context" attribute so the
+-- where a player is now (mirrored as the player's "context" attribute so the
 -- client can switch between lobby and match screens).
 function Runtime.SetContext(player: Player, context: string?, duelId: number?, duelTeam: string?)
 	local s = Runtime.Ensure(player)
@@ -82,8 +82,8 @@ function Runtime.SetContext(player: Player, context: string?, duelId: number?, d
 	player:SetAttribute("Context", context)
 end
 
--- Same place and able to hurt each other: same match, or opposite sides of
--- the same duel. Nobody gets hurt in the lobby.
+-- same place and able to hurt each other: same match, or opposite sides of
+-- the same duel. nobody gets hurt in the lobby.
 function Runtime.CanHit(a: Player, b: Player): boolean
 	local sa, sb = Runtime.Get(a), Runtime.Get(b)
 	if not sa or not sb or sa.Context ~= sb.Context then
@@ -99,7 +99,7 @@ function Runtime.Remove(player: Player)
 	Runtime.States[player] = nil
 end
 
--- Reset per-life fields (called on spawn).
+-- reset per-life fields (called on spawn).
 function Runtime.ResetLife(player: Player)
 	local s = Runtime.Ensure(player)
 	s.Accumulated = 0
@@ -111,7 +111,7 @@ function Runtime.ResetLife(player: Player)
 	s.WeaponOverride = nil
 end
 
--- Reset per-match fields.
+-- reset per-match fields.
 function Runtime.ResetMatch(player: Player)
 	local s = Runtime.Ensure(player)
 	s.MatchElims = 0

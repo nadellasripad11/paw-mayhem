@@ -1,18 +1,18 @@
 --!strict
--- CameraController: custom third-person over-the-shoulder camera.
--- Drives a Scriptable camera each frame (so Roblox's default camera yields) and
+-- cameracontroller: custom third-person over-the-shoulder camera.
+-- drives a scriptable camera each frame (so roblox's default camera yields) and
 -- feeds look input from mouse, right-side touch drag, and the gamepad's right
--- stick. Exposes the current aim direction/ray for CombatController.
--- Speed widens the view a little (sprint, dash, getting launched), and on
+-- stick. exposes the current aim direction/ray for combatcontroller.
+-- speed widens the view a little (sprint, dash, getting launched), and on
 -- touch / gamepad your aim eases onto a visible enemy near the crosshair
 -- while you're shooting.
--- First person (V, the setting, or scrolling all the way in) puts the camera
+-- first person (v, the setting, or scrolling all the way in) puts the camera
 -- in the cat's head and hides your own cat; scrolling zooms the third-person
 -- view in and out.
--- Walking round the lobby it runs in "free mouse" mode: the cursor stays free
+-- walking round the lobby it runs in "free mouse" mode: the cursor stays free
 -- for the on-screen buttons, holding right mouse turns the view, and the cat
 -- faces where it walks instead of where you aim.
--- Movement stays on Roblox's default control module, which follows this camera.
+-- movement stays on roblox's default control module, which follows this camera.
 
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
@@ -43,14 +43,14 @@ local shake = 0 -- decaying shake magnitude
 local fovBoost = 0 -- extra field of view from speed
 local assistUntil = 0 -- aim help runs while you've shot recently
 local kick = 0 -- recoil: upward view kick (radians) that settles back
--- Where the crosshair really points: the view before recoil kick and shake
+-- where the crosshair really points: the view before recoil kick and shake
 -- (those only move the picture, never where shots go).
 local aimCF: CFrame? = nil
-local punch = 0 -- big-hit zoom punch (degrees of FOV), settles back
+local punch = 0 -- big-hit zoom punch (degrees of fov), settles back
 local parallax = Vector2.zero
 local camDist = 0
 
--- Distance to the first solid, visible part between two points. Walk-through
+-- distance to the first solid, visible part between two points. walk-through
 -- decoration (trees, lips, planks) and invisible walkway/guard collision are
 -- skipped so they don't yank the camera in as you move past them.
 local function blockerDistance(char: Model, from: Vector3, to: Vector3): number?
@@ -72,7 +72,7 @@ local function blockerDistance(char: Model, from: Vector3, to: Vector3): number?
 	return nil
 end
 
--- Add a camera shake impulse (respects the CameraShake setting).
+-- add a camera shake impulse (respects the camerashake setting).
 function CameraController.AddShake(amount: number)
 	local ClientState = require(script.Parent.Parent.ClientState)
 	if not ClientState.Settings.CameraShake then
@@ -83,7 +83,7 @@ end
 
 local MIN_PITCH, MAX_PITCH = -1.2, 1.2
 
--- A quick zoom-in punch when you land a big hit.
+-- a quick zoom-in punch when you land a big hit.
 function CameraController.Punch(degrees: number)
 	local ClientState = require(script.Parent.Parent.ClientState)
 	if ClientState.Settings.CameraShake then
@@ -91,7 +91,7 @@ function CameraController.Punch(degrees: number)
 	end
 end
 
--- Called for every local shot; `kickDeg` is the recoil kick.
+-- called for every local shot; `kickdeg` is the recoil kick.
 function CameraController.OnShot(kickDeg: number?)
 	assistUntil = os.clock() + 0.35
 	-- (small and quick to settle: the crosshair rides up with it, the shots
@@ -115,7 +115,7 @@ local function isEnemy(model: Model, char: Model): boolean
 	return mine == nil or model:GetAttribute("Team") ~= mine
 end
 
--- Touch / gamepad aim help: while shooting, ease the view toward the visible
+-- touch / gamepad aim help: while shooting, ease the view toward the visible
 -- enemy nearest the crosshair (only within a small circle round it).
 local function aimAssist(dt: number, char: Model)
 	if os.clock() > assistUntil then
@@ -164,8 +164,8 @@ local function firstPerson(): boolean
 	return require(script.Parent.Parent.ClientState).Settings.FirstPerson == true
 end
 
--- Lock the cursor to the centre (aiming) or leave it free (lobby, menus).
--- First person always aims down the middle unless a screen is open.
+-- lock the cursor to the centre (aiming) or leave it free (lobby, menus).
+-- first person always aims down the middle unless a screen is open.
 local function applyMouse()
 	if not enabled or isMobile() or not UserInputService.MouseEnabled then
 		return
@@ -179,10 +179,10 @@ local function applyMouse()
 	end
 end
 
--- A touch that starts on free screen space (not the joystick or a HUD button)
--- becomes the look drag. Only that finger turns the camera, so moving the
--- joystick while holding Fire can't swing the view.
--- Switch between first and third person (saved like any other setting).
+-- a touch that starts on free screen space (not the joystick or a hud button)
+-- becomes the look drag. only that finger turns the camera, so moving the
+-- joystick while holding fire can't swing the view.
+-- switch between first and third person (saved like any other setting).
 local saveQueued = false
 local function setFirstPerson(on: boolean)
 	local ClientState = require(script.Parent.Parent.ClientState)
@@ -228,7 +228,7 @@ local function onInputChanged(input: InputObject, gpe: boolean)
 		return
 	end
 	if input.UserInputType == Enum.UserInputType.MouseWheel and not gpe then
-		-- Scroll to zoom; all the way in is first person, out again is third.
+		-- scroll to zoom; all the way in is first person, out again is third.
 		local d = input.Position.Z
 		if firstPerson() then
 			if d < 0 then
@@ -289,13 +289,13 @@ local function updateGamepad(dt: number)
 	end
 end
 
--- Scripted shot that overrides everything (the knockout replay drives it).
+-- scripted shot that overrides everything (the knockout replay drives it).
 local override: CFrame? = nil
 function CameraController.SetOverride(cf: CFrame?)
 	override = cf
 end
 
--- Countdown flyover: a slow orbit over the arena you're about to drop into.
+-- countdown flyover: a slow orbit over the arena you're about to drop into.
 local flyover = false
 local flyoverAt = 0
 function CameraController.SetFlyover(on: boolean)
@@ -305,7 +305,7 @@ function CameraController.SetFlyover(on: boolean)
 	flyover = on
 end
 
--- End-of-match shot of the winners' podium (overrides everything else).
+-- end-of-match shot of the winners' podium (overrides everything else).
 local showcase: CFrame? = nil
 local showcaseAt = 0
 function CameraController.SetShowcase(cf: CFrame?)
@@ -313,7 +313,7 @@ function CameraController.SetShowcase(cf: CFrame?)
 	showcaseAt = os.clock()
 end
 
--- Kill-cam: orbit whoever eliminated you until you respawn. If they go down
+-- kill-cam: orbit whoever eliminated you until you respawn. if they go down
 -- too, it hops to another living cat.
 local spectating: Model? = nil
 local spectateAt = 0
@@ -332,7 +332,7 @@ local function livingCat(): Model?
 	return nil
 end
 
--- First person: your own cat disappears for you (its blaster stays).
+-- first person: your own cat disappears for you (its blaster stays).
 local hidden: Model? = nil
 local function hideSelf(char: Model, on: boolean)
 	if (hidden == char) == on then
@@ -375,7 +375,7 @@ local function step(dt: number)
 	if showcase then
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.FieldOfView = 55
-		-- Slow push-in toward the stage.
+		-- slow push-in toward the stage.
 		local t = os.clock() - showcaseAt
 		camera.CFrame = showcase * CFrame.new(math.sin(t * 0.4) * 2, 0, -math.min(t * 1.4, 12))
 		return
@@ -417,8 +417,8 @@ local function step(dt: number)
 
 	updateGamepad(dt)
 	aimAssist(dt, char)
-	-- Lobby, third person, cursor free: the view swings round behind the cat
-	-- as you walk (A / D steer, the camera follows), and holding right mouse
+	-- lobby, third person, cursor free: the view swings round behind the cat
+	-- as you walk (a / d steer, the camera follows), and holding right mouse
 	-- still turns it by hand.
 	do
 		local hum = char:FindFirstChildOfClass("Humanoid")
@@ -431,7 +431,7 @@ local function step(dt: number)
 	end
 
 	camera.CameraType = Enum.CameraType.Scriptable
-	-- Speed kick: a little wider when sprinting, more when dashing or launched.
+	-- speed kick: a little wider when sprinting, more when dashing or launched.
 	local v = root.AssemblyLinearVelocity
 	local speed = Vector3.new(v.X, 0, v.Z).Magnitude
 	local walk = GameConfig.Character.WalkSpeed
@@ -444,7 +444,7 @@ local function step(dt: number)
 	local fp = firstPerson()
 	hideSelf(char, fp)
 	if fp then
-		-- In the cat's head, looking where you aim. (From the root, not the head
+		-- in the cat's head, looking where you aim. (from the root, not the head
 		-- part: flips, tumbles and landings move the head and would swing the view.)
 		local eye = root.Position + Vector3.new(0, 1.47, 0)
 		local fpCF = CFrame.new(eye) * rot
@@ -473,7 +473,7 @@ local function step(dt: number)
 	local focus = root.Position + Vector3.new(0, 1.5, 0)
 	local shoulder = GameConfig.Camera.ShoulderOffset
 
-	-- Camera sits behind + offset from the shoulder. It snaps in when a wall
+	-- camera sits behind + offset from the shoulder. it snaps in when a wall
 	-- blocks it and eases back out, so it never pops back and forth.
 	local offset = rot:VectorToWorldSpace(Vector3.new(shoulder.X, shoulder.Y, distance))
 	local want = offset.Magnitude
@@ -492,13 +492,13 @@ local function step(dt: number)
 	local finalCF = CFrame.lookAt(camPos, lookAt)
 	aimCF = finalCF
 
-	-- Recoil kick: tips the view up, then settles back quickly.
+	-- recoil kick: tips the view up, then settles back quickly.
 	if kick > 0.0001 then
 		finalCF = finalCF * CFrame.Angles(kick, 0, 0)
 		kick *= math.exp(-14 * dt)
 	end
 
-	-- Apply decaying shake.
+	-- apply decaying shake.
 	if shake > 0.001 then
 		local s = shake
 		finalCF = finalCF * CFrame.new((math.random() - 0.5) * s * 0.4, (math.random() - 0.5) * s * 0.4, 0)
@@ -507,9 +507,9 @@ local function step(dt: number)
 	end
 	camera.CFrame = finalCF
 
-	-- Face where you aim, shooter-style, so the held blaster points at the
-	-- crosshair (the cat's front is its -Z, same as the camera's look).
-	-- (Walking round the lobby it faces where it walks instead.)
+	-- face where you aim, shooter-style, so the held blaster points at the
+	-- crosshair (the cat's front is its -z, same as the camera's look).
+	-- (walking round the lobby it faces where it walks instead.)
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum and freeMouse and not fp then
 		hum.AutoRotate = true
@@ -522,17 +522,17 @@ local function step(dt: number)
 	end
 end
 
--- Aim direction: the camera look vector (crosshair is centered).
+-- aim direction: the camera look vector (crosshair is centered).
 function CameraController.GetAimRay(): (Vector3, Vector3)
 	local cf = (enabled and aimCF) or camera.CFrame
 	return cf.Position, cf.LookVector
 end
 
--- Aim from the muzzle toward the crosshair world point.
--- The crosshair ray starts level with the muzzle, not at the camera: the
+-- aim from the muzzle toward the crosshair world point.
+-- the crosshair ray starts level with the muzzle, not at the camera: the
 -- camera sits behind the cat, and anything between the two (the floor when
 -- looking down, a ledge, an invisible wall) used to become the target and
--- sent shots sideways or backwards. Invisible parts are looked through.
+-- sent shots sideways or backwards. invisible parts are looked through.
 function CameraController.GetShootDirection(muzzlePos: Vector3): Vector3
 	local origin, dir = CameraController.GetAimRay()
 	local start = origin + dir * math.max(0, (muzzlePos - origin):Dot(dir))
@@ -557,7 +557,7 @@ function CameraController.GetShootDirection(muzzlePos: Vector3): Vector3
 		end
 		table.insert(ignore, hit.Instance)
 	end
-	-- Something right in front of the muzzle: just shoot straight ahead.
+	-- something right in front of the muzzle: just shoot straight ahead.
 	if (target - muzzlePos):Dot(dir) < 3 then
 		return dir
 	end
@@ -591,7 +591,7 @@ function CameraController.SetEnabled(on: boolean)
 	end
 end
 
--- Free mouse (lobby walking, menus open) or aiming (matches, practice range).
+-- free mouse (lobby walking, menus open) or aiming (matches, practice range).
 function CameraController.SetFreeMouse(on: boolean)
 	if freeMouse == on then
 		return
@@ -601,7 +601,7 @@ function CameraController.SetFreeMouse(on: boolean)
 	applyMouse()
 end
 
--- A screen is open over the game: free the cursor even in first person.
+-- a screen is open over the game: free the cursor even in first person.
 function CameraController.SetMenuOpen(on: boolean)
 	if menuOpen == on then
 		return
@@ -633,7 +633,7 @@ function CameraController.Start()
 	UserInputService.InputEnded:Connect(onInputEnded)
 	RunService:BindToRenderStep("PawCamera", Enum.RenderPriority.Camera.Value + 1, step)
 
-	-- Re-assert lock when window regains focus.
+	-- re-assert lock when window regains focus.
 	UserInputService.WindowFocused:Connect(function()
 		applyMouse()
 	end)

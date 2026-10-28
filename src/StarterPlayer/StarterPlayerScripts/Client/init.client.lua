@@ -1,7 +1,7 @@
 --!strict
--- PAW MAYHEM — client bootstrap.
--- Wires the ClientState to server state pushes, starts the controllers, and
--- builds the UI. Runs once per local player.
+-- paw mayhem — client bootstrap.
+-- wires the clientstate to server state pushes, starts the controllers, and
+-- builds the ui. runs once per local player.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,10 +27,10 @@ local MapLife = require(Controllers.MapLife)
 local UIManager = require(script.UI.UIManager)
 
 local function main()
-	-- Subscribe to server state pushes.
+	-- subscribe to server state pushes.
 	local settingsLoaded = false
 	Remotes.Get("ProfileUpdate").OnClientEvent:Connect(function(profile)
-		-- Saved settings are applied once, the first time the profile arrives.
+		-- saved settings are applied once, the first time the profile arrives.
 		if not settingsLoaded and typeof(profile) == "table" then
 			settingsLoaded = true
 			if typeof(profile.Settings) == "table" then
@@ -49,7 +49,7 @@ local function main()
 		ClientState.SetMatch(m)
 	end)
 
-	-- Start controllers.
+	-- start controllers.
 	CameraController.Start()
 	MovementController.Start()
 	CombatController.Start()
@@ -63,7 +63,7 @@ local function main()
 	ReplayController.Start()
 	LobbyLook.Start()
 
-	-- Build UI (also coordinates gameplay enable/disable).
+	-- build ui (also coordinates gameplay enable/disable).
 	UIManager.Start()
 
 	print("[PAW MAYHEM] Client started.")

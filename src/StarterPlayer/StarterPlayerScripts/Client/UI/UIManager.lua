@@ -1,13 +1,13 @@
 --!strict
--- UIManager: builds the screens and switches between them by where your cat
--- is (the player's "Context" attribute) and the match phase:
---   * Lobby: the menu overlay (icons + PLAY) while you walk round with a free
+-- uimanager: builds the screens and switches between them by where your cat
+-- is (the player's "context" attribute) and the match phase:
+--   * lobby: the menu overlay (icons + play) while you walk round with a free
 --     mouse; step into the practice range and you aim and shoot like in a
---     match. Once you're queued, the countdown flies over the arena.
---   * Match: the in-match HUD; at the end your last knockout replays, then
---     the podium and results. Then everyone who played is back in the lobby.
---   * Duel: the match HUD without the team scores.
--- Before your cat first spawns, the menu camera shows the 3D lobby scene.
+--     match. once you're queued, the countdown flies over the arena.
+--   * match: the in-match hud; at the end your last knockout replays, then
+--     the podium and results. then everyone who played is back in the lobby.
+--   * duel: the match hud without the team scores.
+-- before your cat first spawns, the menu camera shows the 3d lobby scene.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -37,16 +37,16 @@ local alive = false
 local transitionFrame: Frame? = nil
 local fallbackGui: ScreenGui? = nil
 
--- The Practice Centre (through the portal behind spawn): a box round the
--- lobby's "Range" point the size of its platform.
+-- the practice centre (through the portal behind spawn): a box round the
+-- lobby's "range" point the size of its platform.
 local RANGE_HALF = 60
--- The countdown flyover stays up until the server has dropped you into the
+-- the countdown flyover stays up until the server has dropped you into the
 -- arena (a few seconds at most), so the lobby doesn't flash in between.
 local flyoverUntil = 0
 
--- A real, clickable launch surface kept outside the large decorative menu.
--- If a future art/card change ever fails during startup, players still get
--- the intended landing -> map choice -> countdown flow instead of a blank UI.
+-- a real, clickable launch surface kept outside the large decorative menu.
+-- if a future art/card change ever fails during startup, players still get
+-- the intended landing -> map choice -> countdown flow instead of a blank ui.
 local function buildFallbackLanding()
 	if fallbackGui then
 		fallbackGui.Enabled = true
@@ -145,9 +145,9 @@ local function inPracticeRange(): boolean
 	return math.abs(d.X) < RANGE_HALF and math.abs(d.Z) < RANGE_HALF and math.abs(d.Y) < 30
 end
 
--- Aim + shoot, or a free mouse: in a match or duel you aim unless a screen
--- (Loadout) is open over it; in the lobby only inside the practice range.
--- Checked a few times a second.
+-- aim + shoot, or a free mouse: in a match or duel you aim unless a screen
+-- (loadout) is open over it; in the lobby only inside the practice range.
+-- checked a few times a second.
 local aiming: boolean? = nil
 local function updateAim(force: boolean?)
 	local ctx = context()
@@ -172,7 +172,7 @@ local function updateAim(force: boolean?)
 	end
 end
 
--- Which screen state we picked last (printed to Output when it changes, so a
+-- which screen state we picked last (printed to output when it changes, so a
 -- wrong screen can be tracked down from the log).
 local lastView = ""
 local function trace(view: string)
@@ -183,7 +183,7 @@ local function trace(view: string)
 	end
 end
 
--- Put the screen in the right state for where the cat is and the phase.
+-- put the screen in the right state for where the cat is and the phase.
 local function refresh()
 	local ctx = context()
 	local phase = ClientState.Match.phase
@@ -200,7 +200,7 @@ local function refresh()
 		end
 		if phase == "Results" and ctx == "Match" then
 			MainMenu.SetVisible(false)
-			return -- the replay and podium have the screen (see onPhase)
+			return -- the replay and podium have the screen (see onphase)
 		end
 		CameraController.SetLobbyView(false)
 		HUD.SetMode(ctx)
@@ -217,7 +217,7 @@ local function refresh()
 		CameraController.SetShowcase(nil)
 		CameraController.SetLobbyView(false)
 		if queuedCountdown() or os.clock() < flyoverUntil then
-			-- Queued and about to drop in: fly over the arena.
+			-- queued and about to drop in: fly over the arena.
 			if queuedCountdown() then
 				flyoverUntil = math.huge
 			end
@@ -239,7 +239,7 @@ local function refresh()
 		CameraController.SetEnabled(true)
 		updateAim(true)
 	else
-		-- Not spawned yet: the menu over the 3D lobby scene.
+		-- not spawned yet: the menu over the 3d lobby scene.
 		trace("menu backdrop (no cat yet)")
 		HUD.SetVisible(false)
 		CameraController.SetEnabled(false)
@@ -254,7 +254,7 @@ end
 local function onCharacter(char)
 	alive = true
 	CameraController.SetSpectate(nil)
-	-- wait a beat for parts (and the Context attribute) to settle
+	-- wait a beat for parts (and the context attribute) to settle
 	task.wait(0.2)
 	if char ~= player.Character then
 		return
@@ -267,14 +267,14 @@ local function onCharacter(char)
 	if hum then
 		hum.Died:Connect(function()
 			alive = false
-			-- Stay where you are for the kill-cam (no lobby view while dead).
+			-- stay where you are for the kill-cam (no lobby view while dead).
 			CameraController.SetEnabled(false)
 			CombatController.SetEnabled(false)
 		end)
 	end
 end
 
--- Camera shot of the winners' podium, sent by the server at match end.
+-- camera shot of the winners' podium, sent by the server at match end.
 local podiumShot: CFrame? = nil
 
 local function onPhase(m)
@@ -299,7 +299,7 @@ local function onPhase(m)
 		ReplayController.Clear() -- a fresh match: only this match's knockouts replay
 	end
 	if phase == "Playing" and flyoverUntil == math.huge then
-		-- Dropping in now: hold the flyover until our arena cat arrives.
+		-- dropping in now: hold the flyover until our arena cat arrives.
 		flyoverUntil = os.clock() + 4
 		task.delay(4.1, refresh)
 	elseif phase ~= "Countdown" and phase ~= "Playing" then
@@ -329,7 +329,7 @@ local function onPhase(m)
 			end
 			Results.Show(ClientState.Match)
 		end
-		-- Your last knockout first (if you got one), then the podium.
+		-- your last knockout first (if you got one), then the podium.
 		if ReplayController.HasClip() then
 			CameraController.SetLobbyView(false)
 			ReplayController.Play(showResults)
@@ -343,7 +343,7 @@ end
 
 function UIManager.Start()
 	task.spawn(require(script.Parent.UIJuice).Start)
-	-- Kill-cam: watch whoever eliminated you.
+	-- kill-cam: watch whoever eliminated you.
 	Remotes.Get("Eliminated").OnClientEvent:Connect(function(data)
 		local by = typeof(data) == "table" and data.by or nil
 		local target: Model? = nil
@@ -389,7 +389,7 @@ function UIManager.Start()
 	if not resultsOk then
 		warn("[PAW MAYHEM] Results screen failed to build: " .. tostring(resultsErr))
 	end
-	-- The results screen, the daily calendar and the HUD onto the clean look too.
+	-- the results screen, the daily calendar and the hud onto the clean look too.
 	local playerGui = player:WaitForChild("PlayerGui")
 	for _, name in ipairs({ "PawResults", "PawDaily", "PawHUD" }) do
 		local g = playerGui:FindFirstChild(name)
@@ -397,7 +397,7 @@ function UIManager.Start()
 			UIUtil.restyle(g)
 		end
 	end
-	-- Every screen gets the raised, glossy finish (the in-match HUD only gets
+	-- every screen gets the raised, glossy finish (the in-match hud only gets
 	-- the finish, nothing added; not the cinematic screens).
 	local SKIP_POLISH = { PawEndScreen = true, PawCelebrate = true, PawTutorial = true, PawIntro = true, PawReplay = true }
 	local function polishGui(g: Instance)
@@ -413,7 +413,7 @@ function UIManager.Start()
 	CameraController.SetLobbyView(true)
 
 	ClientState.MatchChanged:Connect(onPhase)
-	-- Mid-match loadout: the Loadout screen over the game.
+	-- mid-match loadout: the loadout screen over the game.
 	HUD.OnLoadout = function()
 		MainMenu.OpenInGame("Loadout")
 	end
@@ -429,7 +429,7 @@ function UIManager.Start()
 		CameraController.SetEnabled(false)
 		CombatController.SetEnabled(false)
 	end)
-	-- Lobby <-> match <-> duel, and joining / leaving the queue.
+	-- lobby <-> match <-> duel, and joining / leaving the queue.
 	player:GetAttributeChangedSignal("Context"):Connect(function()
 		playTransition()
 		refresh()
@@ -445,7 +445,7 @@ function UIManager.Start()
 	-- apply current state on start
 	onPhase(ClientState.Match)
 
-	-- Tells the ReplicatedFirst loading screen the home screen is ready.
+	-- tells the replicatedfirst loading screen the home screen is ready.
 	player:SetAttribute("CattoLobbyReady", true)
 end
 

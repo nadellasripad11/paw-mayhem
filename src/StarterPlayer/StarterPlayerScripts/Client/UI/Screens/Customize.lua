@@ -1,7 +1,7 @@
 --!strict
--- Customize: fur / hat / accessory / outfit / emote. A slim icon rail picks
--- the category, the real 3D cat stands in the middle (drag to spin), and a
--- grid of 3D portrait tiles shows your cat wearing each option.
+-- customize: fur / hat / accessory / outfit / emote. a slim icon rail picks
+-- the category, the real 3d cat stands in the middle (drag to spin), and a
+-- grid of 3d portrait tiles shows your cat wearing each option.
 
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -44,7 +44,7 @@ local previewVF: ViewportFrame
 local previewName: TextLabel
 local railButtons: { [string]: any } = {}
 local tiles: { any } = {}
--- The six emote slots (shown above the grid on the EMOTES tab).
+-- the six emote slots (shown above the grid on the emotes tab).
 local slotBar: Frame? = nil
 local slotViews: { { button: TextButton, icon: Frame, stroke: UIStroke, scale: UIScale } } = {}
 local selectedSlot = 1
@@ -76,7 +76,7 @@ local function framingFor(kind: string, item): string
 	return "Bust"
 end
 
--- Paint the six slots: their emotes, and which one is selected.
+-- paint the six slots: their emotes, and which one is selected.
 local function paintSlots()
 	local slots = ClientActions.EmoteSlots()
 	for i, v in ipairs(slotViews) do
@@ -90,7 +90,7 @@ local function paintSlots()
 	end
 end
 
--- Just added to a slot: the slot pops with a gold flash and "ADDED!" floats
+-- just added to a slot: the slot pops with a gold flash and "added!" floats
 -- up, and the preview cat does the emote.
 local function addedEffect(i: number, id: string)
 	local TweenService = game:GetService("TweenService")
@@ -124,7 +124,7 @@ local function addedEffect(i: number, id: string)
 	end)
 end
 
--- An emote tile was picked: buy it if needed, then put it in the selected
+-- an emote tile was picked: buy it if needed, then put it in the selected
 -- slot (or the first empty one if that's taken).
 local function equipEmote(item)
 	if not ClientState.Owns("Emote", item.Id) and not Monetize.Buy("Emote", item.Id, item) then
@@ -207,7 +207,7 @@ local function buildTile(cat, item, order: number)
 		CatView.Set(vf, custom, framingFor(cat.kind, item))
 	end
 
-	-- Name caption over a dark fade at the bottom.
+	-- name caption over a dark fade at the bottom.
 	local fade = UIUtil.make("Frame", {
 		Parent = tile, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1),
 		Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Color3.fromRGB(6, 12, 26), BorderSizePixel = 0,
@@ -223,7 +223,7 @@ local function buildTile(cat, item, order: number)
 		TextTruncate = Enum.TextTruncate.AtEnd, TextStrokeTransparency = 0.6,
 	})
 
-	-- Equipped check (top left) and price / level pill (top right).
+	-- equipped check (top left) and price / level pill (top right).
 	local check = UIUtil.make("Frame", {
 		Parent = tile, Position = UDim2.fromOffset(6, 6), Size = UDim2.fromOffset(20, 20),
 		BackgroundColor3 = EQUIP_GREEN, BorderSizePixel = 0, Visible = false,
@@ -275,7 +275,7 @@ local function loadCategory(cat)
 		b.glow.Visible = on
 	end
 	gridTitle.Text = cat.kind == "Emote" and "EMOTES  ·  tap a slot, then an emote (up to 6)" or cat.title
-	-- The emote tab shows the six slots above the grid.
+	-- the emote tab shows the six slots above the grid.
 	local bar = slotBar
 	if bar then
 		bar.Visible = cat.kind == "Emote"
@@ -337,7 +337,7 @@ function Customize.Build(parent)
 	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
 	fit()
 
-	-- Category rail --------------------------------------------------------
+	-- category rail --------------------------------------------------------
 	local rail = UIUtil.make("Frame", {
 		Parent = stage, Position = UDim2.fromOffset(12, 12), Size = UDim2.fromOffset(66, H - 24),
 		BackgroundColor3 = Color3.fromRGB(12, 26, 50), BorderSizePixel = 0,
@@ -365,7 +365,7 @@ function Customize.Build(parent)
 		railButtons[cat.kind] = { button = b, stroke = stroke, glow = glow }
 	end
 
-	-- 3D preview -------------------------------------------------------------
+	-- 3d preview -------------------------------------------------------------
 	local holder = UIUtil.make("Frame", { Parent = stage, Position = UDim2.fromOffset(88, 12), Size = UDim2.fromOffset(296, H - 24), BackgroundTransparency = 1 })
 	local spot = UIUtil.make("Frame", {
 		Parent = holder, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(148, 200),
@@ -393,7 +393,7 @@ function Customize.Build(parent)
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 442), Size = UDim2.new(1, 0, 0, 16),
 	})
 
-	-- Drag to spin, with a gentle idle sway.
+	-- drag to spin, with a gentle idle sway.
 	local spin = UIUtil.make("TextButton", { Parent = holder, Text = "", BackgroundTransparency = 1, Size = UDim2.fromOffset(296, 410) }) :: TextButton
 	local userYaw = math.rad(CatView.Framing.Full.yaw)
 	local dragInput: InputObject? = nil
@@ -404,7 +404,7 @@ function Customize.Build(parent)
 			lastX = input.Position.X
 		end
 	end)
-	-- Dragging swings the camera all round the cat (up and down too).
+	-- dragging swings the camera all round the cat (up and down too).
 	require(script.Parent.Parent.Orbit).Enable(spin, previewVF)
 	UserInputService.InputEnded:Connect(function(input)
 		if input == dragInput or (dragInput and input.UserInputType == Enum.UserInputType.MouseButton1) then
@@ -422,7 +422,7 @@ function Customize.Build(parent)
 		CatView.SetYaw(previewVF, userYaw + sway)
 	end)
 
-	-- Grid -------------------------------------------------------------------
+	-- grid -------------------------------------------------------------------
 	gridTitle = UIUtil.label({
 		Parent = stage, Text = "FUR", Font = Theme.Font.Heading, TextSize = 14, TextColor3 = Theme.Color.TextDim,
 		Position = UDim2.fromOffset(398, 16), Size = UDim2.fromOffset(348, 18),
@@ -438,7 +438,7 @@ function Customize.Build(parent)
 	gpad.PaddingBottom = UDim.new(0, 8)
 	gpad.Parent = grid
 	UIUtil.gridLayout(grid, UDim2.fromOffset(TILE, TILE), UDim2.fromOffset(10, 10))
-	-- The six emote slots (EMOTES tab): tap one to choose where the next
+	-- the six emote slots (emotes tab): tap one to choose where the next
 	-- emote goes.
 	local bar = UIUtil.make("Frame", { Parent = stage, Position = UDim2.fromOffset(398, 44), Size = UDim2.fromOffset(352, 66), BackgroundTransparency = 1, Visible = false }) :: Frame
 	UIUtil.listLayout(bar, 6, Enum.FillDirection.Horizontal)

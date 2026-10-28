@@ -1,17 +1,17 @@
-# Paw Mayhem cat — procedural Blender model (v3: furry).
+# paw mayhem cat — procedural blender model (v3: furry).
 #
 #   blender --background --python tools/blender/build_cat.py
 #
-# Builds the cat as separate smooth meshes (each tinted in Roblox with the
+# builds the cat as separate smooth meshes (each tinted in roblox with the
 # player's fur / outfit colours, and still driven by the rig's joints),
 # bakes fur / fabric textures (colour + normal maps) for the big pieces,
-# exports everything to assets/CatMeshes.glb, writes the Lua layout table
-# src/ReplicatedStorage/Shared/Character/CatMeshData.lua and renders preview
+# exports everything to assets/catmeshes.glb, writes the lua layout table
+# src/replicatedstorage/shared/character/catmeshdata.lua and renders preview
 # images to tools/blender/preview_*.png.
 #
-# Every piece is modelled in the local space of the rig part it welds to
-# ("anchor"), in Roblox axes: X right, Y up, -Z = the way the cat faces.
-# R(x, y, z) converts a Roblox position to Blender's Z-up axes.
+# every piece is modelled in the local space of the rig part it welds to
+# ("anchor"), in roblox axes: x right, y up, -z = the way the cat faces.
+# r(x, y, z) converts a roblox position to blender's z-up axes.
 
 import bpy
 import bmesh
@@ -29,7 +29,7 @@ TEX_DIR = os.path.join(ROOT, "tools", "blender", "textures")
 
 random.seed(7)
 
-# Rig layout (Roblox root space) — must match CatBuilder.
+# rig layout (roblox root space) — must match catbuilder.
 HEAD_CENTER = (0, 1.22, 0)
 SHOULDER = (0.68, 0.24, 0)
 HIP = (0.3, -0.78, 0)
@@ -39,7 +39,7 @@ TAIL_POINTS = [  # lower back -> down to the floor -> round beside the foot -> t
 ]
 
 # ── axes ─────────────────────────────────────────────────────────────────────
-C3 = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # Roblox -> Blender
+C3 = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # roblox -> blender
 
 
 def R(x, y, z):
@@ -54,7 +54,7 @@ def rot_r(rx=0.0, ry=0.0, rz=0.0):
     """Roblox CFrame.Angles(rx, ry, rz) (degrees) as a Blender 3x3."""
     def m(axis, a):
         return Matrix.Rotation(math.radians(a), 3, axis)
-    rr = m("X", rx) @ m("Y", ry) @ m("Z", rz)  # in Roblox axes
+    rr = m("X", rx) @ m("Y", ry) @ m("Z", rz)  # in roblox axes
     return C3 @ rr @ C3.inverted()
 
 
@@ -274,7 +274,7 @@ def shape_decal(outline, surf, target, center, offset, thickness):
     return o
 
 
-PIECES = []  # (object, anchor, texture kind or None)
+PIECES = []  # (object, anchor, texture kind or none)
 
 
 def piece(obj, anchor, tex=None):
@@ -282,9 +282,9 @@ def piece(obj, anchor, tex=None):
     return obj
 
 
-# ── HEAD (head-local; head centre = origin) ──────────────────────────────────
+# ── head (head-local; head centre = origin) ──────────────────────────────────
 HR = (0.98, 0.86, 0.84)  # head radii: round, just a little wider than tall
-# The finished head (ears and face included) is shrunk and lowered onto the
+# the finished head (ears and face included) is shrunk and lowered onto the
 # collar at export, after baking (the texture masks use the unscaled shape).
 HEAD_SCALE = 0.82
 HEAD_DROP = 0.07
@@ -295,7 +295,7 @@ def build_head():
     for i in (-1, 1):
         parts.append(ellipsoid((0.48 * i, -0.38, -0.16), (0.42, 0.3, 0.38)))  # full, smooth cheeks (below the eyes)
     head = fuse(parts, "HeadFur", voxel=0.018, smooth=16, tris=9000)
-    # A little tuft of loose strands on top (kept as strands, not fused).
+    # a little tuft of loose strands on top (kept as strands, not fused).
     surf = Surface(head)
     tuft = [head]
     for dx, lean, ln in ((-0.05, -0.35, 0.15), (0.06, 0.3, 0.13)):
@@ -307,7 +307,7 @@ def build_head():
     piece(head, "Head", "fur_head")
     surf = Surface(head)
 
-    # Ears: cupped like real ears (hollowed front), rounded tip, fur outside.
+    # ears: cupped like real ears (hollowed front), rounded tip, fur outside.
     ears = []
     for i in (-1, 1):
         ear = cone_between((0.44 * i, 0.44, 0.08), (0.84 * i, 1.22, 0.12), 0.5, 0.05, verts=48)
@@ -330,7 +330,7 @@ def build_head():
     piece(ears_obj, "Head", "fur_plain")
     esurf = Surface(ears_obj)
 
-    # Pink inside each ear cup + white fur tufts growing out of it.
+    # pink inside each ear cup + white fur tufts growing out of it.
     inner, tufts = [], []
     for i in (-1, 1):
         hit, n = esurf.toward((0.64 * i, 0.9, -2), (0, 0, 1))
@@ -361,7 +361,7 @@ def build_head():
             finish(o, tris)
             piece(o, "Head")
 
-    # Eyes: round, a touch taller than wide; mostly dark with a green glow at
+    # eyes: round, a touch taller than wide; mostly dark with a green glow at
     # the bottom, a big shine upper-left and a small one lower-right.
     EX, EY = 0.43, -0.08
     layers = {"EyeWhite": [], "Iris": [], "IrisGlow": [], "Pupil": [], "Shine": []}
@@ -385,7 +385,7 @@ def build_head():
         brows.append(tube(pts, 0.022, "brow"))
     add("Brows", brows, 1200)
 
-    # White blaze: a stripe from between the ears down the forehead, widening
+    # white blaze: a stripe from between the ears down the forehead, widening
     # into a white muzzle round the nose and mouth, and a little white chin.
     right = [(0.03, 0.8), (0.045, 0.6), (0.065, 0.4), (0.085, 0.2), (0.1, 0.05), (0.11, -0.08), (0.13, -0.17)]
     for deg in (60, 40, 20, 0, -20, -40, -60, -75):
@@ -412,10 +412,10 @@ def build_head():
 
 
 
-# ── BODY (root-local) ─────────────────────────────────────────────────────────
+# ── body (root-local) ─────────────────────────────────────────────────────────
 TORSO_C, TORSO_R = (0, -0.15, 0), (0.66, 0.58, 0.52)
 
-# Hoodie body profile, top to bottom: (y, half-width, half-depth). A garment
+# hoodie body profile, top to bottom: (y, half-width, half-depth). a garment
 # silhouette: rounded shoulders, straight sides, hem flaring a touch.
 JACKET_RINGS = [
     (0.45, 0.29, 0.25), (0.42, 0.42, 0.34), (0.36, 0.56, 0.44), (0.27, 0.65, 0.5),
@@ -522,7 +522,7 @@ def ring_tube(y, radius, lift, skip_front=True, tilt=0.0, name="ring"):
 def build_body():
     piece(fuse([ellipsoid(TORSO_C, TORSO_R)], "Body", voxel=0.02, smooth=0, tris=3000), "Root", ("cloth", (255, 255, 255)))
 
-    # Peach tee underneath, with a soft crew neck.
+    # peach tee underneath, with a soft crew neck.
     shirt = fuse([
         ellipsoid((0, -0.14, 0.03), (0.6, 0.55, 0.44)),
         ellipsoid((0, 0.34, -0.04), (0.29, 0.09, 0.24)),
@@ -530,7 +530,7 @@ def build_body():
     crumple(shirt, 0.012, 0.2, "teefolds")
     piece(shirt, "Root", ("knit", SHIRT))
 
-    # Hoodie: lofted garment shell with drape folds, open down the front.
+    # hoodie: lofted garment shell with drape folds, open down the front.
     shell = lofted_shell(JACKET_RINGS, drape=0.035)
     sub = shell.modifiers.new("sub", "SUBSURF")
     sub.levels = 2
@@ -552,7 +552,7 @@ def build_body():
     so.use_rim = True
     apply_mods(shell)
     parts = [shell]
-    # Thick rounded front edges (so the fabric has visible depth) + hem.
+    # thick rounded front edges (so the fabric has visible depth) + hem.
     for i in (-1, 1):
         pts = []
         for k in range(14):
@@ -563,7 +563,7 @@ def build_body():
             pts.append(R(x * i, y, z))
         parts.append(tube(pts, 0.036, "placket"))
     parts.append(ring_tube(HEM_Y + 0.01, 0.034, 0.028, name="hem"))
-    # Hood: a soft roll round the back of the neck whose ends come round to
+    # hood: a soft roll round the back of the neck whose ends come round to
     # the front, with bunched, creased fabric behind.
     roll = []
     for k in range(11):
@@ -579,7 +579,7 @@ def build_body():
     jsurf = Surface(jacket)
     ssurf = Surface(shirt)
 
-    # Long white drawstrings from the hood's front ends, with metal tips.
+    # long white drawstrings from the hood's front ends, with metal tips.
     strings = []
     for i in (-1, 1):
         pts = []
@@ -593,7 +593,7 @@ def build_body():
     finish(o, 2500)
     piece(o, "Root", ("cord", (246, 246, 250)))
 
-    # Dog tag: a rounded rectangle on a thin chain, resting on the tee.
+    # dog tag: a rounded rectangle on a thin chain, resting on the tee.
     tag = []
     hit, n = ssurf.front(-0.02, 0.02)
     plate = rounded_box((0.15, 0.21, 0.03), 0.05, segments=5, subdiv=0, local=True)
@@ -611,7 +611,7 @@ def build_body():
     finish(o, 1500)
     piece(o, "Root")
 
-    # ── Pocket: a pillowy pouch that curves with the hoodie, piped edges and
+    # ── pocket: a pillowy pouch that curves with the hoodie, piped edges and
     # a thick overhanging flap with a metal snap.
     hardware = []
     hit, n = jsurf.toward((-0.44, -0.46, -2), (0, 0, 1))
@@ -654,7 +654,7 @@ def build_body():
         return g
 
     pocket_parts = [surface_patch(W, H, 0, 0, 0.045, 0.006)]
-    # Raised piping round the pouch
+    # raised piping round the pouch
     rim = []
     for k in range(41):
         a = 2 * math.pi * k / 40
@@ -665,7 +665,7 @@ def build_body():
         wh, _ = jsurf.nearest(wp)
         rim.append((wh if wh is not None else wp) + n * 0.02)
     pocket_parts.append(tube(rim, 0.013, "piping"))
-    # Thick flap overhanging the top of the pocket, soft point at the bottom
+    # thick flap overhanging the top of the pocket, soft point at the bottom
     pocket_parts.append(surface_patch(W + 0.03, 0.11, 0, H / 2 - 0.02, 0.02, 0.05, round_bottom=True))
     snap_at = F @ Vector((0, H / 2 - 0.07, 0)) + hit
     sh, _ = jsurf.nearest(snap_at)
@@ -674,10 +674,10 @@ def build_body():
     finish(o, 3500)
     piece(o, "Root", ("canvas", (214, 140, 80)))
 
-    # ── Messenger bag on the other hip: soft rounded body with piped edges,
-    # a thick flap folded over the top, buckle + tab, D-rings for the strap.
+    # ── messenger bag on the other hip: soft rounded body with piped edges,
+    # a thick flap folded over the top, buckle + tab, d-rings for the strap.
     bw, bh, bd = 0.4, 0.32, 0.17
-    # Hang it on the outside of the hoodie at the left hip: its back rests on
+    # hang it on the outside of the hoodie at the left hip: its back rests on
     # the fabric and it faces out along the surface normal.
     bhit, bn = jsurf.toward((0.52, -0.6, -2), (0, 0, 1))
     bx, by, bz = rb(bn)
@@ -689,7 +689,7 @@ def build_body():
     cast.factor = 0.18
     apply_mods(body)
     bag_parts = [body]
-    # Piping round the front and back faces
+    # piping round the front and back faces
     for face_z in (-bd / 2 + 0.005, bd / 2 - 0.005):
         pts = []
         for k in range(49):
@@ -697,13 +697,13 @@ def build_body():
             u, t = math.cos(a), math.sin(a)
             pts.append(R(math.copysign(abs(u) ** 0.3, u) * (bw / 2 - 0.035), math.copysign(abs(t) ** 0.3, t) * (bh / 2 - 0.035), face_z))
         bag_parts.append(tube(pts, 0.013, "bagpiping"))
-    # Flap: over the top and two thirds down the front, with a rounded edge
+    # flap: over the top and two thirds down the front, with a rounded edge
     top = rounded_box((bw + 0.03, 0.035, bd + 0.03), 0.015, segments=3, subdiv=1)
     top.data.transform(Matrix.Translation(R(0, bh / 2 + 0.005, 0)))
     front = rounded_box((bw + 0.03, bh * 0.66, 0.035), 0.03, segments=4, subdiv=1)
     front.data.transform(Matrix.Translation(R(0, bh / 2 - bh * 0.33 + 0.01, -bd / 2 - 0.022)))
     bag_parts += [top, front]
-    # Leather tab from the flap down through the buckle
+    # leather tab from the flap down through the buckle
     tab = rounded_box((0.07, 0.14, 0.02), 0.012, segments=3, subdiv=0)
     tab.data.transform(Matrix.Translation(R(0, -bh * 0.12, -bd / 2 - 0.05)))
     bag_parts.append(tab)
@@ -711,7 +711,7 @@ def build_body():
     bag.data.transform(BAG_CF)
     finish(bag, 5000)
     piece(bag, "Root", ("leather", (158, 72, 56)))
-    # Buckle frame + D-rings (metal)
+    # buckle frame + d-rings (metal)
     buckle_pts = []
     for k in range(25):
         a = 2 * math.pi * k / 24
@@ -720,7 +720,7 @@ def build_body():
     buckle = tube(buckle_pts, 0.011, "buckle")
     buckle.data.transform(BAG_CF)
     hardware.append(buckle)
-    # D-rings standing up on leather tabs at the bag's top corners, facing
+    # d-rings standing up on leather tabs at the bag's top corners, facing
     # front so you can see the strap loop through them.
     bag_rot = BAG_CF.to_3x3()
     bag_front = (bag_rot @ R(0, 0, -1)).normalized()
@@ -768,8 +768,8 @@ def build_body():
         apply_mods(o)
         return o
 
-    # ── Crossbody strap: lies flat on the hoodie (stretched straight over the
-    # open front), runs down to each D-ring, over its top bar and folds back.
+    # ── crossbody strap: lies flat on the hoodie (stretched straight over the
+    # open front), runs down to each d-ring, over its top bar and folds back.
     proxy = lofted_shell([(y, rx + 0.06, rz + 0.06) for y, rx, rz in JACKET_RINGS])
     psub = proxy.modifiers.new("sub", "SUBSURF")
     psub.levels = 1
@@ -803,7 +803,7 @@ def build_body():
             out.append((p, last_n.lerp(-bag_front, min(1.0, (j + 1) / 2)).normalized()))
         return out
 
-    # One continuous band round the body in a tilted plane: high over the
+    # one continuous band round the body in a tilted plane: high over the
     # right shoulder, low at the left hip where it meets the bag's rings.
     ix, iy, iz = rb(inner_ring)
     ox, oy, oz = rb(outer_ring)
@@ -835,7 +835,7 @@ def build_body():
     path = start + loop + end
     strap = [ribbon([p for p, _ in path], [n for _, n in path])]
     strap += tabs
-    # Buckle slider high on the chest (front part of the loop)
+    # buckle slider high on the chest (front part of the loop)
     front = [(p, n) for p, n in loop if rb(p)[2] < -0.3 and rb(p)[0] < -0.1]
     if len(front) > 3:
         (a, n3), (b, _) = front[len(front) // 2], front[len(front) // 2 + 1]
@@ -856,7 +856,7 @@ def build_body():
     finish(hw, 3000)
     piece(hw, "Root")
 
-    # Shorts seat (mostly hidden under the hoodie hem).
+    # shorts seat (mostly hidden under the hoodie hem).
     seat = [ellipsoid((0, -0.72, 0.02), (0.56, 0.2, 0.44))]
     for i in (-1, 1):
         seat.append(cone_between((0.3 * i, -0.7, 0.0), (0.3 * i, -0.86, 0.0), 0.31, 0.33, verts=40))
@@ -867,9 +867,9 @@ def build_body():
     piece(hips, "Root", ("cloth", (255, 255, 255)))
 
 
-# ── ARM (arm-local: the sleeve's centre is the origin, hanging down) ────────
+# ── arm (arm-local: the sleeve's centre is the origin, hanging down) ────────
 def build_arm():
-    # Sleeve: tapered, rounded shoulder cap, a raised seam where it joins the
+    # sleeve: tapered, rounded shoulder cap, a raised seam where it joins the
     # shoulder and one down the back, and irregular diagonal wrinkles.
     parts = [
         ellipsoid((0, 0.2, 0), (0.235, 0.16, 0.235)),
@@ -898,7 +898,7 @@ def build_arm():
     hs.data.name = "HoodieSleeve"
     piece(hs, "Arm", ("cloth", JACKET))
 
-    # Turned-back cuff: a hollow band (you can see into the sleeve around the
+    # turned-back cuff: a hollow band (you can see into the sleeve around the
     # wrist) with a rolled lip.
     bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=0.232, depth=0.12, end_fill_type="NOTHING")
     band = bpy.context.active_object
@@ -916,7 +916,7 @@ def build_arm():
     top_lip.data.transform(Matrix.Translation(R(0, -0.19, 0)))
     piece(fuse([band, lip, top_lip], "Cuff", voxel=0.009, smooth=2, tris=3000), "Arm", ("cloth", (255, 255, 255)))
 
-    # Paw: a smooth, rounded mitten. The toes are soft lobes sunk almost
+    # paw: a smooth, rounded mitten. the toes are soft lobes sunk almost
     # completely into it, so they only show as gentle scallops (no bumps).
     hand = [ellipsoid((0, -0.43, -0.01), (0.19, 0.2, 0.19))]
     for k in (-1, 0, 1):
@@ -924,9 +924,9 @@ def build_arm():
     piece(fuse(hand, "Hand", voxel=0.01, smooth=12, tris=3000), "Arm", "fur_plain")
 
 
-# ── LEG (leg-local) ───────────────────────────────────────────────────────────
+# ── leg (leg-local) ───────────────────────────────────────────────────────────
 def build_leg():
-    # Chunky, rounded foot: a soft bean with a round heel. The toes are big
+    # chunky, rounded foot: a soft bean with a round heel. the toes are big
     # lobes sunk almost completely in, so the front just has soft scallops.
     parts = [
         ellipsoid((0, 0, 0), (0.28, 0.28, 0.28)),
@@ -936,7 +936,7 @@ def build_leg():
     for k in (-1, 0, 1):
         parts.append(ellipsoid((0.095 * k, -0.265, -0.305), (0.12, 0.12, 0.12)))
     piece(fuse(parts, "Leg", voxel=0.012, smooth=18, tris=4500), "Leg", "fur_plain")
-    # Boxy shorts leg: a wide tube over the thigh with a rolled, turned-up hem.
+    # boxy shorts leg: a wide tube over the thigh with a rolled, turned-up hem.
     bm = bmesh.new()
     rows = []
     rings = [(0.3, 0.315), (0.18, 0.33), (0.06, 0.345), (-0.04, 0.36), (-0.1, 0.365)]
@@ -972,8 +972,8 @@ def build_leg():
     piece(s, "Leg", ("cloth", (255, 255, 255)))
 
 
-# ── TAIL (tail-local: relative to the first tail joint) ──────────────────────
-FLOOR_Y = -1.4  # HipHeight 0.4 under the 2-stud root
+# ── tail (tail-local: relative to the first tail joint) ──────────────────────
+FLOOR_Y = -1.4  # hipheight 0.4 under the 2-stud root
 
 
 def catmull(points, per=8):
@@ -990,8 +990,8 @@ def catmull(points, per=8):
 
 
 def build_tail():
-    # Like the reference: a small fluffy tail that drops from the lower back
-    # to the floor, sweeps round beside the foot and curls its tip up. One
+    # like the reference: a small fluffy tail that drops from the lower back
+    # to the floor, sweeps round beside the foot and curls its tip up. one
     # smooth, plump shape with a rounded end; the fur is in the texture only.
     p0 = Vector(TAIL_POINTS[0])
     ctrl = [R(*(Vector(p) - p0)) for p in TAIL_POINTS]
@@ -1004,7 +1004,7 @@ def build_tail():
         a = min(int(f), len(ctrl_taper) - 2)
         taper.append(ctrl_taper[a] + (ctrl_taper[a + 1] - ctrl_taper[a]) * (f - a))
     TR = 0.145
-    # Parallel-transport frames along the curve.
+    # parallel-transport frames along the curve.
     tangents = [(pts[min(k + 1, len(pts) - 1)] - pts[max(k - 1, 0)]).normalized() for k in range(len(pts))]
     normals = [tangents[0].orthogonal().normalized()]
     for k in range(1, len(pts)):
@@ -1016,8 +1016,8 @@ def build_tail():
     parts.append(ellipsoid(rb(pts[-1]), (TR * 0.66, TR * 0.66, TR * 0.66)))  # soft, rounded fluffy end
     tail = fuse(parts, "Tail", voxel=0.011, smooth=10, tris=5000)
 
-    # Tail coordinates for the fur texture, so the strands run along the tail:
-    # R/G = position round it, B = distance along it (/3).
+    # tail coordinates for the fur texture, so the strands run along the tail:
+    # r/g = position round it, b = distance along it (/3).
     cum = [0.0]
     for k in range(1, len(pts)):
         cum.append(cum[-1] + (pts[k] - pts[k - 1]).length)
@@ -1074,7 +1074,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
     fine.inputs["Detail"].default_value = 4
     L.new(mp.outputs["Vector"], fine.inputs["Vector"])
     if kind == "fur_tail":
-        # Strands running along the tail (coordinates stored per vertex).
+        # strands running along the tail (coordinates stored per vertex).
         tail_uv = N.new("ShaderNodeAttribute")
         tail_uv.attribute_name = "TailUV"
         L.new(tail_uv.outputs["Vector"], mp.inputs["Vector"])
@@ -1083,7 +1083,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         fine.inputs["Scale"].default_value = 2
         strength, dist = 0.32, 0.02
     elif kind.startswith("fur"):
-        # Long thin strands running down the body (object Z = up).
+        # long thin strands running down the body (object z = up).
         mp.inputs["Scale"].default_value = (38, 38, 2.6)
         nz.inputs["Detail"].default_value = 3
         fine.inputs["Scale"].default_value = 2
@@ -1121,10 +1121,10 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
     bsdf = N.new("ShaderNodeBsdfPrincipled")
     L.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
 
-    # Albedo: base * strand variation * ambient occlusion
+    # albedo: base * strand variation * ambient occlusion
     ao = N.new("ShaderNodeAmbientOcclusion")
     cloth = kind in CLOTH_KINDS
-    # Clothes get deeper contact shadows: creases, under the hood and pocket
+    # clothes get deeper contact shadows: creases, under the hood and pocket
     # flap, inside the open front, where the strap sits.
     ao.inputs["Distance"].default_value = 0.3 if cloth else 0.25
     aof = N.new("ShaderNodeMapRange")
@@ -1138,7 +1138,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
     L.new(aof.outputs["Result"], shade.inputs[0])
     L.new(var.outputs["Result"], shade.inputs[1])
     base = N.new("ShaderNodeRGB")
-    # White = tinted with the player's colour in Roblox; otherwise baked in.
+    # white = tinted with the player's colour in roblox; otherwise baked in.
     base.outputs[0].default_value = srgb(base_rgb)
     albedo = N.new("ShaderNodeMix")
     albedo.data_type = "RGBA"
@@ -1151,7 +1151,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
     L.new(comb.outputs["Color"], albedo.inputs[7])
     final = albedo
     if kind == "fur_head":
-        # Big soft tan patch pointing down from the top of the head.
+        # big soft tan patch pointing down from the top of the head.
         sep = N.new("ShaderNodeSeparateXYZ")
         L.new(tc.outputs["Object"], sep.inputs["Vector"])
         ax = N.new("ShaderNodeMath")
@@ -1184,7 +1184,7 @@ def build_bake_material(obj, kind, base_rgb=(255, 255, 255)):
         L.new(mask.outputs["Value"], tan.inputs["Factor"])
         L.new(albedo.outputs[2], tan.inputs[6])
         tan.inputs[7].default_value = (1.0, 1.0, 1.0, 1)  # (tan patch retired: the white blaze replaced it)
-        # Soft pink blush on each cheek, just under the eyes.
+        # soft pink blush on each cheek, just under the eyes.
         dx = N.new("ShaderNodeMath")
         dx.operation = "SUBTRACT"
         dx.inputs[1].default_value = 0.63
@@ -1254,7 +1254,7 @@ def bake(obj, tex):
         img.file_format = "PNG"
         img.save()
         results[label] = img
-    # Final export material: colour map + normal map.
+    # final export material: colour map + normal map.
     fm = bpy.data.materials.new(obj.name)
     fm.use_nodes = True
     fb = fm.node_tree.nodes.get("Principled BSDF")
@@ -1269,7 +1269,7 @@ def bake(obj, tex):
     fb.inputs["Roughness"].default_value = 0.75
     obj.data.materials.clear()
     obj.data.materials.append(fm)
-    # Drop helper vertex colours (texture coordinates) so they are not
+    # drop helper vertex colours (texture coordinates) so they are not
     # applied as colour on import.
     for attr in list(obj.data.color_attributes):
         obj.data.color_attributes.remove(attr)
@@ -1320,7 +1320,7 @@ def export():
 
 # ── preview render (assembled, reference colours) ───────────────────────────
 TINT = {
-    # Preview in orange fur (the default in-game cat), like the reference.
+    # preview in orange fur (the default in-game cat), like the reference.
     "HeadFur": (244, 170, 100), "Ears": (244, 170, 100), "Hand": (244, 170, 100), "Leg": (244, 170, 100), "Tail": (244, 170, 100),
     "Hips": (40, 38, 52), "ShortsLeg": (40, 38, 52), "Cuff": (40, 36, 52), "Sleeve": JACKET, "Body": JACKET,
 }
@@ -1444,28 +1444,28 @@ def preview():
         cam.rotation_quaternion = (target - pos).to_track_quat("-Z", "Y")
         scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_%s.png" % name)
         bpy.ops.render.render(write_still=True)
-    # Close-up of the bag, strap and pocket
+    # close-up of the bag, strap and pocket
     tgt = R(0.35, -0.4, -0.4)
     pos = tgt + R(1.3, 0.5, -3.4)
     cam.location = pos
     cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
     scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_bag.png")
     bpy.ops.render.render(write_still=True)
-    # Close-up of the face
+    # close-up of the face
     tgt = R(0, 1.18, 0)
     pos = tgt + R(0.45, 0.25, -4.6)
     cam.location = pos
     cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
     scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_face.png")
     bpy.ops.render.render(write_still=True)
-    # Close-up of the tail on the floor beside the foot
+    # close-up of the tail on the floor beside the foot
     tgt = R(0.7, -1.05, 0.3)
     pos = tgt + R(2.3, 1.3, -2.1)
     cam.location = pos
     cam.rotation_quaternion = (tgt - pos).to_track_quat("-Z", "Y")
     scene.render.filepath = os.path.join(OUT_PREVIEW, "preview_tail.png")
     bpy.ops.render.render(write_still=True)
-    # Close-up of the paws (hands and feet)
+    # close-up of the paws (hands and feet)
     tgt = R(0, -0.85, -0.3)
     pos = tgt + R(0.9, 0.6, -3.2)
     cam.location = pos

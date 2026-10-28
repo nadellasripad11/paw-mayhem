@@ -1,6 +1,6 @@
 --!strict
--- Signal: minimal, allocation-light signal implementation (Lua-side events).
--- Used where BindableEvents would be overkill.
+-- signal: minimal, allocation-light signal implementation (lua-side events).
+-- used where bindableevents would be overkill.
 
 local Signal = {}
 Signal.__index = Signal

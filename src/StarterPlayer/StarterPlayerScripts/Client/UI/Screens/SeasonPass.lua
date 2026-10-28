@@ -1,8 +1,8 @@
 --!strict
--- SeasonPass: the season track. Header with season name, current tier, an XP
--- bar and the Premium / +5 Tiers Robux buttons; below it a scrolling row of
--- 30 tiers, each with a FREE reward (top) and a gold PREMIUM reward (bottom).
--- Rewards render in 3D (blasters, cats wearing cosmetics, coin / gem props).
+-- seasonpass: the season track. header with season name, current tier, an xp
+-- bar and the premium / +5 tiers robux buttons; below it a scrolling row of
+-- 30 tiers, each with a free reward (top) and a gold premium reward (bottom).
+-- rewards render in 3d (blasters, cats wearing cosmetics, coin / gem props).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -144,7 +144,7 @@ end
 function SeasonPass.Build(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
 
-	-- Header
+	-- header
 	local header = UIUtil.make("Frame", { Parent = root, Size = UDim2.new(1, 0, 0, 96), BackgroundColor3 = CARD, BorderSizePixel = 0 })
 	UIUtil.corner(UDim.new(0, 18), header)
 	UIUtil.gradient(Color3.fromRGB(70, 60, 150), Color3.fromRGB(24, 40, 80), 0, header)
@@ -175,7 +175,7 @@ function SeasonPass.Build(parent)
 		Monetize.PromptProduct("SeasonTiers")
 	end)
 
-	-- Tier track (built the first time the screen opens)
+	-- tier track (built the first time the screen opens)
 	local scroller = UIUtil.make("ScrollingFrame", {
 		Parent = root, Position = UDim2.fromOffset(0, 108), Size = UDim2.new(1, 0, 1, -108), BackgroundTransparency = 1, BorderSizePixel = 0,
 		ScrollBarThickness = 6, ScrollingDirection = Enum.ScrollingDirection.X, CanvasSize = UDim2.fromOffset(Season.Tiers * (COL_W + 12), 0),
@@ -195,7 +195,7 @@ function SeasonPass.Build(parent)
 			rewardCard(cards, t, "Premium", row.Premium)
 		end
 		refresh()
-		-- Start scrolled to the current tier.
+		-- start scrolled to the current tier.
 		local tier = Season.TierFor(season().XP or 0)
 		scroller.CanvasPosition = Vector2.new(math.max(0, (tier - 2) * (COL_W + 12)), 0)
 	end
@@ -215,7 +215,7 @@ function SeasonPass.Build(parent)
 			refresh()
 		end
 	end)
-	-- The header is always live.
+	-- the header is always live.
 	local function header()
 		local s = season()
 		local tier = Season.TierFor(s.XP or 0)

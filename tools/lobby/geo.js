@@ -1,5 +1,5 @@
-// Geometry helpers for the lobby meshes (Roblox axes: Y up, studs).
-// A Mesh is positions / normals / uvs / triangle indices. Every triangle is
+// geometry helpers for the lobby meshes (roblox axes: y up, studs).
+// a mesh is positions / normals / uvs / triangle indices. every triangle is
 // wound to face along its vertex normals, so builders only need the normals
 // right.
 
@@ -70,7 +70,7 @@ class Mesh {
   }
 }
 
-// Box-projected UVs (world studs / tile) from the dominant normal axis.
+// box-projected uvs (world studs / tile) from the dominant normal axis.
 function uvBox(p, n, tile) {
   const ax = Math.abs(n[0]), ay = Math.abs(n[1]), az = Math.abs(n[2]);
   if (ay >= ax && ay >= az) return [p[0] / tile, p[2] / tile];
@@ -78,7 +78,7 @@ function uvBox(p, n, tile) {
   return [p[0] / tile, -p[1] / tile];
 }
 
-// A parametric surface over u, v in [0, 1]; normals from finite differences,
+// a parametric surface over u, v in [0, 1]; normals from finite differences,
 // flipped to agree with hint(p, u, v) (a rough outward direction).
 function grid(f, nu, nv, opts = {}) {
   const m = new Mesh();
@@ -107,9 +107,9 @@ function grid(f, nu, nv, opts = {}) {
   return m;
 }
 
-// Revolve runs of [r, y] points round the Y axis. Each run is smooth inside;
+// revolve runs of [r, y] points round the y axis. each run is smooth inside;
 // runs meet at hard edges. seg = segments round. rmod(theta, r, y) can carve
-// the radius (flutes). UVs: round the axis (seamless) x down the profile.
+// the radius (flutes). uvs: round the axis (seamless) x down the profile.
 function lathe(runs, seg, opts = {}) {
   const out = new Mesh();
   const tile = opts.tile || 4;
@@ -155,7 +155,7 @@ function lathe(runs, seg, opts = {}) {
         const du = V.sub(f(u + e, v), f(u - e, v));
         const dv = V.sub(f(u, Math.min(1, v + e)), f(u, Math.max(0, v - e)));
         let n = V.cross(du, dv);
-        // outward hint from the profile direction (2D normal of the run)
+        // outward hint from the profile direction (2d normal of the run)
         const a = sample(Math.max(0, v - 0.01)), b = sample(Math.min(1, v + 0.01));
         const t2 = [b[0] - a[0], b[1] - a[1]];
         const th = u * Math.PI * 2;
@@ -178,7 +178,7 @@ function lathe(runs, seg, opts = {}) {
   return out;
 }
 
-// A box with rounded edges (radius r, m steps per quarter round), centred on c.
+// a box with rounded edges (radius r, m steps per quarter round), centred on c.
 function roundedBox(size, r, c = [0, 0, 0], m = 3, tile = 4) {
   const half = size.map((s) => s / 2);
   r = Math.min(r, ...half.map((h) => h * 0.999));
@@ -215,7 +215,7 @@ function roundedBox(size, r, c = [0, 0, 0], m = 3, tile = 4) {
   return out;
 }
 
-// Sweep a closed 2D profile (points [a, b] in the curve's normal / binormal
+// sweep a closed 2d profile (points [a, b] in the curve's normal / binormal
 // plane) along curve(t) for t in [0, 1]. up = the binormal reference.
 function sweep(curve, profile, steps, opts = {}) {
   const e = 1e-4;
@@ -248,7 +248,7 @@ function sweep(curve, profile, steps, opts = {}) {
     for (let i = 0; i <= profile.length; i++) {
       const q = profile[i % profile.length];
       const p = V.add(c, V.add(V.mul(N, q[0]), V.mul(B, q[1])));
-      // normal: perpendicular to the profile edge, in the N/B plane
+      // normal: perpendicular to the profile edge, in the n/b plane
       const a = profile[(i - 1 + profile.length) % profile.length], b = profile[(i + 1) % profile.length];
       const d = [b[0] - a[0], b[1] - a[1]];
       let n2 = [d[1], -d[0]];
@@ -265,7 +265,7 @@ function sweep(curve, profile, steps, opts = {}) {
   return out;
 }
 
-// A tube (radius r, n sides) along a curve.
+// a tube (radius r, n sides) along a curve.
 function tube(curve, r, steps, sides = 10, opts = {}) {
   const prof = [];
   for (let i = 0; i < sides; i++) {

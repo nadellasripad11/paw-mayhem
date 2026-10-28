@@ -1,8 +1,8 @@
 --!strict
--- LavaFX: client-side life for the Volcano's lava. The server builds static,
--- tagged parts; here crust plates ("LavaCrust") drift and bob, hot spots
--- ("LavaHot") pulse between orange and yellow, and bubbles swell and pop at
--- "LavaVent" areas near the camera. All of it is local, so nothing replicates.
+-- lavafx: client-side life for the volcano's lava. the server builds static,
+-- tagged parts; here crust plates ("lavacrust") drift and bob, hot spots
+-- ("lavahot") pulse between orange and yellow, and bubbles swell and pop at
+-- "lavavent" areas near the camera. all of it is local, so nothing replicates.
 
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
@@ -75,7 +75,7 @@ local function fxPart(shape: Enum.PartType, size: Vector3, cf: CFrame, color: Co
 end
 
 local function pop(pos: Vector3, d: number)
-	-- Splash ring (flat disc: cylinder axis rolled upright).
+	-- splash ring (flat disc: cylinder axis rolled upright).
 	local ring = fxPart(Enum.PartType.Cylinder, Vector3.new(0.15, d, d), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), HOT_B)
 	ring.Transparency = 0.2
 	local t = TweenService:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(0.15, d * 2.8, d * 2.8), Transparency = 1 })
@@ -83,7 +83,7 @@ local function pop(pos: Vector3, d: number)
 		ring:Destroy()
 	end)
 	t:Play()
-	-- A few spatter blobs thrown up and out.
+	-- a few spatter blobs thrown up and out.
 	for _ = 1, 3 do
 		local blob = fxPart(Enum.PartType.Ball, Vector3.one * rng:NextNumber(0.3, 0.6), CFrame.new(pos), HOT_A:Lerp(HOT_B, rng:NextNumber()))
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -112,7 +112,7 @@ local function bubble(pos: Vector3)
 	grow:Play()
 end
 
--- Pick a spot on the lava near the camera, or nil if none is close.
+-- pick a spot on the lava near the camera, or nil if none is close.
 local function bubbleSpot(camPos: Vector3): Vector3?
 	local nearVents = {}
 	local sea: BasePart? = nil

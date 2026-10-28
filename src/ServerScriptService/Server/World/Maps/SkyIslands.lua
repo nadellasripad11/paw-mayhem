@@ -1,8 +1,8 @@
 --!strict
--- Map 1/3 — Sky Islands. A tight cluster of grassy floating islands stepping
+-- map 1/3 — sky islands. a tight cluster of grassy floating islands stepping
 -- down from a windmill hill: stone stairs to fountain plazas, rope bridges to
 -- the flanks, cottages, round bushy trees, streams spilling into waterfalls
--- and a sea of clouds below. Point-symmetric so Blue and Red play the same map.
+-- and a sea of clouds below. point-symmetric so blue and red play the same map.
 
 local Workspace = game:GetService("Workspace")
 local ArenaKit = require(script.Parent.Parent.ArenaKit)
@@ -37,7 +37,7 @@ local FLOWERS = {
 	Color3.fromRGB(255, 110, 96), Color3.fromRGB(250, 250, 250),
 }
 
--- ── Layout (point-symmetric: Blue at -Z, Red at +Z) ─────────────────────────
+-- ── layout (point-symmetric: blue at -z, red at +z) ─────────────────────────
 local LAYOUT = {
 	center = { pos = Vector3.new(0, 20, 0), r = 32 },
 	plazaB = { pos = Vector3.new(0, 13, -70), r = 24 },
@@ -69,7 +69,7 @@ local LINKS = {
 	{ "padBL", "plazaB", "bridge" }, { "padBR", "plazaB", "bridge" },
 	{ "padRL", "plazaR", "bridge" }, { "padRR", "plazaR", "bridge" },
 }
--- Unreachable scenery islands out in the sky.
+-- unreachable scenery islands out in the sky.
 local DECOR = {
 	{ pos = Vector3.new(-150, 30, -60), r = 10, kind = "mill" },
 	{ pos = Vector3.new(150, 26, 60), r = 10, kind = "mill" },
@@ -107,7 +107,7 @@ local function faceYaw(dir: Vector3): number
 	return math.atan2(-dir.X, -dir.Z)
 end
 
--- ── Foliage ──────────────────────────────────────────────────────────────────
+-- ── foliage ──────────────────────────────────────────────────────────────────
 
 local function makeTree(pos: Vector3, s: number, parent: Instance)
 	local m = Instance.new("Model")
@@ -162,7 +162,7 @@ local function makeRock(pos: Vector3, s: number, parent: Instance)
 	end
 end
 
--- ── Props ────────────────────────────────────────────────────────────────────
+-- ── props ────────────────────────────────────────────────────────────────────
 
 local function makeCrate(pos: Vector3, s: number, yaw: number, parent: Instance)
 	local cf = CFrame.new(pos + Vector3.new(0, 1.8 * s, 0)) * CFrame.Angles(0, yaw, 0)
@@ -219,7 +219,7 @@ local function makeBanner(pos: Vector3, color: Color3, yaw: number, parent: Inst
 	tip.Material = Enum.Material.Neon
 end
 
--- Flush cobble disc with a darker rim and a ring of paving blocks.
+-- flush cobble disc with a darker rim and a ring of paving blocks.
 local function makePlaza(center: Vector3, radius: number, parent: Instance, rim: Color3?)
 	deco(DISC("PlazaRim", radius * 2 + 1.4, 0.24, center + Vector3.new(0, 0.07, 0), rim or COBBLE_DARK, Enum.Material.Slate, parent))
 	deco(DISC("Plaza", radius * 2, 0.24, center + Vector3.new(0, 0.1, 0), COBBLE, Enum.Material.Cobblestone, parent))
@@ -231,7 +231,7 @@ local function makePlaza(center: Vector3, radius: number, parent: Instance, rim:
 	end
 end
 
--- Cobble tiles from `from` to `to` (surface level).
+-- cobble tiles from `from` to `to` (surface level).
 local function makePath(from: Vector3, to: Vector3, parent: Instance)
 	local len = (to - from).Magnitude
 	local n = math.floor(len / 2.5)
@@ -242,7 +242,7 @@ local function makePath(from: Vector3, to: Vector3, parent: Instance)
 	end
 end
 
--- Wooden fence arcs around the rim, skipping walkways.
+-- wooden fence arcs around the rim, skipping walkways.
 local function makeRimFence(isle: any, parent: Instance)
 	local r = isle.r - 1.4
 	local step = math.rad(360 / math.max(16, math.floor(2 * math.pi * r / 5)))
@@ -263,7 +263,7 @@ local function makeRimFence(isle: any, parent: Instance)
 	end
 end
 
--- ── Buildings ────────────────────────────────────────────────────────────────
+-- ── buildings ────────────────────────────────────────────────────────────────
 
 local function makeCottage(pos: Vector3, facing: Vector3, s: number, roofColor: Color3, parent: Instance)
 	local f = Instance.new("Model")
@@ -279,7 +279,7 @@ local function makeCottage(pos: Vector3, facing: Vector3, s: number, roofColor: 
 		end
 	end
 	deco(NP("Beam", Vector3.new(w + 0.3, 0.5, d + 0.3), base * CFrame.new(0, 1 + h * 0.52, 0), PALETTE.WoodDark, Enum.Material.Wood, f))
-	-- 45° pitched roof: a box turned 45° about X fills both gables exactly,
+	-- 45° pitched roof: a box turned 45° about x fills both gables exactly,
 	-- and two tilted slabs form the roof planes.
 	local wallTop = 1 + h
 	local roofH = d / 2
@@ -297,7 +297,7 @@ local function makeCottage(pos: Vector3, facing: Vector3, s: number, roofColor: 
 	end
 	deco(NP("Ridge", Vector3.new(w + 1.6, 0.6, 0.8), base * CFrame.new(0, wallTop + roofH + 0.35, 0), roofColor:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Slate, f))
 	NP("Chimney", Vector3.new(1.4, 3.6, 1.4) * s, base * CFrame.new(w * 0.28, wallTop + roofH * 0.7, d * 0.15), Color3.fromRGB(150, 104, 90), Enum.Material.Brick, f)
-	-- Front (-Z) door, windows, flower boxes
+	-- front (-z) door, windows, flower boxes
 	deco(NP("DoorFrame", Vector3.new(2.6, 4.2, 0.3) * s, base * CFrame.new(0, 1 + 2.1 * s, -d / 2 - 0.1), PALETTE.WoodDark, Enum.Material.Wood, f))
 	deco(NP("Door", Vector3.new(2.0, 3.8, 0.3) * s, base * CFrame.new(0, 1 + 1.9 * s, -d / 2 - 0.2), Color3.fromRGB(132, 84, 50), Enum.Material.WoodPlanks, f))
 	for _, x in ipairs({ -w * 0.3, w * 0.3 }) do
@@ -315,7 +315,7 @@ local function makeCottage(pos: Vector3, facing: Vector3, s: number, roofColor: 
 	end
 end
 
--- Round stone-and-plaster windmill with a conical roof and turning lattice sails.
+-- round stone-and-plaster windmill with a conical roof and turning lattice sails.
 local function makeWindmill(pos: Vector3, facing: Vector3, s: number, parent: Instance)
 	local f = Instance.new("Model")
 	f.Name = "Windmill"
@@ -327,7 +327,7 @@ local function makeWindmill(pos: Vector3, facing: Vector3, s: number, parent: In
 	deco(DISC("Plinth", 13 * s, 0.5, at(0.1), STONE_WALL, Enum.Material.Slate, f))
 	DISC("StoneTower", 10 * s, 10 * s, at(1 + 5), Color3.fromRGB(176, 166, 150), Enum.Material.Cobblestone, f)
 	deco(DISC("Band", 10.8 * s, 0.8 * s, at(11), PALETTE.WoodDark, Enum.Material.Wood, f))
-	-- The balcony takes your weight; a ladder climbs to it.
+	-- the balcony takes your weight; a ladder climbs to it.
 	DISC("Balcony", 13 * s, 0.4 * s, at(11.5), PALETTE.Wood, Enum.Material.WoodPlanks, f).CanCollide = true
 	ArenaKit.AddLadder((base * CFrame.new(5 * s + 1, 0, 0)).Position, 12 * s + 1, base.RightVector, f)
 	local prev: Vector3? = nil
@@ -345,7 +345,7 @@ local function makeWindmill(pos: Vector3, facing: Vector3, s: number, parent: In
 		deco(DISC("Roof" .. k, (9.8 - k * 1.6) * s, 1.4 * s, at(20.7 + k * 1.35), k % 2 == 0 and ROOF or ROOF_DARK, Enum.Material.Slate, f))
 	end
 	ball("Finial", 1.2 * s, at(29.2), Color3.fromRGB(230, 190, 90), f).Material = Enum.Material.Metal
-	-- Door and windows on the facing side
+	-- door and windows on the facing side
 	deco(NP("Door", Vector3.new(2.6, 4.4, 0.5) * s, base * CFrame.new(0, (1 + 2.2) * s, -5 * s), PALETTE.WoodDark, Enum.Material.WoodPlanks, f))
 	for _, spec in ipairs({ { 0, 8, -5 }, { 0, 16.5, -4.3 }, { 3.2, 15.5, -3.1 }, { -3.2, 15.5, -3.1 } }) do
 		local p = base * CFrame.new(spec[1] * s, spec[2] * s, spec[3] * s)
@@ -355,7 +355,7 @@ local function makeWindmill(pos: Vector3, facing: Vector3, s: number, parent: In
 		g.Transparency = 0.15
 	end
 
-	-- Sails: welded to an anchored hub so only the hub's CFrame replicates.
+	-- sails: welded to an anchored hub so only the hub's cframe replicates.
 	local hubCF = base * CFrame.new(0, 18.5 * s, -7.6 * s)
 	ArenaKit.Beam("Shaft", at(18.5, -3.5), hubCF.Position, 0.9 * s, PALETTE.WoodDark, Enum.Material.Wood, f)
 	local hub = NP("Hub", Vector3.new(1.8, 1.8, 1.6) * s, hubCF, PALETTE.WoodDark, Enum.Material.Wood, f)
@@ -400,7 +400,7 @@ local function makeWindmill(pos: Vector3, facing: Vector3, s: number, parent: In
 	end)
 end
 
--- Tiered stone fountain with a water curtain.
+-- tiered stone fountain with a water curtain.
 local function makeFountain(pos: Vector3, parent: Instance)
 	DISC("Basin", 12, 1.3, pos + Vector3.new(0, 0.65, 0), STONE_WALL, Enum.Material.Slate, parent)
 	local pool = deco(DISC("Pool", 10.4, 0.1, pos + Vector3.new(0, 1.33, 0), WATER, Enum.Material.Glass, parent))
@@ -423,7 +423,7 @@ local function makeFountain(pos: Vector3, parent: Instance)
 	spout.Transparency = 0.2
 end
 
--- Stream across the top that spills off the edge as a waterfall.
+-- stream across the top that spills off the edge as a waterfall.
 local function makeWaterfall(isle: any, angle: number, height: number, parent: Instance)
 	local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
 	local from = ArenaKit.Polar(isle, angle, isle.r * 0.5)
@@ -443,9 +443,9 @@ local function makeWaterfall(isle: any, angle: number, height: number, parent: I
 	mist.CastShadow = false
 end
 
--- ── Connections ──────────────────────────────────────────────────────────────
+-- ── connections ──────────────────────────────────────────────────────────────
 
--- Rope bridge: invisible smooth collision deck + side guards, visual planks,
+-- rope bridge: invisible smooth collision deck + side guards, visual planks,
 -- stringers, posts, rope rails and end lanterns.
 local function makeRopeBridge(A: any, B: any, parent: Instance)
 	local f = Instance.new("Folder")
@@ -494,7 +494,7 @@ local STAIRS: ArenaKit.StairStyle = {
 	step = COBBLE, stepAlt = COBBLE:Lerp(COBBLE_DARK, 0.3), wall = STONE_WALL, under = PALETTE.StoneDark, material = Enum.Material.Slate,
 }
 
--- ── Island dressing ──────────────────────────────────────────────────────────
+-- ── island dressing ──────────────────────────────────────────────────────────
 
 local function scatterNature(isle: any, trees: number, bushes: number, flowers: number, rocks: number, minD: number)
 	local maxD = isle.r - 3
@@ -550,7 +550,7 @@ local function propsAt(isle: any, n: number, minD: number, maxD: number, fn: (Ve
 	end
 end
 
--- ── Build ────────────────────────────────────────────────────────────────────
+-- ── build ────────────────────────────────────────────────────────────────────
 
 function SkyIslands.Build(): Folder
 	local arena, spawns, powerPads = ArenaKit.SetupFolders(Workspace, SkyIslands.Name)
@@ -576,7 +576,7 @@ function SkyIslands.Build(): Folder
 		end
 	end
 
-	-- Rope swings across the gaps from the team-side pads to the flanks.
+	-- rope swings across the gaps from the team-side pads to the flanks.
 	local swings = Instance.new("Folder")
 	swings.Name = "RopeSwings"
 	swings.Parent = arena
@@ -584,7 +584,7 @@ function SkyIslands.Build(): Folder
 		ArenaKit.AddRopeSwing(I[pair[1]], I[pair[2]], swings)
 	end
 
-	-- Supply drops land on any playable island; jump pads on the team bases
+	-- supply drops land on any playable island; jump pads on the team bases
 	-- and windmill islands fling you onto the windmill hill.
 	for _, isle in pairs(I) do
 		ArenaKit.MarkPlayable(isle.folder)
@@ -594,14 +594,14 @@ function SkyIslands.Build(): Folder
 	pads.Parent = arena
 	for _, spec in ipairs({ { "teamB", 0.75 }, { "teamB", -0.75 }, { "teamR", 0.75 }, { "teamR", -0.75 }, { "millL", 0 }, { "millR", 0 } }) do
 		local from, c = I[spec[1]], I.center
-		-- Mill pads land beside (not on) the cottages that sit east/west of centre.
+		-- mill pads land beside (not on) the cottages that sit east/west of centre.
 		local turn = spec[2] ~= 0 and -spec[2] * 0.6 or 0.6
 		local land = ArenaKit.FacingPoint(c, from.pos, c.r * 0.62, turn)
 		ArenaKit.Reserve(c, land, 4)
 		ArenaKit.AddJumpPad(from, ArenaKit.AngleTo(from.pos, c.pos) + spec[2], from.r * 0.55, land, pads)
 	end
 
-	-- Windmill hill (centre high ground)
+	-- windmill hill (centre high ground)
 	do
 		local c = I.center
 		local cottageA = { 0, math.pi }
@@ -631,7 +631,7 @@ function SkyIslands.Build(): Folder
 		ArenaKit.AddPowerPad(c.pos + Vector3.new(-11, 0, 0), powerPads)
 	end
 
-	-- Fountain plazas
+	-- fountain plazas
 	for _, key in ipairs({ "plazaB", "plazaR" }) do
 		local p = I[key]
 		makePlaza(ArenaKit.Polar(p, 0, 0), 12, p.folder)
@@ -656,7 +656,7 @@ function SkyIslands.Build(): Folder
 		makeRimFence(p, p.folder)
 	end
 
-	-- Team bases
+	-- team bases
 	for _, key in ipairs({ "teamB", "teamR" }) do
 		local t = I[key]
 		local baseSpawn = t.pos + Vector3.new(0, 0, -math.sign(t.pos.Z) * t.r * 0.25)
@@ -687,7 +687,7 @@ function SkyIslands.Build(): Folder
 		propsAt(t, 2, 16, 25, function(p) makeBarrel(p, t.folder) end)
 		scatterNature(t, 8, 8, 10, 3, 16)
 		makeRimFence(t, t.folder)
-		-- Three spawns per team on three islands: the base and both side pads.
+		-- three spawns per team on three islands: the base and both side pads.
 		ArenaKit.AddTeamSpawnPoint(baseSpawn, t.team, spawns, t.folder)
 		for _, padKey in ipairs(t.team == "Blue" and { "padBL", "padBR" } or { "padRL", "padRR" }) do
 			local pad = I[padKey]
@@ -696,13 +696,13 @@ function SkyIslands.Build(): Folder
 		end
 	end
 
-	-- Flank islands
+	-- flank islands
 	for _, key in ipairs({ "flankBL", "flankBR", "flankRL", "flankRR" }) do
 		local fl = I[key]
 		makePlaza(ArenaKit.Polar(fl, 0, 0), 7, fl.folder)
 		ArenaKit.Reserve(fl, ArenaKit.Polar(fl, 0, 0), 8)
 		pathsToLinks(fl, 7)
-		-- A waterfall you can swim in, pouring off the open side.
+		-- a waterfall you can swim in, pouring off the open side.
 		ArenaKit.AddSwimColumn("Water", fl, ArenaKit.OpenAngles(fl, 1)[1], fl.folder)
 		propsAt(fl, 2, 9, 15, function(p) makeCrateStack(p, fl.folder) end)
 		propsAt(fl, 1, 9, 15, function(p) makeBarrel(p, fl.folder) end)
@@ -712,7 +712,7 @@ function SkyIslands.Build(): Folder
 		ArenaKit.AddPowerPad(fl.pos, powerPads)
 	end
 
-	-- Windmill side islands
+	-- windmill side islands
 	for _, key in ipairs({ "millL", "millR" }) do
 		local m = I[key]
 		local facing = Vector3.new(-m.pos.X, 0, 0).Unit
@@ -725,7 +725,7 @@ function SkyIslands.Build(): Folder
 		ArenaKit.AddPowerPad(m.pos + Vector3.new(facing.X * 9.5, 0, 0), powerPads)
 	end
 
-	-- Side pads by the team bases
+	-- side pads by the team bases
 	for _, key in ipairs({ "padBL", "padBR", "padRL", "padRR" }) do
 		local p = I[key]
 		pathsToLinks(p, 0)
@@ -735,7 +735,7 @@ function SkyIslands.Build(): Folder
 		makeRimFence(p, p.folder)
 	end
 
-	-- Scenery islands
+	-- scenery islands
 	local scenery = Instance.new("Folder")
 	scenery.Name = "Scenery"
 	scenery.Parent = arena
@@ -767,7 +767,7 @@ function SkyIslands.Build(): Folder
 		Brightness = 2.4,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
-	-- Birds pecking about on the grass (they scatter when a cat comes near).
+	-- birds pecking about on the grass (they scatter when a cat comes near).
 	for _, key in ipairs({ "center", "plazaB", "plazaR", "flankBL", "flankBR", "flankRL", "flankRR", "millL", "millR" }) do
 		ArenaKit.AddBirdSpots(I[key], rng, key == "center" and 2 or 1, I[key].folder)
 	end

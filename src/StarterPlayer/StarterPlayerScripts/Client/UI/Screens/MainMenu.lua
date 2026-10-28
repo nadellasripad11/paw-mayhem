@@ -1,12 +1,12 @@
 --!strict
--- MainMenu: the overlay while you walk round the lobby (laid out like Rivals):
--- a dark bar of square tiles at the bottom (Loadout, Customize, Tasks, Shop,
--- Pass), a big PLAY button above it (pick a mode and vote a map; it shows
+-- mainmenu: the overlay while you walk round the lobby (laid out like rivals):
+-- a dark bar of square tiles at the bottom (loadout, customize, tasks, shop,
+-- pass), a big play button above it (pick a mode and vote a map; it shows
 -- when you're queued) with your cat on its left and invite on its right,
--- today's tasks and a TO DUELS button middle-left, coins/gems top centre, and
--- the VIP / Leaderboard / Settings icons top right. Each tile opens its own
--- full screen with a close button. The lobby's showcases open screens too
--- (their prompts carry an OpenPanel attribute).
+-- today's tasks and a to duels button middle-left, coins/gems top centre, and
+-- the vip / leaderboard / settings icons top right. each tile opens its own
+-- full screen with a close button. the lobby's showcases open screens too
+-- (their prompts carry an openpanel attribute).
 
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -63,7 +63,7 @@ local SCREEN_TITLES = {
 local navButtons = {}
 local currentPanel
 local inGame = false -- a screen opened over a match or duel (only it shows)
-local rangeMode = false -- in the practice range (see SetRangeMode)
+local rangeMode = false -- in the practice range (see setrangemode)
 local rangeHidden: { GuiObject } = {}
 
 local NAV = {
@@ -75,7 +75,7 @@ local NAV = {
 }
 
 
--- Open a full screen (id) or return to the home screen (nil). Opening the
+-- open a full screen (id) or return to the home screen (nil). opening the
 -- screen that's already open goes back home.
 local function switchTo(id: string?)
 	if id ~= nil and id == currentPanel then
@@ -109,10 +109,10 @@ local function switchTo(id: string?)
 		relayoutFn()
 	end
 	if panelBackdrop then
-		-- Over a match the game stays visible behind the screen.
+		-- over a match the game stays visible behind the screen.
 		panelBackdrop.BackgroundTransparency = inGame and 0.3 or 0.03
 	end
-	-- Closing a screen opened over a match hides the menu again.
+	-- closing a screen opened over a match hides the menu again.
 	if id == nil and inGame then
 		inGame = false
 		if gui then
@@ -125,12 +125,12 @@ MainMenu.Open = function(id: string?)
 	switchTo(id)
 end
 
--- A screen or the map picker is up (the mouse is freed and aiming stops).
+-- a screen or the map picker is up (the mouse is freed and aiming stops).
 function MainMenu.Busy(): boolean
 	return currentPanel ~= nil or MapSelect.IsOpen() or PlayMenu.IsOpen() or DuelVote.IsOpen()
 end
 
--- Open one screen over a match or duel (Loadout); again to close it.
+-- open one screen over a match or duel (loadout); again to close it.
 function MainMenu.OpenInGame(id: string)
 	if not gui or not panels or not panels[id] then
 		return
@@ -144,8 +144,8 @@ function MainMenu.OpenInGame(id: string)
 	switchTo(id)
 end
 
--- In the practice range only the daily tasks and TO DUELS stay up (the
--- HUD shows your blaster); everything else comes back when you leave.
+-- in the practice range only the daily tasks and to duels stay up (the
+-- hud shows your blaster); everything else comes back when you leave.
 function MainMenu.SetRangeMode(on: boolean)
 	if on == rangeMode then
 		return
@@ -169,15 +169,15 @@ local function commas(n: number): string
 	return out
 end
 
--- Builds a panel with a name for error reporting, wrapped in pcall so a bug in
--- one screen can never blank out the others (each nav tab still shows SOMETHING).
+-- builds a panel with a name for error reporting, wrapped in pcall so a bug in
+-- one screen can never blank out the others (each nav tab still shows something).
 local function safeBuild(name: string, parent: Instance, builder: (Instance) -> Frame): Frame
 	local ok, result = pcall(builder, parent)
 	if ok and typeof(result) == "Instance" then
 		return result :: Frame
 	end
 	warn(string.format("[PAW MAYHEM] UI panel '%s' failed to build: %s", name, tostring(result)))
-	-- Hide any orphaned frames the failed builder may have parented before crashing.
+	-- hide any orphaned frames the failed builder may have parented before crashing.
 	for _, child in ipairs(parent:GetChildren()) do
 		if child:IsA("GuiObject") then
 			(child :: GuiObject).Visible = false
@@ -197,7 +197,7 @@ local function refreshCurrency()
 	end
 	coinLabel.Text = commas(p.Coins or 0)
 	gemLabel.Text = commas(p.Gems or 0)
-	-- Level + trophy tier, e.g. "Lv. 5 · GOLD 640".
+	-- level + trophy tier, e.g. "lv. 5 · gold 640".
 	levelLabel.Text = string.format("LV %d", p.Level or 1)
 	local frac = (p.LevelNeed and p.LevelNeed > 0) and (p.LevelXP / p.LevelNeed) or 0
 	levelFill.Size = UDim2.fromScale(math.clamp(frac, 0.04, 1), 1)
@@ -225,9 +225,9 @@ function MainMenu.SetVisible(on: boolean)
 	end
 end
 
--- Play: during a live match, join it straight away; otherwise open the map
+-- play: during a live match, join it straight away; otherwise open the map
 -- picker for the next round.
--- The big shared arena match (the old PLAY): join it if it's running,
+-- the big shared arena match (the old play): join it if it's running,
 -- else open the map vote for the next one.
 local function onArena()
 	switchTo(nil)
@@ -242,14 +242,14 @@ local function onArena()
 	end
 end
 
--- PLAY: the mode picker (1v1 - 5v5 duels, or the arena match).
+-- play: the mode picker (1v1 - 5v5 duels, or the arena match).
 local function onPlay()
 	switchTo(nil)
 	PlayMenu.Open(onArena)
 end
 
--- ── bottom bar tiles: a big 3D icon standing up out of the bar, its name
--- under it (Rivals-style) ────────────────────────────────────────────────────
+-- ── bottom bar tiles: a big 3d icon standing up out of the bar, its name
+-- under it (rivals-style) ────────────────────────────────────────────────────
 local function catColors(): (Color3?, Color3?)
 	local p = ClientState.Profile
 	local fur = p and p.Loadout and Cats.FurById[p.Loadout.Cat.Fur]
@@ -268,7 +268,7 @@ local function navButton(parent: Instance, item, order: number)
 	local stroke = UIUtil.hairline(b)
 	stroke.Transparency = 1
 	local white = Color3.new(1, 1, 1)
-	-- The icon pokes up above the bar.
+	-- the icon pokes up above the bar.
 	local iconSize, iconPos = UDim2.fromOffset(92, 80), UDim2.fromOffset(-4, -40)
 	if item.icon3d == "Gun" then
 		local vf = GunView.Create(b, ClientState.Equipped("Weapon") or "PawBlaster", ClientState.Equipped("Skin"), UDim2.fromOffset(96, 64), UDim2.fromOffset(-6, -26))
@@ -301,7 +301,7 @@ local function navButton(parent: Instance, item, order: number)
 end
 
 
--- A glossy finish on a big button: lighter at the top, a soft shine across
+-- a glossy finish on a big button: lighter at the top, a soft shine across
 -- the upper half, a dark outline and an outlined label - it reads as a
 -- raised, pressable button rather than a flat box.
 local function gloss(b: GuiObject, color: Color3, label: TextLabel?)
@@ -331,7 +331,7 @@ function MainMenu.Build()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 	}) :: ScreenGui
 
-	-- Every corner group is designed at 1x and scaled with the screen height.
+	-- every corner group is designed at 1x and scaled with the screen height.
 	local function scaled(props): (Frame, UIScale)
 		local f = UIUtil.make("Frame", props) :: Frame
 		f.BackgroundTransparency = 1
@@ -340,7 +340,7 @@ function MainMenu.Build()
 		return f, sc
 	end
 
-	-- Bottom bar (centre): a dark strip of square tiles. Each opens its screen.
+	-- bottom bar (centre): a dark strip of square tiles. each opens its screen.
 	local TILE, GAP, PAD = 84, 8, 6
 	local barW = #NAV * TILE + (#NAV - 1) * GAP + PAD * 2
 	local barGroup, barScale = scaled({ Parent = gui, Name = "NavBar", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(barW, 72 + PAD * 2), ZIndex = 10 })
@@ -353,16 +353,16 @@ function MainMenu.Build()
 		navButton(tiles, item, i)
 	end
 
-	-- PLAY (above the bar): pick a mode and vote a map for the next match, or
-	-- drop straight into one that's running. Your cat on the left (opens
-	-- Customize, shows your level), invite friends on the right. The line
+	-- play (above the bar): pick a mode and vote a map for the next match, or
+	-- drop straight into one that's running. your cat on the left (opens
+	-- customize, shows your level), invite friends on the right. the line
 	-- under it says where you are.
 	local playGroup, playScale = scaled({ Parent = gui, Name = "PlayGroup", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(392, 90), ZIndex = 10 })
 	local avatarBtn = UIUtil.make("TextButton", {
 		Parent = playGroup, Name = "Avatar", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(62, 62),
 		BackgroundColor3 = Theme.Color.Surface2, BackgroundTransparency = 0.08, BorderSizePixel = 0, ZIndex = 11,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(1, 0), avatarBtn) -- round, like Rivals
+	UIUtil.corner(UDim.new(1, 0), avatarBtn) -- round, like rivals
 	UIUtil.hairline(avatarBtn)
 	UIUtil.feedback(avatarBtn)
 	UIUtil.tooltip(avatarBtn, "Customize your cat")
@@ -408,9 +408,9 @@ function MainMenu.Build()
 	})
 	play.MouseButton1Click:Connect(onPlay)
 
-	-- Searching for a duel: a pill over PLAY with the mode, the time and a
+	-- searching for a duel: a pill over play with the mode, the time and a
 	-- cancel button.
-	-- (A green box at the top of the screen, like Rivals.)
+	-- (a green box at the top of the screen, like rivals.)
 	local search = UIUtil.make("Frame", {
 		Parent = gui, Name = "Search", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 58),
 		Size = UDim2.fromOffset(300, 54), ZIndex = 30, Visible = false, BackgroundColor3 = Theme.Color.PlayGreen, BorderSizePixel = 0,
@@ -452,7 +452,7 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- INVITE: Roblox's friend-invite prompt (hidden where invites aren't allowed).
+	-- invite: roblox's friend-invite prompt (hidden where invites aren't allowed).
 	local invite = UIUtil.iconButton({
 		Parent = playGroup, Name = "Invite", Position = UDim2.fromOffset(330, 6), Size = UDim2.fromOffset(50, 50), ZIndex = 11, CornerRadius = UDim.new(1, 0),
 	}, function(slot: Frame)
@@ -491,14 +491,14 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- Top centre: coins and gems (+ opens the gem shop).
+	-- top centre: coins and gems (+ opens the gem shop).
 	local currGroup, currScale = scaled({ Parent = gui, Name = "CurrencyGroup", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(250, 40), ZIndex = 10 })
 	UIUtil.listLayout(currGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Center
 	local coinPill, coins = UIUtil.currencyPill({ Parent = currGroup, Size = UDim2.fromOffset(118, 40), LayoutOrder = 1, ZIndex = 10 }, "Coin", Theme.Color.Coin)
 	coinLabel = coins
 	local gemPill, gems, gemPlus = UIUtil.currencyPill({ Parent = currGroup, Size = UDim2.fromOffset(124, 40), LayoutOrder = 2, ZIndex = 10 }, "Gem", Theme.Color.Gem, true)
 	gemLabel = gems
-	-- 3D coin and gem in place of the flat icons, a bit bigger than the pill.
+	-- 3d coin and gem in place of the flat icons, a bit bigger than the pill.
 	for _, spec in ipairs({ { coinPill, "Coin" }, { gemPill, "Gem" } }) do
 		local slot = spec[1]:FindFirstChildOfClass("Frame")
 		if slot then
@@ -519,14 +519,14 @@ function MainMenu.Build()
 			end
 		end)
 	end
-	-- Top right: small round buttons (VIP, Leaderboard, Settings).
+	-- top right: small round buttons (vip, leaderboard, settings).
 	local iconGroup, iconScale = scaled({ Parent = gui, Name = "IconGroup", AnchorPoint = Vector2.new(1, 0), Size = UDim2.fromOffset(260, 40), ZIndex = 10 })
 	UIUtil.listLayout(iconGroup, 8, Enum.FillDirection.Horizontal).HorizontalAlignment = Enum.HorizontalAlignment.Right
 	local function roundButton(name: string, order: number, tip: string, draw: (Frame) -> (), onClick: () -> ()): TextButton
 		return UIUtil.iconButton({ Parent = iconGroup, Name = name, LayoutOrder = order, ZIndex = 10 }, draw, tip, onClick)
 	end
 
-	-- Today's free gift lives in the Shop: a red dot on the SHOP icon while
+	-- today's free gift lives in the shop: a red dot on the shop icon while
 	-- it's waiting.
 	local shopEntry = navButtons.Shop
 	if shopEntry then
@@ -540,7 +540,7 @@ function MainMenu.Build()
 		paintDot()
 	end
 
-	-- VIP (gold, hidden once owned).
+	-- vip (gold, hidden once owned).
 	local vip = roundButton("VIP", 5, "Get VIP", function(slot: Frame)
 		UIUtil.label({
 			Parent = slot, Text = "VIP", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.fromRGB(70, 44, 0),
@@ -557,7 +557,7 @@ function MainMenu.Build()
 	player:GetAttributeChangedSignal("VIP"):Connect(refreshVip)
 	refreshVip()
 
-	-- Emotes: a picker of the ones you own (easy on phones too).
+	-- emotes: a picker of the ones you own (easy on phones too).
 	pcall(EmotePicker.Build)
 	roundButton("EmotesIcon", 10, "Emotes", function(slot: Frame)
 		Icon3D.Create("Smiley", slot, UDim2.fromScale(1.5, 1.5), UDim2.fromScale(-0.25, -0.25)).ZIndex = slot.ZIndex + 1
@@ -565,7 +565,7 @@ function MainMenu.Build()
 		EmotePicker.Toggle()
 	end)
 
-	-- Leaderboard + Settings at the far right.
+	-- leaderboard + settings at the far right.
 	for i, spec in ipairs({ { "Leaderboard", "Podium", "Leaderboard" }, { "Settings", "Gear", "Settings" } }) do
 		roundButton(spec[1] .. "Icon", 10 + i, spec[3], function(slot: Frame)
 			Icon3D.Create(spec[2], slot, UDim2.fromScale(1.5, 1.5), UDim2.fromScale(-0.25, -0.25)).ZIndex = slot.ZIndex + 1
@@ -574,7 +574,7 @@ function MainMenu.Build()
 		end)
 	end
 
-	-- Toast (top centre) for notices and purchase messages in the lobby.
+	-- toast (top centre) for notices and purchase messages in the lobby.
 	local toast = UIUtil.label({
 		Parent = gui, Name = "Toast", Text = "", Font = Theme.Font.Bold, TextSize = 16,
 		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0),
@@ -606,14 +606,14 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- Middle left: today's tasks (progress, coin reward, CLAIM when done) and
-	-- TO DUELS, which takes you straight to the duel pads.
+	-- middle left: today's tasks (progress, coin reward, claim when done) and
+	-- to duels, which takes you straight to the duel pads.
 	local TASKS_W, ROW_H, HEAD_H = 290, 46, 50
 	local tasksGroup, tasksScale = scaled({ Parent = gui, Name = "TasksGroup", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(TASKS_W, 300), ZIndex = 10 })
 	local tasksCard = UIUtil.surface({ Parent = tasksGroup, Size = UDim2.new(1, 0, 0, HEAD_H), ZIndex = 10, BackgroundColor3 = Theme.Color.Surface }, 1, UDim.new(0, 14))
 	tasksCard.BackgroundTransparency = 0.3
 	UIUtil.gradient(Color3.fromRGB(34, 40, 60), Color3.fromRGB(12, 14, 22), 90, tasksCard)
-	-- Open on every screen (tap the header to fold it).
+	-- open on every screen (tap the header to fold it).
 	local phone = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 	local collapsed = false
 	Icon3D.Create("Clipboard", tasksCard, UDim2.fromOffset(46, 52), UDim2.fromOffset(4, -6)).ZIndex = 12
@@ -628,7 +628,7 @@ function MainMenu.Build()
 		Parent = tasksCard, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim,
 		TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0.5, -12, 0, HEAD_H), ZIndex = 11,
 	})
-	-- Tasks reset at midnight UTC.
+	-- tasks reset at midnight utc.
 	task.spawn(function()
 		while gui.Parent do
 			local left = 86400 - os.time() % 86400
@@ -636,7 +636,7 @@ function MainMenu.Build()
 			task.wait(30)
 		end
 	end)
-	-- NEW TASKS (R$): swap the ones you haven't finished.
+	-- new tasks (r$): swap the ones you haven't finished.
 	local reroll = UIUtil.secondaryButton({
 		Parent = tasksGroup, Name = "Reroll", Size = UDim2.fromOffset(TASKS_W, 30), ZIndex = 11, TextSize = 13, Visible = false,
 	}, "NEW TASKS   R$ " .. tostring(Monetization.Products.RerollTasks.Price), function()
@@ -658,7 +658,7 @@ function MainMenu.Build()
 		Icons.Place("Burst", spark, 22, Color3.new(1, 1, 1))
 	end
 
-	-- The TASKS tile shows how many are ready to claim.
+	-- the tasks tile shows how many are ready to claim.
 	local questBadge: TextLabel? = nil
 	local questEntry = navButtons.Quests
 	if questEntry then
@@ -678,7 +678,7 @@ function MainMenu.Build()
 		collapsed = not collapsed
 		rebuildTasks()
 	end)
-	-- A white icon for each kind of task.
+	-- a white icon for each kind of task.
 	local function taskIcon(text: string): string
 		local t = string.lower(text)
 		if string.find(t, "elim") or string.find(t, "knock") then
@@ -729,7 +729,7 @@ function MainMenu.Build()
 			TextColor3 = dim, TextXAlignment = Enum.TextXAlignment.Right, TextStrokeTransparency = 0.6,
 			Position = UDim2.new(1, -140, 0, 6), Size = UDim2.fromOffset(56, 22), ZIndex = 12,
 		})
-		-- Right side: the reward, a CLAIM button once done, a tick once claimed.
+		-- right side: the reward, a claim button once done, a tick once claimed.
 		local right = UIUtil.make("Frame", {
 			Parent = row, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(74, 32),
 			BackgroundTransparency = 1, ZIndex = 12,
@@ -796,7 +796,7 @@ function MainMenu.Build()
 		tasksTitle.Text = collapsed and string.format("Daily Tasks  %d/%d", finished, #list) or "Daily Tasks"
 		local h = HEAD_H + (collapsed and 0 or #list * ROW_H) + 4
 		tasksCard.Size = UDim2.new(1, 0, 0, h)
-		-- (NEW TASKS only while there's something left to swap.)
+		-- (new tasks only while there's something left to swap.)
 		reroll.Visible = open > 0 and not collapsed
 		local y = h + 8
 		if reroll.Visible then
@@ -815,7 +815,7 @@ function MainMenu.Build()
 	ClientState.ProfileChanged:Connect(rebuildTasks)
 	rebuildTasks()
 
-	-- Your win streak (3+) just ended: offer to buy it back for a few minutes
+	-- your win streak (3+) just ended: offer to buy it back for a few minutes
 	-- (shows once you're back in the lobby).
 	local saver = UIUtil.surface({
 		Parent = gui, Name = "StreakSaver", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 64),
@@ -851,7 +851,7 @@ function MainMenu.Build()
 		local token = saverToken
 		saverTitle.Text = string.format("Your %d-win streak ended!", n)
 		saver.Visible = true
-		-- The server keeps it for 5 minutes; the offer goes a bit before that.
+		-- the server keeps it for 5 minutes; the offer goes a bit before that.
 		task.delay(Monetization.StreakSaver.Window - 30, function()
 			if token == saverToken then
 				saver.Visible = false
@@ -859,8 +859,8 @@ function MainMenu.Build()
 		end)
 	end)
 
-	-- Full-screen backdrop behind whichever screen is open, with a header bar:
-	-- BACK button + screen title (currency stays top right).
+	-- full-screen backdrop behind whichever screen is open, with a header bar:
+	-- back button + screen title (currency stays top right).
 	local backdrop = UIUtil.make("Frame", { Parent = gui, Name = "PanelBackdrop", BackgroundColor3 = Theme.Color.Bg, BackgroundTransparency = 0.03, BorderSizePixel = 0, Visible = false, ZIndex = 9, Size = UDim2.fromScale(1, 1) }) :: Frame
 	local header, headerScale = scaled({ Parent = backdrop, Name = "Header", Size = UDim2.fromOffset(520, 44), ZIndex = 12 })
 	local close = UIUtil.iconButton({ Parent = header, Name = "Close", Size = UDim2.fromOffset(44, 44), ZIndex = 12 }, function(slot: Frame)
@@ -884,12 +884,12 @@ function MainMenu.Build()
 	local camera = Workspace.CurrentCamera
 	local function relayout()
 		local vp = camera.ViewportSize
-		-- Phones get a bigger minimum so every button stays easy to tap.
+		-- phones get a bigger minimum so every button stays easy to tap.
 		local touch = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 		local s = math.clamp(vp.Y / 640, touch and 0.62 or 0.72, 1.75)
 		local inset = UIUtil.topInset()
-		-- Phones: the move buttons take the bottom-right corner, so the bar and
-		-- PLAY centre in the space left of them.
+		-- phones: the move buttons take the bottom-right corner, so the bar and
+		-- play centre in the space left of them.
 		local cx = touch and math.max((vp.X - 210) / 2, barW * s / 2 + 8) or vp.X / 2
 		barScale.Scale = s
 		barGroup.Position = UDim2.new(0, cx, 1, -12 * s)
@@ -902,7 +902,7 @@ function MainMenu.Build()
 		tasksScale.Scale = s
 		tasksGroup.Position = UDim2.new(0, 16 * s, 0.5, 0)
 
-		-- Screens fill the display under the header bar.
+		-- screens fill the display under the header bar.
 		local side = 24 * s
 		local headerY = math.max(inset + 4, 12 * s)
 		headerScale.Scale = s
@@ -915,7 +915,7 @@ function MainMenu.Build()
 	relayout()
 	camera:GetPropertyChangedSignal("ViewportSize"):Connect(relayout)
 
-	-- Build every panel defensively: a crash in one never blanks the others.
+	-- build every panel defensively: a crash in one never blanks the others.
 	panels = {}
 	panels.Loadout = safeBuild("Loadout", content, Loadout.Build)
 	panels.Shop = safeBuild("Shop", content, Shop.Build)
@@ -937,7 +937,7 @@ function MainMenu.Build()
 	if not ok then
 		warn("[PAW MAYHEM] Map select failed to build: " .. tostring(err))
 	end
-	-- Every screen (and the map picker) onto the clean look.
+	-- every screen (and the map picker) onto the clean look.
 	UIUtil.restyle(gui)
 
 	ClientState.ProfileChanged:Connect(refreshCurrency)
@@ -945,7 +945,7 @@ function MainMenu.Build()
 		refreshCurrency()
 	end
 
-	-- Lobby showcases: the armory opens Loadout, the boutique the Shop.
+	-- lobby showcases: the armory opens loadout, the boutique the shop.
 	ProximityPromptService.PromptTriggered:Connect(function(prompt)
 		local id = prompt:GetAttribute("OpenPanel")
 		if typeof(id) == "string" and panels[id] and gui.Enabled and currentPanel ~= id then
@@ -953,11 +953,11 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- New players are offered the tutorial (it goes away by itself if ignored).
-	-- The daily gift is claimed in the Shop; its 7-day calendar is still here
-	-- for the Shop to open.
+	-- new players are offered the tutorial (it goes away by itself if ignored).
+	-- the daily gift is claimed in the shop; its 7-day calendar is still here
+	-- for the shop to open.
 	pcall(DailyReward.Build)
-	-- Settings -> Intro -> REPLAY runs the intro again (not while a match is on).
+	-- settings -> intro -> replay runs the intro again (not while a match is on).
 	Settings.OnReplayIntro = function()
 		if player:GetAttribute("Context") ~= "Lobby" then
 			showToast("You can replay the intro from the lobby.")
@@ -975,12 +975,12 @@ function MainMenu.Build()
 			return
 		end
 		greeted = true
-		-- Point new players at PLAY.
+		-- point new players at play.
 		local function pointAtPlay()
 			local play = gui:FindFirstChild("Play", true)
 			if play and play:IsA("GuiObject") then
 				local arrow = UIUtil.label({
-					Parent = play, Name = "StartHere", Text = "START HERE  ▼", Font = Theme.Font.Bold, TextSize = 13,
+					Parent = play, Name = "StartHere", Text = "START HERE", Font = Theme.Font.Bold, TextSize = 13,
 					TextColor3 = Color3.fromRGB(40, 30, 6), TextXAlignment = Enum.TextXAlignment.Center,
 					AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8),
 					Size = UDim2.fromOffset(120, 26), ZIndex = 20, BackgroundTransparency = 0, BackgroundColor3 = Theme.Color.Coin,
@@ -995,9 +995,9 @@ function MainMenu.Build()
 				end)
 			end
 		end
-		-- New players get asked whether they want the tutorial (a short
-		-- cinematic, then a hands-on lesson with Mochi). Ignore it for 7 seconds
-		-- and it slides away (and asks again next time); NO THANKS stops asking.
+		-- new players get asked whether they want the tutorial (a short
+		-- cinematic, then a hands-on lesson with mochi). ignore it for 7 seconds
+		-- and it slides away (and asks again next time); no thanks stops asking.
 		if Tutorial.ShouldShow() then
 			local ask = UIUtil.make("Frame", {
 				Parent = gui, Name = "TutorialAsk", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 70),
@@ -1060,7 +1060,7 @@ function MainMenu.Build()
 				end
 			end)
 		end
-		-- Weekend event banner (Sat/Sun UTC): low gravity + bonus coins.
+		-- weekend event banner (sat/sun utc): low gravity + bonus coins.
 		local wday = os.date("!*t").wday
 		if wday == 1 or wday == 7 then
 			task.delay(2, function()

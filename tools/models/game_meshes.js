@@ -1,24 +1,24 @@
-// PAW MAYHEM — procedural 3D models for the blasters and the maps.
+// paw mayhem — procedural 3d models for the blasters and the maps.
 //
 //   node tools/models/game_meshes.js
 //
-// Writes
-//   assets/GameMeshes.glb                      every mesh (no textures: each
+// writes
+//   assets/gamemeshes.glb                      every mesh (no textures: each
 //                                              piece is tinted and given a
-//                                              Roblox material in the game, so
+//                                              roblox material in the game, so
 //                                              skins and map themes still work)
-//   src/ReplicatedStorage/Shared/GameMeshData.lua  sizes / centres / gun layout
-//   tools/models/setup_game.lua                the one-paste Studio setup
+//   src/replicatedstorage/shared/gamemeshdata.lua  sizes / centres / gun layout
+//   tools/models/setup_game.lua                the one-paste studio setup
 //
-// Blasters: every design in BlasterDesigns.json, rebuilt piece for piece with
+// blasters: every design in blasterdesigns.json, rebuilt piece for piece with
 // rounded edges (boxes bevelled, cylinders chamfered) and merged into one
 // mesh per colour slot, so a gun is 4-6 smooth parts instead of 20-30 blocks.
-// Map props: trees, pines, bushes, rocks, crates, lamps, island cliffs and
-// rock undersides (the duel maps), toy props (Toybox), rooftop props
-// (Rooftops). Sky Islands and Volcano are left as they are.
+// map props: trees, pines, bushes, rocks, crates, lamps, island cliffs and
+// rock undersides (the duel maps), toy props (toybox), rooftop props
+// (rooftops). sky islands and volcano are left as they are.
 //
-// Roblox axes, studs. Props: origin at the bottom centre unless noted.
-// "Unit" meshes (U_*) fill a 1 x 1 x 1 box centred on the origin and are
+// roblox axes, studs. props: origin at the bottom centre unless noted.
+// "unit" meshes (u_*) fill a 1 x 1 x 1 box centred on the origin and are
 // stretched to the part they replace.
 
 const fs = require('fs');
@@ -38,7 +38,7 @@ const scaleM = (m, s) => m.transform((p) => [p[0] * s[0], p[1] * s[1], p[2] * s[
 const rx = (a) => (p) => [p[0], p[1] * Math.cos(a) - p[2] * Math.sin(a), p[1] * Math.sin(a) + p[2] * Math.cos(a)];
 const ry = (a) => (p) => [p[0] * Math.cos(a) + p[2] * Math.sin(a), p[1], -p[0] * Math.sin(a) + p[2] * Math.cos(a)];
 const rz = (a) => (p) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a), p[2]];
-// Roblox CFrame.Angles(x, y, z) = Rx * Ry * Rz (z applied first)
+// roblox cframe.angles(x, y, z) = rx * ry * rz (z applied first)
 const angles = (m, x, y, z) => m.transform((p) => rx(x)(ry(y)(rz(z)(p))));
 const turnY = (m, a) => m.transform(ry(a));
 
@@ -69,7 +69,7 @@ const fbm3 = (p, seed, oct = 3) => {
   return s / t;
 };
 
-// A closed surface round the origin: radius(dir) along each direction.
+// a closed surface round the origin: radius(dir) along each direction.
 function radial(rfun, nu = 48, nv = 28, tile = 4) {
   return grid((u, v) => {
     const th = u * Math.PI * 2, ph = (v - 0.5) * Math.PI;
@@ -77,7 +77,7 @@ function radial(rfun, nu = 48, nv = 28, tile = 4) {
     return V.mul(dir, rfun(dir));
   }, nu, nv, { closedU: true, hint: (p) => p, uv: (u, v, p, n) => uvBox(p, n, tile) });
 }
-// Union of spheres seen from the origin (cloud / canopy shapes).
+// union of spheres seen from the origin (cloud / canopy shapes).
 function lobes(spheres, seed, wobble = 0.06) {
   return (dir) => {
     let best = 0;
@@ -98,12 +98,12 @@ const chamfer = (r, len, c) => [
   [[r, len / 2 - c], [r - c, len / 2]],
   [[r - c, len / 2], [0, len / 2]],
 ];
-// cylinder along X (Roblox's cylinder axis), chamfered ends
+// cylinder along x (roblox's cylinder axis), chamfered ends
 function cylX(len, d, seg = 24) {
   const r = d / 2, c = Math.min(0.04, r * 0.3, len * 0.2);
   return lathe(chamfer(r, len, c), seg, { tile: 1 }).transform(rz(-Math.PI / 2));
 }
-// cylinder along Y
+// cylinder along y
 function cylY(len, d, seg = 24, c) {
   const r = d / 2;
   c = c ?? Math.min(0.08, r * 0.3, len * 0.2);
@@ -207,7 +207,7 @@ function rockMesh(seed, sx, sy, sz) {
   return move(out, [0, 0.18 * sy, 0]);
 }
 
-// Island bits: a cliff column (unit box), a hanging rock (unit box, point
+// island bits: a cliff column (unit box), a hanging rock (unit box, point
 // down), a lumpy rock drum (unit box) for the island's core and tapers, and
 // the grass lip (unit box: a disc with a rolled, wavy edge).
 function cliffColumn(seed) {
@@ -432,7 +432,7 @@ add('U_GrassLip', grassLip(401));
   add('TankMetal', wt.TankMetal);
   add('TankRoof', wt.TankRoof);
 }
-// Import probes: tell the setup script how the importer turned the scene.
+// import probes: tell the setup script how the importer turned the scene.
 add('Probe_O', roundedBox([0.5, 0.5, 0.5], 0.05, [0, 0, 0], 1, 1));
 add('Probe_X', roundedBox([0.5, 0.5, 0.5], 0.05, [20, 0, 0], 1, 1));
 add('Probe_Y', roundedBox([0.5, 0.5, 0.5], 0.05, [0, 20, 0], 1, 1));
@@ -524,7 +524,7 @@ function writeAll() {
   }
   lua.push('\t},');
   lua.push('}');
-  fs.writeFileSync(OUT_LUA, lua.join('\n') + '\n');
+  fs.writeFileSync(OUT_LUA, (lua.join('\n') + '\n').replace(/^(\s*--.*)$/gm, (m) => m.toLowerCase())); // (comments lowercase, like the rest of the code)
 
   const template = fs.readFileSync(path.join(__dirname, 'setup_game.template.lua'), 'utf8');
   const names = all.map(([n]) => `"${n}"`).join(', ');

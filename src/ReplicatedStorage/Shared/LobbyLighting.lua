@@ -1,10 +1,10 @@
 --!strict
--- The lobby's lighting, in one place, so it can be tuned by eye in Studio
+-- the lobby's lighting, in one place, so it can be tuned by eye in studio
 -- (tools/lobby/export_lighting.lua prints this whole file back out after a
--- tuning session; see docs/LOBBY_ART.md).
---   Lighting / Bloom / Grade: what LobbyLook sets while you're in the lobby.
---   Lights: the room lights LobbyService hangs (Offset = studs from the
---   lobby's centre, Y = height above the floor). Lamps, screens and signs keep
+-- tuning session; see docs/lobby_art.md).
+--   lighting / bloom / grade: what lobbylook sets while you're in the lobby.
+--   lights: the room lights lobbyservice hangs (offset = studs from the
+--   lobby's centre, y = height above the floor). lamps, screens and signs keep
 --   their own small lights.
 
 return {
@@ -33,7 +33,7 @@ return {
 		{ Kind = "PointLight", Offset = Vector3.new(0, 13, 72), Color = Color3.fromRGB(190, 210, 255), Range = 26, Brightness = 0.9, Shadows = false },
 		{ Kind = "PointLight", Offset = Vector3.new(0, 13, 88), Color = Color3.fromRGB(190, 210, 255), Range = 26, Brightness = 0.9, Shadows = false },
 		{ Kind = "PointLight", Offset = Vector3.new(0, 13, 104), Color = Color3.fromRGB(190, 210, 255), Range = 26, Brightness = 0.9, Shadows = false },
-		-- warm pools: the spawn, the DUELS arch, the two room doors, the range
+		-- warm pools: the spawn, the duels arch, the two room doors, the range
 		{ Kind = "SpotLight", Offset = Vector3.new(0, 18, 0), Color = Color3.fromRGB(255, 222, 170), Range = 34, Brightness = 1.6, Angle = 70, Face = "Bottom", Shadows = true },
 		{ Kind = "SpotLight", Offset = Vector3.new(0, 18, 26), Color = Color3.fromRGB(255, 222, 170), Range = 24, Brightness = 1.2, Angle = 70, Face = "Bottom", Shadows = true },
 		{ Kind = "SpotLight", Offset = Vector3.new(38, 18, 0), Color = Color3.fromRGB(255, 222, 170), Range = 22, Brightness = 1, Angle = 70, Face = "Bottom", Shadows = true },

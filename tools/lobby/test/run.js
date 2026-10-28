@@ -1,9 +1,9 @@
-// Runs the lobby's Studio scripts against a mock Roblox (Luau CLI):
+// runs the lobby's studio scripts against a mock roblox (luau cli):
 //   node tools/lobby/test/run.js
 // 1. setup_lobby.lua on a simulated import (with textures, turned 180°, odd
 //    names), again (re-run), and on an import with no textures;
-// 2. LobbyService's model placement (spawnPiece / placeGroup) with the real
-//    LobbyMeshData, checking every piece lands where the generator put it.
+// 2. lobbyservice's model placement (spawnpiece / placegroup) with the real
+//    lobbymeshdata, checking every piece lands where the generator put it.
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -88,9 +88,9 @@ check(math.abs(t.XVector.X - 1) < 1e-6, "unturned import has identity ImportTurn
 print(failures == 0 and "SETUP TESTS PASSED" or ("SETUP TESTS FAILED: " .. failures))
 `;
 
-// Pull LobbyService's placement code out verbatim.
+// pull lobbyservice's placement code out verbatim.
 const start = lobby.indexOf('local FALLBACK');
-const end = lobby.indexOf('-- A part the model replaces');
+const end = lobby.indexOf('-- a part the model replaces');
 if (start < 0 || end < 0) throw new Error('placement code not found in LobbyService');
 const placement = lobby.slice(start, end);
 

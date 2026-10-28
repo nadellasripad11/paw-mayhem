@@ -1,7 +1,7 @@
 --!strict
--- PAW MAYHEM — server bootstrap.
--- Builds the arena and starts every service in dependency order. Services that
--- listen to DataService.ProfileLoaded are started BEFORE DataService so no
+-- paw mayhem — server bootstrap.
+-- builds the arena and starts every service in dependency order. services that
+-- listen to dataservice.profileloaded are started before dataservice so no
 -- early join is missed.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -32,17 +32,17 @@ local ArenaBuilder = require(World.ArenaBuilder)
 local MapPreviews = require(World.MapPreviews)
 
 local function main()
-	-- 1. Create all remotes up front.
+	-- 1. create all remotes up front.
 	Remotes.InitServer()
 
-	-- 2. Snapshot every map for the map picker, then build the real arena so
+	-- 2. snapshot every map for the map picker, then build the real arena so
 	--    spawns/pads exist before players spawn.
 	MapPreviews.Build()
 	ArenaBuilder.Build()
 
-	-- 3. Start services that must be ready before profiles load.
-	-- Each one starts on its own, so a bug in one can't stop the rest (and
-	-- leave players with no lobby to spawn into); the error still shows in Output.
+	-- 3. start services that must be ready before profiles load.
+	-- each one starts on its own, so a bug in one can't stop the rest (and
+	-- leave players with no lobby to spawn into); the error still shows in output.
 	local function start(name: string, service: any)
 		local ok, err = pcall(service.Start)
 		if not ok then
@@ -66,7 +66,7 @@ local function main()
 	start("LobbyService", LobbyService)
 	start("DuelService", DuelService) -- (duel pads stand in the lobby)
 
-	-- 4. Push profile to client + ensure daily quests on load, then put the
+	-- 4. push profile to client + ensure daily quests on load, then put the
 	--    player in the lobby (they join matches and duels from there).
 	DataService.ProfileLoaded:Connect(function(player)
 		QuestService.EnsureDaily(player)
@@ -74,7 +74,7 @@ local function main()
 		LobbyService.Spawn(player)
 	end)
 
-	-- 5. Finally start data (fires ProfileLoaded for joiners).
+	-- 5. finally start data (fires profileloaded for joiners).
 	DataService.Start()
 
 	print("[PAW MAYHEM] Server started.")

@@ -1,8 +1,8 @@
--- LobbyScene: the real 3D world behind the home screen. Built locally on each
+-- lobbyscene: the real 3d world behind the home screen. built locally on each
 -- client (never replicated) far away from the arena, so the menu camera looks at
 -- an actual lit scene: your own cat holding your blaster on a mossy ledge,
 -- floating islands with windmills, houses and waterfalls, clouds, flowers and
--- fences. Everything is procedural Parts — no Toolbox models.
+-- fences. everything is procedural parts — no toolbox models.
 
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
@@ -18,7 +18,7 @@ LobbyScene.FieldOfView = 50
 
 local ORIGIN = Vector3.new(0, 260, -2600)
 local SCENE = CFrame.new(ORIGIN)
--- Scene space: camera looks down -Z, +X is screen right, +Z is toward camera.
+-- scene space: camera looks down -z, +x is screen right, +z is toward camera.
 local CAMERA_POS = Vector3.new(0, 9, 27.5)
 local CAMERA_LOOK = Vector3.new(1, 7.4, 0)
 
@@ -37,7 +37,7 @@ local lightingConns: { RBXScriptConnection } = {}
 
 local LIGHTING = {
 	ClockTime = 14.2,
-	-- Kept moderate: brighter settings pushed white fur and flowers past the
+	-- kept moderate: brighter settings pushed white fur and flowers past the
 	-- bloom threshold and washed the whole mascot out.
 	Brightness = 2.1,
 	Ambient = Color3.fromRGB(100, 108, 130),
@@ -59,7 +59,7 @@ local ATMOSPHERE = {
 	Haze = 1.9,
 }
 
--- Palette
+-- palette
 local GRASS_TOP = Color3.fromRGB(116, 198, 76)
 local GRASS_DARK = Color3.fromRGB(82, 162, 62)
 local GRASS_BLADES = { Color3.fromRGB(96, 184, 70), Color3.fromRGB(128, 206, 84), Color3.fromRGB(74, 150, 58) }
@@ -104,7 +104,7 @@ local function block(parent: Instance, size: Vector3, cf: CFrame, color: Color3,
 	return newPart("Part", parent, size, cf, color, material)
 end
 
--- Ellipsoid (a Ball part is forced uniform; a Sphere mesh stretches to Size).
+-- ellipsoid (a ball part is forced uniform; a sphere mesh stretches to size).
 local function ell(parent: Instance, size: Vector3, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
 	local p = newPart("Part", parent, size, cf, color, material)
 	local mesh = Instance.new("SpecialMesh")
@@ -113,7 +113,7 @@ local function ell(parent: Instance, size: Vector3, cf: CFrame, color: Color3, m
 	return p
 end
 
--- Cylinder whose axis runs along cf's X axis.
+-- cylinder whose axis runs along cf's x axis.
 local function cyl(parent: Instance, length: number, dia: number, cf: CFrame, color: Color3, material: Enum.Material?): BasePart
 	local p = newPart("Part", parent, Vector3.new(length, dia, dia), cf, color, material)
 	p.Shape = Enum.PartType.Cylinder
@@ -128,8 +128,8 @@ local function wedge(parent: Instance, size: Vector3, cf: CFrame, color: Color3,
 	return newPart("WedgePart", parent, size, cf, color, material)
 end
 
--- Isosceles triangle prism (apex up) from two mirrored wedges. `cf` sits at the
--- middle of the base edge; the triangle lies in cf's XY plane.
+-- isosceles triangle prism (apex up) from two mirrored wedges. `cf` sits at the
+-- middle of the base edge; the triangle lies in cf's xy plane.
 local function triangle(parent: Instance, cf: CFrame, halfWidth: number, height: number, thickness: number, color: Color3, material: Enum.Material?): { BasePart }
 	local size = Vector3.new(thickness, height, halfWidth)
 	local a = wedge(parent, size, cf * CFrame.new(-halfWidth / 2, height / 2, 0) * CFrame.Angles(0, math.rad(90), 0), color, material)
@@ -137,7 +137,7 @@ local function triangle(parent: Instance, cf: CFrame, halfWidth: number, height:
 	return { a, b }
 end
 
--- Gable roof: ridge runs along cf's Z axis, `cf` at the roof's center.
+-- gable roof: ridge runs along cf's z axis, `cf` at the roof's center.
 local function gable(parent: Instance, cf: CFrame, width: number, height: number, depth: number, color: Color3)
 	triangle(parent, cf * CFrame.new(0, -height / 2, 0), width / 2, height, depth, color, Enum.Material.SmoothPlastic)
 end
@@ -179,7 +179,7 @@ local function house(parent: Instance, x: number, y: number, z: number, s: numbe
 	block(parent, Vector3.new(0.6, 1.4, 0.6) * s, b * CFrame.new(1.2 * s, 4.6 * s, -0.8 * s), Color3.fromRGB(170, 150, 140), Enum.Material.Brick)
 end
 
--- A lookout hut on stilts like the one on the reference's right island.
+-- a lookout hut on stilts like the one on the reference's right island.
 local function hut(parent: Instance, x: number, y: number, z: number, s: number, yaw: number)
 	local b = W(x, y, z) * CFrame.Angles(0, yaw, 0)
 	for _, dx in ipairs({ -1, 1 }) do
@@ -353,9 +353,9 @@ local function island(parent: Instance, name: string, x: number, y: number, z: n
 	return { model = m, phase = rng:NextNumber(0, math.pi * 2), amp = bob or 0 }
 end
 
--- ── the Catto mascot ─────────────────────────────────────────────────────────
--- The real in-game cat (your equipped look) scaled up, holding your equipped
--- blaster. CatAnimator poses it (breathing, head sway, tail, blinking).
+-- ── the catto mascot ─────────────────────────────────────────────────────────
+-- the real in-game cat (your equipped look) scaled up, holding your equipped
+-- blaster. catanimator poses it (breathing, head sway, tail, blinking).
 local MASCOT_SCALE = 4
 local GUN_SCALE = 0.36
 local mascotRoot: CFrame? = nil
@@ -363,7 +363,7 @@ local mascotParent: Instance? = nil
 local mascot: Model? = nil
 local mascotSig = ""
 
--- Place every jointed part from its joints, walking out from the root.
+-- place every jointed part from its joints, walking out from the root.
 local function resolveJoints(model: Model)
 	local root = model.PrimaryPart
 	if not root then
@@ -391,7 +391,7 @@ local function resolveJoints(model: Model)
 	end
 end
 
--- Scale parts, joint offsets and stored rest poses about `pivot`.
+-- scale parts, joint offsets and stored rest poses about `pivot`.
 local function scaleAbout(inst: Instance, pivot: CFrame, s: number)
 	local function scaled(cf: CFrame): CFrame
 		return cf - cf.Position + cf.Position * s
@@ -436,7 +436,7 @@ local function buildMascot()
 	root.Anchored = true
 	model:PivotTo(CFrame.identity)
 
-	-- Arms raised forward to hold the blaster.
+	-- arms raised forward to hold the blaster.
 	for _, i in ipairs({ -1, 1 }) do
 		local m = model:FindFirstChild(i < 0 and "PawShoulderL" or "PawShoulderR", true) :: Motor6D?
 		if m then
@@ -447,7 +447,7 @@ local function buildMascot()
 	end
 	resolveJoints(model)
 
-	-- Blaster across the body, muzzle to screen-right and a little toward the
+	-- blaster across the body, muzzle to screen-right and a little toward the
 	-- camera, gripped by the right hand.
 	local hands = {}
 	for _, d in ipairs(model:GetDescendants()) do
@@ -584,7 +584,7 @@ local function buildIslands(parent: Instance): ({ Island }, { Windmill })
 		table.insert(mills, w)
 	end
 
-	-- A: big island right, behind the mascot
+	-- a: big island right, behind the mascot
 	local a = island(parent, "IslandRight", 34, 11, -46, 13, 24, 0.45)
 	table.insert(isles, a)
 	mill(a, 33, 11.7, -50, 1.7, -0.3)
@@ -596,7 +596,7 @@ local function buildIslands(parent: Instance): ({ Island }, { Windmill })
 	waterfall(a.model, 30, 11.2, -33.6, 30, 3.5)
 	waterfall(a.model, 41, 11.2, -36.4, 22, 2.2)
 
-	-- B: high island top-center with the tall windmill and houses
+	-- b: high island top-center with the tall windmill and houses
 	local b = island(parent, "IslandTop", -6, 30, -86, 10, 19, 0.5)
 	table.insert(isles, b)
 	mill(b, -5, 30.7, -88, 1.5, 0.2)
@@ -606,7 +606,7 @@ local function buildIslands(parent: Instance): ({ Island }, { Windmill })
 	tree(b.model, 3, 30.7, -90, 1.1)
 	waterfall(b.model, 1, 30.2, -79, 26, 2.8)
 
-	-- D: left island behind the logo
+	-- d: left island behind the logo
 	local d = island(parent, "IslandLeft", -40, 20, -78, 12, 20, 0.4)
 	table.insert(isles, d)
 	tree(d.model, -44, 20.7, -80, 1.4)
@@ -725,7 +725,7 @@ local function same(a: any, b: any): boolean
 	return a == b
 end
 
--- Point the whole scene so the sun sits behind the camera's upper-left, lighting
+-- point the whole scene so the sun sits behind the camera's upper-left, lighting
 -- the mascot's face like the key art.
 local function orientToSun()
 	local ok, sun = pcall(function()
@@ -782,7 +782,7 @@ local function applyLighting()
 	end
 	overrideAtmosphere(atmo :: Atmosphere)
 
-	-- The server may retune lighting when it builds a map while we're in the
+	-- the server may retune lighting when it builds a map while we're in the
 	-- menu: remember its new value for later, then keep the menu look.
 	table.insert(lightingConns, Lighting.Changed:Connect(function(prop)
 		local want = LIGHTING[prop]
@@ -869,7 +869,7 @@ local function buildPostEffects()
 	end
 end
 
--- ── public API ───────────────────────────────────────────────────────────────
+-- ── public api ───────────────────────────────────────────────────────────────
 function LobbyScene.Build()
 	if built then
 		return
@@ -890,7 +890,7 @@ function LobbyScene.Build()
 		buildForeground(f)
 	end)
 	section("mascot", function()
-		-- Feet sit 1.4 below the cat's root; it faces -Z, so turn it to the camera.
+		-- feet sit 1.4 below the cat's root; it faces -z, so turn it to the camera.
 		mascotRoot = W(4, -1.0 + 1.4 * MASCOT_SCALE, 0) * CFrame.Angles(0, math.rad(180 - 12), 0)
 		mascotParent = f
 		refreshMascot()
@@ -910,7 +910,7 @@ function LobbyScene.GetCameraCFrame(): CFrame
 	return SCENE * CFrame.lookAt(CAMERA_POS, CAMERA_LOOK)
 end
 
--- Graphics Quality: Low = no post effects, Medium = colour + bloom only.
+-- graphics quality: low = no post effects, medium = colour + bloom only.
 LobbyScene.Quality = "High"
 function LobbyScene.EffectAllowed(e: Instance): boolean
 	if LobbyScene.Quality == "Low" then

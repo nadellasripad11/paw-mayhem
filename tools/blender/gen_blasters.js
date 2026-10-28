@@ -1,4 +1,4 @@
-// Generates BlasterDesigns.json: stylized sci-fi guns with real gun anatomy.
+// generates blasterdesigns.json: stylized sci-fi guns with real gun anatomy.
 const fs = require('fs');
 const OUT = require('path').join(__dirname, '..', '..', 'src', 'ReplicatedStorage', 'Shared', 'Character', 'BlasterDesigns.json');
 
@@ -6,10 +6,10 @@ const box = (size, pos, c, rot, extra) => Object.assign({ k: 'box', size, pos, c
 const cyl = (len, d, pos, c, rot, extra) => Object.assign({ k: 'cyl', len, d, pos, c }, rot ? { rot } : {}, extra || {});
 const ball = (d, pos, c, extra) => Object.assign({ k: 'ball', d, pos, c }, extra || {});
 const glow = (len, d, pos) => cyl(len, d, pos, 'Glow');
-const V = [0, 90, 0]; // cylinder across the gun (along Z)
+const V = [0, 90, 0]; // cylinder across the gun (along z)
 const UP = [0, 0, 90]; // cylinder standing up
 
-// Shared lower: grip, trigger guard, trigger.
+// shared lower: grip, trigger guard, trigger.
 const grip = [
   box([0.36, 0.9, 0.32], [-0.72, -0.66, 0], 'Dark', [0, 0, -14]),
   box([0.62, 0.07, 0.26], [-0.3, -0.62, 0], 'Dark'),

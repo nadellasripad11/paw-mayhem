@@ -1,7 +1,7 @@
 --!strict
--- PowerUpService: periodically spawns readable power-up pickups at arena pads.
--- On touch, grants the toucher a timed effect stored in Runtime state (read by
--- WeaponService and the movement status loop). Server-authoritative.
+-- powerupservice: periodically spawns readable power-up pickups at arena pads.
+-- on touch, grants the toucher a timed effect stored in runtime state (read by
+-- weaponservice and the movement status loop). server-authoritative.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -49,10 +49,10 @@ local function grant(player: Player, powerId: string, duration: number?)
 	})
 end
 
--- Used by supply drops.
+-- used by supply drops.
 PowerUpService.Grant = grant
 
--- Power-ups that can appear on the pads (drop-only ones are excluded).
+-- power-ups that can appear on the pads (drop-only ones are excluded).
 local padPool = {}
 for _, p in ipairs(Progression.PowerUps) do
 	if not p.DropOnly then
@@ -124,7 +124,7 @@ local function spawnPickup()
 		end
 	end)
 
-	-- Auto-despawn if untouched.
+	-- auto-despawn if untouched.
 	task.delay(GameConfig.PowerUps.RespawnAfterPickup + GameConfig.PowerUps.Duration, function()
 		if activePickups[id] then
 			activePickups[id] = nil

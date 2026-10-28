@@ -1,11 +1,11 @@
 --!strict
--- HeroArt: larger composed illustrations built the same way as Icons.lua (pure
--- Frames/UICorner/UIGradient, no image assets) — a layered parallax sky, a big
+-- heroart: larger composed illustrations built the same way as icons.lua (pure
+-- frames/uicorner/uigradient, no image assets) — a layered parallax sky, a big
 -- foreground floating island with a windmill/trees/waterfall, and a fully
--- articulated standing cat holding a blaster. Used behind the main menu so the
--- lobby reads as a scene, not a flat panel, entirely within what native Roblox
--- GuiObjects can draw (flat/vector styled — this is not a substitute for
--- painted artwork, just the richest version achievable in pure UI code).
+-- articulated standing cat holding a blaster. used behind the main menu so the
+-- lobby reads as a scene, not a flat panel, entirely within what native roblox
+-- guiobjects can draw (flat/vector styled — this is not a substitute for
+-- painted artwork, just the richest version achievable in pure ui code).
 
 local TweenService = game:GetService("TweenService")
 
@@ -35,7 +35,7 @@ local function grad(f: Frame, c1: Color3, c2: Color3, rotation: number?)
 	return g
 end
 
--- ── Sky: gradient + sun glow + three drifting cloud layers ──────────────────
+-- ── sky: gradient + sun glow + three drifting cloud layers ──────────────────
 function HeroArt.Sky(parent: Instance)
 	local sky = frame(parent, UDim2.fromScale(1, 1), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(120, 175, 245), 0, Vector2.new(0.5, 0.5))
 	grad(sky, Color3.fromRGB(116, 202, 255), Color3.fromRGB(52, 133, 213), 90)
@@ -73,7 +73,7 @@ function HeroArt.Sky(parent: Instance)
 	return sky
 end
 
--- ── Floating island: grass top, stone tiers, windmill, trees, flowers, falls ─
+-- ── floating island: grass top, stone tiers, windmill, trees, flowers, falls ─
 function HeroArt.Island(parent: Instance, opts: any?)
 	opts = opts or {}
 	local width = opts.width or 900
@@ -168,7 +168,7 @@ function HeroArt.Island(parent: Instance, opts: any?)
 	return root
 end
 
--- ── Hero cat: fully articulated standing cat holding a blaster ──────────────
+-- ── hero cat: fully articulated standing cat holding a blaster ──────────────
 function HeroArt.HeroCat(parent: Instance, opts: any?)
 	opts = opts or {}
 	local size = opts.size or 340
@@ -252,8 +252,8 @@ function HeroArt.HeroCat(parent: Instance, opts: any?)
 	return root
 end
 
--- Dim every descendant Frame of `root` by raising its BackgroundTransparency,
--- turning any HeroArt piece into a faint watermark (used behind panel content).
+-- dim every descendant frame of `root` by raising its backgroundtransparency,
+-- turning any heroart piece into a faint watermark (used behind panel content).
 function HeroArt.Fade(root: Instance, amount: number)
 	for _, d in ipairs(root:GetDescendants()) do
 		if d:IsA("Frame") then
@@ -263,11 +263,11 @@ function HeroArt.Fade(root: Instance, amount: number)
 	return root
 end
 
--- Convenience: a faint island watermark anchored to a panel's bottom, sitting
+-- convenience: a faint island watermark anchored to a panel's bottom, sitting
 -- behind its content (caller should still add its own opaque foreground).
--- Wrapped in pcall: decorative background art must NEVER be able to break a
+-- wrapped in pcall: decorative background art must never be able to break a
 -- functional screen (item grids, buttons, etc.) — if anything here throws, we
--- warn to Output with the real error and simply render no watermark.
+-- warn to output with the real error and simply render no watermark.
 function HeroArt.Watermark(parent: Instance, width: number?)
 	local ok, result = pcall(function()
 		local holder = Instance.new("Frame")

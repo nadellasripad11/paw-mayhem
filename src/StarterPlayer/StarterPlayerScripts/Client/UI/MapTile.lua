@@ -1,8 +1,8 @@
 --!strict
--- MapTile: the big picture tiles of the vote screens (maps, gamemodes),
--- styled like Rivals: a picture filling the tile (a map in 3D from the
+-- maptile: the big picture tiles of the vote screens (maps, gamemodes),
+-- styled like rivals: a picture filling the tile (a map in 3d from the
 -- server's snapshots, or a plain colour), and along the bottom a dark band
--- with diagonal stripes and the name in the middle. A RANDOM tile shows a
+-- with diagonal stripes and the name in the middle. a random tile shows a
 -- shuffle sign instead.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +14,7 @@ local MapTile = {}
 
 export type Tile = { button: TextButton, setPicked: (boolean) -> (), setVotes: (number) -> () }
 
--- A map from the snapshots, seen from above, filling \`parent\`.
+-- a map from the snapshots, seen from above, filling \`parent\`.
 function MapTile.Shot(parent: GuiObject, mapId: string, sky: Color3, turn: number?)
 	task.spawn(function()
 		local folder = ReplicatedStorage:WaitForChild("MapPreviews", 30)
@@ -47,7 +47,7 @@ function MapTile.Shot(parent: GuiObject, mapId: string, sky: Color3, turn: numbe
 	end)
 end
 
--- The shuffle sign for RANDOM: two crossing arrows made of bars.
+-- the shuffle sign for random: two crossing arrows made of bars.
 local function shuffle(parent: Instance)
 	local h = UIUtil.make("Frame", {
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromScale(0.34, 0.4),
@@ -72,7 +72,7 @@ local function shuffle(parent: Instance)
 	end
 end
 
--- \`art\`: a map id to show in 3D, "Random" for the shuffle sign, or nil for
+-- \`art\`: a map id to show in 3d, "random" for the shuffle sign, or nil for
 -- just \`color\`. \`stripe\` colours the band's stripes.
 function MapTile.New(parent: Instance, name: string, art: string?, color: Color3, stripe: Color3, onClick: () -> ()): Tile
 	local b = UIUtil.make("TextButton", {
@@ -90,7 +90,7 @@ function MapTile.New(parent: Instance, name: string, art: string?, color: Color3
 		g.Rotation = 90
 		g.Parent = b
 	end
-	-- The band: dark, with diagonal stripes, the name in the middle.
+	-- the band: dark, with diagonal stripes, the name in the middle.
 	local band = UIUtil.make("Frame", {
 		Parent = b, AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromScale(1, 0.22),
 		BackgroundColor3 = Color3.fromRGB(14, 16, 14), BackgroundTransparency = 0.15, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 4,
@@ -109,7 +109,7 @@ function MapTile.New(parent: Instance, name: string, art: string?, color: Color3
 	ls.Thickness = 2
 	ls.Color = Color3.fromRGB(10, 10, 12)
 	ls.Parent = label
-	-- Edge (green normally, gold when it's your pick), votes in the corner.
+	-- edge (green normally, gold when it's your pick), votes in the corner.
 	local edge = UIUtil.stroke(stripe, 3, b)
 	edge.Transparency = 0.35
 	local votes = UIUtil.label({
@@ -141,7 +141,7 @@ function MapTile.New(parent: Instance, name: string, art: string?, color: Color3
 	}
 end
 
--- Lay \`tiles\` out like the reference: the first three big across the top,
+-- lay \`tiles\` out like the reference: the first three big across the top,
 -- the rest four to a row underneath (inside \`grid\`, which fills its parent).
 function MapTile.Layout(tiles: { Tile })
 	local gap = 0.008

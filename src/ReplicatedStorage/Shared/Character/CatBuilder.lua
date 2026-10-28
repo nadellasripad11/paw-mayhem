@@ -1,17 +1,17 @@
 --!strict
--- CatBuilder: builds an original chibi cat entirely from Roblox primitives
--- (no Toolbox / external meshes or textures; rounded pieces use the built-in
+-- catbuilder: builds an original chibi cat entirely from roblox primitives
+-- (no toolbox / external meshes or textures; rounded pieces use the built-in
 -- sphere mesh so they can be true ovals).
 --
---   Model
---     HumanoidRootPart (invisible collision root; PrimaryPart)
---     Humanoid
---     Torso / hips / chest, Head (+ face, ears, hats), arms, legs, tail
+--   model
+--     humanoidrootpart (invisible collision root; primarypart)
+--     humanoid
+--     torso / hips / chest, head (+ face, ears, hats), arms, legs, tail
 --
--- The head, arms, legs and tail hang off named Motor6D pivots (PawNeck,
--- PawShoulderL/R, PawHipL/R, PawTail) whose rest pose is stored in a
--- "BaseC0" attribute; CatBuilder.Pose animates them. Every cosmetic part is
--- Massless + CanCollide=false so the root alone drives physics/knockback.
+-- the head, arms, legs and tail hang off named motor6d pivots (pawneck,
+-- pawshoulderl/r, pawhipl/r, pawtail) whose rest pose is stored in a
+-- "basec0" attribute; catbuilder.pose animates them. every cosmetic part is
+-- massless + cancollide=false so the root alone drives physics/knockback.
 
 local CollectionService = game:GetService("CollectionService")
 
@@ -21,8 +21,8 @@ local GameConfig = require(script.Parent.Parent.Config.GameConfig)
 
 local CatBuilder = {}
 
--- Smooth Blender meshes (tools/blender/build_cat.py). Used when the imported
--- ReplicatedStorage.CatMeshes model is present; otherwise the cat falls back
+-- smooth blender meshes (tools/blender/build_cat.py). used when the imported
+-- replicatedstorage.catmeshes model is present; otherwise the cat falls back
 -- to the primitive build below.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CatMeshData = require(script.Parent.CatMeshData)
@@ -30,16 +30,16 @@ local CatMeshData = require(script.Parent.CatMeshData)
 CatBuilder.Tag = "PawCat"
 
 local ROOT_SIZE = Vector3.new(2, 2, 1.4)
--- The invisible root is the only collider. HipHeight lifts it so the
--- Humanoid hovers instead of dragging the box along the floor (which snagged
+-- the invisible root is the only collider. hipheight lifts it so the
+-- humanoid hovers instead of dragging the box along the floor (which snagged
 -- on seams and shoved the cat sideways); 0.4 puts the feet on the ground.
 local HIP_HEIGHT = 0.4
 
 local V = Vector3.new
 local HEAD_POS = V(0, 1.22, 0) -- head centre in root space
 local PINK = Color3.fromRGB(255, 172, 192)
-local ROT_Z90 = CFrame.Angles(0, 0, math.rad(90)) -- cylinder axis X -> Y
-local ROT_Y90 = CFrame.Angles(0, math.rad(90), 0) -- cylinder axis X -> Z
+local ROT_Z90 = CFrame.Angles(0, 0, math.rad(90)) -- cylinder axis x -> y
+local ROT_Y90 = CFrame.Angles(0, math.rad(90), 0) -- cylinder axis x -> z
 
 local function part(name: string, size: Vector3, color: Color3, shape: Enum.PartType?): BasePart
 	local p = Instance.new("Part")
@@ -80,7 +80,7 @@ local function wedge(name: string, size: Vector3, color: Color3): BasePart
 	return w
 end
 
--- Rigidly attach b to a at offset cf (in a's space).
+-- rigidly attach b to a at offset cf (in a's space).
 local function weld(a: BasePart, b: BasePart, cf: CFrame)
 	local w = Instance.new("Motor6D")
 	w.Name = b.Name .. "_Joint"
@@ -92,7 +92,7 @@ local function weld(a: BasePart, b: BasePart, cf: CFrame)
 	b.Parent = a.Parent
 end
 
--- Attach b to a through a named pivot so it can be rotated about `pivot`.
+-- attach b to a through a named pivot so it can be rotated about `pivot`.
 local function joint(name: string, a: BasePart, b: BasePart, pivot: CFrame, offset: CFrame)
 	local m = Instance.new("Motor6D")
 	m.Name = name
@@ -115,13 +115,13 @@ local function resolve(custom)
 	return fur, outfit, hat, acc
 end
 
--- Clothing colours per outfit: jacket/top, inner chest, shorts, sleeve cuffs.
+-- clothing colours per outfit: jacket/top, inner chest, shorts, sleeve cuffs.
 local function outfitColors(outfit, fur)
 	local id = outfit.Id
 	if id == "None" then
 		return fur.Body, fur.Accent, nil, nil
 	elseif id == "Hoodie" then
-		-- Open hoodie over a peach tee, dark shorts
+		-- open hoodie over a peach tee, dark shorts
 		return outfit.Color, Color3.fromRGB(242, 178, 152), Color3.fromRGB(46, 42, 54), outfit.Color:Lerp(Color3.new(0, 0, 0), 0.25)
 	elseif id == "Streetwear" then
 		return outfit.Color, outfit.Color:Lerp(Color3.new(1, 1, 1), 0.2), Color3.fromRGB(62, 92, 140), Color3.fromRGB(236, 240, 246)
@@ -137,7 +137,7 @@ local function outfitColors(outfit, fur)
 	return outfit.Color, fur.Accent, outfit.Color:Lerp(Color3.new(0, 0, 0), 0.3), nil
 end
 
--- Outfit / back-item offsets were authored for the original 1.45 x 1.15 x
+-- outfit / back-item offsets were authored for the original 1.45 x 1.15 x
 -- 1.05 torso centred at y 0.02; map them onto the compact torso (1.3 x 1.0 x
 -- 1.0 centred at y -0.2).
 local function slim(p: BasePart, cf: CFrame): CFrame
@@ -157,28 +157,28 @@ local function addOutfitDetails(root: BasePart, outfit, top: Color3)
 		local function put(p: BasePart, cf: CFrame)
 			weld(root, p, cf)
 		end
-		-- Hood bunched behind the neck + jacket collar
+		-- hood bunched behind the neck + jacket collar
 		put(oval("Hood", V(1.15, 0.52, 0.72), top), CFrame.new(0, 0.26, 0.38))
 		put(oval("HoodRim", V(0.95, 0.24, 0.5), dark), CFrame.new(0, 0.36, 0.3))
 		put(oval("Collar", V(1.02, 0.26, 0.92), top), CFrame.new(0, 0.24, 0))
-		-- Open front: two jacket panels framing the tee
+		-- open front: two jacket panels framing the tee
 		for i = -1, 1, 2 do
 			put(oval("Lapel", V(0.42, 0.94, 0.24), top), CFrame.new(0.4 * i, -0.22, -0.4) * CFrame.Angles(0, math.rad(-18 * i), math.rad(-3 * i)))
 			put(part("LapelEdge", V(0.05, 0.86, 0.05), dark), CFrame.new(0.24 * i, -0.2, -0.53) * CFrame.Angles(0, 0, math.rad(-3 * i)))
-			-- Drawstrings with metal tips
+			-- drawstrings with metal tips
 			put(part("Drawstring", V(0.045, 0.42, 0.045), Color3.fromRGB(246, 246, 250)), CFrame.new(0.15 * i, 0.04, -0.56))
 			put(oval("Aglet", V(0.08, 0.11, 0.08), Color3.fromRGB(200, 205, 215)), CFrame.new(0.15 * i, -0.19, -0.57))
-			-- Dog-tag chain
+			-- dog-tag chain
 			put(part("TagChain", V(0.025, 0.26, 0.025), Color3.fromRGB(180, 186, 196)), CFrame.new(0.07 * i, 0.16, -0.55) * CFrame.Angles(0, 0, math.rad(28 * i)))
 		end
 		put(oval("JacketHem", V(1.34, 0.2, 1.04), dark), CFrame.new(0, -0.62, 0))
 		local tag = oval("DogTag", V(0.17, 0.24, 0.05), Color3.fromRGB(214, 218, 228))
 		tag.Material = Enum.Material.Metal
 		put(tag, CFrame.new(-0.01, 0.02, -0.575))
-		-- Tan patch pocket (lower right as you face the cat)
+		-- tan patch pocket (lower right as you face the cat)
 		put(part("Pocket", V(0.3, 0.26, 0.05), Color3.fromRGB(214, 140, 72)), CFrame.new(-0.46, -0.46, -0.39) * CFrame.Angles(0, math.rad(34), 0))
 		put(part("PocketFlap", V(0.32, 0.07, 0.06), Color3.fromRGB(176, 104, 48)), CFrame.new(-0.46, -0.34, -0.395) * CFrame.Angles(0, math.rad(34), 0))
-		-- Crossbody strap + satchel (on the other hip)
+		-- crossbody strap + satchel (on the other hip)
 		local leather = Color3.fromRGB(150, 88, 54)
 		put(part("Strap", V(0.09, 1.2, 0.05), leather), CFrame.new(0, -0.16, -0.575) * CFrame.Angles(0, 0, math.rad(53)))
 		put(part("StrapBack", V(0.09, 1.1, 0.05), leather), CFrame.new(0, -0.16, 0.52) * CFrame.Angles(0, 0, math.rad(-53)))
@@ -246,7 +246,7 @@ local function addBackItem(root: BasePart, acc)
 end
 
 -- ── head: face, ears, markings, hats, glasses (head space) ──────────────────
--- A big, wide kitten head: huge round glossy eyes, little brows, a
+-- a big, wide kitten head: huge round glossy eyes, little brows, a
 -- down-pointing forehead marking, pink nose, ":3" mouth, spiky cheek fluff
 -- and tall, wide ears with pink insides.
 local function earPair(add: (BasePart, CFrame) -> (), cf: CFrame, color: Color3, w: number, h: number, t: number, name: string)
@@ -263,7 +263,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 	local marking = fur.Marking or fur.Body:Lerp(Color3.fromRGB(150, 80, 40), 0.22)
 	local browColor = fur.Body:Lerp(Color3.new(0, 0, 0), 0.28)
 
-	-- Spiky cheek fluff sweeping out to the sides + a tuft on top
+	-- spiky cheek fluff sweeping out to the sides + a tuft on top
 	for i = -1, 1, 2 do
 		add(oval("CheekFluff", V(0.64, 0.34, 0.52), fur.Body), CFrame.new(1.05 * i, -0.28, -0.2) * CFrame.Angles(0, 0, math.rad(-24 * i)))
 		add(oval("CheekFluff", V(0.52, 0.28, 0.46), fur.Body), CFrame.new(1.0 * i, -0.52, -0.1) * CFrame.Angles(0, 0, math.rad(-52 * i)))
@@ -273,13 +273,13 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 	add(oval("Tuft", V(0.22, 0.42, 0.2), fur.Body), CFrame.new(0.06, 1.0, -0.06) * CFrame.Angles(0, 0, math.rad(-6)))
 	add(oval("Tuft", V(0.2, 0.34, 0.18), fur.Body), CFrame.new(0.2, 0.94, -0.04) * CFrame.Angles(0, 0, math.rad(-28)))
 
-	-- Forehead marking: a small triangle pointing down between the eyes
+	-- forehead marking: a small triangle pointing down between the eyes
 	if fur.Pattern ~= "Tiger" then
 		local tri = CFrame.new(0, 0.5, -0.83) * CFrame.Angles(math.rad(34), 0, 0) * CFrame.Angles(0, 0, math.pi)
 		earPair(add, tri, marking, 0.36, 0.4, 0.05, "ForeheadMark")
 	end
 
-	-- Muzzle: soft light puffs, pink nose, ":3" mouth
+	-- muzzle: soft light puffs, pink nose, ":3" mouth
 	for i = -1, 1, 2 do
 		add(oval("MuzzlePuff", V(0.34, 0.24, 0.22), fur.Accent), CFrame.new(0.12 * i, -0.42, -0.9))
 		local mouth = part("Mouth", V(0.14, 0.035, 0.03), Color3.fromRGB(110, 58, 66))
@@ -289,7 +289,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 	add(oval("Nose", V(0.2, 0.12, 0.12), Color3.fromRGB(255, 136, 160)), CFrame.new(0, -0.28, -0.965))
 	add(oval("NoseShine", V(0.07, 0.04, 0.03), Color3.fromRGB(255, 210, 222)), CFrame.new(0.03, -0.25, -1.025))
 
-	-- Eyes: big and round. Dark rim, deep iris that glows lighter at the
+	-- eyes: big and round. dark rim, deep iris that glows lighter at the
 	-- bottom, big pupil, one large + one small highlight (same side on both
 	-- eyes, like a single light).
 	local eyeColor = fur.Eye or Color3.fromRGB(52, 160, 140)
@@ -307,16 +307,16 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		local shut = part("ClosedEye", V(0.5, 0.07, 0.05), Color3.fromRGB(40, 30, 40))
 		shut.Transparency = 1
 		add(shut, at(0, -0.02, -0.1) * CFrame.Angles(0, 0, math.rad(-8 * i)))
-		-- Little brows
+		-- little brows
 		add(oval("Brow", V(0.26, 0.08, 0.07), browColor), CFrame.new(0.5 * i, 0.44, -0.8) * CFrame.Angles(0, math.rad(-20 * i), math.rad(-10 * i)))
-		-- Blush
+		-- blush
 		local blush = oval("Blush", V(0.34, 0.17, 0.06), Color3.fromRGB(255, 150, 175))
 		blush.Transparency = 0.4
 		add(blush, CFrame.new(0.8 * i, -0.33, -0.7) * CFrame.Angles(0, math.rad(-42 * i), 0))
 	end
 
-	-- Ears: tall, wide triangles tilted outward, pink inside with a tuft of
-	-- pale fur. Calico gets one patched ear.
+	-- ears: tall, wide triangles tilted outward, pink inside with a tuft of
+	-- pale fur. calico gets one patched ear.
 	for i = -1, 1, 2 do
 		local earColor = (fur.Pattern == "Calico" and i == -1) and marking or fur.Body
 		local earCF = CFrame.new(0.68 * i, 0.98, 0.04) * CFrame.Angles(0, math.rad(-8 * i), 0) * CFrame.Angles(0, 0, math.rad(-22 * i))
@@ -325,7 +325,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		add(oval("EarFluff", V(0.26, 0.42, 0.12), fur.Accent), earCF * CFrame.new(0, -0.3, -0.21))
 	end
 
-	-- Fur markings
+	-- fur markings
 	if fur.Pattern == "Tiger" then
 		for i = -1, 1 do
 			local z = i == 0 and -0.72 or -0.68
@@ -341,7 +341,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		add(oval("CalicoPatch", V(0.5, 0.4, 0.12), Color3.fromRGB(60, 50, 50)), CFrame.new(-0.72, 0.2, -0.72) * CFrame.Angles(0, math.rad(40), 0))
 	end
 
-	-- Hats
+	-- hats
 	if hat and hat.Shape == "Cap" then
 		add(oval("Cap", V(2.1, 0.85, 2.02), hat.Color), CFrame.new(0, 0.68, 0.02))
 		add(part("CapBrim", V(1.4, 0.1, 0.8), hat.Color:Lerp(Color3.new(0, 0, 0), 0.15)), CFrame.new(0, 0.54, -0.98) * CFrame.Angles(math.rad(-8), 0, 0))
@@ -369,7 +369,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		add(glass, CFrame.new(0, 0.3, 0))
 		add(part("HelmetRing", V(0.2, 2.0, 2.0), Color3.fromRGB(230, 236, 246), Enum.PartType.Cylinder), CFrame.new(0, -1.08, 0) * ROT_Z90)
 	elseif hat and hat.Shape == "PartyHat" then
-		-- Stepped striped cone, tilted a little, with a pompom.
+		-- stepped striped cone, tilted a little, with a pompom.
 		for k = 0, 4 do
 			local d = 0.9 - k * 0.17
 			local color = k % 2 == 0 and hat.Color or Color3.fromRGB(255, 236, 120)
@@ -377,7 +377,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		end
 		add(oval("PartyPom", V(0.26, 0.26, 0.26), Color3.fromRGB(255, 255, 255)), CFrame.new(0.3, 2.14, 0))
 	elseif hat and hat.Shape == "Headphones" then
-		-- Band over the head and a cup on each side.
+		-- band over the head and a cup on each side.
 		for k = 0, 6 do
 			local a = math.rad(-75 + k * 25)
 			add(part("PhonesBand", V(0.18, 0.12, 0.26), hat.Color), CFrame.new(math.sin(a) * 1.02, 0.2 + math.cos(a) * 0.95, 0.05) * CFrame.Angles(0, 0, -a))
@@ -387,7 +387,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 			add(part("PhonesPad", V(0.08, 0.5, 0.5), Color3.fromRGB(255, 110, 170), Enum.PartType.Cylinder), CFrame.new(1.17 * i, 0.02, 0.05))
 		end
 	elseif hat and hat.Shape == "Halo" then
-		-- A ring of glowing beads floating over the head.
+		-- a ring of glowing beads floating over the head.
 		for k = 0, 13 do
 			local a = k / 14 * math.pi * 2
 			local bead = oval("HaloBead", V(0.2, 0.2, 0.2), hat.Color)
@@ -396,7 +396,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 		end
 	end
 
-	-- Glasses
+	-- glasses
 	if acc and acc.Shape == "Glasses" then
 		for i = -1, 1, 2 do
 			local lens = oval("Lens", V(0.72, 0.62, 0.1), acc.Color)
@@ -409,7 +409,7 @@ local function buildHead(root: BasePart, fur, hat, acc): BasePart
 end
 
 -- ── limbs ────────────────────────────────────────────────────────────────────
--- Armed cats hold both arms forward around the blaster (the gun is welded to
+-- armed cats hold both arms forward around the blaster (the gun is welded to
 -- the right hand); unarmed arms hang at the sides.
 local function buildArm(root: BasePart, i: number, sleeve: Color3, cuff: Color3?, fur, armed: boolean): BasePart
 	local arm = oval("Arm", V(0.42, 0.66, 0.42), sleeve)
@@ -447,7 +447,7 @@ local function attachBlaster(model: Model, root: BasePart, hand: BasePart, weapo
 	model:SetAttribute("Armed", true)
 end
 
--- Short, chunky legs with big round paws.
+-- short, chunky legs with big round paws.
 local function buildLeg(root: BasePart, i: number, shorts: Color3?, fur)
 	local leg = oval("Leg", V(0.56, 0.54, 0.56), fur.Body)
 	joint(i < 0 and "PawHipL" or "PawHipR", root, leg, CFrame.new(0.3 * i, -0.78, 0), CFrame.new(0, -0.18, 0))
@@ -460,9 +460,9 @@ local function buildLeg(root: BasePart, i: number, shorts: Color3?, fur)
 	end
 end
 
--- A small fluffy tail that drops from the lower back to the floor, sweeps
--- round beside the foot (on the viewer's left) and curls its tip up. Points
--- match TAIL_POINTS in tools/blender/build_cat.py.
+-- a small fluffy tail that drops from the lower back to the floor, sweeps
+-- round beside the foot (on the viewer's left) and curls its tip up. points
+-- match tail_points in tools/blender/build_cat.py.
 local function buildTail(root: BasePart, fur)
 	local pivot = V(0, -0.6, 0.45)
 	local points = {
@@ -484,8 +484,8 @@ local function buildTail(root: BasePart, fur)
 	end
 end
 
--- ── Blender mesh pass ────────────────────────────────────────────────────────
--- Primitive parts the meshes replace. Anchors (joints, the blaster hand) stay
+-- ── blender mesh pass ────────────────────────────────────────────────────────
+-- primitive parts the meshes replace. anchors (joints, the blaster hand) stay
 -- but go invisible; everything else is removed.
 local MESH_REPLACES = {
 	CheekFluff = true, Tuft = true, ForeheadMark = true, MuzzlePuff = true, Mouth = true, Chin = true,
@@ -498,7 +498,7 @@ local MESH_REPLACES = {
 	Tail2 = true, Tail3 = true, Tail4 = true, Tail5 = true, Tail6 = true, Tail7 = true, Tail8 = true,
 	TigerStripe = true, CheekStripe = true, CalicoPatch = true,
 }
--- Hats / glasses were sized for the primitive head; the mesh head is smaller.
+-- hats / glasses were sized for the primitive head; the mesh head is smaller.
 local HEAD_GEAR = {
 	Cap = true, CapBrim = true, CapButton = true, Beanie = true, BeanieCuff = true, Pompom = true,
 	Crown = true, CrownPoint = true, CrownGem = true, CrownJewel = true, Helmet = true, HelmetRing = true,
@@ -512,7 +512,7 @@ local HOODIE_ONLY = { Jacket = true, Shirt = true, Drawstrings = true, DogTag = 
 
 local function meshLibrary(): Instance?
 	local lib = ReplicatedStorage:FindFirstChild("CatMeshes")
-	-- Only once the imported model (not just the empty folder) is there.
+	-- only once the imported model (not just the empty folder) is there.
 	if lib and lib:FindFirstChild("HeadFur", true) then
 		return lib
 	end
@@ -523,8 +523,8 @@ function CatBuilder.HasMeshes(): boolean
 	return meshLibrary() ~= nil
 end
 
--- Studio's 3D importer turns glTF meshes round 180° (glTF's front is +Z,
--- Roblox's is -Z). Depending on the importer that turn sits either on the
+-- studio's 3d importer turns gltf meshes round 180° (gltf's front is +z,
+-- roblox's is -z). depending on the importer that turn sits either on the
 -- imported part's orientation or in the mesh itself; keep the part's own turn
 -- when it has one, otherwise turn the piece round ourselves.
 local function meshTurn(src: BasePart): CFrame
@@ -558,7 +558,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 		Hips = shorts or fur.Body, ShortsLeg = shorts or fur.Body,
 	}
 
-	-- Anchors: the rig parts each mesh welds to.
+	-- anchors: the rig parts each mesh welds to.
 	local anchors: { [string]: { BasePart } } = { Root = { root } }
 	local function add(key: string, p: Instance?)
 		if p and p:IsA("BasePart") then
@@ -577,7 +577,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 		add("Leg", m and m.Part1)
 	end
 
-	-- Hats, glasses and the blink lid follow the smaller mesh head.
+	-- hats, glasses and the blink lid follow the smaller mesh head.
 	local headPart = model:FindFirstChild("Head")
 	if headPart then
 		for _, j in ipairs(headPart:GetChildren()) do
@@ -595,7 +595,7 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 		end
 	end
 
-	-- Swap: drop the primitive details, hide the anchors.
+	-- swap: drop the primitive details, hide the anchors.
 	for _, d in ipairs(model:GetChildren()) do
 		if d:IsA("BasePart") and d ~= root then
 			if MESH_ANCHORS[d.Name] then
@@ -636,8 +636,8 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 				local color = colors[name] or fur.Body
 				m.Color = color
 				m.Transparency = name == "Blush" and 0.4 or 0
-				-- Baked fur textures are white, tinted with the player's fur
-				-- colour. Clothing textures carry their own colour.
+				-- baked fur textures are white, tinted with the player's fur
+				-- colour. clothing textures carry their own colour.
 				local sa = m:FindFirstChildOfClass("SurfaceAppearance")
 				if sa and colors[name] ~= nil and not HOODIE_ONLY[name] then
 					local ok = pcall(function()
@@ -653,8 +653,8 @@ local function applyMeshes(model: Model, root: BasePart, fur, outfit, top: Color
 	end
 end
 
--- Build and return the fully assembled cat Model (not yet parented).
--- `weapon` ({ Id, Skin }) puts that blaster in the cat's hands.
+-- build and return the fully assembled cat model (not yet parented).
+-- `weapon` ({ id, skin }) puts that blaster in the cat's hands.
 function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Model
 	local fur, outfit, hat, acc = resolve(custom)
 	local top, chest, shorts, cuff = outfitColors(outfit, fur)
@@ -673,7 +673,7 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	root.Parent = model
 	model.PrimaryPart = root
 
-	-- Torso, chest and hips
+	-- torso, chest and hips
 	weld(root, oval("Torso", V(1.32, 1.16, 1.04), top), CFrame.new(0, -0.15, 0))
 	weld(root, oval("Chest", V(0.64, 0.9, 0.3), chest), CFrame.new(0, -0.17, -0.42))
 	weld(root, oval("Hips", V(1.22, 0.5, 0.96), shorts or fur.Body), CFrame.new(0, -0.68, 0.02))
@@ -716,9 +716,9 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	humanoid.Parent = model
 
 	root.CustomPhysicalProperties = PhysicalProperties.new(0.7, 0.3, 0.5, 1, 1)
-	-- One pivot under everything you can see (PawBody), so the animator can
+	-- one pivot under everything you can see (pawbody), so the animator can
 	-- lean, squash, flip and tumble the whole cat while the root itself stays
-	-- upright for the physics. Same look and size: the pivot sits exactly on
+	-- upright for the physics. same look and size: the pivot sits exactly on
 	-- the root.
 	local pivot = part("PawPivot", V(0.2, 0.2, 0.2), Color3.new(1, 1, 1))
 	pivot.Transparency = 1
@@ -748,7 +748,7 @@ function CatBuilder.Build(custom: any?, displayName: string?, weapon: any?): Mod
 	return model
 end
 
--- Swap the blaster in a built cat's hands (e.g. a supply-drop weapon).
+-- swap the blaster in a built cat's hands (e.g. a supply-drop weapon).
 function CatBuilder.SetBlaster(model: Model, weapon: any)
 	local old = model:FindFirstChild("Blaster")
 	if old then
@@ -770,10 +770,10 @@ end
 
 -- ── posing ───────────────────────────────────────────────────────────────────
 local JOINTS = { "PawNeck", "PawShoulderL", "PawShoulderR", "PawHipL", "PawHipR", "PawTail", "PawBody" }
--- Ear pieces (primitive and mesh) the animator flattens and twitches.
+-- ear pieces (primitive and mesh) the animator flattens and twitches.
 local EAR_PARTS = { Ear = true, InnerEar = true, EarFluff = true, Ears = true, EarTufts = true }
 
--- Extra layers on top of the basic pose (CatAnimator works them out):
+-- extra layers on top of the basic pose (catanimator works them out):
 -- `body` moves the whole cat, `replace` sets joints outright, `add`
 -- turns them a bit more, `blink` shuts the eyes, `ears` flattens /
 -- twitches them (`side` -1 left, 1 right).
@@ -821,7 +821,7 @@ local function rigFor(model: Model): PoseRig
 			local b = base :: CFrame
 			local x = b.Position.X
 			local side = x > 0.1 and 1 or x < -0.1 and -1 or 0
-			-- Turn about the ear's base (one shared point per side).
+			-- turn about the ear's base (one shared point per side).
 			local pivot = side ~= 0 and CFrame.new(0.5 * side, 0.5, 0.04) or CFrame.new(b.Position - Vector3.new(0, 0.3, 0))
 			table.insert(r.ears, { motor = d, base = b, pivot = pivot, side = side })
 		end
@@ -839,15 +839,15 @@ end
 
 CatBuilder.EmoteSeconds = 2.6
 
--- Emote poses (k = seconds into the emote). Arms: +Z raises the right arm
--- out and up, -Z the left; hips: +X swings the legs forward.
--- Emotes that shut the eyes.
+-- emote poses (k = seconds into the emote). arms: +z raises the right arm
+-- out and up, -z the left; hips: +x swings the legs forward.
+-- emotes that shut the eyes.
 local SHUT_EMOTES = { Sleep = true, Knead = true, Purr = true, Loaf = true }
 
 local function emotePose(set: (string, CFrame) -> (), id: string, k: number): CFrame?
 	local s = math.sin
 	if id == "Loaf" then
-		-- Tucked into a bread loaf.
+		-- tucked into a bread loaf.
 		set("PawHipL", CFrame.Angles(1.6, 0, -0.1))
 		set("PawHipR", CFrame.Angles(1.6, 0, 0.1))
 		set("PawShoulderL", CFrame.Angles(1.4, 0, -0.1))
@@ -856,7 +856,7 @@ local function emotePose(set: (string, CFrame) -> (), id: string, k: number): CF
 		set("PawNeck", CFrame.Angles(0.1, 0, s(k * 1.5) * 0.03))
 		return CFrame.new(0, -0.75, 0)
 	elseif id == "Zoomies" then
-		-- (EmoteController runs the cat round in a little circle.)
+		-- (emotecontroller runs the cat round in a little circle.)
 		set("PawHipL", CFrame.Angles(s(k * 30) * 0.9, 0, 0))
 		set("PawHipR", CFrame.Angles(-s(k * 30) * 0.9, 0, 0))
 		set("PawShoulderL", CFrame.Angles(-s(k * 30) * 0.8, 0, -0.3))
@@ -864,7 +864,7 @@ local function emotePose(set: (string, CFrame) -> (), id: string, k: number): CF
 		set("PawTail", CFrame.Angles(-0.5, s(k * 20) * 0.3, 0))
 		return CFrame.new(0, math.abs(s(k * 15)) * 0.15, 0) * CFrame.Angles(-0.2, 0, -0.35)
 	elseif id == "Hiss" then
-		-- Back arched, tail straight up, claws out.
+		-- back arched, tail straight up, claws out.
 		set("PawShoulderL", CFrame.Angles(-1.2, 0, -0.6))
 		set("PawShoulderR", CFrame.Angles(-1.2, 0, 0.6))
 		set("PawTail", CFrame.Angles(0.9, s(k * 40) * 0.05, 0))
@@ -880,7 +880,7 @@ local function emotePose(set: (string, CFrame) -> (), id: string, k: number): CF
 		set("PawNeck", CFrame.Angles(0.1, 0, s(k * 2) * 0.12))
 		return CFrame.new(s(k * 90) * 0.02, 0, 0)
 	elseif id == "BoxSit" then
-		-- (CatAnimator puts a box round the cat.)
+		-- (catanimator puts a box round the cat.)
 		set("PawHipL", CFrame.Angles(1.4, 0, -0.1))
 		set("PawHipR", CFrame.Angles(1.4, 0, 0.1))
 		set("PawShoulderL", CFrame.Angles(0.4, 0, -0.1))
@@ -937,10 +937,10 @@ local function emotePose(set: (string, CFrame) -> (), id: string, k: number): CF
 	return nil
 end
 
--- Poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed;
--- `air` (0..1) blends into a mid-air pose (legs split, arms out). The model's
--- Emote / EmoteAt attributes (set by the server) layer an emote on top, and
--- `fx` (CatAnimator) layers everything else.
+-- poses the cat for time `t`; `move` is 0 standing still, ~1 at walk speed;
+-- `air` (0..1) blends into a mid-air pose (legs split, arms out). the model's
+-- emote / emoteat attributes (set by the server) layer an emote on top, and
+-- `fx` (catanimator) layers everything else.
 function CatBuilder.Pose(model: Model, t: number, move: number, air: number?, fx: PoseFx?)
 	local rig = rigFor(model)
 	local j = rig.joints
@@ -975,7 +975,7 @@ function CatBuilder.Pose(model: Model, t: number, move: number, air: number?, fx
 	set("PawHipL", CFrame.Angles(swing + 0.4 * airborne, 0, 0))
 	set("PawHipR", CFrame.Angles(-swing - 0.25 * airborne, 0, 0))
 	if rig.armed then
-		-- Arms stay on the blaster: a small breathing / step bob only.
+		-- arms stay on the blaster: a small breathing / step bob only.
 		local aim = CFrame.Angles(breathe * 0.02 + math.abs(math.cos(phase)) * 0.05 * walk, 0, 0)
 		set("PawShoulderL", aim)
 		set("PawShoulderR", aim)

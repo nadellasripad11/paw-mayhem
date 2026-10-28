@@ -1,6 +1,6 @@
 --!strict
--- EconomyService: server-authoritative coins / XP / levels / unlocks /
--- purchases / quest progress. Every reward flows through here so the client can
+-- economyservice: server-authoritative coins / xp / levels / unlocks /
+-- purchases / quest progress. every reward flows through here so the client can
 -- never mint currency or unlock items on its own.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,7 +18,7 @@ local DataService = require(script.Parent.DataService)
 
 local EconomyService = {}
 
--- Catalog lookup: kind -> list + id field for cost/unlock validation.
+-- catalog lookup: kind -> list + id field for cost/unlock validation.
 local CATALOG = {
 	Weapon = { list = Weapons.List, unlockKey = "Weapons" },
 	Skin = { list = Weapons.Skins, unlockKey = "Skins" },
@@ -42,8 +42,8 @@ local function findItem(kind: string, id: string)
 	return nil, cat
 end
 
--- Push the full profile snapshot to a player's client.
--- Set by BadgeService: runs after every profile push (milestone checks).
+-- push the full profile snapshot to a player's client.
+-- set by badgeservice: runs after every profile push (milestone checks).
 EconomyService.OnPushed = nil :: ((Player, any, number) -> ())?
 
 function EconomyService.Push(player: Player)
@@ -74,7 +74,7 @@ function EconomyService.Push(player: Player)
 	end
 end
 
--- Award XP (and handle level-up coin bonuses). Returns new level.
+-- award xp (and handle level-up coin bonuses). returns new level.
 function EconomyService.AddXP(player: Player, amount: number)
 	local profile = DataService.Get(player)
 	if not profile or amount <= 0 then
@@ -96,7 +96,7 @@ function EconomyService.AddXP(player: Player, amount: number)
 	end
 end
 
--- Coin rewards are multiplied by owned passes (VIP, 2x Coins); purchases and
+-- coin rewards are multiplied by owned passes (vip, 2x coins); purchases and
 -- refunds pass `raw = true` so they're never multiplied.
 function EconomyService.AddCoins(player: Player, amount: number, raw: boolean?)
 	local profile = DataService.Get(player)
@@ -109,7 +109,7 @@ function EconomyService.AddCoins(player: Player, amount: number, raw: boolean?)
 				amount *= mult
 			end
 		end
-		-- Weekend Mayhem bonus (CommunityService).
+		-- weekend mayhem bonus (communityservice).
 		local boost = workspace:GetAttribute("CoinBoost")
 		if typeof(boost) == "number" then
 			amount *= boost
@@ -127,8 +127,8 @@ function EconomyService.AddGems(player: Player, amount: number)
 	profile.Gems = math.max(0, (profile.Gems or 0) + amount)
 end
 
--- A win streak ended: reset it, and if it was worth saving (3+), remember it
--- for a few minutes and offer the Streak Saver.
+-- a win streak ended: reset it, and if it was worth saving (3+), remember it
+-- for a few minutes and offer the streak saver.
 function EconomyService.EndStreak(player: Player)
 	local profile = DataService.Get(player)
 	local stats = profile and profile.Stats
@@ -143,7 +143,7 @@ function EconomyService.EndStreak(player: Player)
 	end
 end
 
--- Give an item outright (Robux unlocks, pass rewards). Returns true if new.
+-- give an item outright (robux unlocks, pass rewards). returns true if new.
 function EconomyService.Grant(player: Player, kind: string, id: string): boolean
 	local profile = DataService.Get(player)
 	local item, cat = findItem(kind, id)
@@ -158,7 +158,7 @@ function EconomyService.Grant(player: Player, kind: string, id: string): boolean
 	return true
 end
 
--- Track a stat and advance any matching quest metrics.
+-- track a stat and advance any matching quest metrics.
 function EconomyService.AddStat(player: Player, statName: string, amount: number)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -168,7 +168,7 @@ function EconomyService.AddStat(player: Player, statName: string, amount: number
 	if profile.Stats[statName] ~= nil then
 		profile.Stats[statName] += amount
 	end
-	-- Map stat -> quest metric names.
+	-- map stat -> quest metric names.
 	local metricMap = {
 		Eliminations = "eliminations",
 		Matches = "matches",
@@ -195,8 +195,8 @@ function EconomyService.AdvanceQuests(player: Player, metric: string, amount: nu
 	end
 end
 
--- Purchase an item with coins, or gems for gem-priced items. Pass-only items
--- come from their Game Pass. Returns {ok, reason}.
+-- purchase an item with coins, or gems for gem-priced items. pass-only items
+-- come from their game pass. returns {ok, reason}.
 function EconomyService.Purchase(player: Player, kind: string, id: string)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -233,7 +233,7 @@ function EconomyService.Purchase(player: Player, kind: string, id: string)
 	return { ok = true }
 end
 
--- Validate a player owns an item id of a kind.
+-- validate a player owns an item id of a kind.
 function EconomyService.Owns(player: Player, kind: string, id: string): boolean
 	local profile = DataService.Get(player)
 	if not profile then
@@ -246,7 +246,7 @@ function EconomyService.Owns(player: Player, kind: string, id: string): boolean
 	return profile.Unlocks[cat.unlockKey][id] == true
 end
 
--- Equip an item into the loadout (validates ownership).
+-- equip an item into the loadout (validates ownership).
 function EconomyService.Equip(player: Player, kind: string, id: string)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -271,7 +271,7 @@ function EconomyService.Equip(player: Player, kind: string, id: string)
 	return { ok = true }
 end
 
--- Set by PlayerService: put a loadout change on the player's cat.
+-- set by playerservice: put a loadout change on the player's cat.
 EconomyService.OnEquipped = nil :: ((player: Player, kind: string) -> ())?
 
 function EconomyService.ClaimQuest(player: Player, questId: string)
@@ -300,7 +300,7 @@ function EconomyService.ClaimQuest(player: Player, questId: string)
 	return { ok = false, reason = "unknown quest" }
 end
 
--- Client settings the profile may store, with how to validate each.
+-- client settings the profile may store, with how to validate each.
 local SETTING_RULES: { [string]: any } = {
 	CameraShake = "boolean", ShowDamage = "boolean", InvertY = "boolean", AutoSprint = "boolean", AutoFire = "boolean", ShowFPS = "boolean", FirstPerson = "boolean",
 	MobileSensitivity = { 0, 1 }, MusicVolume = { 0, 1 }, SFXVolume = { 0, 1 }, MouseSensitivity = { 0, 1 }, FieldOfView = { 60, 95 },
@@ -308,7 +308,7 @@ local SETTING_RULES: { [string]: any } = {
 	Crosshair = { White = true, Green = true, Cyan = true, Pink = true, Yellow = true },
 }
 
--- Reward codes (Config.Codes): once per player, case-insensitive.
+-- reward codes (config.codes): once per player, case-insensitive.
 local function redeemCode(player: Player, code: any)
 	local profile = DataService.Get(player)
 	if not profile or type(code) ~= "string" then
@@ -339,8 +339,8 @@ end
 
 local lastEmote: { [Player]: number } = {}
 
--- Emotes: if the player owns it, stamp it on their character so every client
--- poses it (Emote / EmoteAt attributes, read by CatBuilder.Pose).
+-- emotes: if the player owns it, stamp it on their character so every client
+-- poses it (emote / emoteat attributes, read by catbuilder.pose).
 local function useEmote(player: Player, id: any)
 	if type(id) ~= "string" or os.clock() - (lastEmote[player] or 0) < 1 then
 		return
@@ -355,8 +355,8 @@ local function useEmote(player: Player, id: any)
 	char:SetAttribute("EmoteAt", workspace:GetServerTimeNow())
 end
 
--- Move animations (the double-jump flip, a dash...) are passed on to everyone
--- else so they see them too. Animation only: nothing here changes the game.
+-- move animations (the double-jump flip, a dash...) are passed on to everyone
+-- else so they see them too. animation only: nothing here changes the game.
 local MOVE_FX = { Flip = true, Dash = true, Pounce = true, WallKick = true, Swing = true, SwingEnd = true, Fly = true }
 local lastMoveFx: { [Player]: number } = {}
 local function relayMoveFx(player: Player, kind: any)
@@ -375,8 +375,8 @@ local function relayMoveFx(player: Player, kind: any)
 	end
 end
 
--- Put an owned emote in one of the six emote slots ("" empties it). If it's
--- already in another slot the two swap. Slot 1 is also what the emote key
+-- put an owned emote in one of the six emote slots ("" empties it). if it's
+-- already in another slot the two swap. slot 1 is also what the emote key
 -- plays.
 local function setEmoteSlot(player: Player, data: any)
 	local profile = DataService.Get(player)
@@ -442,7 +442,7 @@ function EconomyService.Start()
 		end
 	end)
 
-	-- Purchase / equip / claim remote handlers.
+	-- purchase / equip / claim remote handlers.
 	Remotes.Get("PurchaseItem").OnServerInvoke = function(player, payload)
 		if type(payload) ~= "table" then
 			return { ok = false }

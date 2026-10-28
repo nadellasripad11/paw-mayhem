@@ -1,5 +1,5 @@
 --!strict
--- PlayerService: owns the cat character lifecycle — spawning custom cat rigs,
+-- playerservice: owns the cat character lifecycle — spawning custom cat rigs,
 -- team assignment, respawns, spawn protection, and kill-floor ("ringout")
 -- detection which is the payoff of the knockback mechanic.
 
@@ -24,13 +24,13 @@ local PlayerService = {}
 
 local spawnsFolder: Folder? = nil
 
--- MatchService sets this so we only ringout-eliminate during live play.
+-- matchservice sets this so we only ringout-eliminate during live play.
 PlayerService.MatchActive = false
--- Set by DuelService: a knockout inside a duel (not a match elimination).
+-- set by duelservice: a knockout inside a duel (not a match elimination).
 PlayerService.OnDuelKO = nil :: ((victim: Player, killer: Player?, ringout: boolean) -> ())?
--- Set by LobbyService: someone reset in the lobby.
+-- set by lobbyservice: someone reset in the lobby.
 PlayerService.OnLobbyDeath = nil :: ((player: Player) -> ())?
--- Set by MatchService to award team points on elimination.
+-- set by matchservice to award team points on elimination.
 PlayerService.OnElimination = nil :: ((victim: Player, killer: Player?, weaponId: string?, ringout: boolean) -> ())?
 
 local function getSpawns(): Folder
@@ -43,11 +43,11 @@ local function getSpawns(): Folder
 	return spawnsFolder :: Folder
 end
 
--- Pick a spawn point for a team, biased away from other players.
--- When each spawn was last used, so teammates spread over all three.
+-- pick a spawn point for a team, biased away from other players.
+-- when each spawn was last used, so teammates spread over all three.
 local lastUsed: { [BasePart]: number } = setmetatable({}, { __mode = "k" }) :: any
 
--- Distance from `pos` to the nearest living enemy cat (players and bots).
+-- distance from `pos` to the nearest living enemy cat (players and bots).
 local function enemyDistance(pos: Vector3, teamId: string?): number
 	local best = 200
 	for _, m in ipairs(CollectionService:GetTagged(CatBuilder.Tag)) do
@@ -85,7 +85,7 @@ local function pickSpawn(teamId: string?): CFrame
 	if #candidates == 0 then
 		return CFrame.new(0, 30, 0)
 	end
-	-- Prefer the spawn furthest from enemies that a teammate didn't just use,
+	-- prefer the spawn furthest from enemies that a teammate didn't just use,
 	-- with a little randomness so it isn't predictable.
 	local chosen, bestScore = candidates[1], -math.huge
 	local now = os.clock()
@@ -99,14 +99,14 @@ local function pickSpawn(teamId: string?): CFrame
 		end
 	end
 	lastUsed[chosen] = now
-	-- Spawn just above the marker so the root lands on the island surface
+	-- spawn just above the marker so the root lands on the island surface
 	-- instead of visibly dropping in from several studs overhead.
 	return chosen.CFrame + Vector3.new(0, 1.25, 0)
 end
 
 PlayerService.PickSpawn = pickSpawn
 
--- Assign the player to the smaller team.
+-- assign the player to the smaller team.
 function PlayerService.AssignTeam(player: Player)
 	local state = Runtime.Ensure(player)
 	if state.Team then
@@ -141,9 +141,9 @@ local function teamColor(teamId: string?): Color3
 	return Color3.fromRGB(200, 200, 200)
 end
 
--- Build + spawn a cat for the player using their saved loadout.
---   opts.context: "Match" (default: the arena, on their team), "Lobby" or
---   "Duel"; opts.team / opts.cframe place lobby and duel cats.
+-- build + spawn a cat for the player using their saved loadout.
+--   opts.context: "match" (default: the arena, on their team), "lobby" or
+--   "duel"; opts.team / opts.cframe place lobby and duel cats.
 function PlayerService.Spawn(player: Player, opts: any?)
 	local context = (opts and opts.context) or "Match"
 	if context == "Match" and PlayerService.MatchActive then
@@ -153,7 +153,7 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	local cat = profile and profile.Loadout.Cat or nil
 	local teamId = (opts and opts.team) or (context == "Match" and PlayerService.AssignTeam(player)) or "Lobby"
 	local spawnAt: CFrame = (opts and opts.cframe) or PlayerService.PickSpawn(teamId)
-	-- If streaming is on, send the player the ground there before the cat
+	-- if streaming is on, send the player the ground there before the cat
 	-- lands on it (the lobby and duels are far from where they joined).
 	pcall(function()
 		player:RequestStreamAroundAsync(spawnAt.Position, 5)
@@ -162,7 +162,7 @@ function PlayerService.Spawn(player: Player, opts: any?)
 		return nil
 	end
 
-	-- Clean up previous character.
+	-- clean up previous character.
 	if player.Character then
 		player.Character:Destroy()
 		player.Character = nil
@@ -173,7 +173,7 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	local model = CatBuilder.Build(cat, player.DisplayName, weapon)
 	model.Name = player.Name
 
-	-- Team accent ring under the cat for readability (not in the lobby).
+	-- team accent ring under the cat for readability (not in the lobby).
 	local root = model.PrimaryPart :: BasePart
 	local ring = Instance.new("Part")
 	ring.Name = "TeamRing"
@@ -209,7 +209,7 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	state.LifeWeapon = weapon.Id
 	model:SetAttribute("Weapon", weapon.Id)
 
-	-- Death (from HP reaching 0) -> elimination by last attacker.
+	-- death (from hp reaching 0) -> elimination by last attacker.
 	humanoid.Died:Connect(function()
 		PlayerService.HandleElimination(player, false)
 	end)
@@ -218,9 +218,9 @@ function PlayerService.Spawn(player: Player, opts: any?)
 	return model
 end
 
--- The player changed their loadout. In the lobby, or in the first few seconds
+-- the player changed their loadout. in the lobby, or in the first few seconds
 -- of a life, their cat gets it straight away (a new blaster in its paws; a
--- new look rebuilds the cat on the spot in the lobby). Otherwise it's theirs
+-- new look rebuilds the cat on the spot in the lobby). otherwise it's theirs
 -- from the next respawn.
 local LOADOUT_GRACE = 5
 local rebuildToken: { [Player]: number } = {}
@@ -243,7 +243,7 @@ function PlayerService.ApplyLoadout(player: Player, kind: string)
 		char:SetAttribute("Weapon", loadout.Weapon)
 		CatBuilder.SetBlaster(char, { Id = loadout.Weapon, Skin = loadout.Skin })
 	elseif lobby and (kind == "Fur" or kind == "Outfit" or kind == "Hat" or kind == "Accessory") then
-		-- Rebuild once the clicking settles.
+		-- rebuild once the clicking settles.
 		local token = (rebuildToken[player] or 0) + 1
 		rebuildToken[player] = token
 		task.delay(0.6, function()
@@ -256,7 +256,7 @@ function PlayerService.ApplyLoadout(player: Player, kind: string)
 	end
 end
 
--- Where each cat left the ground last: updated while it's standing (or still
+-- where each cat left the ground last: updated while it's standing (or still
 -- about level with where it stood), so when it falls off the map the ringout
 -- burst goes off where it actually went over the edge.
 local edge: { [Player]: { pos: Vector3, groundY: number } } = {}
@@ -281,12 +281,12 @@ local function trackEdges()
 	end
 end
 
--- Everyone near enough sees a big burst where a cat flew off the map.
+-- everyone near enough sees a big burst where a cat flew off the map.
 function PlayerService.RingoutBurst(position: Vector3, color: Color3?)
 	Remotes.Get("PlayEffect"):FireAllClients({ kind = "Ringout", position = position, color = color })
 end
 
--- Central elimination handler (HP death or ringout).
+-- central elimination handler (hp death or ringout).
 function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 	local state = Runtime.Get(victim)
 	if not state or not state.Alive then
@@ -294,8 +294,8 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 	end
 	state.Alive = false
 
-	-- The knockout burst: where it went over the edge (ringout) or where it
-	-- dropped (HP).
+	-- the knockout burst: where it went over the edge (ringout) or where it
+	-- dropped (hp).
 	local char = victim.Character
 	local root = char and char.PrimaryPart
 	local at = ringout and PlayerService.EdgeOf(victim) or (root and root.Position)
@@ -307,13 +307,13 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 	end
 
 	local killer = state.LastAttacker
-	-- Ringout with no recent attacker = self-elimination.
+	-- ringout with no recent attacker = self-elimination.
 	local weaponId = nil
 	if killer == victim then
 		killer = nil
 	end
 
-	-- Duels score their own knockouts; the lobby has none (a reset there
+	-- duels score their own knockouts; the lobby has none (a reset there
 	-- just puts you back).
 	if state.Context == "Duel" then
 		if PlayerService.OnDuelKO then
@@ -331,7 +331,7 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 		PlayerService.OnElimination(victim, killer, weaponId, ringout)
 	end
 
-	-- Respawn after delay if match still active (and they're still in it).
+	-- respawn after delay if match still active (and they're still in it).
 	task.delay(GameConfig.Character.RespawnDelay, function()
 		local s = Runtime.Get(victim)
 		if Players:FindFirstChild(victim.Name) and PlayerService.MatchActive and s and s.Context == "Match" then
@@ -340,13 +340,13 @@ function PlayerService.HandleElimination(victim: Player, ringout: boolean)
 	end)
 end
 
--- Kill-floor watcher: launched cats that fall below the arena are eliminated.
+-- kill-floor watcher: launched cats that fall below the arena are eliminated.
 local function startKillFloorLoop()
 	RunService.Heartbeat:Connect(function()
 		if not PlayerService.MatchActive then
 			return
 		end
-		-- Map events (Volcano's rising lava) can raise the floor.
+		-- map events (volcano's rising lava) can raise the floor.
 		local raised = Workspace:GetAttribute("KillFloorY")
 		local arena = Workspace:FindFirstChild("Arena")
 		local mapFloor = arena and arena:GetAttribute("KillFloorY")
@@ -363,8 +363,8 @@ local function startKillFloorLoop()
 	end)
 end
 
--- Status loop: publishes SpeedMult (read by the client MovementController) and
--- Fluff (the knockback % shown above each cat) on each character, regenerates
+-- status loop: publishes speedmult (read by the client movementcontroller) and
+-- fluff (the knockback % shown above each cat) on each character, regenerates
 -- health once a cat stops taking hits, and expires power-ups.
 local function startStatusLoop()
 	RunService.Heartbeat:Connect(function(dt)
@@ -405,7 +405,7 @@ local function startStatusLoop()
 end
 
 function PlayerService.DespawnAll()
-	-- Only the match's cats: people in the lobby or a duel stay put.
+	-- only the match's cats: people in the lobby or a duel stay put.
 	for _, player in ipairs(Players:GetPlayers()) do
 		local state = Runtime.Get(player)
 		if not state or state.Context ~= "Match" then

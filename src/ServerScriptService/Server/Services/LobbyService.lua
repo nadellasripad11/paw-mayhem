@@ -1,22 +1,22 @@
 --!strict
--- LobbyService: the lobby everyone spawns into: one closed, connected steel
--- bunker (Rivals-style hub), dark plate floors and wall panels under a steel
--- roof with light panels. Signs and displays are the only things that glow.
+-- lobbyservice: the lobby everyone spawns into: one closed, connected steel
+-- bunker (rivals-style hub), dark plate floors and wall panels under a steel
+-- roof with light panels. signs and displays are the only things that glow.
 --   * the middle: a round grated platform where everyone spawns, facing the
---     hall; featured blasters float over lit pedestals round it (F to equip),
+--     hall; featured blasters float over lit pedestals round it (f to equip),
 --     with today's free gift and an arcade machine for codes
---   * ahead: the big DUELS sign over the Matchmaking hall you walk through -
+--   * ahead: the big duels sign over the matchmaking hall you walk through -
 --     rows of 1v1 / 2v2 pads down both sides with screens above them
---     (DuelService builds the pads); WIN STREAKS and DUELS LIVE boards
+--     (duelservice builds the pads); win streaks and duels live boards
 --     either side of the way in
---   * behind the spawn: the SHOOTING RANGE bay - a glass grid with targets
---     behind it; walk through to the range (the Practice Dimension), a
+--   * behind the spawn: the shooting range bay - a glass grid with targets
+--     behind it; walk through to the range (the practice dimension), a
 --     platform of target cats you can knock off the edge (and back)
---   * left: WEAPONS, every blaster racked on the back wall (F to equip)
---   * right: the MARKET, featured cats in glass cases, every rank tier and a
+--   * left: weapons, every blaster racked on the back wall (f to equip)
+--   * right: the market, featured cats in glass cases, every rank tier and a
 --     gold cat statue
---   * between the spawn and the Market: the all-time leaderboards
--- Every room opens straight off the main hall; nobody can hurt anyone here.
+--   * between the spawn and the market: the all-time leaderboards
+-- every room opens straight off the main hall; nobody can hurt anyone here.
 
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
@@ -47,15 +47,15 @@ local CENTER = Vector3.new(0, 150, 2600)
 local SURFACE_Y = CENTER.Y + ArenaKit.SURFACE
 local FALL_Y = CENTER.Y - 30
 
--- Floors, as rectangles relative to CENTER: { x0, x1, z0, z1 }. Spawn faces
--- +Z, so the player's left is +X and their right is -X.
+-- floors, as rectangles relative to center: { x0, x1, z0, z1 }. spawn faces
+-- +z, so the player's left is +x and their right is -x.
 local PLAZA = { -44, 44, -40, 30 }
 local GUNS_ROOM = { 44, 86, -18, 18 }
 local COLLECTION_ROOM = { -86, -44, -18, 18 }
 local MATCH_HALL = { -20, 20, 30, 112 }
 local GATE = { -16, 16, -62, -40 } -- the portal alcove behind the spawn
 local AREAS = { PLAZA, GUNS_ROOM, COLLECTION_ROOM, MATCH_HALL, GATE }
--- The outside wall of the whole building, walked round in order.
+-- the outside wall of the whole building, walked round in order.
 local OUTLINE = {
 	{ -44, -40 }, { -16, -40 }, { -16, -62 }, { 16, -62 }, { 16, -40 }, { 44, -40 }, { 44, -18 }, { 86, -18 },
 	{ 86, 18 }, { 44, 18 }, { 44, 30 }, { 20, 30 }, { 20, 112 }, { -20, 112 }, { -20, 30 },
@@ -64,11 +64,11 @@ local OUTLINE = {
 local HEIGHT = 22 -- walls up to the roof, everywhere
 local HALL_WALL = 14 -- where the hall's screens and signs sit under
 
--- The Practice Dimension floats on its own, far away.
+-- the practice dimension floats on its own, far away.
 local PRACTICE = Vector3.new(CENTER.X, CENTER.Y, CENTER.Z - 420)
 
--- Duel pads (DuelService builds them) down both sides of the matchmaking
--- hall; `wall` is the side their screen hangs on (+1 = left / +X).
+-- duel pads (duelservice builds them) down both sides of the matchmaking
+-- hall; `wall` is the side their screen hangs on (+1 = left / +x).
 LobbyService.DuelPads = {}
 for _, side in ipairs({ 1, -1 }) do
 	for _, p in ipairs({ { "1v1", 42 }, { "1v1", 56 }, { "1v1", 70 }, { "2v2", 85 }, { "2v2", 100 } }) do
@@ -76,12 +76,12 @@ for _, side in ipairs({ 1, -1 }) do
 	end
 end
 
--- Colours (your reference): warm mid-tone stone floors and pillars, deep
+-- colours (your reference): warm mid-tone stone floors and pillars, deep
 -- navy walls and ceiling, gold trim and beams, blue / purple light.
 local FLOOR_PLATE = Color3.fromRGB(150, 140, 124) -- warm stone floor
 local SEAM = Color3.fromRGB(138, 128, 112)
--- One palette: night navy, warm stone, and one accent - real gold, used
--- thin (edges, caps, inlays). Only signs, screens and duel pads glow.
+-- one palette: night navy, warm stone, and one accent - real gold, used
+-- thin (edges, caps, inlays). only signs, screens and duel pads glow.
 local PANEL = Color3.fromRGB(22, 27, 48) -- night-navy wall panels
 local STEEL_DARK = Color3.fromRGB(14, 18, 34) -- deepest navy (frames, posts)
 local BEAM = Color3.fromRGB(168, 126, 54) -- deep warm gold (metal)
@@ -125,7 +125,7 @@ local function solid(name: string, size: Vector3, cf: CFrame, color: Color3, mat
 	return ArenaKit.NewPart(name, size, cf, color, material, parent)
 end
 
--- A plain coloured part (no glow) for the few coloured details left.
+-- a plain coloured part (no glow) for the few coloured details left.
 local function neon(name: string, size: Vector3, cf: CFrame, color: Color3, parent: Instance): BasePart
 	local p = part(name, size, cf, color, Enum.Material.SmoothPlastic, parent)
 	p.CastShadow = false
@@ -153,8 +153,32 @@ local function light(parent: BasePart, color: Color3, range: number, brightness:
 	l.Parent = parent
 end
 
--- Text on one face of a part, one label per line.
-local function sign(parent: BasePart, face: Enum.NormalId, lines: { { text: string, size: number, color: Color3 } })
+-- text on one face of a part, one label per line.
+-- a paw print drawn from shapes (a pad and four toes) inside `holder`
+local function drawPaw(holder: GuiObject, color: Color3)
+	local keep = Instance.new("UIAspectRatioConstraint")
+	keep.AspectRatio = 1
+	keep.Parent = holder
+	local function blob(x: number, y: number, w: number, h: number)
+		local b = Instance.new("Frame")
+		b.AnchorPoint = Vector2.new(0.5, 0.5)
+		b.Position = UDim2.fromScale(x, y)
+		b.Size = UDim2.fromScale(w, h)
+		b.BackgroundColor3 = color
+		b.BorderSizePixel = 0
+		b.Parent = holder
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(1, 0)
+		c.Parent = b
+	end
+	blob(0.5, 0.66, 0.5, 0.42)
+	blob(0.2, 0.38, 0.19, 0.25)
+	blob(0.39, 0.22, 0.19, 0.25)
+	blob(0.61, 0.22, 0.19, 0.25)
+	blob(0.8, 0.38, 0.19, 0.25)
+end
+
+local function sign(parent: BasePart, face: Enum.NormalId, lines: { { text: string?, paw: boolean?, size: number, color: Color3 } })
 	local gui = Instance.new("SurfaceGui")
 	gui.Face = face
 	gui.LightInfluence = 0
@@ -165,18 +189,27 @@ local function sign(parent: BasePart, face: Enum.NormalId, lines: { { text: stri
 	list.VerticalAlignment = Enum.VerticalAlignment.Center
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = gui
-	-- Each line gets a share of the board's height by its size, and its text
+	-- each line gets a share of the board's height by its size, and its text
 	-- scales to fill that share (so it reads from across the room).
 	local total = 0
 	for _, l in ipairs(lines) do
 		total += l.size
 	end
 	for i, l in ipairs(lines) do
+		if l.paw then
+			local holder = Instance.new("Frame")
+			holder.LayoutOrder = i
+			holder.BackgroundTransparency = 1
+			holder.Size = UDim2.new(0.9, 0, 0.82 * l.size / total, 0)
+			holder.Parent = gui
+			drawPaw(holder, l.color)
+			continue
+		end
 		local t = Instance.new("TextLabel")
 		t.LayoutOrder = i
 		t.BackgroundTransparency = 1
 		t.Size = UDim2.new(0.9, 0, 0.82 * l.size / total, 0)
-		t.Text = l.text
+		t.Text = l.text or ""
 		t.TextScaled = true
 		t.Font = Enum.Font.FredokaOne
 		t.TextColor3 = l.color
@@ -185,7 +218,7 @@ local function sign(parent: BasePart, face: Enum.NormalId, lines: { { text: stri
 	return gui
 end
 
--- A navy board facing `toward`, with a glowing edge and (optional) text.
+-- a navy board facing `toward`, with a glowing edge and (optional) text.
 local function board(name: string, pos: Vector3, toward: Vector3, w: number, h: number, edge: Color3, lines: any, parent: Instance): BasePart
 	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z))
 	part(name .. "Edge", Vector3.new(w + 0.5, h + 0.5, 0.2), face * CFrame.new(0, 0, 0.25), edge:Lerp(NAVY, 0.55), Enum.Material.SmoothPlastic, parent)
@@ -196,14 +229,14 @@ local function board(name: string, pos: Vector3, toward: Vector3, w: number, h: 
 	return b
 end
 
--- A prompt that opens a screen on the client (Loadout, Shop...).
+-- a prompt that opens a screen on the client (loadout, shop...).
 local function prompt(parent: BasePart, action: string, object: string, panel: string, weaponId: string?)
 	local p = Instance.new("ProximityPrompt")
 	p.ActionText = action
 	p.ObjectText = object
 	p.MaxActivationDistance = 9
 	p.RequiresLineOfSight = false
-	p.KeyboardKeyCode = Enum.KeyCode.F -- E is pounce
+	p.KeyboardKeyCode = Enum.KeyCode.F -- e is pounce
 	p:SetAttribute("OpenPanel", panel)
 	if weaponId then
 		p:SetAttribute("WeaponId", weaponId)
@@ -221,8 +254,8 @@ local function inside(x: number, z: number): boolean
 end
 
 -- ── props ────────────────────────────────────────────────────────────────────
--- A lit sign: a dark backing, a bright tube round the edge and glowing
--- letters. Signs and displays are the only things in the lobby that glow.
+-- a lit sign: a dark backing, a bright tube round the edge and glowing
+-- letters. signs and displays are the only things in the lobby that glow.
 local function neonSign(name: string, pos: Vector3, toward: Vector3, w: number, h: number, color: Color3, text: string, parent: Instance, tilt: number?): BasePart
 	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z)) * CFrame.Angles(0, 0, math.rad(tilt or 0))
 	local back = part(name, Vector3.new(w, h, 0.4), face, Color3.fromRGB(20, 26, 54), Enum.Material.SmoothPlastic, parent)
@@ -241,7 +274,7 @@ local function neonSign(name: string, pos: Vector3, toward: Vector3, w: number, 
 	return back
 end
 
--- Yellow and black caution stripes along the floor (`cf`'s X axis).
+-- yellow and black caution stripes along the floor (`cf`'s x axis).
 local function caution(name: string, cf: CFrame, length: number, width: number, parent: Instance)
 	local n = math.max(2, math.floor(length / 1.2))
 	local step = length / n
@@ -250,7 +283,7 @@ local function caution(name: string, cf: CFrame, length: number, width: number, 
 	end
 end
 
--- Crates and a barrel stacked in a corner.
+-- crates and a barrel stacked in a corner.
 local function crates(pos: Vector3, parent: Instance)
 	solid("Crate", Vector3.new(3, 3, 3), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, rng:NextNumber(-0.2, 0.2), 0), WOOD, Enum.Material.WoodPlanks, parent)
 	solid("Crate", Vector3.new(2.4, 2.4, 2.4), CFrame.new(pos + Vector3.new(0.3, 4.2, 0.2)) * CFrame.Angles(0, rng:NextNumber(-0.5, 0.5), 0), WOOD, Enum.Material.WoodPlanks, parent)
@@ -258,8 +291,8 @@ local function crates(pos: Vector3, parent: Instance)
 	barrel.Shape = Enum.PartType.Cylinder
 end
 
--- A pedestal with a lit ring and a cone of light over it, and a name plate
--- on the side facing `toward`. Returns the pedestal and where to float
+-- a pedestal with a lit ring and a cone of light over it, and a name plate
+-- on the side facing `toward`. returns the pedestal and where to float
 -- something over it.
 local function holoPedestal(pos: Vector3, toward: Vector3, color: Color3, label: string, parent: Instance): (BasePart, Vector3)
 	local base = ArenaKit.NewDisc("Pedestal", 4.4, 1.2, pos + Vector3.new(0, 0.6, 0), STEEL_DARK, Enum.Material.Metal, parent)
@@ -288,7 +321,7 @@ local function holoPedestal(pos: Vector3, toward: Vector3, color: Color3, label:
 	return base, pos + Vector3.new(0, 4.4, 0)
 end
 
--- Displays that turn slowly and bob (each client spins them: LobbyLook).
+-- displays that turn slowly and bob (each client spins them: lobbylook).
 local function spinning(m: Model)
 	m:SetAttribute("SpinPivot", m:GetPivot())
 	CollectionService:AddTag(m, "LobbySpin")
@@ -306,7 +339,7 @@ local function archeryTarget(pos: Vector3, faceTo: Vector3, parent: Instance)
 	end
 end
 
--- A cat you can look at but not touch (no name tag, no collisions).
+-- a cat you can look at but not touch (no name tag, no collisions).
 local function displayCat(look: any, cf: CFrame, parent: Instance): Model
 	local cat = CatBuilder.Build(look, "Display", nil)
 	cat:SetAttribute("NoOverhead", true)
@@ -322,7 +355,7 @@ local function displayCat(look: any, cf: CFrame, parent: Instance): Model
 	return cat
 end
 
--- A shopkeeper cat with a speech bubble that opens a screen when you talk to it.
+-- a shopkeeper cat with a speech bubble that opens a screen when you talk to it.
 local function shopkeeper(look: any, pos: Vector3, toward: Vector3, line: string, panel: string, parent: Instance)
 	local cat = displayCat(look, CFrame.lookAt(pos + Vector3.new(0, 1.9, 0), Vector3.new(toward.X, pos.Y + 1.9, toward.Z)), parent)
 	local root = cat.PrimaryPart
@@ -367,7 +400,7 @@ local function buildGround(f: Instance)
 		local room = r == GUNS_ROOM or r == COLLECTION_ROOM
 		solid("Floor" .. i, Vector3.new(w + 0.2, 2, d + 0.2), CFrame.new(mid - Vector3.new(0, 1, 0)), hall and HALL_FLOOR or room and Color3.fromRGB(156, 146, 128) or FLOOR_PLATE,
 			hall and Enum.Material.SmoothPlastic or Enum.Material.Slate, f)
-		-- A steel roof on girders (it casts no shadow, so the daylight still
+		-- a steel roof on girders (it casts no shadow, so the daylight still
 		-- lights the inside).
 		local roof = solid("Roof" .. i, Vector3.new(w + 2, 1, d + 2), CFrame.new(mid + Vector3.new(0, HEIGHT + 0.5, 0)), Color3.fromRGB(10, 12, 22), Enum.Material.SmoothPlastic, f)
 		roof.CastShadow = false
@@ -378,7 +411,7 @@ local function buildGround(f: Instance)
 			local off = long and Vector3.new(r[1] + k - (r[1] + r[2]) / 2, 0, 0) or Vector3.new(0, 0, r[3] + k - (r[3] + r[4]) / 2)
 			part("RoofBeam", long and Vector3.new(1.4, 1.6, d) or Vector3.new(w, 1.6, 1.4), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.8, 0)), ROOF_BEAM, Enum.Material.Metal, f).CastShadow = false
 		end
-		-- Light panels in the ceiling.
+		-- light panels in the ceiling.
 		for x = r[1] + 11, r[2] - 5, 22 do
 			for z = r[3] + 11, r[4] - 5, 22 do
 				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), Color3.fromRGB(236, 226, 206), Enum.Material.SmoothPlastic, f)
@@ -394,7 +427,7 @@ local function buildGround(f: Instance)
 			end
 		end
 		if not hall and not room then
-			-- Plate seams.
+			-- plate seams.
 			for x = r[1] + 6, r[2] - 1, 6 do
 				part("Grout", Vector3.new(0.12, 0.04, d), CFrame.new(at(x, (r[3] + r[4]) / 2, 0.02)), SEAM, Enum.Material.SmoothPlastic, f)
 			end
@@ -402,13 +435,13 @@ local function buildGround(f: Instance)
 				part("Grout", Vector3.new(w, 0.04, 0.12), CFrame.new(at((r[1] + r[2]) / 2, z, 0.02)), SEAM, Enum.Material.SmoothPlastic, f)
 			end
 		end
-		-- Rock underneath, tapering away.
+		-- rock underneath, tapering away.
 		part("Foundation", Vector3.new(w + 4, 6, d + 4), CFrame.new(mid - Vector3.new(0, 5, 0)), STEEL_DARK, Enum.Material.Rock, f)
 		part("Taper", Vector3.new(w * 0.75, 10, d * 0.75), CFrame.new(mid - Vector3.new(0, 13, 0)), STEEL_DARK:Lerp(Color3.new(0, 0, 0), 0.15), Enum.Material.Rock, f)
 		part("Taper", Vector3.new(w * 0.45, 12, d * 0.45), CFrame.new(mid - Vector3.new(0, 24, 0)), STEEL_DARK:Lerp(Color3.new(0, 0, 0), 0.25), Enum.Material.Rock, f)
 	end
 
-	-- Walls all the way round: steel panels along the plaza and rooms, navy
+	-- walls all the way round: steel panels along the plaza and rooms, navy
 	-- along the matchmaking hall; a rail, a cap and girder pillars inside.
 	for i, a in ipairs(OUTLINE) do
 		local b = OUTLINE[i % #OUTLINE + 1]
@@ -428,7 +461,7 @@ local function buildGround(f: Instance)
 		local along = CFrame.lookAt(face, face + dir)
 		part("WallBase", Vector3.new(0.2, 2.4, len), along * CFrame.new(0, 1.2, 0), navy and PANEL or STEEL_DARK, Enum.Material.Metal, f)
 		if not navy then
-			-- A rail along the wall and girder pillars every 16 studs.
+			-- a rail along the wall and girder pillars every 16 studs.
 			part("WallRail", Vector3.new(0.4, 0.6, len), along * CFrame.new(0, 4.2, 0), BEAM, Enum.Material.Metal, f)
 			part("WallCap", Vector3.new(0.6, 1, len), along * CFrame.new(0, HEIGHT - 2, 0), BEAM, Enum.Material.Metal, f)
 			for k = 8, len - 4, 16 do
@@ -438,8 +471,8 @@ local function buildGround(f: Instance)
 			end
 		end
 	end
-	-- Over each way through from the main hall: a wall above the opening with
-	-- its lit sign (WEAPONS and the MARKET; the matchmaking arch has its own),
+	-- over each way through from the main hall: a wall above the opening with
+	-- its lit sign (weapons and the market; the matchmaking arch has its own),
 	-- caution stripes across the floor.
 	for _, h in ipairs({ { 44, -1, "WEAPONS", BLUE }, { -44, 1, "MARKET", GOLD } }) do
 		local x, side = h[1], h[2]
@@ -456,20 +489,20 @@ end
 
 -- ── the middle: spawn ────────────────────────────────────────────────────────
 local function buildSpawn(f: Instance)
-	-- Like a Rivals spawn: a stepped round platform, dark grate panels split
+	-- like a rivals spawn: a stepped round platform, dark grate panels split
 	-- by steel ribs (every third one lit thin blue), a raised inner ring, and
-	-- PAW MAYHEM written big on the floor in the middle, facing the duel hall
-	-- so it reads the right way round as you spawn. Light posts round the rim.
+	-- paw mayhem written big on the floor in the middle, facing the duel hall
+	-- so it reads the right way round as you spawn. light posts round the rim.
 	local c = at(0, 0)
 	local rib = STONE_DARK_TONE -- stone ribs and ring (gold only as thin inlay)
 	local grate = Color3.fromRGB(140, 131, 115) -- stone panels
-	-- The step all round, then the platform (both walkable).
+	-- the step all round, then the platform (both walkable).
 	ArenaKit.NewDisc("SpawnStep", 35, 0.3, c + Vector3.new(0, 0.15, 0), Color3.fromRGB(150, 140, 124), Enum.Material.Slate, f)
 	ArenaKit.NewDisc("SpawnPlatform", 30, 0.6, c + Vector3.new(0, 0.3, 0), Color3.fromRGB(172, 162, 144), Enum.Material.Slate, f)
 	disc("SpawnRim", 30.8, 0.5, c + Vector3.new(0, 0.3, 0), BEAM, Enum.Material.Metal, f)
 	disc("SpawnGlow", 29.4, 0.08, c + Vector3.new(0, 0.62, 0), BEAM, Enum.Material.Metal, f).CastShadow = false
 	disc("SpawnGrate", 28.6, 0.1, c + Vector3.new(0, 0.64, 0), grate, Enum.Material.Slate, f)
-	-- Grate texture: thin bars across each panel.
+	-- grate texture: thin bars across each panel.
 	for k = 0, 23 do
 		local a = (k + 0.5) / 24 * math.pi * 2
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -478,7 +511,7 @@ local function buildSpawn(f: Instance)
 			part("GrateBar", Vector3.new(0.16, 0.04, 2 * math.pi * r / 24 * 0.8), CFrame.lookAt(p, p + Vector3.new(-dir.Z, 0, dir.X)), Color3.fromRGB(126, 118, 104), Enum.Material.Slate, f).CastShadow = false
 		end
 	end
-	-- Ribs.
+	-- ribs.
 	for k = 0, 11 do
 		local a = k / 12 * math.pi * 2
 		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -488,7 +521,7 @@ local function buildSpawn(f: Instance)
 			part("SpawnRibGlow", Vector3.new(0.1, 0.13, 7.2), CFrame.lookAt(mid, mid + dir), BEAM, Enum.Material.Metal, f).CastShadow = false
 		end
 	end
-	-- The raised inner ring the logo sits in.
+	-- the raised inner ring the logo sits in.
 	local r = 7.4
 	local n = 36
 	for k = 0, n - 1 do
@@ -496,7 +529,7 @@ local function buildSpawn(f: Instance)
 		local p = c + Vector3.new(math.cos(a) * r, 0.78, math.sin(a) * r)
 		part("SpawnRing", Vector3.new(0.7, 0.28, 2 * math.pi * r / n + 0.06), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), rib, Enum.Material.Slate, f).CastShadow = false
 	end
-	-- The floor logo.
+	-- the floor logo.
 	disc("LogoDisc", 14.2, 0.1, c + Vector3.new(0, 0.66, 0), Color3.fromRGB(22, 30, 64), Enum.Material.SmoothPlastic, f)
 	local logo = part("SpawnLogo", Vector3.new(12, 0.05, 12), CFrame.lookAt(c + Vector3.new(0, 0.74, 0), c + Vector3.new(0, 0.74, 1)), Color3.fromRGB(20, 22, 30), Enum.Material.SmoothPlastic, f)
 	logo.Transparency = 1
@@ -505,15 +538,13 @@ local function buildSpawn(f: Instance)
 	gui.LightInfluence = 0.2
 	gui.PixelsPerStud = 40
 	gui.Parent = logo
-	local paw = Instance.new("TextLabel")
+	local paw = Instance.new("Frame")
 	paw.BackgroundTransparency = 1
-	paw.Position = UDim2.fromScale(0.3, 0.06)
-	paw.Size = UDim2.fromScale(0.4, 0.3)
-	paw.Text = "🐾"
-	paw.TextScaled = true
-	paw.Font = Enum.Font.FredokaOne
-	paw.TextColor3 = BEAM
+	paw.AnchorPoint = Vector2.new(0.5, 0)
+	paw.Position = UDim2.fromScale(0.5, 0.06)
+	paw.Size = UDim2.fromScale(0.3, 0.3)
 	paw.Parent = gui
+	drawPaw(paw, BEAM)
 	for i, word in ipairs({ "PAW", "MAYHEM" }) do
 		local l = Instance.new("TextLabel")
 		l.BackgroundTransparency = 1
@@ -527,7 +558,7 @@ local function buildSpawn(f: Instance)
 		l.TextStrokeTransparency = 0.3
 		l.Parent = gui
 	end
-	-- Light posts round the step.
+	-- light posts round the step.
 	for k = 0, 7 do
 		local a = (k + 0.5) / 8 * math.pi * 2
 		local p = c + Vector3.new(math.cos(a) * 16.6, 0, math.sin(a) * 16.6)
@@ -536,7 +567,7 @@ local function buildSpawn(f: Instance)
 		cap.CastShadow = false
 		light(cap, Color3.fromRGB(200, 220, 255), 10, 0.5)
 	end
-	-- Crates and barrels in the corners.
+	-- crates and barrels in the corners.
 	for _, p in ipairs({ { 39, -35 }, { -39, -35 }, { 25, -37 }, { -25, -37 } }) do
 		crates(at(p[1], p[2]), f)
 	end
@@ -551,8 +582,8 @@ local function buildDisplays(f: Instance)
 	for _, w in ipairs(Weapons.List) do
 		byId[w.Id] = w
 	end
-	-- Featured blasters floating over lit pedestals, between the spawn and
-	-- WEAPONS (F to equip).
+	-- featured blasters floating over lit pedestals, between the spawn and
+	-- weapons (f to equip).
 	for i, spot in ipairs({ { 22, -12 }, { 25, -1 }, { 22, 10 } }) do
 		local w = byId[SHOWCASE[i]]
 		if w then
@@ -571,7 +602,7 @@ local function buildDisplays(f: Instance)
 		end
 	end
 
-	-- Today's free gift: a present turning over a gold pedestal (opens the Shop).
+	-- today's free gift: a present turning over a gold pedestal (opens the shop).
 	local giftBase, giftTop = holoPedestal(at(-19, 12), spawnAt, GOLD, "FREE GIFT", f)
 	local gift = Instance.new("Model")
 	gift.Name = "Gift"
@@ -586,7 +617,7 @@ local function buildDisplays(f: Instance)
 	spinning(gift)
 	prompt(giftBase, "Open", "Free daily gift", "Shop")
 
-	-- An arcade cabinet: its screen takes reward codes (opens Settings).
+	-- an arcade cabinet: its screen takes reward codes (opens settings).
 	local spot = at(-25, 1)
 	local face = CFrame.lookAt(spot, Vector3.new(spawnAt.X, spot.Y, spawnAt.Z))
 	local pink = BEAM -- (the arcade's trim: gold like everything else)
@@ -612,25 +643,25 @@ end
 
 -- ── ahead: the matchmaking hall (walk-through) and the practice gate ────────
 local function buildMatchHall(f: Instance)
-	-- The entrance arch: stone pillars, a beam and the big sign.
+	-- the entrance arch: stone pillars, a beam and the big sign.
 	for _, x in ipairs({ -22, 22 }) do
 		-- (in front of the wall, not half inside it)
 		solid("ArchPillar", Vector3.new(4, HEIGHT, 4), CFrame.new(at(x, 28.5, HEIGHT / 2)), STONE, Enum.Material.Slate, f)
 	end
 	solid("ArchHeader", Vector3.new(40, HEIGHT - 14, 2), CFrame.new(at(0, 30, 14 + (HEIGHT - 14) / 2)), NAVY, Enum.Material.SmoothPlastic, f)
-	-- The big DUELS sign over the way in, bolted up slightly crooked.
+	-- the big duels sign over the way in, bolted up slightly crooked.
 	neonSign("DuelsSign", at(0, 28.3, 17.6), at(0, 0, 17.6), 22, 6, BLUE, "DUELS", f, -4)
 	neonSign("LobbySign", at(0, 31.4, 17.6), at(0, 60, 17.6), 16, 4, CYAN, "LOBBY", f)
-	-- Painted arrows on the floor from the spawn to the arch.
+	-- painted arrows on the floor from the spawn to the arch.
 	for _, z in ipairs({ 18, 22.5, 27 }) do
 		for _, s in ipairs({ -1, 1 }) do
 			part("FloorArrow", Vector3.new(0.35, 0.05, 3), CFrame.new(at(s * 0.96, z - 1.15, 0.03)) * CFrame.Angles(0, math.rad(-s * 40), 0), BEAM, Enum.Material.Metal, f)
 		end
 	end
 
-	-- The walkway: a darker lane with glowing arrows, purple and gold edges.
+	-- the walkway: a darker lane with glowing arrows, purple and gold edges.
 	part("Walkway", Vector3.new(10, 0.06, 82), CFrame.new(at(0, 71, 0.03)), Color3.fromRGB(26, 28, 40), Enum.Material.SmoothPlastic, f)
-	-- Mode signs above each block of pads.
+	-- mode signs above each block of pads.
 	for _, s in ipairs({ { "1V1", 56, BLUE }, { "2V2", 92.5, PURPLE } }) do
 		for _, side in ipairs({ 1, -1 }) do
 			board("ModeSign", at(side * 18.6, s[2], 12), at(0, s[2], 12), 8, 2.2, s[3], {
@@ -638,7 +669,7 @@ local function buildMatchHall(f: Instance)
 			}, f)
 		end
 	end
-	-- An open roof of beams with light strips under them.
+	-- an open roof of beams with light strips under them.
 	for z = 34, 110, 8 do
 		part("RoofBeam", Vector3.new(41, 1, 1.2), CFrame.new(at(0, z, HALL_WALL + 0.8)), ROOF_BEAM, Enum.Material.Metal, f).CastShadow = false
 	end
@@ -646,17 +677,17 @@ local function buildMatchHall(f: Instance)
 		part("RoofRail", Vector3.new(0.8, 0.8, 80), CFrame.new(at(x, 72, HALL_WALL + 1.6)), METAL, Enum.Material.Metal, f).CastShadow = false
 	end
 
-	-- The far end of the hall: a big screen.
+	-- the far end of the hall: a big screen.
 	board("DuelScreen", at(0, 110.8, 10), at(0, 0, 10), 26, 8, BLUE, {
 		{ text = "DUELS", size = 140, color = WHITE },
 		{ text = "Stand on a pad  ·  First to 5  ·  Alone 15s = vs BOT", size = 40, color = CYAN },
 	}, f)
 end
 
--- ── behind the spawn: the SHOOTING RANGE bay ────────────────────────────────
--- A steel bay door with caution stripes and a rolled-up shutter, a glass grid
--- with targets behind it, LIVE FIRE signs either side. Walking through the
--- glass takes you to the range (the Practice Dimension).
+-- ── behind the spawn: the shooting range bay ────────────────────────────────
+-- a steel bay door with caution stripes and a rolled-up shutter, a glass grid
+-- with targets behind it, live fire signs either side. walking through the
+-- glass takes you to the range (the practice dimension).
 local rangeDoor: BasePart? = nil
 
 local function buildGate(f: Instance)
@@ -670,7 +701,7 @@ local function buildGate(f: Instance)
 		for k = 0, 9 do
 			part("PostStripe", Vector3.new(1.05, 0.65, 1.45), CFrame.new(at(s * 7.5, z, 0.65 + k * 1.3)), CAUTION, Enum.Material.SmoothPlastic, f)
 		end
-		-- LIVE FIRE signs on the alcove walls.
+		-- live fire signs on the alcove walls.
 		local p = at(s * 15.8, -47, 7)
 		local face = CFrame.lookAt(p, Vector3.new(CENTER.X, p.Y, p.Z))
 		part("CautionSign", Vector3.new(2.6, 2.6, 0.12), face * CFrame.Angles(0, 0, math.rad(45)), CAUTION, Enum.Material.SmoothPlastic, f)
@@ -686,7 +717,7 @@ local function buildGate(f: Instance)
 		part("ShutterRib", Vector3.new(15.1, 0.12, 2.5), CFrame.new(at(0, z + 0.3, 14.4 + k * 0.45)), STEEL_DARK, Enum.Material.Metal, f)
 	end
 	solid("BayTop", Vector3.new(32, HEIGHT - 16.4, 1), CFrame.new(at(0, z, 16.4 + (HEIGHT - 16.4) / 2)), PANEL, Enum.Material.Metal, f)
-	-- The glass grid in the doorway (you walk through it).
+	-- the glass grid in the doorway (you walk through it).
 	local glass = part("BayGlass", Vector3.new(14, 13, 0.3), CFrame.new(at(0, z, 6.5)), Color3.fromRGB(150, 220, 255), Enum.Material.Glass, f)
 	glass.Transparency = 0.7
 	glass.CastShadow = false
@@ -697,7 +728,7 @@ local function buildGate(f: Instance)
 	for _, y in ipairs({ 2.6, 5.2, 7.8, 10.4 }) do
 		part("Mullion", Vector3.new(14, 0.18, 0.4), CFrame.new(at(0, z, y)), STEEL_DARK, Enum.Material.Metal, f)
 	end
-	-- Behind the glass: a lane with targets.
+	-- behind the glass: a lane with targets.
 	part("RangeLane", Vector3.new(14, 0.05, 7.5), CFrame.new(at(0, -58.4, 0.03)), Color3.fromRGB(30, 32, 38), Enum.Material.SmoothPlastic, f)
 	caution("LaneLine", CFrame.new(at(0, -55.2, 0.04)), 14, 0.5, f)
 	for _, x in ipairs({ -4.5, 0, 4.5 }) do
@@ -718,8 +749,8 @@ local function buildGate(f: Instance)
 	rangeDoor = trigger
 end
 
--- ── left: WEAPONS ────────────────────────────────────────────────────────────
--- A side room off the main hall: a panel on the back wall, glowing trim and
+-- ── left: weapons ────────────────────────────────────────────────────────────
+-- a side room off the main hall: a panel on the back wall, glowing trim and
 -- lights (its walls, roof and sign are part of the building).
 local function shopRoom(name: string, backX: number, openSide: number, glow: Color3, f: Instance): Folder
 	local b = Instance.new("Folder")
@@ -737,7 +768,7 @@ end
 
 local function buildGuns(f: Instance)
 	local b = shopRoom("Guns", 86, -1, BLUE, f)
-	-- Every blaster racked on the back wall, two rows, show side out.
+	-- every blaster racked on the back wall, two rows, show side out.
 	local toFront = Vector3.new(-1, 0, 0)
 	for i, w in ipairs(Weapons.List) do
 		local row = (i - 1) // 5
@@ -756,7 +787,7 @@ local function buildGuns(f: Instance)
 		sign(tag, Enum.NormalId.Front, { { text = string.upper(w.Name), size = 16, color = w.TrailColor } })
 		prompt(plate, "Equip", w.Name, "Loadout", w.Id)
 	end
-	-- A counter, crates, and the shopkeeper.
+	-- a counter, crates, and the shopkeeper.
 	solid("Counter", Vector3.new(3, 3, 12), CFrame.new(at(70, 10, 1.5)), WOOD, Enum.Material.WoodPlanks, b)
 	for _, c in ipairs({ { 80, -15 }, { 77, -15.2 }, { 80, 15 } }) do
 		solid("Crate", Vector3.new(2.6, 2.6, 2.6), CFrame.new(at(c[1], c[2], 1.3)) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0), WOOD, Enum.Material.WoodPlanks, b)
@@ -764,7 +795,7 @@ local function buildGuns(f: Instance)
 	shopkeeper({ Fur = "Black", Outfit = "Ninja", Hat = "Cap" }, at(48, -12), at(0, 0), "Check out new skins!", "Shop", b)
 end
 
--- ── right: the MARKET ────────────────────────────────────────────────────────
+-- ── right: the market ────────────────────────────────────────────────────────
 local FEATURED = {
 	{ Fur = "Galaxy", Outfit = "Royal", Hat = "DiamondCrown" },
 	{ Fur = "Sakura", Outfit = "Streetwear", Hat = "PartyHat" },
@@ -784,14 +815,14 @@ end
 
 local function buildCollection(f: Instance)
 	local b = shopRoom("Collection", -86, 1, PURPLE, f)
-	-- Featured cats in glass cases along the back wall.
+	-- featured cats in glass cases along the back wall.
 	for i, look in ipairs(FEATURED) do
 		local pos = at(-81, -13.5 + (i - 1) * 9)
 		local stand = glassCase(pos, Vector3.new(5, 6, 5), PURPLE, b)
 		displayCat(look, CFrame.lookAt(pos + Vector3.new(0, 3.1, 0), pos + Vector3.new(10, 3.1, 0)), b)
 		prompt(stand, "Shop", "Featured look", "Shop")
 	end
-	-- Every rank tier: a glowing gem in its own little case, along one side.
+	-- every rank tier: a glowing gem in its own little case, along one side.
 	for i, tier in ipairs(Ranks.Tiers) do
 		local pos = at(-50 - (i - 1) * 4.2, 15)
 		glassCase(pos, Vector3.new(2.6, 2.8, 2.6), tier.Color, b)
@@ -803,7 +834,7 @@ local function buildCollection(f: Instance)
 			{ text = tostring(tier.Min) .. "+", size = 10, color = WHITE },
 		})
 	end
-	-- A gold cat statue in the middle of the room.
+	-- a gold cat statue in the middle of the room.
 	local plinth = at(-62, -4)
 	solid("Plinth", Vector3.new(7, 2, 7), CFrame.new(plinth + Vector3.new(0, 1, 0)), Color3.fromRGB(236, 232, 224), Enum.Material.Marble, b)
 	local ok, err = pcall(function()
@@ -831,7 +862,7 @@ local function buildCollection(f: Instance)
 	shopkeeper({ Fur = "White", Outfit = "Royal", Hat = "Crown" }, at(-48, 12), at(0, 0), "Collect rare cats!", "Shop", b)
 end
 
--- ── between spawn and the Market: the leaderboards ─────────────────────────
+-- ── between spawn and the market: the leaderboards ─────────────────────────
 type Board = { metric: string, rows: { TextLabel } }
 local boards: { Board } = {}
 
@@ -879,8 +910,8 @@ local function refreshBoards()
 	end
 end
 
--- Live boards: the win streaks of everyone in the server, and the duels being
--- played right now (DuelService hands over LobbyService.LiveDuels).
+-- live boards: the win streaks of everyone in the server, and the duels being
+-- played right now (duelservice hands over lobbyservice.liveduels).
 LobbyService.LiveDuels = nil :: (() -> { string })?
 local liveRows: { [string]: { TextLabel } } = {}
 
@@ -891,7 +922,7 @@ local function liveBoard(key: string, title: string, pos: Vector3, toward: Vecto
 	local b = part(key .. "Board", Vector3.new(w, h, 0.4), face, Color3.fromRGB(12, 14, 20), Enum.Material.SmoothPlastic, parent)
 	part(key .. "BoardTube", Vector3.new(w - 0.6, 0.16, 0.14), face * CFrame.new(0, h / 2 - 1.6, -0.26), color, Enum.Material.Neon, parent).CastShadow = false
 	light(b, color, 12, 0.6)
-	-- On two posts with a foot plate.
+	-- on two posts with a foot plate.
 	local ph = pos.Y - SURFACE_Y - h / 2
 	for _, sx in ipairs({ -1, 1 }) do
 		part(key .. "BoardPost", Vector3.new(0.6, ph, 0.6), face * CFrame.new(sx * (w / 2 - 1.5), -h / 2 - ph / 2, 0.45), STEEL_DARK, Enum.Material.Metal, parent)
@@ -980,11 +1011,11 @@ local function refreshLive()
 end
 
 local function buildBoards(f: Instance)
-	-- Either side of the way into the matchmaking hall, facing the spawn.
+	-- either side of the way into the matchmaking hall, facing the spawn.
 	liveBoard("Streaks", "WIN STREAKS", at(33, 25.5, 8), at(30, 0, 8), GOLD, f)
 	liveBoard("Duels", "DUELS", at(-33, 25.5, 8), at(-30, 0, 8), BLUE, f)
 	refreshLive()
-	-- Two boards on a stone base, angled towards the spawn, a crown above.
+	-- two boards on a stone base, angled towards the spawn, a crown above.
 	local spot = at(-30, -14)
 	solid("BoardBase", Vector3.new(24, 1.2, 4), CFrame.lookAt(spot + Vector3.new(0, 0.6, 0), at(0, -2, 0.6)), PANEL, Enum.Material.Metal, f)
 	local face = CFrame.lookAt(spot, at(0, -2))
@@ -999,7 +1030,7 @@ local function buildBoards(f: Instance)
 	}, f)
 end
 
--- ── the Practice Dimension (through the portal) ─────────────────────────────
+-- ── the practice dimension (through the portal) ─────────────────────────────
 type Dummy = { model: Model, root: BasePart, stand: CFrame, fluff: number, edge: Vector3? }
 local dummies: { Dummy } = {}
 
@@ -1018,7 +1049,7 @@ local function resetDummy(d: Dummy)
 	d.model:PivotTo(d.stand)
 end
 
--- A glowing ring you walk through. Returns the invisible trigger in it.
+-- a glowing ring you walk through. returns the invisible trigger in it.
 local function portal(center: Vector3, facing: Vector3, color: Color3, label: string?, parent: Instance): BasePart
 	local face = CFrame.lookAt(center, center + facing)
 	local r = 7
@@ -1050,7 +1081,7 @@ local function portal(center: Vector3, facing: Vector3, color: Color3, label: st
 	return trigger
 end
 
--- Walking into a portal's trigger sends you to `dest`.
+-- walking into a portal's trigger sends you to `dest`.
 local lastPortal: { [Player]: number } = {}
 local function linkPortal(trigger: BasePart, dest: CFrame)
 	trigger.Touched:Connect(function(hit)
@@ -1076,13 +1107,13 @@ local function buildPractice(lobby: Instance)
 	local p = Instance.new("Folder")
 	p.Name = "PracticeDimension"
 	p.Parent = lobby
-	-- The platform: a dark floor with a glowing grid, rails on three sides,
+	-- the platform: a dark floor with a glowing grid, rails on three sides,
 	-- open at the far end so target cats can be knocked off it.
-	-- (A big floor: 110 wide, 96 deep, open at the far end.)
+	-- (a big floor: 110 wide, 96 deep, open at the far end.)
 	local floorMid = practiceAt(0, -24)
 	solid("PracticeFloor", Vector3.new(110, 2, 96), CFrame.new(floorMid - Vector3.new(0, 1, 0)), Color3.fromRGB(48, 51, 60), Enum.Material.DiamondPlate, p)
 	part("Underside", Vector3.new(104, 8, 90), CFrame.new(floorMid - Vector3.new(0, 6, 0)), STEEL_DARK, Enum.Material.Metal, p)
-	-- Lanes for the target cats, caution stripes along the open edge.
+	-- lanes for the target cats, caution stripes along the open edge.
 	for _, x in ipairs({ -27.5, -16.5, -5.5, 5.5, 16.5, 27.5 }) do
 		part("LaneLine", Vector3.new(0.3, 0.05, 60), CFrame.new(practiceAt(x, -36, 0.03)), Color3.fromRGB(200, 204, 214), Enum.Material.SmoothPlastic, p)
 	end
@@ -1097,7 +1128,7 @@ local function buildPractice(lobby: Instance)
 	end
 	neonSign("RangeTitle", practiceAt(0, 23.6, 18.5), practiceAt(0, 0, 18.5), 24, 4.4, CYAN, "SHOOTING RANGE", p)
 
-	-- A floating pedestal to change your blaster (opens the weapons screen).
+	-- a floating pedestal to change your blaster (opens the weapons screen).
 	do
 		local spot = practiceAt(-16, 10)
 		local base, top = holoPedestal(spot, practiceAt(0, -10), CYAN, "CHANGE BLASTER", p)
@@ -1113,8 +1144,8 @@ local function buildPractice(lobby: Instance)
 		prompt(base, "Change", "Blaster", "Loadout")
 	end
 
-	-- Targets floating in the sky beyond the range: shoot them and they pop
-	-- (on your screen) and come back (MapLife).
+	-- targets floating in the sky beyond the range: shoot them and they pop
+	-- (on your screen) and come back (maplife).
 	for _ = 1, 26 do
 		local pos = practiceAt(rng:NextNumber(-60, 60), rng:NextNumber(-130, -40), rng:NextNumber(5, 42))
 		local face = CFrame.lookAt(pos, practiceAt(0, 10, pos.Y - SURFACE_Y))
@@ -1133,7 +1164,7 @@ local function buildPractice(lobby: Instance)
 		CollectionService:AddTag(disc, "RangeTarget")
 	end
 
-	-- Three target cats on glowing decks, archery targets behind them.
+	-- three target cats on glowing decks, archery targets behind them.
 	for i, dx in ipairs({ -22, -11, 0, 11, 22 }) do
 		local dz = i % 2 == 1 and -26 or -23
 		local deck = practiceAt(dx, dz)
@@ -1165,14 +1196,14 @@ local function buildPractice(lobby: Instance)
 		end
 	end
 
-	-- In through the range bay's glass, back out through the portal.
+	-- in through the range bay's glass, back out through the portal.
 	if rangeDoor then
 		linkPortal(rangeDoor, PRACTICE_ARRIVE)
 	end
 	linkPortal(portal(practiceAt(0, 16, 8.5), Vector3.new(0, 0, -1), BLUE, "BACK TO LOBBY", p), HUB_ARRIVE)
 end
 
--- A player's shot hit a target cat: same knockback maths as a real hit.
+-- a player's shot hit a target cat: same knockback maths as a real hit.
 local function hitDummy(shooter: Player, model: Model, weapon: any, dir: Vector3)
 	for _, d in ipairs(dummies) do
 		if d.model == model then
@@ -1193,9 +1224,9 @@ end
 
 -- ── putting it together ──────────────────────────────────────────────────────
 -- ── life round the plaza ─────────────────────────────────────────────────────
--- Two big news screens on the back
+-- two big news screens on the back
 -- wall (cycling tips and news), a lounge corner each side with a vending
--- machine (opens the Shop) and a bench, hanging team banners, planters,
+-- machine (opens the shop) and a bench, hanging team banners, planters,
 -- paw-print trails to the side rooms, two bounce springs to play on and
 -- dust drifting in the light.
 local newsLabels: { TextLabel } = {}
@@ -1212,7 +1243,7 @@ local NEWS = {
 local function buildAmbience(f: Instance)
 	local spawnAt = at(0, 0)
 
-	-- News screens on the back wall either side of the range door.
+	-- news screens on the back wall either side of the range door.
 	for _, x in ipairs({ -30, 30 }) do
 		local pos = at(x, -39.4, 11)
 		local face = CFrame.lookAt(pos, at(x, 0, 11))
@@ -1260,7 +1291,7 @@ local function buildAmbience(f: Instance)
 		table.insert(newsLabels, body)
 	end
 
-	-- Lounge corners: a vending machine (opens the Shop) and a bench.
+	-- lounge corners: a vending machine (opens the shop) and a bench.
 	for _, s in ipairs({ -1, 1 }) do
 		local pos = at(s * 42.4, 22)
 		local face = CFrame.lookAt(pos, Vector3.new(spawnAt.X, pos.Y, pos.Z))
@@ -1276,7 +1307,7 @@ local function buildAmbience(f: Instance)
 		sign(logoPart, Enum.NormalId.Front, { { text = s < 0 and "MEOW COLA" or "FISH SNAX", size = 30, color = BEAM } })
 		light(glass, Color3.fromRGB(180, 230, 255), 10, 0.8)
 		prompt(body, "Shop", "Vending machine", "Shop")
-		-- Bench beside it.
+		-- bench beside it.
 		local bench = face * CFrame.new(5, 0, -0.5)
 		solid("Bench", Vector3.new(5, 0.4, 1.6), bench * CFrame.new(0, 1.3, 0), WOOD, Enum.Material.WoodPlanks, f)
 		part("BenchBack", Vector3.new(5, 1.4, 0.3), bench * CFrame.new(0, 2.4, 0.75), WOOD, Enum.Material.WoodPlanks, f)
@@ -1285,7 +1316,7 @@ local function buildAmbience(f: Instance)
 		end
 	end
 
-	-- Team banners hanging from the girders.
+	-- team banners hanging from the girders.
 	for i, x in ipairs({ -32, -16, 16, 32 }) do
 		for _, z in ipairs({ -26, 18 }) do
 			local color = NAVY:Lerp(Color3.new(0, 0, 0), (i % 2) * 0.15) -- navy with a gold paw
@@ -1293,13 +1324,13 @@ local function buildAmbience(f: Instance)
 			part("BannerRod", Vector3.new(4.4, 0.25, 0.25), CFrame.new(p + Vector3.new(0, 3.6, 0)), STEEL_DARK, Enum.Material.Metal, f)
 			local cloth = part("Banner", Vector3.new(3.6, 7, 0.12), CFrame.new(p), color, Enum.Material.Fabric, f)
 			for _, faceId in ipairs({ Enum.NormalId.Front, Enum.NormalId.Back }) do
-				sign(cloth, faceId, { { text = "🐾", size = 60, color = BEAM } })
+				sign(cloth, faceId, { { paw = true, size = 60, color = BEAM } })
 			end
 			part("BannerTip", Vector3.new(3.6, 0.6, 0.12), CFrame.new(p - Vector3.new(0, 3.8, 0)), GOLD, Enum.Material.SmoothPlastic, f)
 		end
 	end
 
-	-- Planters with neon-edged pots.
+	-- planters with neon-edged pots.
 	for _, p in ipairs({ { 40, -24 }, { -40, -24 }, { 14, -36 }, { -14, -36 } }) do
 		local c = at(p[1], p[2])
 		solid("Planter", Vector3.new(3.4, 1.6, 3.4), CFrame.new(c + Vector3.new(0, 0.8, 0)), STEEL_DARK, Enum.Material.Metal, f)
@@ -1312,7 +1343,7 @@ local function buildAmbience(f: Instance)
 		ball("Leaves", 2.6, c + Vector3.new(0, 4.6, 0), Color3.fromRGB(70, 170, 90), f)
 	end
 
-	-- Paw-print trails from the spawn to the side rooms.
+	-- paw-print trails from the spawn to the side rooms.
 	for _, s in ipairs({ -1, 1 }) do
 		for k = 0, 7 do
 			local x = s * (17 + k * 3.3)
@@ -1326,12 +1357,12 @@ local function buildAmbience(f: Instance)
 		end
 	end
 
-	-- Two bounce springs to mess about on.
+	-- two bounce springs to mess about on.
 	for _, x in ipairs({ -12, 12 }) do
 		ArenaKit.AddSpring(at(x, -30), 95, f)
 	end
 
-	-- Dust drifting in the light.
+	-- dust drifting in the light.
 	local dust = part("Dust", Vector3.new(80, 14, 66), CFrame.new(at(0, -5, 10)), WHITE, Enum.Material.SmoothPlastic, f)
 	dust.Transparency = 1
 	local e = Instance.new("ParticleEmitter")
@@ -1350,9 +1381,9 @@ local function buildAmbience(f: Instance)
 end
 
 -- ── finishing: walls and side rooms ──────────────────────────────────────────
--- Pipe runs along the top of every steel wall, framed posters on the side
--- walls; the Weapons room gets a workbench, a floor mat and work lamps; the
--- Market a red carpet, a velvet rope round the statue, spotlit cases and
+-- pipe runs along the top of every steel wall, framed posters on the side
+-- walls; the weapons room gets a workbench, a floor mat and work lamps; the
+-- market a red carpet, a velvet rope round the statue, spotlit cases and
 -- framed portraits of legendary cats.
 local POSTERS = {
 	{ "BLAST 'EM OFF!", Color3.fromRGB(230, 70, 80) },
@@ -1371,7 +1402,7 @@ local function poster(pos: Vector3, normal: Vector3, idx: number, parent: Instan
 	part("PosterFrame", Vector3.new(5.4, 7, 0.25), face * CFrame.new(0, 0, 0.12), STEEL_DARK, Enum.Material.Metal, parent)
 	local board = part("Poster", Vector3.new(4.8, 6.4, 0.1), face * CFrame.new(0, 0, -0.05), NAVY, Enum.Material.SmoothPlastic, parent)
 	sign(board, Enum.NormalId.Front, {
-		{ text = "🐾", size = 60, color = BEAM },
+		{ paw = true, size = 60, color = BEAM },
 		{ text = p[1], size = 34, color = WHITE },
 	})
 end
@@ -1392,7 +1423,7 @@ local function pendantLamp(pos: Vector3, parent: Instance)
 end
 
 local function buildFinish(f: Instance)
-	-- Pipes and posters round the steel walls.
+	-- pipes and posters round the steel walls.
 	local idx = 0
 	for i, a in ipairs(OUTLINE) do
 		local b = OUTLINE[i % #OUTLINE + 1]
@@ -1407,7 +1438,7 @@ local function buildFinish(f: Instance)
 		local navy = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
 		if not navy then
 			local base = at(midXZ.X, midXZ.Z)
-			-- The wall's pillars (every 16 studs, see buildGround): the pipes run
+			-- the wall's pillars (every 16 studs, see buildground): the pipes run
 			-- between them rather than through them.
 			local pillarsAt = {}
 			for k = 8, len - 4, 16 do
@@ -1443,7 +1474,7 @@ local function buildFinish(f: Instance)
 					end
 				end
 			end
-			-- Posters on the walls that run along the sides (|x| = 44 / 86, and
+			-- posters on the walls that run along the sides (|x| = 44 / 86, and
 			-- the side rooms' walls), between the pillars.
 			if math.abs(dir.Z) > 0.9 or math.abs(midXZ.Z) == 18 then
 				for t = 16, len - 8, 16 do
@@ -1459,7 +1490,7 @@ local function buildFinish(f: Instance)
 		end
 	end
 
-	-- Weapons room: a workbench, a mat down the middle, work lamps.
+	-- weapons room: a workbench, a mat down the middle, work lamps.
 	local wr = Instance.new("Folder")
 	wr.Name = "WeaponsDressing"
 	wr.Parent = f
@@ -1490,7 +1521,7 @@ local function buildFinish(f: Instance)
 		pendantLamp(at(x, 0, HEIGHT - 8), wr)
 	end
 
-	-- Market: carpet, velvet rope round the statue, spotlights, portraits.
+	-- market: carpet, velvet rope round the statue, spotlights, portraits.
 	local mk = Instance.new("Folder")
 	mk.Name = "MarketDressing"
 	mk.Parent = f
@@ -1536,14 +1567,14 @@ local function buildFinish(f: Instance)
 		part("PortraitFrame", Vector3.new(5, 5.6, 0.3), face * CFrame.new(0, 0, 0.1), GOLD, Enum.Material.Metal, mk)
 		local art = part("Portrait", Vector3.new(4.3, 4.9, 0.1), face * CFrame.new(0, 0, -0.1), Color3.fromRGB(30, 24, 40), Enum.Material.SmoothPlastic, mk)
 		sign(art, Enum.NormalId.Front, {
-			{ text = "🐱", size = 70, color = WHITE },
+			{ paw = true, size = 70, color = WHITE },
 			{ text = name, size = 26, color = GOLD },
 		})
 	end
 end
 
 -- ── the grand touches: duel hall, plaza ──────────────────────────────────────
--- The duel hall gets a royal runner, stone pilasters with gold lamps between
+-- the duel hall gets a royal runner, stone pilasters with gold lamps between
 -- the pads, team pennants strung across and a trophy at the far end; the
 -- plaza gold chandeliers, a gold border round its floor, a gold inlay ring
 -- round the spawn and gold trim on the duel arch.
@@ -1598,7 +1629,7 @@ local function trophy(pos: Vector3, parent: Instance)
 end
 
 local function buildGrand(f: Instance)
-	-- Duel hall: runner, pilasters with lamps, pennants, trophy.
+	-- duel hall: runner, pilasters with lamps, pennants, trophy.
 	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), Color3.fromRGB(22, 24, 30), Enum.Material.Asphalt, f)
 	for _, e in ipairs({ { -4.2, Color3.fromRGB(150, 90, 255) }, { 4.2, Color3.fromRGB(255, 200, 60) } }) do
 		local line = part("RunnerTrim", Vector3.new(0.3, 0.08, 76), CFrame.new(at(e[1], 70, 0.06)), e[2], Enum.Material.Neon, f)
@@ -1626,7 +1657,7 @@ local function buildGrand(f: Instance)
 	end
 	trophy(at(0, 106), f)
 
-	-- Duel arch: gold trim and caps.
+	-- duel arch: gold trim and caps.
 	part("ArchTrim", Vector3.new(40.4, 0.5, 2.4), CFrame.new(at(0, 30, 14.2)), BEAM, Enum.Material.Metal, f)
 	part("ArchTrimTop", Vector3.new(40.4, 0.5, 2.4), CFrame.new(at(0, 30, HEIGHT - 0.4)), BEAM, Enum.Material.Metal, f)
 	for _, x in ipairs({ -22, 22 }) do
@@ -1634,7 +1665,7 @@ local function buildGrand(f: Instance)
 		part("ArchBase", Vector3.new(4.6, 1, 4.6), CFrame.new(at(x, 28.5, 0.5)), BEAM, Enum.Material.Metal, f)
 	end
 
-	-- Plaza: chandeliers, a gold border round the floor, an inlay ring.
+	-- plaza: chandeliers, a gold border round the floor, an inlay ring.
 	for _, p in ipairs({ { -24, -4 }, { 24, -4 } }) do
 		chandelier(at(p[1], p[2], HEIGHT - 6), f)
 	end
@@ -1660,11 +1691,11 @@ local function buildGrand(f: Instance)
 	end
 end
 
--- ── the duel hall in 3D: framed wall panels, a spotlight over every pad ─────
+-- ── the duel hall in 3d: framed wall panels, a spotlight over every pad ─────
 local function buildHallDepth(f: Instance)
 	for _, z in ipairs({ 42, 56, 70, 85, 100 }) do
 		for _, side in ipairs({ -1, 1 }) do
-			-- A recessed panel behind each pad's screen: a gold frame and a
+			-- a recessed panel behind each pad's screen: a gold frame and a
 			-- darker inset.
 			local x = side * 19.85
 			part("WallInset", Vector3.new(0.12, 9.5, 11), CFrame.new(at(x, z, 6.5)), Color3.fromRGB(18, 24, 50), Enum.Material.Plaster, f)
@@ -1672,7 +1703,7 @@ local function buildHallDepth(f: Instance)
 				part("InsetFrame", Vector3.new(0.3, e[2], e[1]), CFrame.new(at(x - side * 0.1, z + e[3], e[4])), BEAM, Enum.Material.Metal, f)
 			end
 		end
-		-- A hanging spotlight over the pad.
+		-- a hanging spotlight over the pad.
 		for _, side in ipairs({ -1, 1 }) do
 			local p = at(side * 11, z, HALL_WALL - 2.5)
 			part("SpotCable", Vector3.new(0.12, 3, 0.12), CFrame.new(p + Vector3.new(0, 1.8, 0)), INK, Enum.Material.SmoothPlastic, f)
@@ -1688,15 +1719,15 @@ local function buildHallDepth(f: Instance)
 			sl.Parent = holder
 		end
 	end
-	-- Polished marble down the hall (over the old flat floor).
+	-- polished marble down the hall (over the old flat floor).
 	part("HallMarble", Vector3.new(39.6, 0.04, 81.6), CFrame.new(at(0, 71, 0.02)), Color3.fromRGB(36, 38, 48), Enum.Material.Concrete, f)
 	for z = 34, 110, 6 do
 		part("HallSeam", Vector3.new(39.6, 0.05, 0.1), CFrame.new(at(0, z, 0.025)), Color3.fromRGB(60, 68, 108), Enum.Material.SmoothPlastic, f)
 	end
 end
 
--- Every surface gets material shading and casts shadows (flat plastic with
--- no shadows is what made it all read as 2D). Signs and glass keep theirs.
+-- every surface gets material shading and casts shadows (flat plastic with
+-- no shadows is what made it all read as 2d). signs and glass keep theirs.
 local function depthPass(root: Instance)
 	for _, p in ipairs(root:GetDescendants()) do
 		if p:IsA("BasePart") and p.Transparency < 0.5 and p.Material ~= Enum.Material.Neon and p.Material ~= Enum.Material.Glass then
@@ -1711,9 +1742,9 @@ local function depthPass(root: Instance)
 	end
 end
 
--- ── the room lights (LobbyLighting) ─────────────────────────────────────────
--- Each hangs from its own invisible holder in Plaza.LightRig, so they can be
--- moved and tuned live in Studio and exported back (docs/LOBBY_ART.md).
+-- ── the room lights (lobbylighting) ─────────────────────────────────────────
+-- each hangs from its own invisible holder in plaza.lightrig, so they can be
+-- moved and tuned live in studio and exported back (docs/lobby_art.md).
 local function buildLightRig(f: Instance)
 	local rig = Instance.new("Folder")
 	rig.Name = "LightRig"
@@ -1735,14 +1766,14 @@ local function buildLightRig(f: Instance)
 	end
 end
 
--- ── the 3D models and PBR materials ─────────────────────────────────────────
--- Once assets/LobbyMeshes.glb has been imported into ReplicatedStorage
--- .LobbyMeshes (and tools/lobby/setup_lobby.lua run on it), the lobby
+-- ── the 3d models and pbr materials ─────────────────────────────────────────
+-- once assets/lobbymeshes.glb has been imported into replicatedstorage
+-- .lobbymeshes (and tools/lobby/setup_lobby.lua run on it), the lobby
 -- swaps its block-built columns, pilasters, arch, spawn dais, chandeliers,
 -- trophy, planters and mouldings for the sculpted models, and every stone,
--- plaster, metal, marble and fabric surface gets its PBR material (tinted by
--- the part's own colour, so the palette stays as it is). Without the import
--- nothing changes. Solid parts a model replaces stay as invisible collision.
+-- plaster, metal, marble and fabric surface gets its pbr material (tinted by
+-- the part's own colour, so the palette stays as it is). without the import
+-- nothing changes. solid parts a model replaces stay as invisible collision.
 local function meshLibrary(): Instance?
 	local lib = ReplicatedStorage:FindFirstChild("LobbyMeshes")
 	if lib and lib:FindFirstChild("ColumnStone", true) then
@@ -1759,8 +1790,8 @@ local VARIANT_FOR: { [Enum.Material]: string } = {
 }
 
 local function applyMaterials(lib: Instance, roots: { Instance })
-	-- setup_lobby.lua puts them in MaterialService; a copy rides along in
-	-- the library in case the place is rebuilt from Lobby.rbxm.
+	-- setup_lobby.lua puts them in materialservice; a copy rides along in
+	-- the library in case the place is rebuilt from lobby.rbxm.
 	local mats = lib:FindFirstChild("Materials", true)
 	if mats then
 		for _, mv in ipairs(mats:GetChildren()) do
@@ -1789,8 +1820,8 @@ local function applyMaterials(lib: Instance, roots: { Instance })
 	end
 end
 
--- If the importer's textures didn't come through, a piece still looks right
--- in Roblox's own material and the lobby's colours.
+-- if the importer's textures didn't come through, a piece still looks right
+-- in roblox's own material and the lobby's colours.
 local FALLBACK: { [string]: { any } } = {
 	Gold = { BEAM, Enum.Material.Metal },
 	StoneBlock = { STONE, Enum.Material.Slate },
@@ -1798,9 +1829,9 @@ local FALLBACK: { [string]: { any } } = {
 	Cream = { Color3.fromRGB(246, 236, 214), Enum.Material.SmoothPlastic },
 }
 
--- One model piece: `size` and `cf` in the lobby's axes. The importer may
+-- one model piece: `size` and `cf` in the lobby's axes. the importer may
 -- have turned a mesh inside its part (setup_lobby.lua stores that turn as
--- the ImportTurn attribute); the size is given in the part's own axes.
+-- the importturn attribute); the size is given in the part's own axes.
 local function spawnPiece(src: MeshPart, mat: string?, size: Vector3, cf: CFrame, parent: Instance)
 	local m = src:Clone()
 	for _, c in ipairs(m:GetChildren()) do
@@ -1835,7 +1866,7 @@ local function placeGroup(lib: Instance, group: string, cf: CFrame, scale: Vecto
 	end
 end
 
--- A part the model replaces: decoration goes, solid parts stay to walk on.
+-- a part the model replaces: decoration goes, solid parts stay to walk on.
 local function retire(p: Instance)
 	if p:IsA("BasePart") and p.CanCollide then
 		p.Transparency = 1
@@ -1859,7 +1890,7 @@ local function named(root: Instance, names: { [string]: boolean }): { BasePart }
 	return out
 end
 
--- Fit a group to the part it replaces: its bottom centre, scaled to its size.
+-- fit a group to the part it replaces: its bottom centre, scaled to its size.
 local function onto(lib: Instance, group: string, target: BasePart, parent: Instance)
 	local box = LobbyMeshData[group].Box :: Vector3
 	placeGroup(lib, group, target.CFrame * CFrame.new(0, -target.Size.Y / 2, 0), target.Size / box, parent)
@@ -1880,12 +1911,12 @@ local function applyMeshes(lib: Instance, plaza: Instance)
 	local models = Instance.new("Folder")
 	models.Name = "Models"
 	models.Parent = plaza
-	-- Spawn dais.
+	-- spawn dais.
 	placeGroup(lib, "Dais", CFrame.new(at(0, 0)), Vector3.one, models)
 	for _, p in ipairs(named(plaza, { SpawnStep = true, SpawnPlatform = true, SpawnRim = true })) do
 		retire(p)
 	end
-	-- Columns at the arch and the room openings, pilasters along the walls
+	-- columns at the arch and the room openings, pilasters along the walls
 	-- and down the hall, the arch itself, planters.
 	for _, p in ipairs(named(plaza, { ArchPillar = true, OpeningPillar = true })) do
 		onto(lib, "Column", p, models)
@@ -1900,7 +1931,7 @@ local function applyMeshes(lib: Instance, plaza: Instance)
 	for _, p in ipairs(named(plaza, { Planter = true })) do
 		onto(lib, "Planter", p, models)
 	end
-	-- Mouldings along the walls: one stretched to each cap and rail.
+	-- mouldings along the walls: one stretched to each cap and rail.
 	for _, p in ipairs(named(plaza, { WallCap = true, WallRail = true })) do
 		local piece = LobbyMeshData.Moulding.Pieces[p.Name == "WallCap" and 1 or 2]
 		local src = lib:FindFirstChild(piece.Name, true)
@@ -1909,7 +1940,7 @@ local function applyMeshes(lib: Instance, plaza: Instance)
 			retire(p)
 		end
 	end
-	-- Chandeliers: the sculpted frame and candles, the flames moved onto them.
+	-- chandeliers: the sculpted frame and candles, the flames moved onto them.
 	for _, hub in ipairs(named(plaza, { ChandelierHub = true })) do
 		local pos = hub.Position
 		placeGroup(lib, "Chandelier", CFrame.new(pos), Vector3.one, models)
@@ -1922,7 +1953,7 @@ local function applyMeshes(lib: Instance, plaza: Instance)
 		end
 		hub.Transparency = 1 -- keeps its light
 	end
-	-- The trophy at the end of the hall.
+	-- the trophy at the end of the hall.
 	for _, trim in ipairs(named(plaza, { TrophyTrim = true })) do
 		local top = trim.Position + Vector3.new(0, trim.Size.Y / 2, 0)
 		placeGroup(lib, "Trophy", CFrame.new(top), Vector3.one, models)
@@ -1944,8 +1975,8 @@ end
 local function buildLobby()
 	local f = Instance.new("Folder")
 	f.Name = "Lobby"
-	-- The intro cinematic and Mochi's lesson (client) stage themselves in the
-	-- Practice Dimension; "Range" is where the client lets you aim and shoot.
+	-- the intro cinematic and mochi's lesson (client) stage themselves in the
+	-- practice dimension; "range" is where the client lets you aim and shoot.
 	f:SetAttribute("Center", CENTER)
 	f:SetAttribute("Surface", SURFACE_Y)
 	f:SetAttribute("Stage", practiceAt(0, -12))
@@ -1984,7 +2015,7 @@ local function spawnCFrame(): CFrame
 	return CFrame.lookAt(p, p + Vector3.new(0, 0, 1)) -- facing the matchmaking hall
 end
 
--- Put a player (back) in the lobby.
+-- put a player (back) in the lobby.
 function LobbyService.Spawn(player: Player)
 	if not player.Parent then
 		return
@@ -2006,7 +2037,7 @@ function LobbyService.Start()
 			end
 		end)
 	end
-	-- TO DUELS (lobby menu): straight to the duel pads at the hall entrance.
+	-- to duels (lobby menu): straight to the duel pads at the hall entrance.
 	local lastTravel: { [Player]: number } = {}
 	Remotes.Get("LobbyTravel").OnServerEvent:Connect(function(player, dest)
 		if dest ~= "Duels" or player:GetAttribute("Context") ~= "Lobby" then
@@ -2061,7 +2092,7 @@ function LobbyService.Start()
 			return
 		end
 		acc = 0
-		-- Target cats knocked off the Practice Dimension come back fresh.
+		-- target cats knocked off the practice dimension come back fresh.
 		for _, dm in ipairs(dummies) do
 			local pos = dm.root.Position
 			if pos.Y >= dm.stand.Position.Y - 4 then
@@ -2075,7 +2106,7 @@ function LobbyService.Start()
 				resetDummy(dm)
 			end
 		end
-		-- Anyone who falls is put back where they were (practice or plaza).
+		-- anyone who falls is put back where they were (practice or plaza).
 		for _, p in ipairs(Players:GetPlayers()) do
 			local char = p:GetAttribute("Context") == "Lobby" and p.Character
 			local root = char and char.PrimaryPart

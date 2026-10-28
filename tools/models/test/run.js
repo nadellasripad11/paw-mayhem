@@ -1,9 +1,9 @@
-// Runs tools/models/setup_game.lua and MeshLib against a mock Roblox (Luau CLI):
+// runs tools/models/setup_game.lua and meshlib against a mock roblox (luau cli):
 //   node tools/models/test/run.js
-// The importer might turn the scene round either by turning each part
+// the importer might turn the scene round either by turning each part
 // (geometry untouched) or by baking the turn into the mesh data (parts not
-// turned). Both, plus no turn at all: after setup, every model placed by
-// MeshLib must show exactly as it was modelled, at the right spot and size.
+// turned). both, plus no turn at all: after setup, every model placed by
+// meshlib must show exactly as it was modelled, at the right spot and size.
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');

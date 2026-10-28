@@ -1,8 +1,8 @@
 --!strict
--- ArenaKit: shared building blocks used by every map (SkyIslands, Volcano,
--- Toybox). Each map supplies its own palette + decoration functions; the
+-- arenakit: shared building blocks used by every map (skyislands, volcano,
+-- toybox). each map supplies its own palette + decoration functions; the
 -- island/bridge/spawn/power-pad geometry — and, critically, the safety
--- guarantees around spawn placement — live here ONCE so every map gets them
+-- guarantees around spawn placement — live here once so every map gets them
 -- identically instead of being re-derived (and possibly re-broken) per map.
 
 local CollectionService = game:GetService("CollectionService")
@@ -32,8 +32,8 @@ function ArenaKit.NewPart(name: string, size: Vector3, cframe: CFrame, color: Co
 	return p
 end
 
--- Faceted cliff faces break up the round underside without relying on mesh
--- assets. The wedge points down/out from the island, giving every arena the
+-- faceted cliff faces break up the round underside without relying on mesh
+-- assets. the wedge points down/out from the island, giving every arena the
 -- chunky hand-built silhouette in the reference art.
 function ArenaKit.NewWedge(name: string, size: Vector3, cframe: CFrame, color: Color3, material: Enum.Material?, parent: Instance): WedgePart
 	local p = Instance.new("WedgePart")
@@ -49,11 +49,11 @@ function ArenaKit.NewWedge(name: string, size: Vector3, cframe: CFrame, color: C
 	return p
 end
 
--- Walkable island top sits this far above an island's center Y.
+-- walkable island top sits this far above an island's center y.
 ArenaKit.SURFACE = 1.6
 
--- Flat round disc. Roblox cylinders run along the part's X axis (length =
--- Size.X, diameter = min(Size.Y, Size.Z)), so X holds the thickness and the
+-- flat round disc. roblox cylinders run along the part's x axis (length =
+-- size.x, diameter = min(size.y, size.z)), so x holds the thickness and the
 -- 90° roll stands that axis upright.
 function ArenaKit.NewDisc(name: string, diameter: number, thickness: number, pos: Vector3, color: Color3, material: Enum.Material?, parent: Instance): BasePart
 	local p = ArenaKit.NewPart(name, Vector3.new(thickness, diameter, diameter), CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)), color, material, parent)
@@ -61,7 +61,7 @@ function ArenaKit.NewDisc(name: string, diameter: number, thickness: number, pos
 	return p
 end
 
--- Straight beam from a to b (braces, rails, ropes).
+-- straight beam from a to b (braces, rails, ropes).
 function ArenaKit.Beam(name: string, a: Vector3, b: Vector3, thickness: number, color: Color3, material: Enum.Material?, parent: Instance): BasePart
 	local p = ArenaKit.NewPart(name, Vector3.new(thickness, thickness, (b - a).Magnitude), CFrame.lookAt((a + b) / 2, b), color, material, parent)
 	p.CanCollide = false
@@ -73,11 +73,11 @@ export type IslandStyle = {
 	seam: Color3?, -- glowing cracks between cliff columns + under the rim
 	drip: Color3?, -- grass tufts hanging over the lip
 	depth: number?,
-	meshes: boolean?, -- sculpted rock cliffs, underside and grass lip (MeshLib)
-	softBlocks: boolean?, -- cliffs as soft rounded toy blocks (MeshLib)
+	meshes: boolean?, -- sculpted rock cliffs, underside and grass lip (meshlib)
+	softBlocks: boolean?, -- cliffs as soft rounded toy blocks (meshlib)
 }
 
--- Floating island: one solid round walkable top (the only collider), an
+-- floating island: one solid round walkable top (the only collider), an
 -- overhanging lip, a ring of columnar cliff blocks and a tapered rocky base.
 function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, palette: Palette, topMaterial: Enum.Material?, parent: Instance, style: IslandStyle?): Folder
 	local st: IslandStyle = style or {}
@@ -158,7 +158,7 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 		y -= h
 	end
 
-	-- Hanging rock columns give the underside a jagged, hand-built silhouette.
+	-- hanging rock columns give the underside a jagged, hand-built silhouette.
 	local hangTop = colTop - colH * 0.8
 	for i = 1, 8 do
 		local a = i / 8 * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
@@ -183,8 +183,8 @@ function ArenaKit.MakeIslandBase(center: Vector3, radius: number, name: string, 
 	return folder
 end
 
--- ── Layout helpers ───────────────────────────────────────────────────────────
--- An "isle" is a built island plus bookkeeping: link angles (bridges/stairs),
+-- ── layout helpers ───────────────────────────────────────────────────────────
+-- an "isle" is a built island plus bookkeeping: link angles (bridges/stairs),
 -- reserved angles (big features, streams) and placed prop footprints, so
 -- decoration never lands on a walkway or on top of another prop.
 
@@ -204,7 +204,7 @@ function ArenaKit.Polar(isle: any, angle: number, dist: number, lift: number?): 
 	return Vector3.new(isle.pos.X + math.cos(angle) * dist, isle.surf + (lift or 0), isle.pos.Z + math.sin(angle) * dist)
 end
 
--- Surface-level points on the facing edges of two isles, `inset` studs in.
+-- surface-level points on the facing edges of two isles, `inset` studs in.
 function ArenaKit.EdgePoints(A: any, B: any, inset: number): (Vector3, Vector3)
 	local ang = ArenaKit.AngleTo(A.pos, B.pos)
 	return ArenaKit.Polar(A, ang, A.r - inset), ArenaKit.Polar(B, ang + math.pi, B.r - inset)
@@ -215,7 +215,7 @@ function ArenaKit.Link(A: any, B: any)
 	table.insert(B.links, ArenaKit.AngleTo(B.pos, A.pos))
 end
 
--- True if a point at (angle, dist) sits inside a walkway corridor running
+-- true if a point at (angle, dist) sits inside a walkway corridor running
 -- from the isle's centre out through any link or reserved angle.
 function ArenaKit.Blocked(isle: any, angle: number, dist: number, halfWidth: number): boolean
 	for _, list in ipairs({ isle.links, isle.reserved }) do
@@ -229,7 +229,7 @@ function ArenaKit.Blocked(isle: any, angle: number, dist: number, halfWidth: num
 	return false
 end
 
--- Angles furthest from every link/reserved angle (and from each other).
+-- angles furthest from every link/reserved angle (and from each other).
 function ArenaKit.OpenAngles(isle: any, count: number): { number }
 	local picks = {}
 	for _ = 1, count do
@@ -261,7 +261,7 @@ function ArenaKit.Reserve(isle: any, pos: Vector3, rad: number)
 	table.insert(isle.placed, { x = pos.X, z = pos.Z, rad = rad })
 end
 
--- Random free spot on the isle top (outside corridors and other props).
+-- random free spot on the isle top (outside corridors and other props).
 function ArenaKit.TryPlace(isle: any, rng: Random, minD: number, maxD: number, rad: number, halfWidth: number): Vector3?
 	for _ = 1, 40 do
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -284,8 +284,8 @@ function ArenaKit.TryPlace(isle: any, rng: Random, minD: number, maxD: number, r
 	return nil
 end
 
--- ── Gameplay markers ─────────────────────────────────────────────────────────
--- Playable islands' floors are tagged so supply drops, snacks and map events
+-- ── gameplay markers ─────────────────────────────────────────────────────────
+-- playable islands' floors are tagged so supply drops, snacks and map events
 -- only ever land where players can walk.
 function ArenaKit.MarkPlayable(folder: Instance)
 	local floor = folder:FindFirstChild("Floor")
@@ -294,17 +294,17 @@ function ArenaKit.MarkPlayable(folder: Instance)
 	end
 end
 
--- A point on `toIsle`'s surface `dist` from its centre, on the side facing
--- `fromPos`, turned by `turn` radians (for landing spots).
+-- a point on `toisle`'s surface `dist` from its centre, on the side facing
+-- `frompos`, turned by `turn` radians (for landing spots).
 function ArenaKit.FacingPoint(toIsle: any, fromPos: Vector3, dist: number, turn: number): Vector3
 	return ArenaKit.Polar(toIsle, ArenaKit.AngleTo(toIsle.pos, fromPos) + turn, dist)
 end
 
 local JUMP_GLOW = Color3.fromRGB(90, 230, 255)
 
--- Jump pad on `isle` that flings players to `target` (the client computes the
--- arc). Placed as close to `angle` as the walkways allow, and its lane is
--- reserved so decoration keeps clear. Flush with the ground: no step to trip on.
+-- jump pad on `isle` that flings players to `target` (the client computes the
+-- arc). placed as close to `angle` as the walkways allow, and its lane is
+-- reserved so decoration keeps clear. flush with the ground: no step to trip on.
 function ArenaKit.AddJumpPad(isle: any, angle: number, dist: number, target: Vector3, parent: Instance): BasePart?
 	local chosen: number? = nil
 	for _, off in ipairs({ 0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75, 1, -1 }) do
@@ -362,7 +362,7 @@ function ArenaKit.AddJumpPad(isle: any, angle: number, dist: number, target: Vec
 	sparks.Speed = NumberRange.new(4, 9)
 	sparks.SpreadAngle = Vector2.new(12, 12)
 	sparks.Rate = 10
-	sparks.EmissionDirection = Enum.NormalId.Right -- the disc's X axis points up
+	sparks.EmissionDirection = Enum.NormalId.Right -- the disc's x axis points up
 	sparks.Parent = ring
 	local light = Instance.new("PointLight")
 	light.Color = JUMP_GLOW
@@ -374,9 +374,9 @@ function ArenaKit.AddJumpPad(isle: any, angle: number, dist: number, target: Vec
 	return ring
 end
 
--- Invisible walking surface between two rim points `ea` (on island A, at A's
+-- invisible walking surface between two rim points `ea` (on island a, at a's
 -- ground height) and `eb`: a smooth ramp plus a flat landing reaching 4 studs
--- into each island, and side guards over the gap. The ramp must end exactly at
+-- into each island, and side guards over the gap. the ramp must end exactly at
 -- each island's ground height at its rim; ending it further in left it under
 -- the higher island's floor, a hidden ledge players couldn't step up.
 local function rampCollision(ea: Vector3, eb: Vector3, width: number, parent: Instance)
@@ -396,7 +396,7 @@ local function rampCollision(ea: Vector3, eb: Vector3, width: number, parent: In
 	end
 end
 
--- Walkway collision between two isles. Returns the inset span endpoints (for
+-- walkway collision between two isles. returns the inset span endpoints (for
 -- visuals) and the rim endpoints the ramp runs between.
 function ArenaKit.WalkwayCollision(A: any, B: any, parent: Instance, width: number, inset: number): (Vector3, Vector3, Vector3, Vector3)
 	local a, b = ArenaKit.EdgePoints(A, B, inset)
@@ -407,7 +407,7 @@ end
 
 export type StairStyle = { step: Color3, stepAlt: Color3, wall: Color3, under: Color3, material: Enum.Material }
 
--- Stone staircase between two tiers: invisible ramp for smooth walking,
+-- stone staircase between two tiers: invisible ramp for smooth walking,
 -- visual steps, a support block underneath and parapet walls with newels.
 function ArenaKit.MakeStairs(A: any, B: any, parent: Instance, st: StairStyle)
 	local f = Instance.new("Folder")
@@ -441,7 +441,7 @@ function ArenaKit.MakeStairs(A: any, B: any, parent: Instance, st: StairStyle)
 	end
 end
 
--- Plain wooden bridge: one smooth collision deck (no plank seams to snag on)
+-- plain wooden bridge: one smooth collision deck (no plank seams to snag on)
 -- with visual planks and rails on top.
 function ArenaKit.MakeBridge(a: Vector3, b: Vector3, parent: Instance, palette: Palette)
 	local folder = Instance.new("Folder")
@@ -459,7 +459,7 @@ function ArenaKit.MakeBridge(a: Vector3, b: Vector3, parent: Instance, palette: 
 	end
 end
 
--- A single spawn marker. teamId may be nil for a universal/neutral spawn.
+-- a single spawn marker. teamid may be nil for a universal/neutral spawn.
 function ArenaKit.AddSpawn(pos: Vector3, teamId: string?, spawns: Folder)
 	local pad = Instance.new("Part")
 	pad.Name = "Spawn_" .. (teamId or "Neutral") .. "_" .. tostring(#spawns:GetChildren() + 1)
@@ -472,9 +472,9 @@ function ArenaKit.AddSpawn(pos: Vector3, teamId: string?, spawns: Folder)
 	pad.Parent = spawns
 end
 
--- Exactly 6 spawns per island, hexagon-arranged at half the island's radius —
+-- exactly 6 spawns per island, hexagon-arranged at half the island's radius —
 -- always well inside the solid top, always a safe short drop above the
--- collidable Floor, never near an edge. Used identically by every map.
+-- collidable floor, never near an edge. used identically by every map.
 function ArenaKit.AddHexSpawns(center: Vector3, radius: number, teamId: string?, spawns: Folder)
 	local r = radius * 0.5
 	for k = 0, 5 do
@@ -484,8 +484,8 @@ function ArenaKit.AddHexSpawns(center: Vector3, radius: number, teamId: string?,
 	end
 end
 
--- One team spawn point with its glowing pad, at pos (an island-centre-height
--- point well inside a playable island). Maps give each team three of these
+-- one team spawn point with its glowing pad, at pos (an island-centre-height
+-- point well inside a playable island). maps give each team three of these
 -- on different islands so a whole team never piles out of one spot.
 function ArenaKit.AddTeamSpawnPoint(pos: Vector3, teamId: string, spawns: Folder, parent: Instance)
 	ArenaKit.AddSpawn(pos + Vector3.new(0, 2.25, 0), teamId, spawns)
@@ -504,7 +504,7 @@ function ArenaKit.AddPowerPad(pos: Vector3, pads: Folder)
 	pad.CanCollide = false
 end
 
--- Small floating debris scattered through open air between islands.
+-- small floating debris scattered through open air between islands.
 function ArenaKit.MakeDebris(pos: Vector3, size: number, parent: Instance, palette: Palette, topAccent: boolean?)
 	local folder = Instance.new("Folder")
 	folder.Name = "FloatingChunk"
@@ -580,8 +580,8 @@ function ArenaKit.MakeClouds(arena: Instance, color: Color3, lowTransparency: nu
 	end
 end
 
--- Fresh Arena/Spawns/PowerUpPads folder structure — identical shape every map
--- must produce so PlayerService/PowerUpService work unchanged regardless of
+-- fresh arena/spawns/poweruppads folder structure — identical shape every map
+-- must produce so playerservice/powerupservice work unchanged regardless of
 -- which map is active.
 function ArenaKit.SetupFolders(workspaceService: Workspace, mapName: string): (Folder, Folder, Folder)
 	local existing = workspaceService:FindFirstChild("Arena")
@@ -604,13 +604,13 @@ function ArenaKit.SetupFolders(workspaceService: Workspace, mapName: string): (F
 	return arena, spawns, powerPads
 end
 
--- Shared island layout used by every map — positions/radii are the same ones
+-- shared island layout used by every map — positions/radii are the same ones
 -- whose spawn-safety math (hex spawns at half-radius, always above a solid
--- collidable Floor) was already verified. Reusing it means every new map
+-- collidable floor) was already verified. reusing it means every new map
 -- inherits that same safety guarantee and the same tested team balance,
 -- instead of re-deriving island placement (and re-risking a bad one) per map.
 ArenaKit.StandardLayout = {
-	-- Reference-inspired vertical arena: a broad center island, elevated side
+	-- reference-inspired vertical arena: a broad center island, elevated side
 	-- islands, and two team ledges that create the same layered skyline.
 	Center = { pos = Vector3.new(0, 0, 0), r = 32 },
 	Outer = {
@@ -639,7 +639,7 @@ function ArenaKit.ApplyAtmosphere(opts: any)
 	atmosphere.Offset = opts.Offset or 0.15
 	atmosphere.Color = opts.Color or Color3.fromRGB(200, 220, 255)
 	atmosphere.Decay = opts.Decay or Color3.fromRGB(95, 140, 200)
-	atmosphere.Glare = math.min(opts.Glare or 0.25, 0.08) -- (glare and haze were blinding with Future lighting)
+	atmosphere.Glare = math.min(opts.Glare or 0.25, 0.08) -- (glare and haze were blinding with future lighting)
 	atmosphere.Haze = math.min(opts.Haze or 1.4, 1)
 	atmosphere.Parent = Lighting
 
@@ -660,8 +660,8 @@ function ArenaKit.ApplyAtmosphere(opts: any)
 	end
 	Lighting.Brightness = opts.Brightness or 2
 
-	-- A Sky created here keeps Roblox's built-in skybox textures but can hide
-	-- the sun and moon (the Volcano's smoky dusk shouldn't show a moon).
+	-- a sky created here keeps roblox's built-in skybox textures but can hide
+	-- the sun and moon (the volcano's smoky dusk shouldn't show a moon).
 	local sky = Lighting:FindFirstChild("ArenaSky")
 	if opts.HideCelestial then
 		if not sky then
@@ -677,7 +677,7 @@ function ArenaKit.ApplyAtmosphere(opts: any)
 	end
 end
 
--- Puffy cloud clusters in a band around the arena (sea of clouds / smoke).
+-- puffy cloud clusters in a band around the arena (sea of clouds / smoke).
 function ArenaKit.MakeCloudBank(arena: Instance, color: Color3, count: number, yMin: number, yMax: number, rMin: number, rMax: number, transparency: number)
 	local folder = Instance.new("Folder")
 	folder.Name = "Clouds"
@@ -701,15 +701,15 @@ function ArenaKit.MakeCloudBank(arena: Instance, color: Color3, count: number, y
 end
 
 -- ── swim columns ─────────────────────────────────────────────────────────────
--- A column off an island's edge you can swim in (MovementController): SPACE /
--- jump goes up, SHIFT goes down, and after 15 seconds in it you're flung to a
--- random spot on the map. Each map has its own kind:
---   Water   - a waterfall pouring off the edge (you drift down)
---   Steam   - a volcanic vent's updraft (you drift up)
---   Bubbles - a clear toy tube full of rising bubbles
---   Wind    - an industrial fan blowing up past a roof
+-- a column off an island's edge you can swim in (movementcontroller): space /
+-- jump goes up, shift goes down, and after 15 seconds in it you're flung to a
+-- random spot on the map. each map has its own kind:
+--   water   - a waterfall pouring off the edge (you drift down)
+--   steam   - a volcanic vent's updraft (you drift up)
+--   bubbles - a clear toy tube full of rising bubbles
+--   wind    - an industrial fan blowing up past a roof
 -- `above` / `below` are how far the column reaches over and under the
--- island's surface. Each plays its own loop (Config.Sounds).
+-- island's surface. each plays its own loop (config.sounds).
 ArenaKit.SwimKinds = {
 	Water = { above = 0.6, below = 55, width = 10, depth = 7, drift = -4, sound = "Waterfall", color = Color3.fromRGB(118, 204, 242) },
 	Steam = { above = 22, below = 40, width = 9, depth = 9, drift = 6, sound = "SteamVent", color = Color3.fromRGB(236, 236, 242) },
@@ -747,11 +747,11 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 	table.insert(isle.reserved, angle)
 	local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
 	local h = spec.above + spec.below
-	-- The column overlaps the island's rim a little, so stepping off the
+	-- the column overlaps the island's rim a little, so stepping off the
 	-- edge drops you straight in.
 	local base = ArenaKit.Polar(isle, angle, isle.r + spec.depth / 2 - 1)
 	local mid = base + Vector3.new(0, (spec.above - spec.below) / 2, 0)
-	local face = CFrame.lookAt(mid, mid + out) -- -Z faces away from the island
+	local face = CFrame.lookAt(mid, mid + out) -- -z faces away from the island
 	local top = base + Vector3.new(0, spec.above, 0)
 	local bottom = base - Vector3.new(0, spec.below, 0)
 	local folder = Instance.new("Folder")
@@ -776,7 +776,7 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 	local NP = ArenaKit.NewPart
 
 	if kind == "Water" then
-		-- A stream across the top, the falling water, foam where it spills and
+		-- a stream across the top, the falling water, foam where it spills and
 		-- mist at the bottom.
 		local from = ArenaKit.Polar(isle, angle, isle.r * 0.55)
 		local lip = ArenaKit.Polar(isle, angle, isle.r - 0.5)
@@ -790,7 +790,7 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 		swimParticles(zone, "rbxasset://textures/particles/smoke_main.dds", ColorSequence.new(white), Enum.NormalId.Bottom,
 			NumberRange.new(28, 40), NumberSequence.new(1.4, 3), 30, NumberRange.new(1.2, 1.6))
 	elseif kind == "Steam" then
-		-- A glowing vent at the bottom and steam rising all the way up.
+		-- a glowing vent at the bottom and steam rising all the way up.
 		local glow = swimDeco(NP("VentGlow", Vector3.new(spec.width, 1, spec.depth), CFrame.new(bottom + Vector3.new(0, 0.5, 0)) * face.Rotation, Color3.fromRGB(255, 120, 40), Enum.Material.Neon, folder))
 		glow.Transparency = 0.25
 		local l = Instance.new("PointLight")
@@ -802,7 +802,7 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 		swimParticles(zone, "rbxasset://textures/particles/smoke_main.dds", ColorSequence.new(spec.color), Enum.NormalId.Top,
 			NumberRange.new(22, 32), NumberSequence.new(3, 8), 40, NumberRange.new(1.6, 2.2))
 	elseif kind == "Bubbles" then
-		-- A clear tube with candy-coloured rings and bubbles rising in it.
+		-- a clear tube with candy-coloured rings and bubbles rising in it.
 		local tube = NP("BubbleTube", Vector3.new(h, spec.width, spec.width), CFrame.new(mid) * CFrame.Angles(0, 0, math.rad(90)), spec.color, Enum.Material.Glass, folder) :: Part
 		tube.Shape = Enum.PartType.Cylinder
 		swimDeco(tube).Transparency = 0.72
@@ -815,7 +815,7 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 		swimParticles(zone, "rbxasset://textures/particles/sparkles_main.dds", ColorSequence.new(Color3.fromRGB(200, 240, 255), Color3.fromRGB(255, 200, 240)), Enum.NormalId.Top,
 			NumberRange.new(10, 18), NumberSequence.new(0.8, 1.6), 26, NumberRange.new(2.5, 3.5))
 	elseif kind == "Wind" then
-		-- A fan in a steel frame at the bottom, girders up the side, a lit
+		-- a fan in a steel frame at the bottom, girders up the side, a lit
 		-- ring at roof level and wind streaks rushing up.
 		local metal = Color3.fromRGB(60, 64, 76)
 		swimDeco(ArenaKit.NewDisc("FanHousing", spec.width + 1, 1.2, bottom + Vector3.new(0, 0.6, 0), metal, Enum.Material.Metal, folder))
@@ -835,7 +835,7 @@ function ArenaKit.AddSwimColumn(kind: string, isle: any, angle: number, parent: 
 	return zone
 end
 
--- A ladder (a climbable truss) standing at `base`, `height` tall, its back to
+-- a ladder (a climbable truss) standing at `base`, `height` tall, its back to
 -- the wall it's on (`outward` points away from that wall).
 function ArenaKit.AddLadder(base: Vector3, height: number, outward: Vector3, parent: Instance): TrussPart
 	local h = math.max(2, math.ceil(height / 2) * 2)
@@ -854,13 +854,13 @@ function ArenaKit.AddLadder(base: Vector3, height: number, outward: Vector3, par
 end
 
 -- ── map features ─────────────────────────────────────────────────────────────
--- Built here, run by MapFeatureService (server), MovementController and
--- MapLife (client).
+-- built here, run by mapfeatureservice (server), movementcontroller and
+-- maplife (client).
 
--- A zipline across the gap between two islands: a steel gantry at each edge
+-- a zipline across the gap between two islands: a steel gantry at each edge
 -- and two cables (one each way), each running from high on its start
--- gantry down to the far one. Walk into the handle at the start to grab it
--- and slide across (MovementController). Reserves both edges.
+-- gantry down to the far one. walk into the handle at the start to grab it
+-- and slide across (movementcontroller). reserves both edges.
 function ArenaKit.AddRopeSwing(A: any, B: any, parent: Instance)
 	local folder = Instance.new("Folder")
 	folder.Name = "Zipline"
@@ -887,7 +887,7 @@ function ArenaKit.AddRopeSwing(A: any, B: any, parent: Instance)
 		local top = Vector3.new(from.X, from.Y + HIGH, from.Z) + off
 		local bottom = Vector3.new(to.X, to.Y + LOW, to.Z) + off
 		ArenaKit.Beam("ZipCable", top, bottom, 0.22, Color3.fromRGB(30, 30, 34), Enum.Material.Metal, folder)
-		-- The handle hanging at the start: yellow, easy to spot.
+		-- the handle hanging at the start: yellow, easy to spot.
 		local grab = from + off + Vector3.new(0, 2.6, 0)
 		local handle = swimDeco(ArenaKit.NewPart("ZipHandle", Vector3.new(2.4, 0.4, 0.4), CFrame.lookAt(grab + Vector3.new(0, 1.6, 0), grab + Vector3.new(0, 1.6, 0) + side), yellow, Enum.Material.SmoothPlastic, folder))
 		swimDeco(ArenaKit.Beam("ZipStrap", top, handle.Position, 0.12, yellow, Enum.Material.Fabric, folder))
@@ -900,7 +900,7 @@ function ArenaKit.AddRopeSwing(A: any, B: any, parent: Instance)
 	end
 end
 
--- Spots where a few birds peck about (MapLife scares them off).
+-- spots where a few birds peck about (maplife scares them off).
 function ArenaKit.AddBirdSpots(isle: any, rng: Random, count: number, parent: Instance)
 	for _ = 1, count do
 		local p = ArenaKit.TryPlace(isle, rng, 4, isle.r - 4, 2.5, 3)
@@ -913,8 +913,8 @@ function ArenaKit.AddBirdSpots(isle: any, rng: Random, count: number, parent: In
 	end
 end
 
--- A lava geyser in the ground: a basalt rim, glowing cracks and the vent.
--- MapFeatureService makes it rumble, then blast whoever's on it.
+-- a lava geyser in the ground: a basalt rim, glowing cracks and the vent.
+-- mapfeatureservice makes it rumble, then blast whoever's on it.
 function ArenaKit.AddGeyser(pos: Vector3, parent: Instance): BasePart
 	local folder = Instance.new("Folder")
 	folder.Name = "Geyser"
@@ -934,7 +934,7 @@ function ArenaKit.AddGeyser(pos: Vector3, parent: Instance): BasePart
 	glow.Range = 14
 	glow.Brightness = 1
 	glow.Parent = vent
-	-- (Emitters on an upright attachment: the disc itself lies on its side.)
+	-- (emitters on an upright attachment: the disc itself lies on its side.)
 	local spout = Instance.new("Attachment")
 	spout.Name = "Spout"
 	spout.Parent = vent
@@ -976,8 +976,8 @@ function ArenaKit.AddGeyser(pos: Vector3, parent: Instance): BasePart
 	return vent
 end
 
--- A giant toy spring: jump on the top and it bounces you straight up
--- (MovementController; it's a JumpPad with a Bounce speed).
+-- a giant toy spring: jump on the top and it bounces you straight up
+-- (movementcontroller; it's a jumppad with a bounce speed).
 function ArenaKit.AddSpring(pos: Vector3, bounce: number, parent: Instance): BasePart
 	local folder = Instance.new("Folder")
 	folder.Name = "Spring"
@@ -992,8 +992,8 @@ function ArenaKit.AddSpring(pos: Vector3, bounce: number, parent: Instance): Bas
 	return top
 end
 
--- A ball pit: a soft rim, two layers of plastic balls and the region
--- MapFeatureService checks (cats inside are Hidden and wade slowly).
+-- a ball pit: a soft rim, two layers of plastic balls and the region
+-- mapfeatureservice checks (cats inside are hidden and wade slowly).
 function ArenaKit.AddBallPit(center: Vector3, sx: number, sz: number, rng: Random, parent: Instance): BasePart
 	local folder = Instance.new("Folder")
 	folder.Name = "BallPit"
@@ -1020,8 +1020,8 @@ function ArenaKit.AddBallPit(center: Vector3, sx: number, sz: number, rng: Rando
 	return zone
 end
 
--- A neon billboard on two legs over `pos` (a roof), facing `toward`.
--- MapFeatureService makes it flicker, then surge and knock back cats near
+-- a neon billboard on two legs over `pos` (a roof), facing `toward`.
+-- mapfeatureservice makes it flicker, then surge and knock back cats near
 -- it.
 function ArenaKit.AddBillboard(pos: Vector3, toward: Vector3, color: Color3, text: string, parent: Instance): BasePart
 	local folder = Instance.new("Folder")

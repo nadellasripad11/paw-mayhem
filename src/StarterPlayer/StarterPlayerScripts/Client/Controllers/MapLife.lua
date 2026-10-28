@@ -1,9 +1,9 @@
 --!strict
--- MapLife: little bits of life on the maps that only need this client.
---   * birds (BirdSpot parts, Sky Islands): a few birds peck about on the
+-- maplife: little bits of life on the maps that only need this client.
+--   * birds (birdspot parts, sky islands): a few birds peck about on the
 --     grass and scatter into the sky when a cat comes near, then come back
 --     a while later
---   * the shooting range's floating targets (RangeTarget): they pop
+--   * the shooting range's floating targets (rangetarget): they pop
 --     when you shoot them and come back a few seconds later
 
 local Workspace = game:GetService("Workspace")
@@ -126,7 +126,7 @@ local function removeSpot(inst: Instance)
 	end
 end
 
--- A floating target was shot: pop it, bring it back after a moment.
+-- a floating target was shot: pop it, bring it back after a moment.
 local popped: { [BasePart]: boolean } = {}
 function MapLife.HitTarget(target: BasePart)
 	if popped[target] then
@@ -179,7 +179,7 @@ function MapLife.Start()
 	local acc = 0
 	RunService.Heartbeat:Connect(function(dt)
 		local now = os.clock()
-		-- Birds in the air: fly up and away, flapping, then gone.
+		-- birds in the air: fly up and away, flapping, then gone.
 		for i = #flights, 1, -1 do
 			local fl = flights[i]
 			local t = (now - fl.t0) / FLIGHT
@@ -203,7 +203,7 @@ function MapLife.Start()
 			return
 		end
 		acc = 0
-		-- Cats nearby scare them; empty spots fill again after a while.
+		-- cats nearby scare them; empty spots fill again after a while.
 		local cats = {}
 		for _, m in ipairs(CollectionService:GetTagged(CatBuilder.Tag)) do
 			if m:IsA("Model") and m.PrimaryPart then

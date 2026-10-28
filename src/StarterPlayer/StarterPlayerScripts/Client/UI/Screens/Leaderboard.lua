@@ -1,10 +1,10 @@
 --!strict
--- Leaderboard: two tabs.
---   LEADERBOARD  Global / your country, ranked by Eliminations or Wins, with
---                real Roblox avatar headshots, medals for the top 3 and your
+-- leaderboard: two tabs.
+--   leaderboard  global / your country, ranked by eliminations or wins, with
+--                real roblox avatar headshots, medals for the top 3 and your
 --                own row highlighted.
---   YOUR STATS   Your full-body avatar, level, global + country rank and a
---                detailed stat grid (K/D, win rate, damage...).
+--   your stats   your full-body avatar, level, global + country rank and a
+--                detailed stat grid (k/d, win rate, damage...).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -91,7 +91,7 @@ local function row(entry: any)
 		UIUtil.gradient(MEDAL[rank][2]:Lerp(ROW_BG, 0.72), ROW_BG, 0, r)
 	end
 
-	-- Rank medal / number
+	-- rank medal / number
 	local medal = UIUtil.make("Frame", {
 		Parent = r, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 14, 0.5, 0),
 		Size = UDim2.fromOffset(top3 and 40 or 34, top3 and 40 or 34), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
@@ -109,7 +109,7 @@ local function row(entry: any)
 		TextColor3 = top3 and Color3.fromRGB(60, 36, 0) or Color3.new(1, 1, 1),
 	})
 
-	-- Real avatar headshot
+	-- real avatar headshot
 	local avatarSize = top3 and 54 or 44
 	local ring = UIUtil.make("Frame", {
 		Parent = r, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 66, 0.5, 0),
@@ -181,7 +181,7 @@ end
 
 -- ── your stats ───────────────────────────────────────────────────────────────
 local function buildStats(parent: Frame)
-	-- Left: full-body avatar card
+	-- left: full-body avatar card
 	local card = UIUtil.make("Frame", {
 		Parent = parent, Size = UDim2.new(0.32, -8, 1, 0), BackgroundColor3 = CARD_BG, BorderSizePixel = 0,
 	})
@@ -219,7 +219,7 @@ local function buildStats(parent: Frame)
 	local globalRank = rankBox("GLOBAL RANK")
 	local countryRank = rankBox("COUNTRY RANK")
 
-	-- Right: stat grid
+	-- right: stat grid
 	local grid = UIUtil.make("ScrollingFrame", {
 		Parent = parent, Position = UDim2.new(0.32, 8, 0, 0), Size = UDim2.new(0.68, -8, 1, 0),
 		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 4, CanvasSize = UDim2.new(),
@@ -275,7 +275,7 @@ end
 function Leaderboard.Build(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false }) :: Frame
 
-	-- Main tabs
+	-- main tabs
 	local tabs = UIUtil.make("Frame", { Parent = root, Size = UDim2.new(1, 0, 0, 44), BackgroundTransparency = 1 })
 	UIUtil.listLayout(tabs, 10, Enum.FillDirection.Horizontal)
 	local boardPage = UIUtil.make("Frame", { Parent = root, Position = UDim2.fromOffset(0, 56), Size = UDim2.new(1, 0, 1, -56), BackgroundTransparency = 1 }) :: Frame
@@ -296,7 +296,7 @@ function Leaderboard.Build(parent)
 		b.Size = UDim2.fromOffset(0, 44)
 	end
 
-	-- Leaderboard: scope + metric toggles, then the list
+	-- leaderboard: scope + metric toggles, then the list
 	local controls = UIUtil.make("Frame", { Parent = boardPage, Size = UDim2.new(1, 0, 0, 38), BackgroundTransparency = 1 })
 	local left = UIUtil.make("Frame", { Parent = controls, Size = UDim2.new(0.45, 0, 1, 0), BackgroundTransparency = 1 })
 	UIUtil.listLayout(left, 8, Enum.FillDirection.Horizontal)
@@ -322,7 +322,7 @@ function Leaderboard.Build(parent)
 	buildStats(statsPage)
 	showMain("Board")
 
-	-- Reload whenever the screen is opened.
+	-- reload whenever the screen is opened.
 	root:GetPropertyChangedSignal("Visible"):Connect(function()
 		if root.Visible then
 			load()

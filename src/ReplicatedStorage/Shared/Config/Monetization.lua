@@ -1,8 +1,8 @@
 --!strict
--- Monetization: every Game Pass and Developer Product the game sells.
--- `Id` is the asset id from the Creator Dashboard (create.roblox.com >
--- Monetization). While an Id is 0 the item shows as "coming soon" and can't be
--- bought. Prices here are for display; Roblox charges what the dashboard says.
+-- monetization: every game pass and developer product the game sells.
+-- `id` is the asset id from the creator dashboard (create.roblox.com >
+-- monetization). while an id is 0 the item shows as "coming soon" and can't be
+-- bought. prices here are for display; roblox charges what the dashboard says.
 
 local Weapons = require(script.Parent.Weapons)
 
@@ -11,7 +11,7 @@ local Monetization = {}
 export type Pass = { Id: number, Price: number, Name: string, Desc: string }
 export type Product = { Id: number, Price: number, Name: string, Desc: string, Kind: string, Amount: number?, ItemKind: string?, ItemId: string? }
 
--- Game Passes (bought once, owned forever).
+-- game passes (bought once, owned forever).
 Monetization.Passes = {
 	VIP = { Id = 2047568433, Price = 199, Name = "VIP", Desc = "Gold VIP tag, +25% coins forever, VIP Gold blaster skin and Royal Gold fur." },
 	DoubleCoins = { Id = 2046117070, Price = 249, Name = "2x Coins", Desc = "Double every coin reward. Stacks with VIP." },
@@ -23,20 +23,20 @@ Monetization.Passes = {
 	TaskMaster = { Id = 2045613029, Price = 129, Name = "Task Master", Desc = "A 4th daily task every day and +50% coins from every task." },
 } :: { [string]: Pass }
 
--- Coin reward multipliers granted by passes (they stack).
--- Coin multipliers by player attribute (GroupMember: Config.Community).
+-- coin reward multipliers granted by passes (they stack).
+-- coin multipliers by player attribute (groupmember: config.community).
 Monetization.CoinMult = { VIP = 1.25, DoubleCoins = 2, GroupMember = 1.1 }
--- XP multipliers granted by passes (levels and the season pass).
+-- xp multipliers granted by passes (levels and the season pass).
 Monetization.XPMult = { DoubleXP = 2 }
--- Task Master: one extra daily task and this much more coin per task.
+-- task master: one extra daily task and this much more coin per task.
 Monetization.TaskMaster = { ExtraTasks = 1, CoinMult = 1.5 }
--- Lucky Gift: the daily gift's coins and gems are multiplied by this.
+-- lucky gift: the daily gift's coins and gems are multiplied by this.
 Monetization.LuckyGiftMult = 2
--- Streak Saver: a lost win streak of at least MinStreak can be bought back
--- for Window seconds. Bought with nothing to save, it gives FallbackGems.
+-- streak saver: a lost win streak of at least minstreak can be bought back
+-- for window seconds. bought with nothing to save, it gives fallbackgems.
 Monetization.StreakSaver = { MinStreak = 3, Window = 300, FallbackGems = 100 }
 
--- Developer Products (can be bought again and again).
+-- developer products (can be bought again and again).
 Monetization.Products = {
 	Gems100 = { Id = 3720863139, Price = 49, Name = "100 Gems", Desc = "A pouch of gems.", Kind = "Gems", Amount = 100 },
 	Gems350 = { Id = 3720863518, Price = 149, Name = "350 Gems", Desc = "A bag of gems.", Kind = "Gems", Amount = 350 },
@@ -51,8 +51,8 @@ Monetization.Products = {
 
 Monetization.StarterPack = { Coins = 1500, Gems = 150, Skin = "Aurora" }
 
--- "Buy with R$": one product per weapon that has a RobuxPrice. Fill the ids in
--- after creating them (named "Unlock <weapon name>").
+-- "buy with r$": one product per weapon that has a robuxprice. fill the ids in
+-- after creating them (named "unlock <weapon name>").
 Monetization.WeaponProductIds = {
 	Starfall = 3720864947,
 	BoomPaw = 3720865093,
@@ -75,7 +75,7 @@ for _, w in ipairs(Weapons.List) do
 	end
 end
 
--- Lookup: product asset id -> product key.
+-- lookup: product asset id -> product key.
 function Monetization.ProductKeyById(assetId: number): string?
 	for key, p in pairs(Monetization.Products) do
 		if p.Id ~= 0 and p.Id == assetId then

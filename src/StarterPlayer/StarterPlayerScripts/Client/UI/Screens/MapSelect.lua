@@ -1,9 +1,9 @@
 --!strict
--- MapSelect: the arena vote, in two steps like Rivals. First PICK A MAP: the
--- maps as big picture tiles (three across the top, RANDOM and the rest
+-- mapselect: the arena vote, in two steps like rivals. first pick a map: the
+-- maps as big picture tiles (three across the top, random and the rest
 -- below) with their vote counts and the time to the next round at the top.
--- Pick one and the same kind of screen asks PICK A GAMEMODE (with RANDOM
--- too); picking that queues you for the next round with both votes. BACK
+-- pick one and the same kind of screen asks pick a gamemode (with random
+-- too); picking that queues you for the next round with both votes. back
 -- goes from the gamemodes to the maps, and from the maps out.
 
 local Workspace = game:GetService("Workspace")
@@ -72,7 +72,7 @@ local function pickMap(id: string)
 	end
 	chosenMap = id
 	refresh()
-	-- The gamemode tiles show the map you picked.
+	-- the gamemode tiles show the map you picked.
 	showStep("mode")
 end
 
@@ -100,7 +100,7 @@ function MapSelect.Build(parent: Instance)
 	}) :: TextButton
 	UIUtil.gradient(Color3.fromRGB(40, 90, 30), Color3.fromRGB(10, 26, 10), 90, root)
 
-	-- Time to the next round, top centre, and what to pick under it.
+	-- time to the next round, top centre, and what to pick under it.
 	timer = UIUtil.label({
 		Parent = root, Text = "", Font = Theme.Font.Title, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Center,
 		AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8), Size = UDim2.fromScale(0.1, 0.065),
@@ -157,7 +157,7 @@ function MapSelect.Build(parent: Instance)
 				pickMode(id)
 			end)
 		if m ~= "Random" then
-			-- The rules over the picture.
+			-- the rules over the picture.
 			local rules = UIUtil.label({
 				Parent = t.button, Text = m.Rules, Font = Theme.Font.Bold, TextScaled = true, TextXAlignment = Enum.TextXAlignment.Center,
 				AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.06), Size = UDim2.fromScale(0.86, 0.12),

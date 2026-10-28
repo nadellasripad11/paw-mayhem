@@ -1,7 +1,7 @@
 --!strict
--- Analytics: logs where new players are in their first session to Roblox's
--- onboarding funnel (Creator Dashboard -> Analytics -> Funnels), so we can see
--- where people quit. Roblox keeps only the first time each player hits a step.
+-- analytics: logs where new players are in their first session to roblox's
+-- onboarding funnel (creator dashboard -> analytics -> funnels), so we can see
+-- where people quit. roblox keeps only the first time each player hits a step.
 
 local AnalyticsService = game:GetService("AnalyticsService")
 

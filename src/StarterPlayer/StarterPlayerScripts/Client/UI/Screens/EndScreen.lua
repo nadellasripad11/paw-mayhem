@@ -1,18 +1,18 @@
 --!strict
--- EndScreen: the end-of-match / end-of-duel cinematic.
---   1. FINAL SCORE: the screen dims, both team plates slam in from the sides
+-- endscreen: the end-of-match / end-of-duel cinematic.
+--   1. final score: the screen dims, both team plates slam in from the sides
 --      and their numbers count up; the winning side grows and glows.
---   2. THE WINNER: the score slides up out of the way, slow-turning light rays
---      open behind, VICTORY / DEFEAT / DRAW drops in letter by letter with a
+--   2. the winner: the score slides up out of the way, slow-turning light rays
+--      open behind, victory / defeat / draw drops in letter by letter with a
 --      bounce and a shine sweeping across, the winners' avatars pop in (a
 --      crown on the first), confetti cannons fire from the bottom corners and
 --      confetti rains down (on a win).
---   3. Settle: the title shrinks into a slim banner at the top so the podium
---      / arena behind stays in view; \`onSettled\` lets the caller add the
+--   3. settle: the title shrinks into a slim banner at the top so the podium
+--      / arena behind stays in view; \`onsettled\` lets the caller add the
 --      scoreboard and round summary.
--- EndScreen.Play(opts, onSettled?) / EndScreen.Hide()
---   opts = { score = { Blue = n, Red = n }, won = bool, draw = bool,
---            winnerTeam = "Blue" | "Red" | nil, winners = { { name, userId } },
+-- endscreen.play(opts, onsettled?) / endscreen.hide()
+--   opts = { score = { blue = n, red = n }, won = bool, draw = bool,
+--            winnerteam = "blue" | "red" | nil, winners = { { name, userid } },
 --            subtitle = string?, ffa = bool? }
 
 local Players = game:GetService("Players")
@@ -71,7 +71,7 @@ function EndScreen.IsShowing(): boolean
 end
 
 -- ── pieces ───────────────────────────────────────────────────────────────────
--- A team plate: its colour, its name and a big number that counts up.
+-- a team plate: its colour, its name and a big number that counts up.
 local function teamPlate(parent: Instance, color: Color3, name: string, side: number): (Frame, TextLabel, UIScale, UIStroke)
 	local plate = frame({
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, side * 150, 0.5, 0),
@@ -94,7 +94,7 @@ local function teamPlate(parent: Instance, color: Color3, name: string, side: nu
 	return plate, num, scale, stroke
 end
 
--- Slow-turning light rays behind the title.
+-- slow-turning light rays behind the title.
 local function sunburst(parent: Instance, color: Color3): (Frame, UIScale)
 	local holder = frame({
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromOffset(900, 900),
@@ -103,7 +103,7 @@ local function sunburst(parent: Instance, color: Color3): (Frame, UIScale)
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0
 	scale.Parent = holder
-	-- (UI turns round each frame's own centre, so every ray is a bar right
+	-- (ui turns round each frame's own centre, so every ray is a bar right
 	-- through the middle: 9 bars make 18 rays)
 	for i = 0, 8 do
 		local ray = frame({
@@ -129,7 +129,7 @@ local function sunburst(parent: Instance, color: Color3): (Frame, UIScale)
 	return holder, scale
 end
 
--- The title, one bouncing letter at a time, with a shine sweeping across.
+-- the title, one bouncing letter at a time, with a shine sweeping across.
 local function dropTitle(parent: Instance, text: string, color: Color3, heavy: boolean, my: number): Frame
 	local holder = frame({
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.4), Size = UDim2.fromOffset(#text * 74, 120),
@@ -179,7 +179,7 @@ local function dropTitle(parent: Instance, text: string, color: Color3, heavy: b
 	return holder
 end
 
--- Confetti: rain from the top and two cannons firing from the bottom corners.
+-- confetti: rain from the top and two cannons firing from the bottom corners.
 local function confetti(parent: Instance, my: number)
 	local layer = frame({ Parent = parent, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 40, ClipsDescendants = true })
 	local function piece(x: number, y: number, vx: number, vy: number, life: number)
@@ -228,7 +228,7 @@ local function confetti(parent: Instance, my: number)
 	return layer
 end
 
--- Avatars of the winners popping in under the title.
+-- avatars of the winners popping in under the title.
 local function winnerCards(parent: Instance, winners: { any }, color: Color3, my: number): Frame
 	local n = math.min(#winners, 5)
 	local row = frame({
@@ -263,10 +263,21 @@ local function winnerCards(parent: Instance, winners: { any }, color: Color3, my
 			UIUtil.label({ Parent = ring, Text = "BOT", Font = Theme.Font.Title, TextSize = 20, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1), ZIndex = 32 })
 		end
 		if i == 1 then
-			UIUtil.label({
-				Parent = card, Text = "👑", TextSize = 34, TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(44, 40), Rotation = -12, ZIndex = 33,
+			-- a gold crown: a band with three points on top
+			local crown = frame({
+				Parent = card, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 8), Size = UDim2.fromOffset(42, 30),
+				BackgroundTransparency = 1, Rotation = -12, ZIndex = 33,
 			})
+			local band = frame({ Parent = crown, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), Size = UDim2.new(1, 0, 0.42, 0), BackgroundColor3 = GOLD, ZIndex = 34 })
+			UIUtil.corner(UDim.new(0, 3), band)
+			for _, x in ipairs({ 0.17, 0.5, 0.83 }) do
+				local point = frame({
+					Parent = crown, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, x == 0.5 and 0.42 or 0.5), Size = UDim2.fromOffset(13, 13),
+					Rotation = 45, BackgroundColor3 = GOLD, ZIndex = 34,
+				})
+				UIUtil.corner(UDim.new(0, 2), point)
+			end
+			UIUtil.stroke(Color3.fromRGB(120, 70, 0), 2, band)
 		end
 		UIUtil.label({
 			Parent = card, Text = tostring(w.name), Font = Theme.Font.Title, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center,

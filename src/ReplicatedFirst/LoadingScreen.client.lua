@@ -1,8 +1,8 @@
--- LoadingScreen: replaces Roblox's default join screen. A dark blue backdrop
--- with a soft glow, the PAW MAYHEM logo in the middle, our cat mascot peeking
--- up from the bottom left with a speech bubble of tips, and "Loading N%" with
--- a thin bar bottom right. It fades away once the client has built the lobby
--- screen (UIManager sets the CattoLobbyReady attribute).
+-- loadingscreen: replaces roblox's default join screen. a dark blue backdrop
+-- with a soft glow, the paw mayhem logo in the middle, our cat mascot peeking
+-- up from the bottom left with a speech bubble of tips, and "loading n%" with
+-- a thin bar bottom right. it fades away once the client has built the lobby
+-- screen (uimanager sets the cattolobbyready attribute).
 
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local Players = game:GetService("Players")
@@ -66,7 +66,7 @@ make("UIGradient", {
 	Rotation = 60, Parent = root,
 })
 
--- A soft glow behind the logo: stacked circles, each fainter and bigger.
+-- a soft glow behind the logo: stacked circles, each fainter and bigger.
 local glow = make("Frame", {
 	AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), Size = UDim2.fromScale(1, 1),
 	BackgroundTransparency = 1, Parent = root,
@@ -80,7 +80,7 @@ for i = 1, 6 do
 	roundCorner(ring, UDim.new(1, 0))
 end
 
--- Faint paw prints scattered over the background.
+-- faint paw prints scattered over the background.
 local rng = Random.new(7)
 for _ = 1, 16 do
 	local s = rng:NextInteger(26, 54)
@@ -175,7 +175,7 @@ make("TextLabel", {
 local paw = blob(190, 128, 46, 46, CREAM, 6)
 stroke(paw, INK, 4, false)
 
--- The speech bubble, to the right of the cat's head.
+-- the speech bubble, to the right of the cat's head.
 local bubble = make("Frame", {
 	AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromOffset(240, 110), Size = UDim2.fromOffset(300, 0),
 	AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 7, Parent = corner,
@@ -201,7 +201,7 @@ local function showTip()
 end
 showTip()
 
--- ── bottom right: "Loading 42%" over a thin bar ─────────────────────────────
+-- ── bottom right: "loading 42%" over a thin bar ─────────────────────────────
 local loadGroup = make("Frame", {
 	AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -36, 1, -30), Size = UDim2.fromOffset(300, 64),
 	BackgroundTransparency = 1, Parent = root,
@@ -232,8 +232,8 @@ local function fit()
 end
 fit()
 
--- In Studio, surface the first client script error right on this screen so a
--- broken build never just hangs on "Loading".
+-- in studio, surface the first client script error right on this screen so a
+-- broken build never just hangs on "loading".
 local isStudio = game:GetService("RunService"):IsStudio()
 local firstError: string? = nil
 local errorLabel = make("TextLabel", {

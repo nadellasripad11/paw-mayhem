@@ -1,7 +1,7 @@
 --!strict
--- Orbit: look all the way round a 3D preview (a blaster, your cat). Drag on
+-- orbit: look all the way round a 3d preview (a blaster, your cat). drag on
 -- \`input\` to swing the camera of \`vf\` round the model (left / right and up
--- / down), and the mouse wheel zooms. Works with touch too. A preview that
+-- / down), and the mouse wheel zooms. works with touch too. a preview that
 -- swaps its model (and camera) is picked up on the next drag.
 
 local UserInputService = game:GetService("UserInputService")

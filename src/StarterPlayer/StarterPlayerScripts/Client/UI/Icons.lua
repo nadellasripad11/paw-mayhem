@@ -1,12 +1,12 @@
 --!strict
--- Icons: original procedural vector icons built entirely from Frames/UICorner
--- (no image assets, no emoji). Roblox's default UI fonts do not reliably
--- render color emoji — glyphs like 🔫🛒🐱🏆⚙💎 can come out blank/missing in
--- Studio. Every icon used in the UI is drawn here instead, so it always
+-- icons: original procedural vector icons built entirely from frames/uicorner
+-- (no image assets, no emoji). roblox's default ui fonts do not reliably
+-- render color emoji - glyphs like guns, carts, cats, trophies or gems come out blank in
+-- studio. every icon used in the ui is drawn here instead, so it always
 -- renders identically and matches the game's flat, colorful art direction.
 --
--- Every Icons.<Name>(size, color, accent) returns an unparented square Frame
--- (Size = size x size) the caller positions/parents like any other element.
+-- every icons.<name>(size, color, accent) returns an unparented square frame
+-- (size = size x size) the caller positions/parents like any other element.
 
 local Icons = {}
 
@@ -42,7 +42,7 @@ local function pos(f: Frame, x: number, y: number, rot: number?)
 	end
 end
 
--- ── Paw print (Customize nav) ────────────────────────────────────────────────
+-- ── paw print (customize nav) ────────────────────────────────────────────────
 function Icons.Paw(size: number, color: Color3): Frame
 	local f = base(size)
 	local pad = chip(f, size * 0.5, size * 0.38, color, 0.5)
@@ -59,7 +59,7 @@ function Icons.Paw(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Blocky blaster silhouette (weapons / Loadout / fire icon) ───────────────
+-- ── blocky blaster silhouette (weapons / loadout / fire icon) ───────────────
 function Icons.Gun(size: number, color: Color3, accent: Color3?): Frame
 	local f = base(size)
 	local tip = accent or color
@@ -74,11 +74,11 @@ function Icons.Gun(size: number, color: Color3, accent: Color3?): Frame
 	return f
 end
 
--- ── Weapon-class silhouettes — each weapon reads as a genuinely different
--- shape, not just a recolor of the same gun (Heavy is chunky, Fast is small
--- and twin-barreled, Sniper is long and scoped, Cannon is huge with a glowing
--- orb, Bubble is round-tipped, Ice is angular/crystalline, Golden wears a
--- small crown). Same (size, color, accent) signature as Icons.Gun.
+-- ── weapon-class silhouettes — each weapon reads as a genuinely different
+-- shape, not just a recolor of the same gun (heavy is chunky, fast is small
+-- and twin-barreled, sniper is long and scoped, cannon is huge with a glowing
+-- orb, bubble is round-tipped, ice is angular/crystalline, golden wears a
+-- small crown). same (size, color, accent) signature as icons.gun.
 function Icons.GunHeavy(size: number, color: Color3, accent: Color3?): Frame
 	local f = base(size)
 	local tip = accent or color
@@ -188,7 +188,7 @@ function Icons.GunGolden(size: number, color: Color3, accent: Color3?): Frame
 	return f
 end
 
--- ── Shopping cart (Shop nav) ─────────────────────────────────────────────────
+-- ── shopping cart (shop nav) ─────────────────────────────────────────────────
 function Icons.Cart(size: number, color: Color3): Frame
 	local f = base(size)
 	local basket = chip(f, size * 0.58, size * 0.36, color, 0.18)
@@ -202,7 +202,7 @@ function Icons.Cart(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Cat face avatar (fur previews, portraits, leaderboard rows) ─────────────
+-- ── cat face avatar (fur previews, portraits, leaderboard rows) ─────────────
 function Icons.CatFace(size: number, furColor: Color3, accentColor: Color3?): Frame
 	local f = base(size)
 	local accent = accentColor or furColor:Lerp(Color3.new(1, 1, 1), 0.3)
@@ -223,9 +223,9 @@ function Icons.CatFace(size: number, furColor: Color3, accentColor: Color3?): Fr
 	return f
 end
 
--- Fuller mini character: head + ears + body + 2 stub legs + a curled tail, no
--- gun — a small standing chibi cat rather than just a face. Used for cat
--- variation thumbnails and the Customize preview, where reference 6 shows a
+-- fuller mini character: head + ears + body + 2 stub legs + a curled tail, no
+-- gun — a small standing chibi cat rather than just a face. used for cat
+-- variation thumbnails and the customize preview, where reference 6 shows a
 -- full small body, not a portrait crop.
 function Icons.CatBody(size: number, furColor: Color3, accentColor: Color3?): Frame
 	local f = base(size)
@@ -270,7 +270,7 @@ function Icons.CatBody(size: number, furColor: Color3, accentColor: Color3?): Fr
 	return f
 end
 
--- ── Trophy (Leaderboard nav) ─────────────────────────────────────────────────
+-- ── trophy (leaderboard nav) ─────────────────────────────────────────────────
 function Icons.Trophy(size: number, color: Color3): Frame
 	local f = base(size)
 	local bowl = circle(f, size * 0.5, color)
@@ -288,7 +288,7 @@ function Icons.Trophy(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Checkmark (Quests nav / claim state) ─────────────────────────────────────
+-- ── checkmark (quests nav / claim state) ─────────────────────────────────────
 function Icons.Check(size: number, color: Color3): Frame
 	local f = base(size)
 	local short = chip(f, size * 0.14, size * 0.36, color, 0.4)
@@ -298,7 +298,7 @@ function Icons.Check(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Gear (Settings nav) ──────────────────────────────────────────────────────
+-- ── gear (settings nav) ──────────────────────────────────────────────────────
 function Icons.Gear(size: number, color: Color3, bg: Color3?): Frame
 	local f = base(size)
 	local outer = circle(f, size * 0.62, color)
@@ -314,7 +314,7 @@ function Icons.Gear(size: number, color: Color3, bg: Color3?): Frame
 	return f
 end
 
--- ── Coin ──────────────────────────────────────────────────────────────────────
+-- ── coin ──────────────────────────────────────────────────────────────────────
 function Icons.Coin(size: number, color: Color3): Frame
 	local f = base(size)
 	local c = circle(f, size * 0.86, color)
@@ -328,7 +328,7 @@ function Icons.Coin(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Gem ───────────────────────────────────────────────────────────────────────
+-- ── gem ───────────────────────────────────────────────────────────────────────
 function Icons.Gem(size: number, color: Color3): Frame
 	local f = base(size)
 	local d = chip(f, size * 0.58, size * 0.58, color, 0.15)
@@ -338,7 +338,7 @@ function Icons.Gem(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Play triangle ─────────────────────────────────────────────────────────────
+-- ── play triangle ─────────────────────────────────────────────────────────────
 function Icons.Play(size: number, color: Color3): Frame
 	local f = base(size)
 	-- approximate a triangle from 3 thin stacked bars of decreasing width
@@ -352,7 +352,7 @@ function Icons.Play(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Shirt (Outfit category) ──────────────────────────────────────────────────
+-- ── shirt (outfit category) ──────────────────────────────────────────────────
 function Icons.Shirt(size: number, color: Color3): Frame
 	local f = base(size)
 	local body = chip(f, size * 0.5, size * 0.5, color, 0.2)
@@ -366,7 +366,7 @@ function Icons.Shirt(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Top hat (Hat category) ───────────────────────────────────────────────────
+-- ── top hat (hat category) ───────────────────────────────────────────────────
 function Icons.Hat(size: number, color: Color3): Frame
 	local f = base(size)
 	local brim = chip(f, size * 0.64, size * 0.14, color, 0.4)
@@ -376,7 +376,7 @@ function Icons.Hat(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Sunglasses (Accessory category) ──────────────────────────────────────────
+-- ── sunglasses (accessory category) ──────────────────────────────────────────
 function Icons.Glasses(size: number, color: Color3): Frame
 	local f = base(size)
 	for _, dx in ipairs({ -0.24, 0.24 }) do
@@ -388,7 +388,7 @@ function Icons.Glasses(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Smiley (Emote category) ──────────────────────────────────────────────────
+-- ── smiley (emote category) ──────────────────────────────────────────────────
 function Icons.Smiley(size: number, color: Color3): Frame
 	local f = base(size)
 	local face = circle(f, size * 0.78, color)
@@ -404,7 +404,7 @@ function Icons.Smiley(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Sparkle (skins / premium accent) ─────────────────────────────────────────
+-- ── sparkle (skins / premium accent) ─────────────────────────────────────────
 function Icons.Sparkle(size: number, color: Color3): Frame
 	local f = base(size)
 	local v = chip(f, size * 0.16, size * 0.7, color, 0.5)
@@ -414,7 +414,7 @@ function Icons.Sparkle(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Shield (power-up) ─────────────────────────────────────────────────────────
+-- ── shield (power-up) ─────────────────────────────────────────────────────────
 function Icons.Shield(size: number, color: Color3): Frame
 	local f = base(size)
 	local top = circle(f, size * 0.6, color)
@@ -424,7 +424,7 @@ function Icons.Shield(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Bolt (rapid fire / speed power-up) ───────────────────────────────────────
+-- ── bolt (rapid fire / speed power-up) ───────────────────────────────────────
 function Icons.Bolt(size: number, color: Color3): Frame
 	local f = base(size)
 	local top = chip(f, size * 0.5, size * 0.16, color, 0.15)
@@ -436,7 +436,7 @@ function Icons.Bolt(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Burst (mega knockback power-up) ──────────────────────────────────────────
+-- ── burst (mega knockback power-up) ──────────────────────────────────────────
 function Icons.Burst(size: number, color: Color3): Frame
 	local f = base(size)
 	for i = 0, 3 do
@@ -449,7 +449,7 @@ function Icons.Burst(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Multi-shot (three dots) ───────────────────────────────────────────────────
+-- ── multi-shot (three dots) ───────────────────────────────────────────────────
 function Icons.MultiShot(size: number, color: Color3): Frame
 	local f = base(size)
 	for i, dy in ipairs({ 0.28, 0.5, 0.72 }) do
@@ -459,7 +459,7 @@ function Icons.MultiShot(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Emote icons (each emote gets its own readable shape) ─────────────────────
+-- ── emote icons (each emote gets its own readable shape) ─────────────────────
 function Icons.Wave(size: number, color: Color3): Frame
 	local f = base(size)
 	local palm = chip(f, size * 0.32, size * 0.4, color, 0.4)
@@ -479,7 +479,7 @@ function Icons.Sleep(size: number, color: Color3): Frame
 		local eye = chip(f, size * 0.1, size * 0.02, Color3.fromRGB(35, 30, 45), 0.5)
 		pos(eye, size * 0.42 + dx * size, size * 0.54)
 	end
-	-- "Z" marks drifting up
+	-- "z" marks drifting up
 	for i, s in ipairs({ 0.14, 0.19, 0.24 }) do
 		local z = chip(f, size * s, size * (s * 0.35), color, 0.1)
 		pos(z, size * (0.72 + i * 0.05), size * (0.42 - i * 0.12))
@@ -538,7 +538,7 @@ function Icons.SitDown(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Shopping bag with a little cat face (Shop nav) ───────────────────────────
+-- ── shopping bag with a little cat face (shop nav) ───────────────────────────
 function Icons.Bag(size: number, color: Color3): Frame
 	local f = base(size)
 	local body = chip(f, size * 0.66, size * 0.56, color, 0.2)
@@ -559,7 +559,7 @@ function Icons.Bag(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Winners' podium (Leaderboard nav) ───────────────────────────────────────
+-- ── winners' podium (leaderboard nav) ───────────────────────────────────────
 function Icons.Podium(size: number, color: Color3): Frame
 	local f = base(size)
 	local mid = chip(f, size * 0.28, size * 0.5, color, 0.12)
@@ -573,7 +573,7 @@ function Icons.Podium(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Plus (buy more gems) ─────────────────────────────────────────────────────
+-- ── plus (buy more gems) ─────────────────────────────────────────────────────
 function Icons.Plus(size: number, color: Color3): Frame
 	local f = base(size)
 	local h = chip(f, size * 0.64, size * 0.18, color, 0.5)
@@ -583,8 +583,8 @@ function Icons.Plus(size: number, color: Color3): Frame
 	return f
 end
 
--- Registry so callers can pass a string key (used by itemCard/Icons.Draw).
--- ── Reticle (mobile FIRE button) ─────────────────────────────────────────────
+-- registry so callers can pass a string key (used by itemcard/icons.draw).
+-- ── reticle (mobile fire button) ─────────────────────────────────────────────
 function Icons.Reticle(size: number, color: Color3): Frame
 	local f = base(size)
 	local ring = circle(f, size * 0.6, color)
@@ -604,7 +604,7 @@ function Icons.Reticle(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Up arrow off a ground line (mobile JUMP button) ──────────────────────────
+-- ── up arrow off a ground line (mobile jump button) ──────────────────────────
 function Icons.JumpArrow(size: number, color: Color3): Frame
 	local f = base(size)
 	local t = size * 0.15
@@ -622,7 +622,7 @@ function Icons.JumpArrow(size: number, color: Color3): Frame
 	return f
 end
 
--- ── Paw with speed lines (mobile RUN button) ─────────────────────────────────
+-- ── paw with speed lines (mobile run button) ─────────────────────────────────
 function Icons.Dash(size: number, color: Color3): Frame
 	local f = base(size)
 	local paw = Icons.Paw(size * 0.66, color)
@@ -681,12 +681,12 @@ Icons.Registry = {
 	SitDown = Icons.SitDown,
 }
 
--- Draw an icon by name and parent+position it, centered, in one call.
--- Every icon draw goes through here, from every screen in the game. Wrapped in
--- pcall: a bug in ONE icon must never take down the whole panel that called it
+-- draw an icon by name and parent+position it, centered, in one call.
+-- every icon draw goes through here, from every screen in the game. wrapped in
+-- pcall: a bug in one icon must never take down the whole panel that called it
 -- (that's exactly what turned a single bad icon into a "temporarily
 -- unavailable" screen before — this is the single point that protects all of
--- them at once). On failure it warns with the real error and simply places no
+-- them at once). on failure it warns with the real error and simply places no
 -- icon, so the rest of the card/header still renders normally.
 function Icons.Place(name: string, parent: Instance, size: number, color: Color3, accent: Color3?, anchorPos: UDim2?): Frame?
 	local fn = Icons.Registry[name]

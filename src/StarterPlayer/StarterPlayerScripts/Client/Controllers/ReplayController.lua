@@ -1,10 +1,10 @@
 --!strict
--- ReplayController: a replay of your last knockout, shown at the end of the
--- match before the podium. Keeps the last few seconds of every cat's position
+-- replaycontroller: a replay of your last knockout, shown at the end of the
+-- match before the podium. keeps the last few seconds of every cat's position
 -- (20 samples a second); when you knock someone out it saves that window.
--- Playback puts stand-in copies of the cats back along their paths in slow
+-- playback puts stand-in copies of the cats back along their paths in slow
 -- motion, with the camera over the victim's shoulder looking back at you.
--- Letterboxed, music muffled, click to skip.
+-- letterboxed, music muffled, click to skip.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -39,7 +39,7 @@ local function displayName(m: Model): string
 	return p and p.DisplayName or m.Name
 end
 
--- A lifeless copy of a cat to act out the replay.
+-- a lifeless copy of a cat to act out the replay.
 local function standFor(m: Model): Model?
 	local s = stands[m]
 	if s then
@@ -94,7 +94,7 @@ local function record(now: number)
 	end
 end
 
--- You knocked someone out: keep the last few seconds around them.
+-- you knocked someone out: keep the last few seconds around them.
 local function capture(victimName: string)
 	local now = os.clock()
 	local victimTrack: Track? = nil
@@ -161,7 +161,7 @@ function ReplayController.Clear()
 	clip = nil
 end
 
--- Play the saved knockout, then call `done` (straight away if there isn't one).
+-- play the saved knockout, then call `done` (straight away if there isn't one).
 function ReplayController.Play(done: () -> ())
 	local c = clip
 	clip = nil
@@ -179,7 +179,7 @@ function ReplayController.Play(done: () -> ())
 		table.insert(actors, a)
 	end
 
-	-- Letterbox + a small label.
+	-- letterbox + a small label.
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PawReplay"
 	gui.IgnoreGuiInset = true
@@ -243,7 +243,7 @@ function ReplayController.Play(done: () -> ())
 		for i, tr in ipairs(c.tracks) do
 			actors[i]:PivotTo(sample(tr.frames, at))
 		end
-		-- Over the victim's shoulder, looking back at you.
+		-- over the victim's shoulder, looking back at you.
 		local vp = sample(c.tracks[c.victim].frames, at).Position
 		local kp = sample(c.tracks[c.killer].frames, at).Position
 		local away = Vector3.new(vp.X - kp.X, 0, vp.Z - kp.Z)
@@ -264,7 +264,7 @@ function ReplayController.Start()
 		end
 	end)
 	Remotes.Get("KillFeed").OnClientEvent:Connect(function(data)
-		-- (Match knockouts only: the replay plays at the end of a match.)
+		-- (match knockouts only: the replay plays at the end of a match.)
 		if typeof(data) == "table" and data.killer == player.DisplayName and typeof(data.victim) == "string" and data.victim ~= player.DisplayName
 			and player:GetAttribute("Context") == "Match" then
 			capture(data.victim)

@@ -1,9 +1,9 @@
 --!strict
--- ShopArt: real 3D renders for store items, drawn in ViewportFrames.
---   * blasters / skins  -> the actual in-game blaster (GunView)
---   * cat cosmetics     -> your cat wearing the item (CatView)
+-- shopart: real 3d renders for store items, drawn in viewportframes.
+--   * blasters / skins  -> the actual in-game blaster (gunview)
+--   * cat cosmetics     -> your cat wearing the item (catview)
 --   * emotes            -> your cat struck in that emote's pose
---   * Robux items       -> small 3D props (gem piles, coin stacks, gift box...)
+--   * robux items       -> small 3d props (gem piles, coin stacks, gift box...)
 
 local CatView = require(script.Parent.CatView)
 local GunView = require(script.Parent.GunView)
@@ -26,7 +26,7 @@ local function viewport(parent: Instance): ViewportFrame
 	return vf
 end
 
--- Point a camera at everything in `model`, from the front-ish, filling the view.
+-- point a camera at everything in `model`, from the front-ish, filling the view.
 local function frame(vf: ViewportFrame, model: Model, yaw: number?, pitch: number?, fill: number?)
 	local cf, size = model:GetBoundingBox()
 	local radius = size.Magnitude / 2
@@ -54,7 +54,7 @@ local function p(model: Model, size: Vector3, cf: CFrame, color: Color3, materia
 end
 
 local function coin(model: Model, cf: CFrame)
-	-- Cylinder axis is X; tip it so the flat face points along cf's Y.
+	-- cylinder axis is x; tip it so the flat face points along cf's y.
 	local base = cf * CFrame.Angles(0, 0, math.rad(90))
 	p(model, Vector3.new(0.22, 1.2, 1.2), base, GOLD_DARK, Enum.Material.Metal, Enum.PartType.Cylinder)
 	p(model, Vector3.new(0.24, 0.86, 0.86), base, GOLD, Enum.Material.Metal, Enum.PartType.Cylinder)
@@ -73,7 +73,7 @@ function ShopArt.Gun(parent: Instance, weaponId: string, skinId: string?): Viewp
 	return GunView.Create(parent, weaponId, skinId, UDim2.fromScale(1, 1), UDim2.new())
 end
 
--- Static emote poses for the preview (joint name -> extra rotation).
+-- static emote poses for the preview (joint name -> extra rotation).
 local EMOTE_POSES: { [string]: { [string]: CFrame } } = {
 	Wave = { PawShoulderR = CFrame.Angles(0, 0, math.rad(150)) },
 	Celebrate = { PawShoulderL = CFrame.Angles(0, 0, math.rad(-150)), PawShoulderR = CFrame.Angles(0, 0, math.rad(150)) },
@@ -102,7 +102,7 @@ function ShopArt.Cat(parent: Instance, custom: any, framing: string, emote: stri
 				end
 			end
 			if emote == "Sleep" or emote == "Happy" or emote == "Laugh" then
-				-- Eyes shut (the same parts the blink toggles).
+				-- eyes shut (the same parts the blink toggles).
 				for _, d in ipairs(model:GetDescendants()) do
 					if d:IsA("BasePart") then
 						if d.Name == "ClosedEye" then
@@ -123,8 +123,8 @@ function ShopArt.Cat(parent: Instance, custom: any, framing: string, emote: stri
 	return vf
 end
 
--- 3D prop for a Robux item: "Gems" (with a count 1-4), "Coins", "CoinRain",
--- "Gift", "Rainbow", "VIP".
+-- 3d prop for a robux item: "gems" (with a count 1-4), "coins", "coinrain",
+-- "gift", "rainbow", "vip".
 function ShopArt.Prop(parent: Instance, kind: string, tier: number?): ViewportFrame
 	if kind == "Emote" then
 		return ShopArt.Cat(parent, { Fur = "White", Outfit = "Hoodie", Hat = "None", Accessory = "None" }, "Full", "Dance")

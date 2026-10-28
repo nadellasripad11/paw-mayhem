@@ -1,7 +1,7 @@
 --!strict
--- Ranks: trophy ranking. Every match moves your trophies (win or lose, plus a
+-- ranks: trophy ranking. every match moves your trophies (win or lose, plus a
 -- little for each knockout) and your tier shows in the menu, on the results
--- screen and on the TROPHIES leaderboard.
+-- screen and on the trophies leaderboard.
 
 local Ranks = {}
 
@@ -20,12 +20,12 @@ Ranks.Loss = -8 -- trophies for losing one (never below 0)
 Ranks.PerKnockout = 2
 Ranks.MaxKnockoutBonus = 10
 
--- Trophies earned in one match.
+-- trophies earned in one match.
 function Ranks.Delta(won: boolean, knockouts: number): number
 	return (won and Ranks.Win or Ranks.Loss) + math.min(knockouts * Ranks.PerKnockout, Ranks.MaxKnockoutBonus)
 end
 
--- The tier for a trophy count.
+-- the tier for a trophy count.
 function Ranks.For(trophies: number): any
 	local tier = Ranks.Tiers[1]
 	for _, t in ipairs(Ranks.Tiers) do

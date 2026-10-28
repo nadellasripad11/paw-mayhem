@@ -1,16 +1,16 @@
-// PAW MAYHEM lobby — procedural 3D models (no Blender needed).
+// paw mayhem lobby — procedural 3d models (no blender needed).
 //
 //   node tools/lobby/textures.js   (once, or after changing textures)
 //   node tools/lobby/meshes.js
 //
-// Writes assets/LobbyMeshes.glb (meshes + embedded PBR textures; Studio's 3D
-// importer turns the textures into SurfaceAppearances) and the Lua layout
-// table src/ReplicatedStorage/Shared/LobbyMeshData.lua. LobbyService swaps
-// the block-built pieces for these once ReplicatedStorage.LobbyMeshes holds
+// writes assets/lobbymeshes.glb (meshes + embedded pbr textures; studio's 3d
+// importer turns the textures into surfaceappearances) and the lua layout
+// table src/replicatedstorage/shared/lobbymeshdata.lua. lobbyservice swaps
+// the block-built pieces for these once replicatedstorage.lobbymeshes holds
 // the imported model; until then the lobby stays block-built.
 //
-// Each group is modelled in its own space, Roblox axes, studs; origin at the
-// bottom centre unless noted. Every piece is centred on X and Z (mirror
+// each group is modelled in its own space, roblox axes, studs; origin at the
+// bottom centre unless noted. every piece is centred on x and z (mirror
 // symmetric), so the importer's 180° turn can't put anything on the wrong side.
 
 const fs = require('fs');
@@ -32,8 +32,8 @@ const rotY = (m, a) => m.transform((p) => [p[0] * Math.cos(a) - p[2] * Math.sin(
 const mirrorX = (m) => m.transform((p) => [-p[0], p[1], p[2]]);
 const merge = (...ms) => ms.reduce((a, b) => a.merge(b), new Mesh());
 
-// ── Spawn dais (origin: floor centre) ─────────────────────────────────────────
-// A stone step and platform with soft edges and a gold bead round the
+// ── spawn dais (origin: floor centre) ─────────────────────────────────────────
+// a stone step and platform with soft edges and a gold bead round the
 // platform; the code still lays the grate, ribs and logo on top (top = 0.6).
 function dais() {
   const stone = lathe([
@@ -49,7 +49,7 @@ function dais() {
   return { DaisStone: ['StoneBlock', stone], DaisGold: ['Gold', merge(bead, inlay)] };
 }
 
-// ── Column (4 x 22 x 4): plinth, mouldings, fluted shaft, capital ────────────
+// ── column (4 x 22 x 4): plinth, mouldings, fluted shaft, capital ────────────
 function column() {
   const flutes = 20;
   const fl = (lo, hi) => (th, r, y) => {
@@ -90,7 +90,7 @@ function column() {
   return { ColumnStone: ['StoneBlock', stone], ColumnGold: ['Gold', gold] };
 }
 
-// ── Pilaster (1.4 deep x 19.6 x 2.2 wide), fluted on both faces ─────────────
+// ── pilaster (1.4 deep x 19.6 x 2.2 wide), fluted on both faces ─────────────
 function pilaster() {
   const loop = roundRect(1.1, 1.8, 0.1, 5);
   const per = [0];
@@ -137,8 +137,8 @@ function pilaster() {
   return { PilasterStone: ['StoneBlock', stone], PilasterGold: ['Gold', gold] };
 }
 
-// ── The DUELS arch (origin: floor at the arch's centre line) ─────────────────
-// An elliptical arch under the header between the two columns (x = ±20):
+// ── the duels arch (origin: floor at the arch's centre line) ─────────────────
+// an elliptical arch under the header between the two columns (x = ±20):
 // navy spandrels and soffit, two gold beads on each face, a stone keystone.
 function archway() {
   const A = 20, Y0 = 8, B = 5.2, TOP = 14.2, Z = 0.95;
@@ -169,7 +169,7 @@ function archway() {
   return { ArchNavy: ['Navy', merge(face(Z), face(-Z), soffit)], ArchGold: ['Gold', merge(...beads, keyGold)], ArchKeystone: ['StoneBlock', key] };
 }
 
-// ── Chandelier (origin: the hub's centre) ────────────────────────────────────
+// ── chandelier (origin: the hub's centre) ────────────────────────────────────
 function chandelierMesh() {
   const hub = lathe([[
     [0, -1.3], [0.12, -1.25], [0.2, -1.05], [0.15, -0.85], [0.45, -0.6], [0.6, -0.32], [0.55, -0.02],
@@ -193,7 +193,7 @@ function chandelierMesh() {
   return { ChandelierGold: ['Gold', merge(...parts)], ChandelierCandles: ['Cream', merge(...candles)] };
 }
 
-// ── Trophy (origin: the plinth trim's top) ────────────────────────────────────
+// ── trophy (origin: the plinth trim's top) ────────────────────────────────────
 function trophyMesh() {
   const cup = lathe([
     [[0, 0], [1.0, 0]],
@@ -208,7 +208,7 @@ function trophyMesh() {
   return { TrophyGold: ['Gold', merge(cup, handle(1), handle(-1))] };
 }
 
-// ── Planter (3.4 x 1.6 x 3.4) ────────────────────────────────────────────────
+// ── planter (3.4 x 1.6 x 3.4) ────────────────────────────────────────────────
 function planterMesh() {
   const stone = merge(
     roundedBox([3.4, 0.3, 3.4], 0.08, [0, 0.15, 0], 3, 4),
@@ -219,7 +219,7 @@ function planterMesh() {
   return { PlanterStone: ['StoneBlock', stone], PlanterGold: ['Gold', gold] };
 }
 
-// ── Mouldings, 1 stud long (stretched along Z to fit each wall) ─────────────
+// ── mouldings, 1 stud long (stretched along z to fit each wall) ─────────────
 function mouldings() {
   const right = [[0.2, -0.5], [0.24, -0.44], [0.25, -0.38], [0.22, -0.32], [0.21, -0.25], [0.22, -0.15], [0.25, -0.06], [0.29, 0.02], [0.3, 0.08], [0.3, 0.3], [0.27, 0.34], [0.3, 0.38], [0.3, 0.5]];
   const crownProf = [...right, ...right.slice().reverse().map(([x, y]) => [-x, y])];
@@ -230,8 +230,8 @@ function mouldings() {
   return { CrownMould: ['Gold', crown], RailMould: ['Gold', rail] };
 }
 
-// ── Swatches: one cube per tiling material (setup_lobby.lua turns their
-// SurfaceAppearances into MaterialVariants). Never placed in the world.
+// ── swatches: one cube per tiling material (setup_lobby.lua turns their
+// surfaceappearances into materialvariants). never placed in the world.
 function swatches() {
   const out = {};
   ['Stone', 'Grain', 'Plaster', 'Metal', 'Marble', 'Fabric'].forEach((s, i) => {
@@ -251,7 +251,7 @@ const GROUPS = {
   Moulding: mouldings(),
   Swatches: swatches(),
 };
-// Nominal size each group was modelled at (the code scales to the part it
+// nominal size each group was modelled at (the code scales to the part it
 // replaces); nil = placed 1:1.
 const BOX = { Column: [4, 22, 4], Pilaster: [1.4, 19.6, 2.2], Planter: [3.4, 1.6, 3.4] };
 
@@ -262,7 +262,10 @@ const MATERIALS = {
 
 module.exports = { GROUPS, BOX, MATERIALS };
 
-// ── GLB writer ───────────────────────────────────────────────────────────────
+// ── glb writer ───────────────────────────────────────────────────────────────
+// (comments lowercase, like the rest of the code)
+const lowerComments = (t) => t.replace(/^(\s*--.*)$/gm, (m) => m.toLowerCase());
+
 function writeGlb() {
   const chunks = [];
   let offset = 0;
@@ -353,7 +356,7 @@ function writeGlb() {
     return Buffer.concat([h, data]);
   };
   fs.writeFileSync(OUT_GLB, Buffer.concat([header, ch(0x4e4f534a, jbuf), ch(0x004e4942, bin)]));
-  fs.writeFileSync(OUT_LUA, `--!strict
+  fs.writeFileSync(OUT_LUA, lowerComments(`--!strict
 -- GENERATED by tools/lobby/meshes.js — do not edit by hand.
 -- The lobby's 3D models: for each group, the size it was modelled at (Box;
 -- the code scales it to the part it replaces) and each piece's centre and
@@ -363,7 +366,7 @@ function writeGlb() {
 return {
 ${lua.join('\n')}
 }
-`);
+`));
   console.log(`wrote ${path.relative(ROOT, OUT_GLB)} (${(fs.statSync(OUT_GLB).size / 1e6).toFixed(1)} MB, ${tris} triangles, ${nodes.length} meshes)`);
 }
 

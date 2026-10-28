@@ -1,9 +1,9 @@
 --!strict
--- PodiumService: after every match the top 3 stand on a winners' stage built
+-- podiumservice: after every match the top 3 stand on a winners' stage built
 -- just outside the arena — gold in the middle, silver left, bronze right.
--- Real players appear as their actual Roblox avatar (scaled up big so the
--- whole server can see them); bots appear as their cat. Each gets a name +
--- eliminations tag. Clients are sent a camera shot of the stage.
+-- real players appear as their actual roblox avatar (scaled up big so the
+-- whole server can see them); bots appear as their cat. each gets a name +
+-- eliminations tag. clients are sent a camera shot of the stage.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -112,7 +112,7 @@ function PodiumService.Clear()
 	end
 end
 
--- `top` is up to three board entries {Display, UserId?, Elims, IsBot?}.
+-- `top` is up to three board entries {display, userid?, elims, isbot?}.
 function PodiumService.Show(top: { any })
 	PodiumService.Clear()
 	if #top == 0 then
@@ -124,7 +124,7 @@ function PodiumService.Show(top: { any })
 		local cf, s = arena:GetBoundingBox()
 		center, size = cf.Position, s
 	elseif arena then
-		-- Folders have no bounding box: measure the parts.
+		-- folders have no bounding box: measure the parts.
 		local minV, maxV = Vector3.one * math.huge, -Vector3.one * math.huge
 		for _, d in ipairs(arena:GetDescendants()) do
 			if d:IsA("BasePart") and d.Transparency < 1 and d.Size.Magnitude < 400 then
@@ -137,14 +137,14 @@ function PodiumService.Show(top: { any })
 		end
 	end
 
-	-- Stage floats beside the arena, facing its centre.
+	-- stage floats beside the arena, facing its centre.
 	local base = center + Vector3.new(0, 6, size.Z / 2 + 70)
 	local model = Instance.new("Model")
 	model.Name = "WinnersPodium"
 	local look = CFrame.lookAt(base, Vector3.new(center.X, base.Y, center.Z))
 	part(model, Vector3.new(58, 3, 30), look * CFrame.new(0, -1.5, 0), Color3.fromRGB(40, 48, 82), Enum.Material.SmoothPlastic)
 	part(model, Vector3.new(60, 0.6, 32), look * CFrame.new(0, 0.2, 0), Color3.fromRGB(120, 200, 255), Enum.Material.Neon).Transparency = 0.5
-	-- Back wall with a glowing rim
+	-- back wall with a glowing rim
 	part(model, Vector3.new(58, 30, 2), look * CFrame.new(0, 14, 13), Color3.fromRGB(28, 36, 70))
 	part(model, Vector3.new(58, 1, 2.4), look * CFrame.new(0, 29, 13), Color3.fromRGB(255, 205, 70), Enum.Material.Neon)
 
@@ -183,7 +183,7 @@ function PodiumService.Show(top: { any })
 	model.Parent = Workspace
 	stage = model
 
-	-- A camera shot framing the stage from the arena side.
+	-- a camera shot framing the stage from the arena side.
 	local camPos = (look * CFrame.new(0, 16, -58)).Position
 	local focus = (look * CFrame.new(0, 12, 0)).Position
 	Remotes.Get("Podium"):FireAllClients({ camera = CFrame.lookAt(camPos, focus), focus = focus })

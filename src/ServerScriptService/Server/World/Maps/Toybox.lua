@@ -1,8 +1,8 @@
 --!strict
--- Map 3/3: Toybox — bright candy-colored block islands, balloon "trees", a
+-- map 3/3: toybox — bright candy-colored block islands, balloon "trees", a
 -- giant stacked-block tower with a spinning pinwheel instead of a windmill,
--- and colorful ribbon-streamer falls. Same tested island layout as the other
--- two maps (ArenaKit.StandardLayout); completely different theme.
+-- and colorful ribbon-streamer falls. same tested island layout as the other
+-- two maps (arenakit.standardlayout); completely different theme.
 
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,18 +24,18 @@ local BLOCK_COLORS = {
 	Color3.fromRGB(255, 120, 150), Color3.fromRGB(120, 200, 255),
 	Color3.fromRGB(255, 210, 90), Color3.fromRGB(170, 130, 255),
 }
--- Islands with soft rounded toy-block cliffs (once the models are imported).
+-- islands with soft rounded toy-block cliffs (once the models are imported).
 local TOY_ISLE: ArenaKit.IslandStyle = { softBlocks = true }
 
--- Swap a block for a soft, rounded toy block (MeshLib); the block itself stays
--- as invisible collision. No-op until the models are imported.
+-- swap a block for a soft, rounded toy block (meshlib); the block itself stays
+-- as invisible collision. no-op until the models are imported.
 local function soften(p: BasePart, mesh: string?)
 	if MeshLib.Fill(mesh or "U_SoftBlock", p.CFrame, p.Size, p.Color, p.Material, p.Parent) then
 		MeshLib.Hide(p)
 	end
 end
 
--- A big toy balloon on a string, in place of a tree.
+-- a big toy balloon on a string, in place of a tree.
 local function makeBalloon(pos: Vector3, parent: Instance)
 	local color = BALLOON_COLORS[math.random(1, #BALLOON_COLORS)]
 	local h = 4 + math.random() * 2
@@ -48,7 +48,7 @@ local function makeBalloon(pos: Vector3, parent: Instance)
 	balloon.CanCollide = false
 end
 
--- A small colorful toy block, in place of a flower.
+-- a small colorful toy block, in place of a flower.
 local function makeBlock(pos: Vector3, parent: Instance)
 	local color = BLOCK_COLORS[math.random(1, #BLOCK_COLORS)]
 	soften(ArenaKit.NewPart("ToyBlock", Vector3.new(0.9, 0.9, 0.9), CFrame.new(pos + Vector3.new(0, 0.45, 0)) * CFrame.Angles(0, math.rad(math.random(0, 45)), 0), color, Enum.Material.SmoothPlastic, parent))
@@ -114,7 +114,7 @@ local function makePlatform(pos: Vector3, size: Vector3, parent: Instance)
 	end
 end
 
--- Central landmark: a stacked-block tower with a spinning colorful pinwheel
+-- central landmark: a stacked-block tower with a spinning colorful pinwheel
 -- on top, standing in for the windmill.
 local function makeBlockTower(pos: Vector3, parent: Instance)
 	local folder = Instance.new("Folder")
@@ -155,7 +155,7 @@ local function makeBlockTower(pos: Vector3, parent: Instance)
 	end)
 end
 
--- Colorful ribbon-streamer cascade in place of a waterfall.
+-- colorful ribbon-streamer cascade in place of a waterfall.
 local function makeStreamerFall(top: Vector3, height: number, parent: Instance)
 	local folder = Instance.new("Folder")
 	folder.Name = "Streamers"
@@ -248,7 +248,7 @@ local function toyBall(d: number, pos: Vector3, color: Color3, parent: Instance)
 	return p
 end
 
--- A lollipop tree: a white stick and a big swirl disc.
+-- a lollipop tree: a white stick and a big swirl disc.
 local function lollipop(pos: Vector3, s: number, parent: Instance)
 	ArenaKit.NewPart("Trunk", Vector3.new(0.6 * s, 7 * s, 0.6 * s), CFrame.new(pos + Vector3.new(0, 3.5 * s, 0)), Color3.fromRGB(250, 248, 244), Enum.Material.SmoothPlastic, parent)
 	local top = pos + Vector3.new(0, 8.6 * s, 0)
@@ -266,7 +266,7 @@ local function lollipop(pos: Vector3, s: number, parent: Instance)
 	end
 end
 
--- An ABC block stack (solid cover), letters on the sides.
+-- an abc block stack (solid cover), letters on the sides.
 local function abcBlocks(pos: Vector3, parent: Instance)
 	local letters = { "A", "B", "C", "P", "A", "W" }
 	for i = 0, toyRng:NextInteger(1, 2) do
@@ -292,7 +292,7 @@ local function abcBlocks(pos: Vector3, parent: Instance)
 	end
 end
 
--- A crayon standing up (a tall pillar with a pointed tip).
+-- a crayon standing up (a tall pillar with a pointed tip).
 local function crayon(pos: Vector3, h: number, parent: Instance)
 	local c = toyColor()
 	if MeshLib.Has("CrayonBody") then
@@ -313,7 +313,7 @@ local function crayon(pos: Vector3, h: number, parent: Instance)
 	toyDeco(ArenaKit.NewWedge("Bloom", Vector3.new(1.4, 1.6, 1.4), CFrame.new(pos + Vector3.new(0, h + 0.8, 0)), c, Enum.Material.SmoothPlastic, parent))
 end
 
--- A bunch of balloons on strings, tied to a spot.
+-- a bunch of balloons on strings, tied to a spot.
 local function balloons(pos: Vector3, parent: Instance)
 	for k = 1, 3 do
 		local top = pos + Vector3.new(toyRng:NextNumber(-1.6, 1.6), 9 + k * 1.2, toyRng:NextNumber(-1.6, 1.6))
@@ -325,10 +325,10 @@ local function balloons(pos: Vector3, parent: Instance)
 	end
 end
 
--- A candy-cane lamp (red and white stripes, a warm light on top).
+-- a candy-cane lamp (red and white stripes, a warm light on top).
 local function candyLamp(pos: Vector3, parent: Instance)
 	if MeshLib.Has("CandyCaneWhite") then
-		-- A real candy cane: a striped pole with the hook, the light hanging
+		-- a real candy cane: a striped pole with the hook, the light hanging
 		-- from it.
 		local o = CFrame.new(pos) * CFrame.Angles(0, toyRng:NextNumber(0, 6.28), 0)
 		MeshLib.Place("CandyCaneWhite", o, 1, Color3.new(1, 1, 1), Enum.Material.SmoothPlastic, parent)
@@ -354,7 +354,7 @@ local function candyLamp(pos: Vector3, parent: Instance)
 	l.Parent = bulb
 end
 
--- Confetti sprinkles on a surface.
+-- confetti sprinkles on a surface.
 local function sprinkles(center: Vector3, r: number, parent: Instance)
 	for _ = 1, math.floor(r * 2.2) do
 		local a = toyRng:NextNumber(0, math.pi * 2)
@@ -363,7 +363,7 @@ local function sprinkles(center: Vector3, r: number, parent: Instance)
 	end
 end
 
--- A free spot on an island's rim, away from the bridge toward the centre.
+-- a free spot on an island's rim, away from the bridge toward the centre.
 local function rimSpot(pos: Vector3, r: number, avoidDir: Vector3?): Vector3
 	for _ = 1, 12 do
 		local a = toyRng:NextNumber(0, math.pi * 2)
@@ -375,7 +375,7 @@ local function rimSpot(pos: Vector3, r: number, avoidDir: Vector3?): Vector3
 	return pos + Vector3.new(r - 3, 1.6, 0)
 end
 
--- A toy train going round and round the centre island on its own track.
+-- a toy train going round and round the centre island on its own track.
 local function toyTrain(center: Vector3, radius: number, parent: Instance)
 	local track = Instance.new("Folder")
 	track.Name = "TrainTrack"
@@ -400,7 +400,7 @@ local function toyTrain(center: Vector3, radius: number, parent: Instance)
 		end
 		car.PrimaryPart = body
 		car.Parent = track
-		-- (Weld the bits to the body so the car moves as one.)
+		-- (weld the bits to the body so the car moves as one.)
 		for _, p in ipairs(car:GetChildren()) do
 			if p:IsA("BasePart") and p ~= body then
 				p.CFrame = body.CFrame * p.CFrame
@@ -432,7 +432,7 @@ local function toyTrain(center: Vector3, radius: number, parent: Instance)
 	end)
 end
 
--- A rainbow arching high over the centre.
+-- a rainbow arching high over the centre.
 local function rainbow(center: Vector3, parent: Instance)
 	local colors = { Color3.fromRGB(255, 90, 90), Color3.fromRGB(255, 170, 60), Color3.fromRGB(255, 230, 80), Color3.fromRGB(110, 220, 120), Color3.fromRGB(90, 170, 255), Color3.fromRGB(170, 110, 255) }
 	for b, c in ipairs(colors) do
@@ -446,7 +446,7 @@ local function rainbow(center: Vector3, parent: Instance)
 	end
 end
 
--- A giant rubber duck bobbing in the clouds.
+-- a giant rubber duck bobbing in the clouds.
 local function giantDuck(pos: Vector3, parent: Instance)
 	local yellow, orange = Color3.fromRGB(255, 214, 50), Color3.fromRGB(255, 140, 40)
 	if MeshLib.Has("DuckBody") then
@@ -492,7 +492,7 @@ local function dressToyWorld(arena: Instance, centerPos: Vector3, centerR: numbe
 	for _, s in ipairs(layout.Satellites) do
 		balloons(s.pos + Vector3.new(0, 1.6, 0), f)
 	end
-	-- Giant toys out in the sky.
+	-- giant toys out in the sky.
 	giantDuck(centerPos + Vector3.new(-150, -20, 90), f)
 	for k = 1, 8 do
 		local a = k / 8 * math.pi * 2 + 0.3
@@ -525,7 +525,7 @@ function Toybox.Build(): Folder
 	makeToySlide(Vector3.new(10, 1.6, -9), center, Color3.fromRGB(255, 120, 150))
 	makeToyDice(Vector3.new(-10, 1.6, 12), center)
 	makePlatform(Vector3.new(0, 8, 0), Vector3.new(16, 1.5, 16), center)
-	-- Ladders: up to the platform, then on up the block tower.
+	-- ladders: up to the platform, then on up the block tower.
 	ArenaKit.AddLadder(centerPos + Vector3.new(9, 1.6, 0), 7.4, Vector3.xAxis, center)
 	ArenaKit.AddLadder(centerPos + Vector3.new(3.9, 8.75, 0), 9, Vector3.xAxis, center)
 	makeCrate(Vector3.new(-14, 1.6, 10), center)
@@ -538,7 +538,7 @@ function Toybox.Build(): Folder
 		local isl = ArenaKit.MakeIslandBase(o.pos, o.r, "Island" .. i, PALETTE, Enum.Material.SmoothPlastic, arena, TOY_ISLE)
 		outerFolders[i] = isl
 		scatterDecor(o.pos, o.r, isl, 5, 16)
-		-- The two side islands get a bubble tube you can swim up (turned off
+		-- the two side islands get a bubble tube you can swim up (turned off
 		-- the outward side so it misses the ribbon falls).
 		if i == 3 or i == 4 then
 			ArenaKit.AddSwimColumn("Bubbles", ArenaKit.NewIsle(o.pos, o.r, isl), ArenaKit.AngleTo(Vector3.zero, o.pos) + 0.6, isl)
@@ -561,7 +561,7 @@ function Toybox.Build(): Folder
 		local edgeB = centerPos + Vector3.new(0, 1.6, 0) - dir.Unit * (centerR - 2)
 		ArenaKit.MakeBridge(edgeA, edgeB, arena, PALETTE)
 		if o.team == "Blue" or o.team == "Red" then
-			-- Three spawns spread wide across the team island.
+			-- three spawns spread wide across the team island.
 			for _, deg in ipairs({ 30, 150, 270 }) do
 				local a = math.rad(deg)
 				ArenaKit.AddTeamSpawnPoint(o.pos + Vector3.new(math.cos(a), 0, math.sin(a)) * o.r * 0.6, o.team, spawns, isl)
@@ -579,7 +579,7 @@ function Toybox.Build(): Folder
 		scatterDecor(s.pos, s.r, isl, 1, 6)
 	end
 
-	-- Supply drops land on the centre and outer islands. Jump pads on two outer
+	-- supply drops land on the centre and outer islands. jump pads on two outer
 	-- islands reach the floating satellites, whose own pads drop you back onto
 	-- the centre (landing spots chosen clear of the toy houses and arch).
 	ArenaKit.MarkPlayable(center)
@@ -601,7 +601,7 @@ function Toybox.Build(): Folder
 
 	ArenaKit.ScatterDebris(arena, 22, PALETTE, false)
 	dressToyWorld(arena, centerPos, centerR, layout, outerFolders)
-	-- Cotton-candy clouds below and above.
+	-- cotton-candy clouds below and above.
 	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(255, 214, 236), 36, -62, -34, 40, 300, 0.1)
 	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(214, 236, 255), 18, -50, -30, 60, 300, 0.15)
 	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(255, 245, 250), 12, 70, 100, 140, 320, 0.35)
@@ -613,7 +613,7 @@ function Toybox.Build(): Folder
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
 
-	-- A giant toy spring each side of the block tower, and a ball pit to hide in.
+	-- a giant toy spring each side of the block tower, and a ball pit to hide in.
 	for _, p in ipairs({ Vector3.new(22, 1.6, -14), Vector3.new(-22, 1.6, 14) }) do
 		ArenaKit.AddSpring(centerPos + p, 125, center)
 	end

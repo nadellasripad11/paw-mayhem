@@ -1,9 +1,9 @@
 --!strict
--- CombatController: turns fire input (mouse / touch button / gamepad R2) into
--- rate-limited FireWeapon requests. Each pellet is traced here first, so your
+-- combatcontroller: turns fire input (mouse / touch button / gamepad r2) into
+-- rate-limited fireweapon requests. each pellet is traced here first, so your
 -- own shot (flash, bolt, sound) shows instantly and the server hears which cat
 -- you actually hit on your screen; the server validates that claim and stays
--- the authority on damage. Ammo is unlimited.
+-- the authority on damage. ammo is unlimited.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -30,14 +30,14 @@ local lastShot = 0
 local enabled = false
 local powerUp = { id = "", untilT = 0 } -- mirrors the server's active power-up for fire rate
 
--- Fires whenever a local shot goes out, so the HUD can kick the crosshair.
+-- fires whenever a local shot goes out, so the hud can kick the crosshair.
 CombatController.OnLocalShot = nil :: ((weaponId: string) -> ())?
 
 function CombatController.IsFiring(): boolean
 	return firing and enabled
 end
 
--- The cat (player or bot) an instance belongs to, if any.
+-- the cat (player or bot) an instance belongs to, if any.
 local function catModel(inst: Instance?): Model?
 	local m = inst and inst:FindFirstAncestorOfClass("Model")
 	while m and not m:FindFirstChildOfClass("Humanoid") do
@@ -46,7 +46,7 @@ local function catModel(inst: Instance?): Model?
 	return m
 end
 
--- True for a living cat on the other team (anyone in Free For All).
+-- true for a living cat on the other team (anyone in free for all).
 function CombatController.IsEnemy(model: Model): boolean
 	local char = player.Character
 	if model == char then
@@ -56,7 +56,7 @@ function CombatController.IsEnemy(model: Model): boolean
 	if not hum or hum.Health <= 0 then
 		return false
 	end
-	-- (FFA is the match mode; duels and the lobby always go by team.)
+	-- (ffa is the match mode; duels and the lobby always go by team.)
 	if ClientState.Match and ClientState.Match.mode == "FFA" and player:GetAttribute("Context") == "Match" then
 		return true
 	end
@@ -78,12 +78,12 @@ local function withSpread(dir: Vector3, spreadDeg: number): Vector3
 end
 
 local function currentWeapon()
-	-- A supply-drop blaster (set by the server on the character) wins.
+	-- a supply-drop blaster (set by the server on the character) wins.
 	local override = player.Character and player.Character:GetAttribute("WeaponOverride")
 	if typeof(override) == "string" and Weapons.Get(override) then
 		return Weapons.Get(override)
 	end
-	-- Then the blaster this life spawned with (a loadout change can wait for
+	-- then the blaster this life spawned with (a loadout change can wait for
 	-- the next respawn), then the saved loadout.
 	local life = player.Character and player.Character:GetAttribute("Weapon")
 	if typeof(life) == "string" and Weapons.Get(life) then
@@ -100,10 +100,10 @@ local function muzzlePosition(): Vector3
 	if not root then
 		return Vector3.new()
 	end
-	-- (Not the blaster's own barrel: it moves with the cat's animations -
+	-- (not the blaster's own barrel: it moves with the cat's animations -
 	-- recoil, leaning, bobbing - which threw every shot off the crosshair.)
-	-- The custom camera can look independently from the Humanoid's current
-	-- facing direction. Place the visual muzzle on the camera's horizontal aim
+	-- the custom camera can look independently from the humanoid's current
+	-- facing direction. place the visual muzzle on the camera's horizontal aim
 	-- so the local flash, server origin validation, and crosshair all agree.
 	local _, aim = CameraController.GetAimRay()
 	local flatAim = Vector3.new(aim.X, 0, aim.Z)
@@ -136,7 +136,7 @@ local function tryFire()
 	if now - lastShot < interval then
 		return
 	end
-	-- Single-shot blasters go exactly where the crosshair is, every shot, no
+	-- single-shot blasters go exactly where the crosshair is, every shot, no
 	-- matter how long you hold the trigger (spray weapons with several pellets
 	-- still spread).
 	lastShot = now
@@ -145,7 +145,7 @@ local function tryFire()
 	local muzzle = muzzlePosition()
 	local dir = CameraController.GetShootDirection(muzzle)
 
-	-- Trace every pellet now: draw it straight away and tell the server which
+	-- trace every pellet now: draw it straight away and tell the server which
 	-- enemy it hit on this screen (it checks the claim against its own view).
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -172,8 +172,8 @@ local function tryFire()
 	CombatController.MuzzleFlash(muzzle, weapon)
 	EffectsController.Tracers(muzzle, tos, weapon.TrailColor, weapon.Id)
 	SoundController.PlayShot(weapon.Id, muzzle)
-	-- Recoil: heavier-hitting blasters shove you back and kick the view more
-	-- (and the arms, CatAnimator).
+	-- recoil: heavier-hitting blasters shove you back and kick the view more
+	-- (and the arms, catanimator).
 	MovementController.Recoil(dir, math.max(0, weapon.Knockback - 0.8) * 10)
 	require(script.Parent.CatAnimator).Trigger(game:GetService("Players").LocalPlayer.Character, "Recoil", math.clamp(0.7 + weapon.Knockback * 0.4, 0.8, 1.8))
 	CameraController.OnShot(0.25 + weapon.Knockback * 0.45)
@@ -204,7 +204,7 @@ function CombatController.MuzzleFlash(pos: Vector3, weapon)
 	end)
 end
 
--- Touch auto-fire: the crosshair (camera ray) rests on an enemy in range.
+-- touch auto-fire: the crosshair (camera ray) rests on an enemy in range.
 local function autoFireTarget(): boolean
 	if not ClientState.Settings.AutoFire or UserInputService:GetLastInputType() ~= Enum.UserInputType.Touch then
 		return false

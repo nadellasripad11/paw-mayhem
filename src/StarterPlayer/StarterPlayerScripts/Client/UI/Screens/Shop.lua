@@ -1,11 +1,11 @@
 --!strict
--- Shop: category tabs down the left (Free Gift, Featured, Gems, Blasters,
--- Skins, Fur, Outfits, Hats & Gear, Emotes) and a grid of cards on the right.
--- FREE GIFT is the daily login reward: a free gift every day, bigger the more
--- days in a row you come back (the shop opens on it while one is waiting). Every card
--- shows a real 3D render of the item (ShopArt), built the first time its tab
--- opens. Robux items open Roblox's purchase prompt; everything else buys with
--- coins / gems and falls back to Robux when you're short (Monetize.Buy).
+-- shop: category tabs down the left (free gift, featured, gems, blasters,
+-- skins, fur, outfits, hats & gear, emotes) and a grid of cards on the right.
+-- free gift is the daily login reward: a free gift every day, bigger the more
+-- days in a row you come back (the shop opens on it while one is waiting). every card
+-- shows a real 3d render of the item (shopart), built the first time its tab
+-- opens. robux items open roblox's purchase prompt; everything else buys with
+-- coins / gems and falls back to robux when you're short (monetize.buy).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -49,7 +49,7 @@ local function equippedWeapon(): string
 end
 
 -- ── card shell ───────────────────────────────────────────────────────────────
--- A card with a 3D art area on top, name + subtitle and an action button.
+-- a card with a 3d art area on top, name + subtitle and an action button.
 local function cardShell(parent: Instance, accent: Color3, title: string, subtitle: string, subColor: Color3?)
 	local card = UIUtil.make("Frame", { Parent = parent, BackgroundColor3 = CARD_BG, BorderSizePixel = 0 }) :: Frame
 	UIUtil.corner(UDim.new(0, 14), card)
@@ -95,7 +95,7 @@ local function tag(parent: Instance, text: string, color: Color3)
 	pad.Parent = t
 end
 
--- ── Robux cards ──────────────────────────────────────────────────────────────
+-- ── robux cards ──────────────────────────────────────────────────────────────
 local function robuxCard(parent: Instance, spec: any)
 	local def = spec.pass and Monetization.Passes[spec.pass] or Monetization.Products[spec.product]
 	if not def then
@@ -223,8 +223,8 @@ local function rewardText(r: any): string
 	return table.concat(parts, "  +  ")
 end
 
--- One card per day of the week: done days ticked, today's glowing with a
--- CLAIM button, later days showing what's coming.
+-- one card per day of the week: done days ticked, today's glowing with a
+-- claim button, later days showing what's coming.
 local claiming = false
 local function dayCard(parent: Instance, index: number, reward: any)
 	local f = UIUtil.make("Frame", { Parent = parent, LayoutOrder = index, BackgroundColor3 = CARD_BG, BorderSizePixel = 0 }) :: Frame
@@ -251,7 +251,7 @@ local function dayCard(parent: Instance, index: number, reward: any)
 		stroke.Color = today and Color3.fromRGB(255, 214, 90) or CARD_STROKE
 		stroke.Thickness = today and 3 or 1.5
 		f.BackgroundColor3 = today and Color3.fromRGB(44, 64, 110) or CARD_BG
-		state.Text = today and "CLAIM FREE" or done and "CLAIMED ✓" or "LATER"
+		state.Text = today and "CLAIM FREE" or done and "CLAIMED" or "LATER"
 		state.BackgroundColor3 = today and EQUIP_GREEN or Color3.fromRGB(40, 54, 84)
 		state.Active = today
 	end
@@ -352,7 +352,7 @@ local TABS = {
 function Shop.Build(parent)
 	local root = UIUtil.make("Frame", { Parent = parent, BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), Visible = false })
 
-	-- Category rail
+	-- category rail
 	local rail = UIUtil.make("ScrollingFrame", {
 		Parent = root, Size = UDim2.new(0, 170, 1, 0), ScrollingDirection = Enum.ScrollingDirection.Y, BackgroundTransparency = 1, BorderSizePixel = 0,
 		ScrollBarThickness = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -376,7 +376,7 @@ function Shop.Build(parent)
 		pad.PaddingBottom = UDim.new(0, 12)
 		pad.Parent = page
 		local grid = UIUtil.gridLayout(page, UDim2.new(0.25, -12, 0, tab.cell), UDim2.fromOffset(14, 14))
-		-- As many ~210px columns as fit (2 on phones, up to 5 on wide screens).
+		-- as many ~210px columns as fit (2 on phones, up to 5 on wide screens).
 		local function fit()
 			local cols = math.clamp(math.floor(page.AbsoluteSize.X / 210), 2, 5)
 			grid.CellSize = UDim2.new(1 / cols, -12, 0, tab.cell)

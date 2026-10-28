@@ -1,8 +1,8 @@
 --!strict
--- MatchService: the match state machine and scoring authority.
---   Intermission -> Countdown -> Playing -> Results -> (loop)
--- Owns team scores, elimination rewards, the kill feed, and match-end payouts.
--- Broadcasts MatchState/ScoreUpdate so all HUDs stay in sync.
+-- matchservice: the match state machine and scoring authority.
+--   intermission -> countdown -> playing -> results -> (loop)
+-- owns team scores, elimination rewards, the kill feed, and match-end payouts.
+-- broadcasts matchstate/scoreupdate so all huds stay in sync.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -128,12 +128,12 @@ local function buildVotedMap()
 	state.MapId = mapId
 end
 
--- Build the live scoreboard array sorted by match eliminations.
+-- build the live scoreboard array sorted by match eliminations.
 local function buildBoard()
 	local board = {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
-		-- Only cats in this match (not the lobby or a duel).
+		-- only cats in this match (not the lobby or a duel).
 		if not (s and s.Context == "Match") and not queuedPlayers[player.UserId] then
 			continue
 		end
@@ -189,7 +189,7 @@ end
 local FIRE_ORANGE = Color3.fromRGB(255, 140, 50)
 local STREAK_TITLES = { [5] = "is UNSTOPPABLE!", [8] = "is LEGENDARY!", [12] = "is GODLIKE!" }
 
--- A kill extends the killer's streak; at the threshold they go On Fire and
+-- a kill extends the killer's streak; at the threshold they go on fire and
 -- carry a bounty.
 local function addStreak(killer: Player)
 	local s = Runtime.Ensure(killer)
@@ -206,7 +206,7 @@ local function addStreak(killer: Player)
 	end
 end
 
--- The victim's streak ends; whoever ended a hot streak collects the bounty.
+-- the victim's streak ends; whoever ended a hot streak collects the bounty.
 local function endStreak(victim: Player, killer: Player?)
 	local s = Runtime.Get(victim)
 	if not s then
@@ -236,7 +236,7 @@ local function setMayhem(on: boolean)
 	end
 end
 
--- Elimination handler wired into PlayerService.
+-- elimination handler wired into playerservice.
 local function onElimination(victim: Player, killer: Player?, weaponId: string?, ringout: boolean)
 	local vState = Runtime.Get(victim)
 	if vState then
@@ -256,11 +256,11 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		local kState = Runtime.Ensure(killer)
 		kState.MatchElims += 1
 		kState.MatchScore += 1
-		-- Team point.
+		-- team point.
 		if not isFFA() and kState.Team and state.Scores[kState.Team] ~= nil then
 			state.Scores[kState.Team] += Scoring.EliminationTeamPoints * currentMode().KillPoints
 		end
-		-- Rewards.
+		-- rewards.
 		EconomyService.AddXP(killer, Scoring.EliminationXP)
 		EconomyService.AddCoins(killer, Scoring.EliminationCoins)
 		EconomyService.AddStat(killer, "Eliminations", 1)
@@ -284,9 +284,9 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 		Remotes.Get("Eliminated"):FireClient(victim, { by = ringout and "the void" or "themselves", xp = 0 })
 	end
 
-	-- Kill feed to everyone.
+	-- kill feed to everyone.
 	Remotes.Get("KillFeed"):FireAllClients({
-		killer = feedKiller or (ringout and "☠" or "—"),
+		killer = feedKiller or (ringout and "the void" or "—"),
 		killerTeam = feedTeam,
 		victim = victim.DisplayName,
 		victimTeam = vState and vState.Team or nil,
@@ -299,7 +299,7 @@ local function onElimination(victim: Player, killer: Player?, weaponId: string?,
 	MatchService.CheckWin()
 end
 
--- End the match as soon as a team (or, in Free For All, a cat) hits the target.
+-- end the match as soon as a team (or, in free for all, a cat) hits the target.
 function MatchService.CheckWin()
 	if state.Phase ~= PHASE.Playing then
 		return
@@ -319,7 +319,7 @@ function MatchService.CheckWin()
 	end
 end
 
--- ── King of the Hill ─────────────────────────────────────────────────────────
+-- ── king of the hill ─────────────────────────────────────────────────────────
 local HILL_RADIUS = 14
 local hillParts: { BasePart } = {}
 local hillPos: Vector3? = nil
@@ -335,7 +335,7 @@ end
 
 local function startHill()
 	stopHill()
-	-- The playable floor nearest the middle of the map becomes the hill.
+	-- the playable floor nearest the middle of the map becomes the hill.
 	local floors = CollectionService:GetTagged("DropZone")
 	if #floors == 0 then
 		return
@@ -382,7 +382,7 @@ local function startHill()
 	announce("KING OF THE HILL", "Stand in the glowing hill to score for your team!", Color3.fromRGB(255, 214, 90))
 end
 
--- Once a second: a team holding the hill alone scores a point.
+-- once a second: a team holding the hill alone scores a point.
 local function tickHill()
 	if not hillPos then
 		return
@@ -431,7 +431,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 	end
 	BotService.DespawnAll()
 	state.Winner = winnerTeam
-	-- Determine winner if not provided (highest score).
+	-- determine winner if not provided (highest score).
 	if not state.Winner then
 		if isFFA() then
 			local top = buildBoard()[1]
@@ -440,7 +440,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 			state.Winner = (state.Scores.Blue >= state.Scores.Red) and "Blue" or "Red"
 		end
 	end
-	-- The knockout that just won it: everyone in the match gets the moment.
+	-- the knockout that just won it: everyone in the match gets the moment.
 	local ko = Runtime.LastKO
 	if ko and os.clock() - ko.t < 1.5 then
 		for _, p in ipairs(Players:GetPlayers()) do
@@ -458,7 +458,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 	state.TimeLeft = GameConfig.Match.ResultsSeconds
 	PlayerService.MatchActive = false
 
-	-- Match payouts (only for the cats who played it).
+	-- match payouts (only for the cats who played it).
 	for _, player in ipairs(Players:GetPlayers()) do
 		local s = Runtime.Get(player)
 		if not (s and s.Context == "Match") then
@@ -474,7 +474,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 			EconomyService.AddStat(player, "Wins", 1)
 			SeasonService.AddXP(player, "Win")
 			EconomyService.AddXP(player, Scoring.WinBonusXP)
-			-- Win streaks pay more: a bonus for every win in a row after the first.
+			-- win streaks pay more: a bonus for every win in a row after the first.
 			local streak = 1
 			if stats then
 				stats.WinStreak = (stats.WinStreak or 0) + 1
@@ -490,7 +490,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 			local played = stats and stats.Matches or 0
 			Analytics.Step(player, played >= 2 and "SecondMatchFinished" or "FirstMatchFinished")
 		end
-		-- Trophy ranking: everyone who played moves up or down.
+		-- trophy ranking: everyone who played moves up or down.
 		if stats and s ~= nil then
 			local before = stats.Trophies or 0
 			stats.Trophies = math.max(0, before + Ranks.Delta(won, s.MatchElims or 0))
@@ -502,7 +502,7 @@ function MatchService.EndMatch(winnerTeam: string?)
 	broadcastState()
 	PlayerService.DespawnAll()
 
-	-- Top 3 of the match stand on the winners' podium beside the arena.
+	-- top 3 of the match stand on the winners' podium beside the arena.
 	local board = buildBoard()
 	local top = {}
 	for i = 1, math.min(3, #board) do
@@ -525,7 +525,7 @@ local function enterIntermission()
 	mapVotes = {}
 	queuedPlayers = {}
 	PlayerService.MatchActive = false
-	-- Everyone who played goes back to the lobby.
+	-- everyone who played goes back to the lobby.
 	for _, p in ipairs(Players:GetPlayers()) do
 		p:SetAttribute("Queued", nil)
 		local s = Runtime.Get(p)
@@ -537,14 +537,14 @@ local function enterIntermission()
 end
 
 local function enterCountdown()
-	-- Lock the vote and rebuild while players are still in the lobby, before
+	-- lock the vote and rebuild while players are still in the lobby, before
 	-- characters and power-up pickups exist for the next match.
 	buildVotedMap()
 	state.Mode = leadingModeId()
 	Runtime.Mode = state.Mode
 	state.Phase = PHASE.Countdown
 	state.TimeLeft = GameConfig.Match.CountdownSeconds
-	-- Fresh match stats for everyone about to drop in (not duelists).
+	-- fresh match stats for everyone about to drop in (not duelists).
 	for _, player in ipairs(Players:GetPlayers()) do
 		if queuedPlayers[player.UserId] then
 			Runtime.ResetMatch(player)
@@ -558,14 +558,14 @@ local function enterPlaying()
 	state.Phase = PHASE.Playing
 	state.TimeLeft = GameConfig.Match.MatchSeconds
 	PlayerService.MatchActive = true
-	-- Only the players who queued leave the lobby for the arena.
+	-- only the players who queued leave the lobby for the arena.
 	for _, p in ipairs(Players:GetPlayers()) do
 		if queuedPlayers[p.UserId] then
 			p:SetAttribute("Queued", nil)
 			task.spawn(PlayerService.Spawn, p)
 		end
 	end
-	-- Bots fill the teams up to the target size around the players who queued.
+	-- bots fill the teams up to the target size around the players who queued.
 	BotService.SpawnBots(queuedCount())
 	if state.Mode == "KOTH" then
 		startHill()
@@ -582,7 +582,7 @@ local function enterPlaying()
 	broadcastState()
 end
 
--- Main loop: tick the timer once per second and advance phases.
+-- main loop: tick the timer once per second and advance phases.
 local function mainLoop()
 	while true do
 		task.wait(1)
@@ -599,7 +599,7 @@ local function mainLoop()
 			end
 		elseif state.Phase == PHASE.Countdown then
 			if queuedCount() < GameConfig.Match.MinPlayersToStart then
-				-- Everyone who queued left before the drop; cancel cleanly and
+				-- everyone who queued left before the drop; cancel cleanly and
 				-- return the remaining clients to the landing screen.
 				enterIntermission()
 			elseif state.TimeLeft <= 0 then
@@ -634,7 +634,7 @@ end
 function MatchService.Start()
 	PlayerService.OnElimination = onElimination
 
-	-- Capture the Flag: a capture scores for the team and pays the carrier.
+	-- capture the flag: a capture scores for the team and pays the carrier.
 	FlagService.OnCapture = function(team: string, carrier: Model)
 		if state.Phase ~= PHASE.Playing or state.Scores[team] == nil then
 			return
@@ -650,7 +650,7 @@ function MatchService.Start()
 		MatchService.CheckWin()
 	end
 
-	-- Award a team point when a bot is eliminated (mirrors onElimination for players).
+	-- award a team point when a bot is eliminated (mirrors onelimination for players).
 	BotService.OnBotEliminated = function(killer: Player, botTeam: string)
 		addStreak(killer)
 		local kState = Runtime.Get(killer)
@@ -662,7 +662,7 @@ function MatchService.Start()
 		MatchService.CheckWin()
 	end
 
-	-- A bot knocked out an enemy bot: its team scores.
+	-- a bot knocked out an enemy bot: its team scores.
 	BotService.OnTeamPoint = function(teamId: string)
 		if state.Phase ~= PHASE.Playing or state.Scores[teamId] == nil then
 			return
@@ -685,8 +685,8 @@ function MatchService.Start()
 			return
 		end
 		Analytics.Step(player, "PressedPlay")
-		-- A late joiner must still opt in from the landing screen. Once they
-		-- press Play, put them into the current round without forcing every
+		-- a late joiner must still opt in from the landing screen. once they
+		-- press play, put them into the current round without forcing every
 		-- existing player through a new countdown.
 		if state.Phase == PHASE.Playing then
 			local rs = Runtime.Get(player)
@@ -703,7 +703,7 @@ function MatchService.Start()
 			broadcastState()
 			return
 		end
-		-- The map is already locked in; everyone is spawned when the round starts.
+		-- the map is already locked in; everyone is spawned when the round starts.
 		if state.Phase == PHASE.Countdown then
 			queuedPlayers[player.UserId] = true
 			player:SetAttribute("Queued", true)
@@ -725,12 +725,12 @@ function MatchService.Start()
 		broadcastState()
 	end)
 
-	-- Sync new joiners to current state, and drop late joiners into a live match.
+	-- sync new joiners to current state, and drop late joiners into a live match.
 	Players.PlayerAdded:Connect(function(player)
 		task.wait(1)
 		broadcastState()
-		-- Do not auto-spawn late joiners. They must use the same landing-screen
-		-- Play action as everyone else so the launch flow is never skipped.
+		-- do not auto-spawn late joiners. they must use the same landing-screen
+		-- play action as everyone else so the launch flow is never skipped.
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		queuedPlayers[player.UserId] = nil

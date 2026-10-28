@@ -1,8 +1,8 @@
 --!strict
--- FlagService: Capture the Flag. Each team's flag stands just behind its base
--- spawn. Walk into the enemy flag to grab it (it rides on your back and you
+-- flagservice: capture the flag. each team's flag stands just behind its base
+-- spawn. walk into the enemy flag to grab it (it rides on your back and you
 -- glow in your team colour); bring it to your own flag while yours is home to
--- capture. Knock a carrier off the map and the flag flies straight home;
+-- capture. knock a carrier off the map and the flag flies straight home;
 -- drop them on an island and it lies there until a defender touches it (sends
 -- it home) or 15 seconds pass.
 
@@ -17,7 +17,7 @@ local CatBuilder = require(ReplicatedStorage.Shared.Character.CatBuilder)
 
 local FlagService = {}
 
--- Set by MatchService: a team captured (carrier is the capturing cat).
+-- set by matchservice: a team captured (carrier is the capturing cat).
 FlagService.OnCapture = nil :: ((team: string, carrier: Model) -> ())?
 
 local GRAB_RADIUS = 5
@@ -42,7 +42,7 @@ local flags: { [string]: Flag } = {}
 local folder: Folder? = nil
 local conn: RBXScriptConnection? = nil
 
--- What to call a cat in announcements (display name for players).
+-- what to call a cat in announcements (display name for players).
 local function catName(m: Model): string
 	local p = Players:GetPlayerFromCharacter(m)
 	return p and p.DisplayName or m.Name
@@ -68,7 +68,7 @@ local function part(name: string, size: Vector3, color: Color3, material: Enum.M
 	return p
 end
 
--- Pole, waving cloth and a glowing stand ring (the ring stays at home).
+-- pole, waving cloth and a glowing stand ring (the ring stays at home).
 local function buildFlag(team: string, home: Vector3, parent: Instance): Flag
 	local color = TEAM_COLOR[team]
 	local model = Instance.new("Model")
@@ -103,7 +103,7 @@ local function buildFlag(team: string, home: Vector3, parent: Instance): Flag
 	return f
 end
 
--- Stand the flag upright at `ground` (anchored).
+-- stand the flag upright at `ground` (anchored).
 local function plant(f: Flag, ground: Vector3)
 	local pole, cloth, knob = f.parts[1], f.parts[2], f.parts[3]
 	local base = CFrame.new(ground + Vector3.new(0, 4, 0))
@@ -138,7 +138,7 @@ local function atHome(f: Flag): boolean
 	return f.carrier == nil and f.droppedAt == nil
 end
 
--- The flag rides on the carrier's back, leaning back a little.
+-- the flag rides on the carrier's back, leaning back a little.
 local function pickUp(f: Flag, cat: Model)
 	local root = cat.PrimaryPart
 	if not root then
@@ -179,7 +179,7 @@ local function step()
 		local carrier = f.carrier
 		if carrier then
 			if not aliveCat(carrier) then
-				-- Carrier went down: fell off the map -> home; else it lies there.
+				-- carrier went down: fell off the map -> home; else it lies there.
 				local pos = f.lastPos
 				release(f)
 				if pos.Y < FELL_Y then
@@ -193,7 +193,7 @@ local function step()
 			else
 				local root = carrier.PrimaryPart :: BasePart
 				f.lastPos = root.Position
-				-- Capture: carrier reaches their own flag while it is home.
+				-- capture: carrier reaches their own flag while it is home.
 				if enemy and atHome(enemy) then
 					local off = root.Position - enemy.home
 					if Vector3.new(off.X, 0, off.Z).Magnitude < GRAB_RADIUS + 1 and math.abs(off.Y) < 8 then
@@ -218,7 +218,7 @@ local function step()
 						local off = (m.PrimaryPart :: BasePart).Position - spot
 						if team and Vector3.new(off.X, 0, off.Z).Magnitude < GRAB_RADIUS and math.abs(off.Y) < 7 then
 							if team ~= f.team then
-								-- Only one flag at a time per cat.
+								-- only one flag at a time per cat.
 								local already = (enemy and enemy.carrier == m)
 								if not already then
 									pickUp(f, m)
@@ -237,7 +237,7 @@ local function step()
 	end
 end
 
--- Home spot for a team's flag: behind the team's base spawn (the spawn
+-- home spot for a team's flag: behind the team's base spawn (the spawn
 -- nearest the map's centre line), on the island top.
 local function homeFor(team: string): Vector3?
 	local arena = Workspace:FindFirstChild("Arena")
@@ -304,7 +304,7 @@ function FlagService.Stop()
 	end
 end
 
--- For bots: where a team should head. Returns (goal, isCarrier).
+-- for bots: where a team should head. returns (goal, iscarrier).
 --   carrying the enemy flag -> own flag's home
 --   else -> the enemy flag (wherever it is), or chase whoever took ours
 function FlagService.Objective(team: string, cat: Model): Vector3?

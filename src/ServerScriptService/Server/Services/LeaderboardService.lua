@@ -1,12 +1,12 @@
 --!strict
--- LeaderboardService: global and per-country leaderboards (Eliminations,
--- Wins and Trophies) backed by OrderedDataStores.
---   * each player's country comes from LocalizationService and is published
---     as the "Country" player attribute
+-- leaderboardservice: global and per-country leaderboards (eliminations,
+-- wins and trophies) backed by ordereddatastores.
+--   * each player's country comes from localizationservice and is published
+--     as the "country" player attribute
 --   * stats are written every couple of minutes and when a player leaves
---   * GetLeaderboard(scope, metric) returns the top 50 with usernames; results
---     are cached for a minute. If DataStores are unavailable (e.g. Studio
---     without API access) it falls back to the players in this server.
+--   * getleaderboard(scope, metric) returns the top 50 with usernames; results
+--     are cached for a minute. if datastores are unavailable (e.g. studio
+--     without api access) it falls back to the players in this server.
 
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
@@ -75,7 +75,7 @@ local function publish(player: Player)
 	end
 end
 
--- The players in this server, ranked (fallback + always fresh).
+-- the players in this server, ranked (fallback + always fresh).
 local function serverBoard(metric: string, country: string?): { any }
 	local list = {}
 	for _, p in ipairs(Players:GetPlayers()) do
@@ -118,8 +118,8 @@ local function fetch(scope: string, metric: string): { any }?
 	return entries
 end
 
--- Top of the global board (falls back to this server's players when data
--- stores are off, e.g. in Studio). For the lobby's leaderboard board.
+-- top of the global board (falls back to this server's players when data
+-- stores are off, e.g. in studio). for the lobby's leaderboard board.
 function LeaderboardService.Top(metric: string): { any }
 	return fetch("Global", metric) or serverBoard(metric, nil)
 end

@@ -1,13 +1,13 @@
 --!strict
--- MeshLib: the game's sculpted models (assets/GameMeshes.glb, imported into
--- ReplicatedStorage.GameMeshes by tools/models/setup_game.lua). Until they're
--- imported Has() is false and every caller keeps building its block version.
---   Place(name, origin, scale, ...)  - a model where it was modelled relative
+-- meshlib: the game's sculpted models (assets/gamemeshes.glb, imported into
+-- replicatedstorage.gamemeshes by tools/models/setup_game.lua). until they're
+-- imported has() is false and every caller keeps building its block version.
+--   place(name, origin, scale, ...)  - a model where it was modelled relative
 --                                       to \`origin\` (props, gun parts)
---   Fill(name, cf, size, ...)        - a model stretched to fill a box (the
---                                       U_* "unit" meshes replacing a part)
--- The importer may have turned meshes round; setup_game.lua stores that turn
--- as each mesh's ImportTurn attribute and it's undone here.
+--   fill(name, cf, size, ...)        - a model stretched to fill a box (the
+--                                       u_* "unit" meshes replacing a part)
+-- the importer may have turned meshes round; setup_game.lua stores that turn
+-- as each mesh's importturn attribute and it's undone here.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -82,11 +82,11 @@ function MeshLib.Fill(name: string, cf: CFrame, size: Vector3, color: Color3?, m
 	return spawn(src, size, cf, color, material, parent)
 end
 
--- A part a model now stands in for: it stays (invisible) only if it's solid.
+-- a part a model now stands in for: it stays (invisible) only if it's solid.
 function MeshLib.Hide(p: BasePart)
 	if p.CanCollide then
 		p.Transparency = 1
-		p:SetAttribute("MeshProxy", true) -- stays solid (ArenaBuilder)
+		p:SetAttribute("MeshProxy", true) -- stays solid (arenabuilder)
 	else
 		p:Destroy()
 	end

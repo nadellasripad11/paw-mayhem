@@ -1,15 +1,15 @@
 --!strict
--- DuelMaps: the arenas 1v1 - 5v5 duels are fought on, built the same way as
--- Sky Islands: grassy floating islands with cliffs underneath, joined by stone
+-- duelmaps: the arenas 1v1 - 5v5 duels are fought on, built the same way as
+-- sky islands: grassy floating islands with cliffs underneath, joined by stone
 -- stairs and rope bridges, dressed with round trees, bushes, flowers, rocks,
 -- lamps and crate cover, swimmable waterfalls off the side islands, a sea of
--- clouds below and scenery islands drifting round. Each duel gets its own
+-- clouds below and scenery islands drifting round. each duel gets its own
 -- copy, built far away when it starts and removed when it ends.
---   * Meadow       (green)  - two bases, a raised centre hill, two flanks
---   * Sakura Garden (pink)  - two bases, twin middle terraces, a top perch
---   * Autumn Ridge (orange) - the Meadow layout in autumn colours, with pines
---   * Frost Peaks  (snow)   - the terrace layout in snow, pines and ice
--- Blue starts on the -Z side, Red on the +Z side.
+--   * meadow       (green)  - two bases, a raised centre hill, two flanks
+--   * sakura garden (pink)  - two bases, twin middle terraces, a top perch
+--   * autumn ridge (orange) - the meadow layout in autumn colours, with pines
+--   * frost peaks  (snow)   - the terrace layout in snow, pines and ice
+-- blue starts on the -z side, red on the +z side.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -142,14 +142,14 @@ local function disc(name: string, d: number, h: number, pos: Vector3, color: Col
 	return p
 end
 
--- ── props (the Sky Islands set, themed) ──────────────────────────────────────
+-- ── props (the sky islands set, themed) ──────────────────────────────────────
 local function tree(th: Theme, pos: Vector3, s: number, parent: Instance)
 	local m = Instance.new("Model")
 	m.Name = "Tree"
 	m.Parent = parent
 	local h = 5.6 * s
 	if MeshLib.Has("TreeTrunk") then
-		-- The sculpted tree: a rooted trunk and a full, lumpy canopy. The old
+		-- the sculpted tree: a rooted trunk and a full, lumpy canopy. the old
 		-- trunk stays as invisible collision.
 		local yaw = CFrame.Angles(0, rng:NextNumber(0, 6.28), 0)
 		solid("Trunk", Vector3.new(1.3 * s, h, 1.3 * s), CFrame.new(pos + Vector3.new(0, h / 2, 0)), th.trunk, Enum.Material.Wood, m).Transparency = 1
@@ -241,7 +241,7 @@ local function lamp(pos: Vector3, parent: Instance)
 	local base = solid("LampBase", Vector3.new(1.4, 1, 1.4), CFrame.new(pos + Vector3.new(0, 0.5, 0)), Color3.fromRGB(196, 186, 168), Enum.Material.Slate, parent)
 	local glow
 	if MeshLib.Has("LampIron") then
-		-- The sculpted lamp: a stone plinth, a tapered iron post and a lantern
+		-- the sculpted lamp: a stone plinth, a tapered iron post and a lantern
 		-- cage round the glowing glass.
 		base.Transparency = 1
 		MeshLib.Place("LampStone", CFrame.new(pos), 1, Color3.fromRGB(196, 186, 168), Enum.Material.Slate, parent)
@@ -265,7 +265,7 @@ local function crates(th: Theme, pos: Vector3, parent: Instance)
 	local a = solid("Crate", Vector3.new(3, 3, 3), CFrame.new(pos + Vector3.new(0, 1.5, 0)) * CFrame.Angles(0, yaw, 0), th.palette.Wood, Enum.Material.WoodPlanks, parent)
 	local b = solid("Crate", Vector3.new(2.2, 2.2, 2.2), CFrame.new(pos + Vector3.new(1.4, 1.1, 1.6)) * CFrame.Angles(0, yaw + 0.5, 0), th.palette.WoodDark, Enum.Material.WoodPlanks, parent)
 	if MeshLib.Has("CrateBody") then
-		-- Framed, braced wooden crates; the boxes stay as invisible cover.
+		-- framed, braced wooden crates; the boxes stay as invisible cover.
 		for _, c in ipairs({ { a, 1, th.palette.Wood }, { b, 2.2 / 3, th.palette.WoodDark } }) do
 			local box: BasePart, s: number = c[1], c[2]
 			local bottom = box.CFrame * CFrame.new(0, -box.Size.Y / 2, 0)
@@ -276,7 +276,7 @@ local function crates(th: Theme, pos: Vector3, parent: Instance)
 	end
 end
 
--- Scatter themed props on an island (keeping clear of paths and each other).
+-- scatter themed props on an island (keeping clear of paths and each other).
 local function dress(th: Theme, isle: any, trees: number, bushes: number, flowerN: number, rocks: number, minD: number, parent: Instance)
 	local function place(n: number, rad: number, fn: (Vector3) -> ())
 		for _ = 1, n do
@@ -306,7 +306,7 @@ local function dress(th: Theme, isle: any, trees: number, bushes: number, flower
 end
 
 -- ── finishing touches ────────────────────────────────────────────────────────
--- A stone path from an island's middle to each way off it.
+-- a stone path from an island's middle to each way off it.
 local function paths(th: Theme, isle: any, parent: Instance)
 	for _, a in ipairs(isle.links) do
 		local from, to = ArenaKit.Polar(isle, a, 4, 0.04), ArenaKit.Polar(isle, a, isle.r - 1, 0.04)
@@ -318,7 +318,7 @@ local function paths(th: Theme, isle: any, parent: Instance)
 	end
 end
 
--- A low wooden fence round the rim, leaving the ways off open.
+-- a low wooden fence round the rim, leaving the ways off open.
 local function fence(th: Theme, isle: any, parent: Instance)
 	local r = isle.r - 1.2
 	local step = math.rad(360 / math.max(16, math.floor(2 * math.pi * r / 4.5)))
@@ -339,7 +339,7 @@ local function fence(th: Theme, isle: any, parent: Instance)
 	end
 end
 
--- A little gazebo (solid posts, a peaked roof) - cover and a landmark.
+-- a little gazebo (solid posts, a peaked roof) - cover and a landmark.
 local function gazebo(th: Theme, pos: Vector3, color: Color3, parent: Instance)
 	for _, c in ipairs({ { -2.2, -2.2 }, { 2.2, -2.2 }, { -2.2, 2.2 }, { 2.2, 2.2 } }) do
 		solid("GazeboPost", Vector3.new(0.6, 5, 0.6), CFrame.new(pos + Vector3.new(c[1], 2.5, c[2])), th.palette.Wood, Enum.Material.Wood, parent)
@@ -351,14 +351,14 @@ local function gazebo(th: Theme, pos: Vector3, color: Color3, parent: Instance)
 	end
 end
 
--- A team flag on a pole.
+-- a team flag on a pole.
 local function flag(pos: Vector3, color: Color3, parent: Instance)
 	deco("FlagPole", Vector3.new(0.35, 9, 0.35), CFrame.new(pos + Vector3.new(0, 4.5, 0)), Color3.fromRGB(230, 230, 236), Enum.Material.Metal, parent)
 	deco("Flag", Vector3.new(0.1, 2.2, 3.4), CFrame.new(pos + Vector3.new(0, 7.6, 1.7)), color, Enum.Material.Fabric, parent)
 	ball("FlagTop", 0.6, pos + Vector3.new(0, 9.1, 0), Color3.fromRGB(255, 210, 80), parent)
 end
 
--- A stone lookout tower with a ladder up to its top deck.
+-- a stone lookout tower with a ladder up to its top deck.
 local function lookout(th: Theme, isle: any, parent: Instance)
 	local base = ArenaKit.Polar(isle, 0, 0)
 	local tower = ArenaKit.NewDisc("TowerBody", 5, 10, base + Vector3.new(0, 5, 0), th.palette.Stone, Enum.Material.Slate, parent)
@@ -377,7 +377,7 @@ local function lookout(th: Theme, isle: any, parent: Instance)
 	ArenaKit.AddLadder(base + Vector3.new(0, 0, -5), 11, Vector3.new(0, 0, -1), parent)
 end
 
--- A small waterfall spilling off an island's edge (just to look at).
+-- a small waterfall spilling off an island's edge (just to look at).
 local function miniFall(isle: any, angle: number, parent: Instance)
 	local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
 	local lip = ArenaKit.Polar(isle, angle, isle.r + 0.6)
@@ -390,7 +390,7 @@ local function miniFall(isle: any, angle: number, parent: Instance)
 	deco("Stream", Vector3.new(2.6, 0.2, (lip - from).Magnitude), CFrame.lookAt((from + lip) / 2 + Vector3.new(0, 0.1, 0), lip + Vector3.new(0, 0.1, 0)), water, Enum.Material.Glass, parent).Transparency = 0.15
 end
 
--- Weather for the theme: petals, leaves, snow or sparkles drifting down.
+-- weather for the theme: petals, leaves, snow or sparkles drifting down.
 local function weather(th: Theme, o: Vector3, f: Instance)
 	local p = deco("Weather", Vector3.new(150, 1, 150), CFrame.new(o + Vector3.new(0, 45, 0)), WHITE, Enum.Material.SmoothPlastic, f)
 	p.Transparency = 1
@@ -428,7 +428,7 @@ end
 
 -- ── the sky round the arena ──────────────────────────────────────────────────
 local function sky(th: Theme, o: Vector3, f: Instance)
-	-- A sea of clouds well below: wide, flat banks rather than balls.
+	-- a sea of clouds well below: wide, flat banks rather than balls.
 	for _ = 1, 22 do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local r = rng:NextNumber(30, 170)
@@ -441,7 +441,7 @@ local function sky(th: Theme, o: Vector3, f: Instance)
 			cloud.CastShadow = false
 		end
 	end
-	-- Scenery islands drifting further out, each with a tree.
+	-- scenery islands drifting further out, each with a tree.
 	for k = 1, 6 do
 		local a = k / 6 * math.pi * 2 + rng:NextNumber(-0.3, 0.3)
 		local r = rng:NextNumber(95, 130)
@@ -460,7 +460,7 @@ local function sky(th: Theme, o: Vector3, f: Instance)
 			tree(th, top, 0.8, folder)
 		end
 	end
-	-- A few thin high clouds far out.
+	-- a few thin high clouds far out.
 	for _ = 1, 6 do
 		local a = rng:NextNumber(0, math.pi * 2)
 		local r = rng:NextNumber(110, 180)
@@ -473,7 +473,7 @@ local function sky(th: Theme, o: Vector3, f: Instance)
 end
 
 -- ── building one ─────────────────────────────────────────────────────────────
--- \`shape\`: "Hill" (bases, a raised centre hill, two flanks) or "Terraces"
+-- \`shape\`: "hill" (bases, a raised centre hill, two flanks) or "terraces"
 -- (bases, twin middle terraces, a high perch between them).
 local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 	local I: { [string]: any } = {}
@@ -520,7 +520,7 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 		end
 	end
 
-	-- Bases: a plaza for each team with its colour, lamps, crate cover.
+	-- bases: a plaza for each team with its colour, lamps, crate cover.
 	local spawns: { [string]: { CFrame } } = {}
 	for _, key in ipairs({ "baseB", "baseR" }) do
 		local b = I[key]
@@ -566,13 +566,13 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 		dress(th, b, 4, 4, 6, 2, 7.5, b.folder)
 	end
 
-	-- The middle: cover, trees, a landmark, waterfalls off the side islands.
+	-- the middle: cover, trees, a landmark, waterfalls off the side islands.
 	local mid = shape == "Hill" and { "center", "flankL", "flankR" } or { "midL", "midR", "perch" }
 	for _, key in ipairs(mid) do
 		local m = I[key]
 		local big = m.r >= 12
 		if big then
-			-- Centre hill: a stone ring with a tree in it.
+			-- centre hill: a stone ring with a tree in it.
 			disc("HillPlaza", 10, 0.12, m.pos + Vector3.new(0, ArenaKit.SURFACE + 0.04, 0), th.stairs.step, Enum.Material.Slate, m.folder)
 			for k = 0, 7 do
 				local a = k / 8 * math.pi * 2
@@ -595,14 +595,14 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 			dress(th, m, 2, 3, 4, 1, 2.5, m.folder)
 		end
 	end
-	-- Paths to every way off, fences round the rims.
+	-- paths to every way off, fences round the rims.
 	for _, isle in pairs(I) do
 		paths(th, isle, isle.folder)
 		fence(th, isle, isle.folder)
 	end
 	weather(th, o, f)
 	if th.snowy then
-		-- Ice crystals on the bases for Frost Peaks.
+		-- ice crystals on the bases for frost peaks.
 		for _, key in ipairs({ "baseB", "baseR" }) do
 			local p = ArenaKit.TryPlace(I[key], rng, 7, I[key].r - 3, 2, 4.5)
 			if p then
@@ -613,7 +613,7 @@ local function build(th: Theme, shape: string, o: Vector3, f: Instance): Layout
 	end
 
 	sky(th, o, f)
-	-- (Deep enough that the bottom of a waterfall is still in play.)
+	-- (deep enough that the bottom of a waterfall is still in play.)
 	return { name = th.name, spawns = spawns, killY = o.Y - 62 }
 end
 
@@ -632,7 +632,7 @@ DuelMaps.List = {
 	end },
 }
 
--- Build duel map \`id\` (a random one if unknown) at \`origin\` into \`parent\`.
+-- build duel map \`id\` (a random one if unknown) at \`origin\` into \`parent\`.
 function DuelMaps.Build(id: string?, origin: Vector3, parent: Instance): Layout
 	for _, def in ipairs(DuelMaps.List) do
 		if def.Id == id then
@@ -642,7 +642,7 @@ function DuelMaps.Build(id: string?, origin: Vector3, parent: Instance): Layout
 	return DuelMaps.BuildRandom(origin, parent)
 end
 
--- Build a random duel map at \`origin\` into \`parent\`.
+-- build a random duel map at \`origin\` into \`parent\`.
 function DuelMaps.BuildRandom(origin: Vector3, parent: Instance): Layout
 	local def = DuelMaps.List[rng:NextInteger(1, #DuelMaps.List)]
 	return def.Build(origin, parent)

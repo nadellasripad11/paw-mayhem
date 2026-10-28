@@ -1,15 +1,15 @@
 --!strict
--- EventService: one map-specific event roughly every minute of a match.
---   Volcano     ERUPTION  — meteors arc out of the crater onto red warning
+-- eventservice: one map-specific event roughly every minute of a match.
+--   volcano     eruption  — meteors arc out of the crater onto red warning
 --                           circles, blast cats away and leave burning ground.
---   Sky Islands WIND GUST — a strong wind pushes everyone one way (the push is
+--   sky islands wind gust — a strong wind pushes everyone one way (the push is
 --                           applied by each client; bots are nudged here).
---   Toybox      STAMPEDE  — giant bouncy balls bounce across the islands and
+--   toybox      stampede  — giant bouncy balls bounce across the islands and
 --                           bowl over anything in their path.
---   Sky Islands LOW GRAVITY — floaty jumps, and every launch flies further.
---   Toybox      BOUNCY FLOOR — super jumps for everyone for 10 seconds.
--- Plus, in the final Mayhem Mode:
---   Volcano     LAVA RISING — the lava sea climbs and the kill floor with it.
+--   sky islands low gravity — floaty jumps, and every launch flies further.
+--   toybox      bouncy floor — super jumps for everyone for 10 seconds.
+-- plus, in the final mayhem mode:
+--   volcano     lava rising — the lava sea climbs and the kill floor with it.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -79,7 +79,7 @@ local function fade(p: BasePart, seconds: number, props: { [string]: any })
 	t:Play()
 end
 
--- ── Volcano: eruption ────────────────────────────────────────────────────────
+-- ── volcano: eruption ────────────────────────────────────────────────────────
 local LAVA = Color3.fromRGB(255, 110, 28)
 local LAVA_GLOW = Color3.fromRGB(255, 196, 80)
 
@@ -179,19 +179,19 @@ local function eruption()
 	end
 end
 
--- ── Sky Islands: wind gust ───────────────────────────────────────────────────
+-- ── sky islands: wind gust ───────────────────────────────────────────────────
 local function windGust()
 	local a = rng:NextNumber(0, math.pi * 2)
 	local dir = Vector3.new(math.cos(a), 0, math.sin(a))
 	local duration, strength = 6, 6
 	announce("WIND GUST!", "A breeze is nudging everyone sideways!", Color3.fromRGB(170, 230, 255))
-	-- Only cats in the match feel it (not the lobby or duels).
+	-- only cats in the match feel it (not the lobby or duels).
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p:GetAttribute("Context") == "Match" then
 			Remotes.Get("MapEvent"):FireClient(p, { kind = "Wind", dir = dir, duration = duration, strength = strength })
 		end
 	end
-	-- Bots are simulated here, so push them directly.
+	-- bots are simulated here, so push them directly.
 	local untilT = os.clock() + duration
 	while os.clock() < untilT do
 		for _, m in ipairs(HazardService.Cats()) do
@@ -204,7 +204,7 @@ local function windGust()
 	end
 end
 
--- ── Toybox: bouncy-ball stampede ─────────────────────────────────────────────
+-- ── toybox: bouncy-ball stampede ─────────────────────────────────────────────
 local BALL_COLORS = { Color3.fromRGB(255, 110, 150), Color3.fromRGB(110, 200, 255), Color3.fromRGB(255, 214, 90), Color3.fromRGB(170, 130, 255), Color3.fromRGB(120, 226, 150) }
 
 local function rollBall(spot: Vector3)
@@ -255,8 +255,8 @@ local function stampede()
 	end
 end
 
--- ── Sky Islands: low gravity ─────────────────────────────────────────────────
--- Gravity outside events: normal, or lower during Weekend Mayhem.
+-- ── sky islands: low gravity ─────────────────────────────────────────────────
+-- gravity outside events: normal, or lower during weekend mayhem.
 local function baseGravity(): number
 	local g = Workspace:GetAttribute("BaseGravity")
 	return typeof(g) == "number" and g or 196.2
@@ -270,7 +270,7 @@ local function lowGravity()
 	announce("GRAVITY'S BACK", "", Color3.fromRGB(190, 170, 255))
 end
 
--- ── Toybox: bouncy floor ─────────────────────────────────────────────────────
+-- ── toybox: bouncy floor ─────────────────────────────────────────────────────
 local function setJump(power: number)
 	for _, m in ipairs(HazardService.Cats()) do
 		local hum = m:FindFirstChildOfClass("Humanoid")
@@ -290,8 +290,8 @@ local function bouncyFloor()
 	setJump(GameConfig.Character.JumpPower)
 end
 
--- ── Volcano: the lava rises in Mayhem Mode ───────────────────────────────────
--- The sea climbs toward the islands over the final seconds; the kill floor
+-- ── volcano: the lava rises in mayhem mode ───────────────────────────────────
+-- the sea climbs toward the islands over the final seconds; the kill floor
 -- rides with it, so anyone knocked off burns up almost at once.
 local LAVA_FROM, LAVA_TO = -88, -30
 
@@ -312,7 +312,7 @@ local function lavaRise()
 	end
 end
 
--- Undo anything an event changed once the match is over.
+-- undo anything an event changed once the match is over.
 local function resetEvents()
 	Workspace.Gravity = baseGravity()
 	Workspace:SetAttribute("KillFloorY", nil)
@@ -326,7 +326,7 @@ local EVENTS: { [string]: { () -> () } } = {
 	Rooftops = { windGust, lowGravity },
 }
 
--- Once per Mayhem Mode (final seconds), per map.
+-- once per mayhem mode (final seconds), per map.
 local MAYHEM_EVENTS: { [string]: () -> () } = {
 	Volcano = lavaRise,
 }
@@ -356,7 +356,7 @@ function EventService.Start()
 				nextEvent = now + GameConfig.Events.Interval
 				local list = map and EVENTS[map.Id]
 				if list and #list > 0 then
-					-- Mix it up: don't run the same event twice in a row.
+					-- mix it up: don't run the same event twice in a row.
 					local pick = list[rng:NextInteger(1, #list)]
 					if pick == last and #list > 1 then
 						pick = list[(table.find(list, pick) :: number) % #list + 1]

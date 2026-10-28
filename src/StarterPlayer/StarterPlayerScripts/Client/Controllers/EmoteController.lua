@@ -1,7 +1,7 @@
 --!strict
--- EmoteController: plays the player's equipped emote as a lightweight procedural
--- animation on the custom cat rig (no external animation assets). Press B (PC),
--- or call Play() from an emote button. Broadcasts intent to the server so it can
+-- emotecontroller: plays the player's equipped emote as a lightweight procedural
+-- animation on the custom cat rig (no external animation assets). press b (pc),
+-- or call play() from an emote button. broadcasts intent to the server so it can
 -- optionally replicate; visually it runs locally for instant feedback.
 
 local Players = game:GetService("Players")
@@ -21,7 +21,7 @@ local function root(): BasePart?
 	return char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
 end
 
--- Simple procedural motions keyed by emote id.
+-- simple procedural motions keyed by emote id.
 local function animate(emoteId: string)
 	local r = root()
 	if not r or playing then
@@ -58,7 +58,7 @@ local function animate(emoteId: string)
 			restore()
 		end)
 	elseif emoteId == "Zoomies" then
-		-- Tear round in a little circle.
+		-- tear round in a little circle.
 		task.spawn(function()
 			local rr = root()
 			if not rr then
@@ -99,7 +99,7 @@ local function animate(emoteId: string)
 			restore()
 		end)
 	else
-		-- The pose itself comes from CatBuilder.Pose (Emote attributes).
+		-- the pose itself comes from catbuilder.pose (emote attributes).
 		task.delay(2.6, restore)
 	end
 end

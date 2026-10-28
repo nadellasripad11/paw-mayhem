@@ -1,7 +1,7 @@
 --!strict
--- WeaponFX: how each blaster class looks and sounds when it fires, so every
+-- weaponfx: how each blaster class looks and sounds when it fires, so every
 -- weapon has its own identity (a thick booming bolt, a thin rapid zip, a
--- bubble stream...). Purely cosmetic; gameplay numbers live in Weapons.
+-- bubble stream...). purely cosmetic; gameplay numbers live in weapons.
 
 local Weapons = require(script.Parent.Weapons)
 

@@ -1,5 +1,5 @@
 --!strict
--- GunView: shows a BlasterBuilder gun in a ViewportFrame at a 3/4 angle,
+-- gunview: shows a blasterbuilder gun in a viewportframe at a 3/4 angle,
 -- muzzle pointing right, framed to fill the view.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

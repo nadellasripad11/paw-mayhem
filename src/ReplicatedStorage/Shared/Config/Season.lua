@@ -1,7 +1,7 @@
 --!strict
--- Season: the season pass. Earn Season XP by playing; every tier has a free
--- reward and a premium reward (premium needs the Season Pass game pass).
--- Season-exclusive items carry `Season = 1` in their config and can only be
+-- season: the season pass. earn season xp by playing; every tier has a free
+-- reward and a premium reward (premium needs the season pass game pass).
+-- season-exclusive items carry `season = 1` in their config and can only be
 -- earned here.
 
 local Season = {}
@@ -11,7 +11,7 @@ Season.Name = "SEASON 1: SKY PAWS"
 Season.Tiers = 30
 Season.XPPerTier = 300
 
--- Season XP per action.
+-- season xp per action.
 Season.XP = {
 	MatchPlayed = 60,
 	Win = 90,
@@ -20,7 +20,7 @@ Season.XP = {
 	DailyClaim = 40,
 }
 
--- kind: Coins | Gems | Fur | Skin | Hat | Outfit | Accessory | Emote
+-- kind: coins | gems | fur | skin | hat | outfit | accessory | emote
 local function r(kind: string, value: any)
 	return { Kind = kind, Amount = typeof(value) == "number" and value or nil, Id = typeof(value) == "string" and value or nil }
 end

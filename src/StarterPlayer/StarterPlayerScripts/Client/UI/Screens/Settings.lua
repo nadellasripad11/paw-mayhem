@@ -1,6 +1,6 @@
 --!strict
--- Settings: one full screen, three cards (Gameplay, Controls, Graphics).
--- Every option is live (camera, movement, crosshair, lobby effects, FPS
+-- settings: one full screen, three cards (gameplay, controls, graphics).
+-- every option is live (camera, movement, crosshair, lobby effects, fps
 -- counter) and saved to your profile so it sticks between sessions.
 
 local Players = game:GetService("Players")
@@ -42,8 +42,8 @@ end
 
 -- ── applying settings that aren't read elsewhere ─────────────────────────────
 local fpsLabel: TextLabel? = nil
--- Post-processing (local to this player): soft bloom on glows, a touch of
--- colour grading and sun rays on High; bloom + grading on Medium; none on Low.
+-- post-processing (local to this player): soft bloom on glows, a touch of
+-- colour grading and sun rays on high; bloom + grading on medium; none on low.
 local function effect(className: string, name: string): any
 	local e = Lighting:FindFirstChild(name)
 	if not e then
@@ -133,7 +133,7 @@ local function toggle(parent: Instance, order: number, label: string, key: strin
 		set(key, not (ClientState.Settings[key] == true))
 		paint()
 	end)
-	ClientState.SettingsChanged:Connect(paint) -- (keys like V change some settings too)
+	ClientState.SettingsChanged:Connect(paint) -- (keys like v change some settings too)
 	paint()
 end
 
@@ -226,7 +226,7 @@ local function choice(parent: Instance, order: number, label: string, key: strin
 	paint()
 end
 
--- Replay the new-player intro (cinematic + lesson with Mochi).
+-- replay the new-player intro (cinematic + lesson with mochi).
 Settings.OnReplayIntro = nil :: (() -> ())?
 local function introRow(parent: Instance, order: number)
 	local row = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 58) })
@@ -245,7 +245,7 @@ local function introRow(parent: Instance, order: number)
 	end)
 end
 
--- Reward codes: type one in, the server checks and pays it (once each).
+-- reward codes: type one in, the server checks and pays it (once each).
 local function codesRow(parent: Instance, order: number)
 	local row = UIUtil.make("Frame", { Parent = parent, LayoutOrder = order, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 86) })
 	UIUtil.label({ Parent = row, Text = "Codes", Font = Theme.Font.Title, TextSize = 18, Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 4) })
@@ -306,7 +306,7 @@ function Settings.Build(parent)
 	ClientState.SettingsChanged:Connect(applyGlobal)
 	applyGlobal()
 
-	-- Rows are built the first time the screen opens, so saved values from
+	-- rows are built the first time the screen opens, so saved values from
 	-- the profile are already in place.
 	local built = false
 	root:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -314,7 +314,7 @@ function Settings.Build(parent)
 			return
 		end
 		built = true
-		-- Wide screens: three cards side by side. Phones: stacked and scrollable.
+		-- wide screens: three cards side by side. phones: stacked and scrollable.
 		local narrow = root.AbsoluteSize.X < 860
 		local holder: Instance = root
 		if narrow then

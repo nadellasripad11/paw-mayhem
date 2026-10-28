@@ -1,16 +1,16 @@
 #!/usr/bin/env node
-// Simulates the Rojo instance tree from default.project.json + src, then checks
+// simulates the rojo instance tree from default.project.json + src, then checks
 // that every require(...) path expression resolves to an existing module.
-// Handles: script.Parent chains, game:GetService("X").a.b, and local aliases
-// like `local Shared = ReplicatedStorage.Shared`.
+// handles: script.parent chains, game:getservice("x").a.b, and local aliases
+// like `local shared = replicatedstorage.shared`.
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const proj = JSON.parse(fs.readFileSync(path.join(ROOT, "default.project.json"), "utf8"));
 
-// ---- Build virtual tree from a src directory ----
-// node = { name, className, children: {name:node}, parent }
+// ---- build virtual tree from a src directory ----
+// node = { name, classname, children: {name:node}, parent }
 function makeNode(name, className, parent) {
   return { name, className, children: {}, parent };
 }
@@ -22,7 +22,7 @@ function classFromFile(fname) {
   return null;
 }
 
-// Map disk path -> node, recording where each lua file lives for require resolution.
+// map disk path -> node, recording where each lua file lives for require resolution.
 const fileToNode = new Map(); // absolute lua path -> node
 
 function buildDir(dirAbs, name, parent) {
@@ -58,14 +58,14 @@ function buildDir(dirAbs, name, parent) {
   return node;
 }
 
-// Root DataModel
+// root datamodel
 const game = makeNode("game", "DataModel", null);
 function ensureService(name) {
   if (!game.children[name]) game.children[name] = makeNode(name, name, game);
   return game.children[name];
 }
 
-// Walk project tree mapping $path dirs to services/children.
+// walk project tree mapping $path dirs to services/children.
 function applyProjectNode(objName, obj, parentNode) {
   let node;
   if (parentNode === game) {
@@ -97,26 +97,26 @@ for (const key in proj.tree) {
   applyProjectNode(key, proj.tree[key], game);
 }
 
-// Aliases for service access.
+// aliases for service access.
 const SERVICE_ALIASES = { workspace: "Workspace", Workspace: "Workspace" };
 
-// ---- Resolve a path expression against the tree ----
+// ---- resolve a path expression against the tree ----
 function resolveSegments(startNode, segs) {
   let n = startNode;
   for (const s of segs) {
     if (!n) return null;
     if (s === "Parent") { n = n.parent; continue; }
-    // WaitForChild("X") / FindFirstChild("X")
+    // waitforchild("x") / findfirstchild("x")
     n = n.children[s] || null;
   }
   return n;
 }
 
-// Parse a require argument expression into {root, segs}.
-// Supports: script..., game:GetService("X")..., ReplicatedStorage...(alias), and var aliases.
+// parse a require argument expression into {root, segs}.
+// supports: script..., game:getservice("x")..., replicatedstorage...(alias), and var aliases.
 function analyzeFile(absPath, node) {
   const src = fs.readFileSync(absPath, "utf8");
-  // collect local aliases: local NAME = <expr>
+  // collect local aliases: local name = <expr>
   const aliasRe = /local\s+([A-Za-z_]\w*)\s*=\s*([^\n]+)/g;
   const aliases = {};
   let m;
@@ -124,16 +124,16 @@ function analyzeFile(absPath, node) {
     aliases[m[1]] = m[2].trim();
   }
 
-  // Expand a textual expr to segments relative to a known root node, or null.
+  // expand a textual expr to segments relative to a known root node, or null.
   function exprToTarget(expr) {
     expr = expr.replace(/\s+/g, "");
     // strip trailing require-close etc handled by caller
-    // Replace :WaitForChild("X") / :FindFirstChild("X") / (":X") with .X
+    // replace :waitforchild("x") / :findfirstchild("x") / (":x") with .x
     expr = expr.replace(/:WaitForChild\("([^"]+)"\)/g, ".$1");
     expr = expr.replace(/:FindFirstChild\("([^"]+)"\)/g, ".$1");
-    // game:GetService("X") -> game.X
+    // game:getservice("x") -> game.x
     expr = expr.replace(/game:GetService\("([^"]+)"\)/g, "game.$1");
-    // Resolve leading alias variable
+    // resolve leading alias variable
     let parts = expr.split(".");
     let head = parts[0];
     // follow alias chains up to a few times
@@ -144,7 +144,7 @@ function analyzeFile(absPath, node) {
       head = parts[0];
       guard++;
     }
-    // Determine start node
+    // determine start node
     let start, segs;
     if (head === "script") { start = node; segs = parts.slice(1); }
     else if (head === "game") { start = game; segs = parts.slice(1); }
@@ -157,7 +157,7 @@ function analyzeFile(absPath, node) {
     return { ok: false, reason: "unresolved", expr };
   }
 
-  // find require(...) with a single balanced-ish argument (no nested parens except GetService)
+  // find require(...) with a single balanced-ish argument (no nested parens except getservice)
   const reqRe = /require\(([^\n]+?)\)\s*$/gm;
   const results = [];
   // simpler: match require( ... ) up to the matching close on same line

@@ -1,10 +1,10 @@
 --!strict
--- SoundController: all game audio.
---   * Music: calm lobby loop, energetic match loop (faster in Mayhem Mode).
---   * SFX: shots (3D, from every blaster), hits, getting hit, knockouts,
+-- soundcontroller: all game audio.
+--   * music: calm lobby loop, energetic match loop (faster in mayhem mode).
+--   * sfx: shots (3d, from every blaster), hits, getting hit, knockouts,
 --     eliminations, jump / land, dash, jump pads, pickups, rewards, the round
 --     countdown, victory / defeat, announcements and a click on every button.
--- Volumes come from Settings (MusicVolume / SFXVolume) via two SoundGroups.
+-- volumes come from settings (musicvolume / sfxvolume) via two soundgroups.
 
 local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
@@ -33,7 +33,7 @@ end
 local sfxGroup = group("PawSFX")
 local musicGroup = group("PawMusic")
 
--- One pre-made Sound per 2D effect, cloned when it's already playing.
+-- one pre-made sound per 2d effect, cloned when it's already playing.
 local templates: { [string]: Sound } = {}
 local function template(name: string): Sound?
 	local def = Sounds.SFX[name]
@@ -54,7 +54,7 @@ local function template(name: string): Sound?
 	return s
 end
 
--- Play a 2D sound effect. `pitch` optionally varies it (e.g. per blaster).
+-- play a 2d sound effect. `pitch` optionally varies it (e.g. per blaster).
 function SoundController.Play(name: string, pitch: number?)
 	local t = template(name)
 	if not t then
@@ -71,7 +71,7 @@ function SoundController.Play(name: string, pitch: number?)
 	s:Play()
 end
 
--- Play a sound in the world at a position (falls off with distance).
+-- play a sound in the world at a position (falls off with distance).
 function SoundController.PlayAt(name: string, position: Vector3, pitch: number?, volume: number?)
 	local def = Sounds.SFX[name]
 	if not def then
@@ -94,7 +94,7 @@ function SoundController.PlayAt(name: string, position: Vector3, pitch: number?,
 	end)
 end
 
--- A looping sound coming from `parent` (waterfalls, steam vents...). It
+-- a looping sound coming from `parent` (waterfalls, steam vents...). it
 -- goes when its parent does.
 function SoundController.Loop(name: string, parent: Instance): Sound?
 	local def = Sounds.SFX[name]
@@ -115,8 +115,8 @@ function SoundController.Loop(name: string, parent: Instance): Sound?
 	return s
 end
 
--- A blaster shot, pitched and weighted for its weapon class (a deep boom
--- for Boom Paw, a high zip for Rapid Paw...).
+-- a blaster shot, pitched and weighted for its weapon class (a deep boom
+-- for boom paw, a high zip for rapid paw...).
 function SoundController.PlayShot(weaponId: string?, position: Vector3)
 	local style = WeaponFX.Style(weaponId)
 	SoundController.PlayAt("Shoot", position, style.pitch / Sounds.SFX.Shoot.pitch * (0.95 + math.random() * 0.1), style.volume)
@@ -164,7 +164,7 @@ local function applyVolumes()
 	musicGroup.Volume = tonumber(st.MusicVolume) or 0.6
 end
 
--- Muffle the music (knocked out, replays): a low-pass that eases in and out.
+-- muffle the music (knocked out, replays): a low-pass that eases in and out.
 local muffle: EqualizerSoundEffect? = nil
 function SoundController.Muffle(on: boolean)
 	if not muffle then
@@ -179,7 +179,7 @@ function SoundController.Muffle(on: boolean)
 	}):Play()
 end
 
--- Launched! A low thump and a whoosh where a cat takes off (CatAnimator).
+-- launched! a low thump and a whoosh where a cat takes off (catanimator).
 function SoundController.Launch(position: Vector3)
 	SoundController.PlayAt("Explosion", position, 0.5, 0.35)
 	SoundController.PlayAt("Dash", position, 0.75, 0.7)
@@ -224,7 +224,7 @@ function SoundController.Start()
 	applyVolumes()
 	ClientState.SettingsChanged:Connect(applyVolumes)
 
-	-- Every blaster shot, 3D at the muzzle (bots included).
+	-- every blaster shot, 3d at the muzzle (bots included).
 	Remotes.Get("PlayEffect").OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then
 			return
@@ -239,7 +239,7 @@ function SoundController.Start()
 			SoundController.PlayAt("Pop", data.position)
 		end
 	end)
-	-- The hit sound climbs with the target's knockback %: you can hear when
+	-- the hit sound climbs with the target's knockback %: you can hear when
 	-- they're about to fly.
 	Remotes.Get("HitConfirm").OnClientEvent:Connect(function(data)
 		local acc = typeof(data) == "table" and tonumber(data.accumulated) or 0
@@ -260,7 +260,7 @@ function SoundController.Start()
 			SoundController.Play("Knockout")
 		end
 	end)
-	-- Match sounds and music are for the cats in the match (or queued for it),
+	-- match sounds and music are for the cats in the match (or queued for it),
 	-- not everyone walking round the lobby.
 	local function playing(): boolean
 		local ctx = player:GetAttribute("Context")
@@ -280,7 +280,7 @@ function SoundController.Start()
 		end
 	end)
 
-	-- Round flow + music.
+	-- round flow + music.
 	local lastPhase, lastTime = nil, -1
 	local queued = false -- queued for the match that's counting down
 	local function music()

@@ -1,7 +1,7 @@
 --!strict
--- Codes: redeemable reward codes (Settings -> Codes). Give these to content
--- creators and post new ones for like / visit milestones - it's how Roblox
--- games get people talking. Each code works once per player. Codes are
+-- codes: redeemable reward codes (settings -> codes). give these to content
+-- creators and post new ones for like / visit milestones - it's how roblox
+-- games get people talking. each code works once per player. codes are
 -- matched case-insensitively; add or retire them here.
 
 return {

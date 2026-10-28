@@ -1,9 +1,9 @@
 --!strict
--- Map 2/3 — Volcano. One connected cluster of basalt platforms stepping down
+-- map 2/3 — volcano. one connected cluster of basalt platforms stepping down
 -- from a craggy erupting volcano: lava rivers pour down the cone, across the
--- crater terrace and off the edges into a glowing lava sea. Paved platforms
+-- crater terrace and off the edges into a glowing lava sea. paved platforms
 -- with brass arena pads, scaffold watchtowers, forge huts, braziers and
--- industrial bridges. Point-symmetric so Blue and Red play the same map.
+-- industrial bridges. point-symmetric so blue and red play the same map.
 
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
@@ -34,7 +34,7 @@ local STAIRS: ArenaKit.StairStyle = { step = FLAG, stepAlt = FLAG_DARK, wall = B
 
 local LAVA_SEA_Y = -88
 
--- ── Layout (point-symmetric: Blue at -Z, Red at +Z) ─────────────────────────
+-- ── layout (point-symmetric: blue at -z, red at +z) ─────────────────────────
 local LAYOUT = {
 	center = { pos = Vector3.new(0, 20, 0), r = 38 },
 	cornerBL = { pos = Vector3.new(-52, 12, -52), r = 20 },
@@ -129,7 +129,7 @@ local function smokeEmitter(parent: BasePart, rate: number, size0: number, size1
 	return e
 end
 
--- Glowing sparks drifting up out of the lava.
+-- glowing sparks drifting up out of the lava.
 local function emberEmitter(parent: BasePart, rate: number, speed: number, spread: number)
 	local e = Instance.new("ParticleEmitter")
 	e.Texture = "rbxasset://textures/particles/sparkles_main.dds"
@@ -147,7 +147,7 @@ local function emberEmitter(parent: BasePart, rate: number, speed: number, sprea
 	return e
 end
 
--- Invisible anchor for emitters / bubble vents.
+-- invisible anchor for emitters / bubble vents.
 local function marker(name: string, pos: Vector3, parent: Instance): BasePart
 	local p = NP(name, Vector3.new(1, 1, 1), CFrame.new(pos), LAVA, Enum.Material.SmoothPlastic, parent)
 	p.Transparency = 1
@@ -157,13 +157,13 @@ local function marker(name: string, pos: Vector3, parent: Instance): BasePart
 	return p
 end
 
--- Cooled lava crust: dark red-brown rock that the CrackedLava material laces
+-- cooled lava crust: dark red-brown rock that the crackedlava material laces
 -- with glowing fissures.
 local function crustShade(): Color3
 	return Color3.fromRGB(rng:NextInteger(64, 98), rng:NextInteger(34, 48), rng:NextInteger(30, 40))
 end
 
--- Tags the client LavaFX controller animates.
+-- tags the client lavafx controller animates.
 local function hot(p: BasePart): BasePart
 	CollectionService:AddTag(p, "LavaHot")
 	return p
@@ -171,9 +171,9 @@ end
 
 local FALL_SPOTS: { Vector3 } = {}
 
--- ── Surface detail ───────────────────────────────────────────────────────────
+-- ── surface detail ───────────────────────────────────────────────────────────
 
--- Worn paving flagstones across the platform top.
+-- worn paving flagstones across the platform top.
 local function makeFlagstones(isle: any, minR: number, count: number)
 	for _ = 1, count do
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -184,7 +184,7 @@ local function makeFlagstones(isle: any, minR: number, count: number)
 	end
 end
 
--- Zig-zag glowing cracks running in from the edge.
+-- zig-zag glowing cracks running in from the edge.
 local function makeLavaCracks(isle: any, count: number, minR: number)
 	for _ = 1, count do
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -205,7 +205,7 @@ local function makeLavaCracks(isle: any, count: number, minR: number)
 	end
 end
 
--- Round paved combat pad with a brass compass ring.
+-- round paved combat pad with a brass compass ring.
 local function makeArenaPad(center: Vector3, R: number, parent: Instance, ring: Color3?)
 	local metal = ring or BRASS
 	deco(DISC("PadBase", R * 2 + 1, 0.3, center + Vector3.new(0, 0.12, 0), FLAG_DARK, Enum.Material.Slate, parent))
@@ -227,7 +227,7 @@ local function makeArenaPad(center: Vector3, R: number, parent: Instance, ring: 
 	end
 end
 
--- ── Props ────────────────────────────────────────────────────────────────────
+-- ── props ────────────────────────────────────────────────────────────────────
 
 local function makeCrate(pos: Vector3, s: number, yaw: number, ore: boolean, parent: Instance)
 	local cf = CFrame.new(pos + Vector3.new(0, 1.8 * s, 0)) * CFrame.Angles(0, yaw, 0)
@@ -306,7 +306,7 @@ local function makeBanner(pos: Vector3, color: Color3, yaw: number, parent: Inst
 	tip.Shape = Enum.PartType.Ball
 end
 
--- Tapered timber scaffold watchtower with braces, railed deck, pitched roof,
+-- tapered timber scaffold watchtower with braces, railed deck, pitched roof,
 -- lantern and ladder.
 local function makeTower(pos: Vector3, height: number, s: number, facing: Vector3, parent: Instance)
 	local f = Instance.new("Model")
@@ -342,7 +342,7 @@ local function makeTower(pos: Vector3, height: number, s: number, facing: Vector
 		end
 	end
 	local dh = ht + 1.1 * s
-	-- A deck you can stand on, and a ladder up to it on the side facing in.
+	-- a deck you can stand on, and a ladder up to it on the side facing in.
 	NP("Deck", Vector3.new(dh * 2, 0.5, dh * 2), rot * CFrame.new(0, height + 0.25, 0), PALETTE.Wood, Enum.Material.WoodPlanks, f).CanCollide = true
 	ArenaKit.AddLadder(rot:PointToWorldSpace(Vector3.new(0, 0, -(hb + 1.2))), height + 1.6, rot.LookVector, f)
 	local deckCorners = {}
@@ -373,7 +373,7 @@ local function makeTower(pos: Vector3, height: number, s: number, facing: Vector
 	end
 end
 
--- Basalt forge hut with a glowing furnace mouth and smoking chimney.
+-- basalt forge hut with a glowing furnace mouth and smoking chimney.
 local function makeForge(pos: Vector3, facing: Vector3, teamColor: Color3, parent: Instance)
 	local f = Instance.new("Model")
 	f.Name = "Forge"
@@ -399,7 +399,7 @@ local function makeForge(pos: Vector3, facing: Vector3, teamColor: Color3, paren
 	deco(NP("AnvilTop", Vector3.new(1.6, 0.5, 2.8), rot * CFrame.new(-2.5, 1.45, -6.2), IRON, Enum.Material.Metal, f))
 end
 
--- ── The volcano ──────────────────────────────────────────────────────────────
+-- ── the volcano ──────────────────────────────────────────────────────────────
 
 local function makeMountain(c: any, parent: Instance)
 	local f = Instance.new("Model")
@@ -441,7 +441,7 @@ local function makeMountain(c: any, parent: Instance)
 		end
 	end
 
-	-- Secondary peaks hugging the main cone (between the rivers).
+	-- secondary peaks hugging the main cone (between the rivers).
 	for k = 0, 3 do
 		local a = math.rad(67.5) + k * math.pi / 2
 		local pc = base + Vector3.new(math.cos(a) * 11, 0, math.sin(a) * 11)
@@ -461,7 +461,7 @@ local function makeMountain(c: any, parent: Instance)
 		deco(NP("PeakTip", Vector3.new(2.6, 6, 2.2), CFrame.new(pc + Vector3.new(0, ph + 2, 0)) * CFrame.Angles(rng:NextNumber(-0.2, 0.2), rng:NextNumber(0, 6), rng:NextNumber(-0.2, 0.2)), ROCK_MID, Enum.Material.Basalt, f))
 	end
 
-	-- Crater rim, lava pool, pulsing glow, embers and smoke plume.
+	-- crater rim, lava pool, pulsing glow, embers and smoke plume.
 	for i = 1, 10 do
 		local a = i / 10 * math.pi * 2
 		local out = Vector3.new(math.cos(a), 0, math.sin(a))
@@ -500,7 +500,7 @@ local function makeMountain(c: any, parent: Instance)
 		end
 	end)
 
-	-- Lava rivers down the cone, with rock fill underneath so no gaps show.
+	-- lava rivers down the cone, with rock fill underneath so no gaps show.
 	for _, a in ipairs(RIVERS) do
 		local out = Vector3.new(math.cos(a), 0, math.sin(a))
 		local segs = 6
@@ -522,7 +522,7 @@ local function makeMountain(c: any, parent: Instance)
 	end
 end
 
--- Lava channel from `fromR` to the island edge, then a lavafall into the sea.
+-- lava channel from `fromr` to the island edge, then a lavafall into the sea.
 local function makeLavaRun(isle: any, angle: number, fromR: number, parent: Instance)
 	local out = Vector3.new(math.cos(angle), 0, math.sin(angle))
 	local from = ArenaKit.Polar(isle, angle, fromR)
@@ -537,7 +537,7 @@ local function makeLavaRun(isle: any, angle: number, fromR: number, parent: Inst
 			deco(NP("BankRock", Vector3.new(1.3, rng:NextNumber(0.6, 1.2), 1.5), CFrame.new(p) * CFrame.Angles(0, rng:NextNumber(0, 6), 0.2), rockShade(), Enum.Material.Basalt, parent))
 		end
 	end
-	-- Lavafall: molten core, jagged crusted edges, a flowing surface and a
+	-- lavafall: molten core, jagged crusted edges, a flowing surface and a
 	-- splash pool where it meets the sea.
 	local height = isle.surf - LAVA_SEA_Y
 	local edge = lip + out * 0.9
@@ -600,9 +600,9 @@ local function makeLavaRun(isle: any, angle: number, fromR: number, parent: Inst
 	CollectionService:AddTag(splash, "LavaVent")
 end
 
--- ── Connections ──────────────────────────────────────────────────────────────
+-- ── connections ──────────────────────────────────────────────────────────────
 
--- Industrial bridge: iron girders, timber planks, iron posts with chain
+-- industrial bridge: iron girders, timber planks, iron posts with chain
 -- rails, string lights and lamps on the end posts.
 local function makeBridge(A: any, B: any, parent: Instance)
 	local f = Instance.new("Folder")
@@ -646,7 +646,7 @@ local function makeBridge(A: any, B: any, parent: Instance)
 	end
 end
 
--- ── Island dressing ──────────────────────────────────────────────────────────
+-- ── island dressing ──────────────────────────────────────────────────────────
 
 local function propsAt(isle: any, n: number, minD: number, maxD: number, rad: number, fn: (Vector3) -> ())
 	for _ = 1, n do
@@ -665,7 +665,7 @@ local function dress(isle: any, minD: number, spires: number, crates: number, ba
 	propsAt(isle, spires, isle.r * 0.72, isle.r - 1.5, 2.2, function(p) makeSpire(p, rng:NextNumber(0.8, 1.2), isle.folder) end)
 end
 
--- One brazier beside each bridge landing, just outside the walkway.
+-- one brazier beside each bridge landing, just outside the walkway.
 local function bridgeBraziers(isle: any)
 	for i, a in ipairs(isle.links) do
 		local d = isle.r - 3.5
@@ -683,7 +683,7 @@ local function addLavaRuns(isle: any, count: number)
 	end
 end
 
--- ── Build ────────────────────────────────────────────────────────────────────
+-- ── build ────────────────────────────────────────────────────────────────────
 
 function Volcano.Build(): Folder
 	local arena, spawns, powerPads = ArenaKit.SetupFolders(Workspace, Volcano.Name)
@@ -710,7 +710,7 @@ function Volcano.Build(): Folder
 		end
 	end
 
-	-- Supply drops land on any playable island; jump pads on the team bases
+	-- supply drops land on any playable island; jump pads on the team bases
 	-- and flanks fling you onto the crater terrace.
 	for _, isle in pairs(I) do
 		ArenaKit.MarkPlayable(isle.folder)
@@ -725,7 +725,7 @@ function Volcano.Build(): Folder
 		ArenaKit.AddJumpPad(from, ArenaKit.AngleTo(from.pos, c.pos) + spec[2], from.r * 0.55, land, pads)
 	end
 
-	-- Crater terrace + the volcano
+	-- crater terrace + the volcano
 	do
 		local c = I.center
 		for _, a in ipairs(RIVERS) do
@@ -740,7 +740,7 @@ function Volcano.Build(): Folder
 		dress(c, 21, 6, 4, 4, 0)
 	end
 
-	-- Corner platforms
+	-- corner platforms
 	for _, key in ipairs({ "cornerBL", "cornerBR", "cornerRL", "cornerRR" }) do
 		local k = I[key]
 		local outward = ArenaKit.AngleTo(Vector3.zero, k.pos)
@@ -750,7 +750,7 @@ function Volcano.Build(): Folder
 		local tp = ArenaKit.Polar(k, outward, k.r - 6)
 		makeTower(tp, 14, 1, ArenaKit.Polar(k, 0, 0) - tp, k.folder)
 		ArenaKit.Reserve(k, tp, 5)
-		-- A steam vent's updraft you can ride, off the open side.
+		-- a steam vent's updraft you can ride, off the open side.
 		ArenaKit.AddSwimColumn("Steam", k, ArenaKit.OpenAngles(k, 1)[1], k.folder)
 		addLavaRuns(k, 1)
 		makeFlagstones(k, 7.5, 26)
@@ -759,7 +759,7 @@ function Volcano.Build(): Folder
 		ArenaKit.AddPowerPad(k.pos, powerPads)
 	end
 
-	-- Team bases
+	-- team bases
 	for _, key in ipairs({ "teamB", "teamR" }) do
 		local t = I[key]
 		local baseSpawn = t.pos + Vector3.new(0, 0, -math.sign(t.pos.Z) * t.r * 0.25)
@@ -794,7 +794,7 @@ function Volcano.Build(): Folder
 		makeLavaCracks(t, 6, 15)
 		bridgeBraziers(t)
 		dress(t, 16, 4, 3, 3, 1)
-		-- Three spawns per team on three islands: the base and both side pads.
+		-- three spawns per team on three islands: the base and both side pads.
 		ArenaKit.AddTeamSpawnPoint(baseSpawn, t.team, spawns, t.folder)
 		for _, padKey in ipairs(t.team == "Blue" and { "padBL", "padBR" } or { "padRL", "padRR" }) do
 			local pad = I[padKey]
@@ -803,7 +803,7 @@ function Volcano.Build(): Folder
 		end
 	end
 
-	-- Flank platforms
+	-- flank platforms
 	for _, key in ipairs({ "flankL", "flankR" }) do
 		local fl = I[key]
 		local outward = ArenaKit.AngleTo(Vector3.zero, fl.pos)
@@ -820,7 +820,7 @@ function Volcano.Build(): Folder
 		ArenaKit.AddPowerPad(fl.pos, powerPads)
 	end
 
-	-- Side pads next to the team bases
+	-- side pads next to the team bases
 	for _, key in ipairs({ "padBL", "padBR", "padRL", "padRR" }) do
 		local p = I[key]
 		makeArenaPad(ArenaKit.Polar(p, 0, 0), 5, p.folder)
@@ -831,7 +831,7 @@ function Volcano.Build(): Folder
 		dress(p, 6.5, 2, 2, 1, 0)
 	end
 
-	-- Sniper perches beside the mountain
+	-- sniper perches beside the mountain
 	for _, key in ipairs({ "perchL", "perchR" }) do
 		local pr = I[key]
 		local outward = ArenaKit.AngleTo(Vector3.zero, pr.pos)
@@ -847,7 +847,7 @@ function Volcano.Build(): Folder
 		ArenaKit.AddPowerPad(pr.pos, powerPads)
 	end
 
-	-- Scenery: distant floating rocks, towers and spires rising from the sea.
+	-- scenery: distant floating rocks, towers and spires rising from the sea.
 	local scenery = Instance.new("Folder")
 	scenery.Name = "Scenery"
 	scenery.Parent = arena
@@ -869,7 +869,7 @@ function Volcano.Build(): Folder
 		local dist = rng:NextNumber(230, 330)
 		local h = rng:NextNumber(70, 140)
 		local w = rng:NextNumber(14, 26)
-		-- Jagged stacked spire: a crusted, still-glowing base and tapering
+		-- jagged stacked spire: a crusted, still-glowing base and tapering
 		-- basalt above, sitting in a ring of hot lava.
 		local base = Vector3.new(math.cos(a) * dist, LAVA_SEA_Y - 2, math.sin(a) * dist)
 		local y, ww = base.Y, w
@@ -901,9 +901,9 @@ function Volcano.Build(): Folder
 		end
 	end
 
-	-- Lava sea: a molten glow underneath, brighter hot patches, and drifting
-	-- plates of cooled crust (CrackedLava) with glowing lava showing between.
-	-- LavaFX (client) drifts the crust, pulses the hot spots and pops bubbles.
+	-- lava sea: a molten glow underneath, brighter hot patches, and drifting
+	-- plates of cooled crust (crackedlava) with glowing lava showing between.
+	-- lavafx (client) drifts the crust, pulses the hot spots and pops bubbles.
 	glowPart(DISC("LavaSea", 1400, 2, Vector3.new(0, LAVA_SEA_Y - 1, 0), Color3.fromRGB(255, 96, 22), Enum.Material.Neon, scenery))
 	for _ = 1, 40 do
 		local a = rng:NextNumber(0, math.pi * 2)
@@ -961,7 +961,7 @@ function Volcano.Build(): Folder
 		emberEmitter(src, 7, 14, 60)
 	end
 
-	-- Smoky haze drifting between the platforms and the sea, dusk sky.
+	-- smoky haze drifting between the platforms and the sea, dusk sky.
 	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(96, 64, 62), 38, -66, -36, 50, 320, 0.45)
 	ArenaKit.MakeCloudBank(arena, Color3.fromRGB(62, 46, 52), 14, 80, 115, 120, 320, 0.5)
 	ArenaKit.ApplyAtmosphere({
@@ -974,7 +974,7 @@ function Volcano.Build(): Folder
 		HideCelestial = true,
 	})
 	arena:SetAttribute("SpawnCount", #spawns:GetChildren())
-	-- Obsidian crystals and glowing rocks round the platforms, ash falling.
+	-- obsidian crystals and glowing rocks round the platforms, ash falling.
 	for _, key in ipairs({ "center", "cornerBL", "cornerBR", "cornerRL", "cornerRR", "flankL", "flankR" }) do
 		local isle = I[key]
 		for _ = 1, key == "center" and 3 or 2 do
@@ -1014,7 +1014,7 @@ function Volcano.Build(): Folder
 		e.Parent = ash
 	end
 
-	-- Lava geysers on the crater terrace and the flanks.
+	-- lava geysers on the crater terrace and the flanks.
 	for _, spec in ipairs({ { "center", 2, 22 }, { "flankL", 1, 6 }, { "flankR", 1, 6 } }) do
 		local isle = I[spec[1]]
 		for _ = 1, spec[2] do

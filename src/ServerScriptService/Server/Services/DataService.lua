@@ -1,8 +1,8 @@
 --!strict
--- DataService: persistent player profiles backed by DataStoreService.
--- Lightweight session handling: load-on-join, autosave, save-on-leave, with
--- retry + BindToClose. Falls back to an in-memory profile if DataStores are
--- unavailable (e.g. Studio without API access) so the game stays playable.
+-- dataservice: persistent player profiles backed by datastoreservice.
+-- lightweight session handling: load-on-join, autosave, save-on-leave, with
+-- retry + bindtoclose. falls back to an in-memory profile if datastores are
+-- unavailable (e.g. studio without api access) so the game stays playable.
 
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
@@ -26,13 +26,13 @@ end
 
 local profiles: { [Player]: any } = {}
 
--- Default profile shape ------------------------------------------------------
+-- default profile shape ------------------------------------------------------
 local function defaultProfile()
 	return {
 		Version = 1,
 		Coins = 250,
 		Gems = 25,
-		XP = 0, -- lifetime XP
+		XP = 0, -- lifetime xp
 		Stats = {
 			Eliminations = 0,
 			Deaths = 0,
@@ -40,7 +40,7 @@ local function defaultProfile()
 			Wins = 0,
 			WinStreak = 0, -- wins in a row (pays a coin bonus)
 			BestWinStreak = 0,
-			Trophies = 0, -- trophy ranking (Config.Ranks)
+			Trophies = 0, -- trophy ranking (config.ranks)
 			LastTrophies = 0, -- change from the last match, for the results screen
 			Ringouts = 0,
 			DamageDealt = 0,
@@ -65,11 +65,11 @@ local function defaultProfile()
 				Accessory = Cats.Default.Accessory,
 				Emote = Cats.Default.Emote,
 			},
-			-- The (up to) six emotes in the emote picker; "" = an empty slot.
+			-- the (up to) six emotes in the emote picker; "" = an empty slot.
 			EmoteSlots = { "Happy", "Sit", "", "", "", "" },
 		},
-		RedeemedCodes = {}, -- reward codes already used (Config.Codes)
-		Receipts = {}, -- Robux purchase ids already granted (duplicate-safe)
+		RedeemedCodes = {}, -- reward codes already used (config.codes)
+		Receipts = {}, -- robux purchase ids already granted (duplicate-safe)
 		StarterPackBought = false,
 		Daily = { LastDay = 0, Streak = 0 },
 		Season = { Id = 1, XP = 0, Free = {}, Premium = {} },
@@ -78,12 +78,12 @@ local function defaultProfile()
 		Settings = {},
 		Quests = {
 			Day = 0, -- os.time() day-number the quests were rolled for
-			Active = {}, -- { {Id, Metric, Target, Progress, Claimed} }
+			Active = {}, -- { {id, metric, target, progress, claimed} }
 		},
 	}
 end
 
--- Merge saved data over defaults so new fields appear for old profiles.
+-- merge saved data over defaults so new fields appear for old profiles.
 local function reconcile(saved: any)
 	local base = defaultProfile()
 	local function deepMerge(dst, src)
@@ -119,7 +119,7 @@ local function loadProfile(player: Player)
 				data = result
 				break
 			elseif string.find(tostring(result), "StudioAccessToApisNotAllowed") or string.find(tostring(result), "403") then
-				-- Saving is switched off for this place (Studio without API
+				-- saving is switched off for this place (studio without api
 				-- access): retrying won't help, so play on a fresh profile now
 				-- instead of keeping the player waiting with no cat.
 				break
@@ -159,7 +159,7 @@ function DataService.Start()
 	Players.PlayerAdded:Connect(function(player)
 		task.spawn(loadProfile, player)
 	end)
-	-- Handle players already present (Studio play solo hot-reload edge case)
+	-- handle players already present (studio play solo hot-reload edge case)
 	for _, p in ipairs(Players:GetPlayers()) do
 		if not profiles[p] then
 			task.spawn(loadProfile, p)
@@ -171,7 +171,7 @@ function DataService.Start()
 		profiles[player] = nil
 	end)
 
-	-- Autosave loop
+	-- autosave loop
 	task.spawn(function()
 		while true do
 			task.wait(GameConfig.DataStore.AutoSaveSeconds)

@@ -1,30 +1,30 @@
 --!strict
--- MovementController: everything about how your cat moves beyond Roblox's
+-- movementcontroller: everything about how your cat moves beyond roblox's
 -- default walking (which follows our camera):
---   * sprint toggle, plus the server's SpeedMult (Frost slow / Speed Boost)
+--   * sprint toggle, plus the server's speedmult (frost slow / speed boost)
 --   * knockback the server sends us, whose momentum carries you through the
 --     air (easing off) instead of stopping dead when the hit burst ends
---   * dash (Q / gamepad B / mobile button) and a mid-air double jump
+--   * dash (q / gamepad b / mobile button) and a mid-air double jump
 --   * recoil: your own shots push you back a little (heavy blasters more; in
 --     the air it carries you, so a big blaster can nudge you across a gap)
 --   * forgiving jumps: a short grace after walking off a ledge, and a jump
 --     pressed just before landing goes off as you land
 --   * wall-jump: jump in the air next to a wall to kick off it (doesn't use
 --     up the double jump; not the same wall twice in a row)
---   * pounce (E / gamepad X / mobile button): a cat leap forward and up
+--   * pounce (e / gamepad x / mobile button): a cat leap forward and up
 --   * jump pads (fling you along an arc to their target)
 --   * map-event wind that pushes you while you keep steering
 --   * rope swings (grab the knot, swing across a gap) and giant springs
---     (a JumpPad with a Bounce speed: straight up, steer in the air)
---   * wading slowly while Hidden in a ball pit
+--     (a jumppad with a bounce speed: straight up, steer in the air)
+--   * wading slowly while hidden in a ball pit
 --   * climbing: in the air, push into a wall (an island's cliff, a building)
 --     and hold jump to climb it; at the top you pull yourself over
---   * abilities (Z / X / C or the HUD buttons, 15 s each): Boost, Jumps, Fly
+--   * abilities (z / x / c or the hud buttons, 15 s each): boost, jumps, fly
 --   * swim columns (waterfalls, steam vents, bubble tubes, fan shafts): float
---     in them, SPACE / jump up, SHIFT down; 15 seconds in and you're flung
+--     in them, space / jump up, shift down; 15 seconds in and you're flung
 --     to a random spot on the map (a warning counts down from 8)
--- Airborne horizontal speed is held with a Plane LinearVelocity, because the
--- Humanoid otherwise drags air speed back down to walking speed.
+-- airborne horizontal speed is held with a plane linearvelocity, because the
+-- humanoid otherwise drags air speed back down to walking speed.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -62,11 +62,11 @@ local wind = { dir = Vector3.zero, strength = 0, untilT = 0 }
 local windMover: LinearVelocity? = nil
 local windFx: Part? = nil
 local lastJumpRequest = 0
-local multiJumpUntil = 0 -- the Jumps ability is on until then
+local multiJumpUntil = 0 -- the jumps ability is on until then
 
 MovementController.SprintChanged = nil :: ((boolean) -> ())?
 
--- A move's animation, here and on everyone else's screen.
+-- a move's animation, here and on everyone else's screen.
 local function moveFx(kind: string)
 	require(script.Parent.CatAnimator).Trigger(player.Character, kind)
 	Remotes.Get("MoveFx"):FireServer(kind)
@@ -91,7 +91,7 @@ function MovementController.IsSprinting(): boolean
 	return sprinting
 end
 
--- Seconds until the dash is ready again (0 when ready).
+-- seconds until the dash is ready again (0 when ready).
 function MovementController.DashCooldown(): number
 	return math.max(0, dashReadyAt - os.clock())
 end
@@ -130,8 +130,8 @@ local function planeMover(root: BasePart, name: string, maxForce: number): Linea
 	return lv
 end
 
--- Keep some horizontal momentum while airborne; it eases off and ends on
--- landing (see carryStep).
+-- keep some horizontal momentum while airborne; it eases off and ends on
+-- landing (see carrystep).
 local function startCarry(vel: Vector3)
 	carryVel = Vector3.new(vel.X, 0, vel.Z)
 	carryStart = os.clock()
@@ -149,7 +149,7 @@ local function isAirborne(hum: Humanoid): boolean
 	return hum.FloorMaterial == Enum.Material.Air
 end
 
--- Hold a horizontal velocity for `seconds`; gravity still handles vertical.
+-- hold a horizontal velocity for `seconds`; gravity still handles vertical.
 local function holdHorizontal(root: BasePart, vel: Vector3, seconds: number, kind: string)
 	if mover then
 		mover:Destroy()
@@ -161,7 +161,7 @@ local function holdHorizontal(root: BasePart, vel: Vector3, seconds: number, kin
 		lv:Destroy()
 		if mover == lv then
 			mover = nil
-			-- An air dash glides on instead of stopping dead.
+			-- an air dash glides on instead of stopping dead.
 			local _, hum = parts()
 			if kind == "dash" and hum and isAirborne(hum) then
 				startCarry(vel * GameConfig.Movement.DashCarry)
@@ -192,8 +192,8 @@ local function ringFx(pos: Vector3, color: Color3, size: number)
 end
 
 -- ── knockback ────────────────────────────────────────────────────────────────
--- A short LinearVelocity burst: long enough to read as a hit, short enough that
--- the player keeps steering. Bigger hits push a little longer.
+-- a short linearvelocity burst: long enough to read as a hit, short enough that
+-- the player keeps steering. bigger hits push a little longer.
 local function launch(velocity: Vector3)
 	local root, hum = parts()
 	if not root or not hum then
@@ -202,7 +202,7 @@ local function launch(velocity: Vector3)
 	if activeLaunch then
 		activeLaunch:Destroy()
 	end
-	-- A hit landing mid-flight adds to the flight instead of resetting it, so
+	-- a hit landing mid-flight adds to the flight instead of resetting it, so
 	-- rapid fire pushes you along rather than pinning you in the air.
 	local current = root.AssemblyLinearVelocity
 	velocity += Vector3.new(current.X, math.max(current.Y, 0), current.Z) * GameConfig.Knockback.Stack
@@ -217,7 +217,7 @@ local function launch(velocity: Vector3)
 	if velocity.Y > 2 then
 		hum:ChangeState(Enum.HumanoidStateType.Freefall)
 	end
-	-- After the burst, the flight keeps going (see carryStep).
+	-- after the burst, the flight keeps going (see carrystep).
 	startCarry(velocity * GameConfig.Movement.KnockbackCarry)
 	local duration = math.clamp(0.12 + velocity.Magnitude / 900, 0.12, 0.3)
 	task.delay(duration, function()
@@ -242,7 +242,7 @@ function MovementController.Recoil(shotDir: Vector3, speed: number)
 	if isAirborne(hum) then
 		startCarry(carryVel + back)
 	elseif not mover then
-		-- A short shove that still leaves most of your own steering.
+		-- a short shove that still leaves most of your own steering.
 		holdHorizontal(root, back + hum.MoveDirection * hum.WalkSpeed * 0.5, 0.08, "recoil")
 	end
 end
@@ -264,7 +264,7 @@ function MovementController.Dash()
 	moveFx("Dash")
 	require(script.Parent.SoundController).Play("Dash")
 
-	-- Speed trail behind the cat.
+	-- speed trail behind the cat.
 	local a0 = Instance.new("Attachment")
 	a0.Position = Vector3.new(0, 0.9, 0)
 	a0.Parent = root
@@ -276,7 +276,7 @@ function MovementController.Dash()
 	trail.Attachment1 = a1
 	trail.Lifetime = 0.25
 	if player:GetAttribute("TrailPack") then
-		-- Trail Pack: rainbow dash trail.
+		-- trail pack: rainbow dash trail.
 		trail.Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 90)),
 			ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 200, 60)),
@@ -300,7 +300,7 @@ end
 
 local function tryDoubleJump()
 	local root, hum = parts()
-	local multi = os.clock() < multiJumpUntil -- the Jumps ability
+	local multi = os.clock() < multiJumpUntil -- the jumps ability
 	if not root or not hum or (doubleUsed and not multi) then
 		return
 	end
@@ -314,7 +314,7 @@ local function tryDoubleJump()
 	moveFx("Flip")
 end
 
--- The wall you're hugging in the air (its flat outward normal), if any.
+-- the wall you're hugging in the air (its flat outward normal), if any.
 local function wallNormal(root: BasePart): Vector3?
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -351,8 +351,8 @@ local function tryWallJump(root: BasePart, hum: Humanoid): boolean
 end
 
 -- ── climbing ─────────────────────────────────────────────────────────────────
--- Jump in the air while pushing into a wall and you grab on: hold jump to
--- climb (up to CLIMB_TIME seconds before you touch the ground again). When
+-- jump in the air while pushing into a wall and you grab on: hold jump to
+-- climb (up to climb_time seconds before you touch the ground again). when
 -- the wall ends you pull yourself up and over.
 local CLIMB_SPEED, CLIMB_TIME = 16, 3.5
 local jumpHeld = false -- the on-screen jump button held down
@@ -364,7 +364,7 @@ local function jumpIsHeld(): boolean
 	return jumpHeld or UserInputService:IsKeyDown(Enum.KeyCode.Space) or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.ButtonA)
 end
 
--- The wall straight ahead in the way you're pushing, if any.
+-- the wall straight ahead in the way you're pushing, if any.
 local function wallAhead(root: BasePart, hum: Humanoid): RaycastResult?
 	local md = Vector3.new(hum.MoveDirection.X, 0, hum.MoveDirection.Z)
 	if md.Magnitude < 0.3 then
@@ -389,7 +389,7 @@ local function stopClimb()
 	end
 end
 
--- Returns true while climbing (the rest of the movement step waits).
+-- returns true while climbing (the rest of the movement step waits).
 local function climbStep(root: BasePart, hum: Humanoid, dt: number): boolean
 	if not climbing then
 		return false
@@ -400,7 +400,7 @@ local function climbStep(root: BasePart, hum: Humanoid, dt: number): boolean
 	end
 	local hit = wallAhead(root, hum)
 	if not hit then
-		-- Over the top: pull up and onto it.
+		-- over the top: pull up and onto it.
 		stopClimb()
 		local md = Vector3.new(hum.MoveDirection.X, 0, hum.MoveDirection.Z)
 		local fwd = md.Magnitude > 0.1 and md.Unit or Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
@@ -425,12 +425,12 @@ local function climbStep(root: BasePart, hum: Humanoid, dt: number): boolean
 end
 
 -- ── abilities ────────────────────────────────────────────────────────────────
--- Three, each recharging in 15 seconds (Z / X / C, or the HUD's buttons):
---   Boost - a long, fast dash with a little lift
---   Jumps - six seconds of unlimited air jumps
---   Fly   - four seconds of flight (steer as usual, SPACE up, SHIFT down)
+-- three, each recharging in 15 seconds (z / x / c, or the hud's buttons):
+--   boost - a long, fast dash with a little lift
+--   jumps - six seconds of unlimited air jumps
+--   fly   - four seconds of flight (steer as usual, space up, shift down)
 MovementController.Abilities = { "Boost", "Jumps", "Fly" }
-MovementController.AbilitiesEnabled = false -- set by the HUD (matches, duels, the range)
+MovementController.AbilitiesEnabled = false -- set by the hud (matches, duels, the range)
 local ABILITY_COOLDOWN = 15
 local JUMPS_TIME, FLY_TIME = 6, 4
 local abilityReady: { [string]: number } = { Boost = 0, Jumps = 0, Fly = 0 }
@@ -441,7 +441,7 @@ function MovementController.AbilityCooldown(name: string): number
 	return math.max(0, (abilityReady[name] or 0) - os.clock())
 end
 
--- Seconds an ability still has running (Jumps / Fly), 0 when it's not on.
+-- seconds an ability still has running (jumps / fly), 0 when it's not on.
 function MovementController.AbilityActive(name: string): number
 	local untilT = name == "Jumps" and multiJumpUntil or name == "Fly" and flyUntil or 0
 	return math.max(0, untilT - os.clock())
@@ -486,7 +486,7 @@ function MovementController.UseAbility(name: string)
 	end
 end
 
--- Returns true while flying (the rest of the movement step waits).
+-- returns true while flying (the rest of the movement step waits).
 local function flyStep(root: BasePart, hum: Humanoid): boolean
 	if os.clock() >= flyUntil then
 		if flyMover then
@@ -519,7 +519,7 @@ end
 local COYOTE = 0.14 -- seconds after leaving a ledge you can still jump normally
 local BUFFER = 0.16 -- a jump pressed this long before landing still counts
 
--- A jump press while airborne: the normal jump if you only just walked off a
+-- a jump press while airborne: the normal jump if you only just walked off a
 -- ledge, else the double jump, else remember it for when you land.
 local function airJump()
 	local root, hum = parts()
@@ -533,7 +533,7 @@ local function airJump()
 		hum:ChangeState(Enum.HumanoidStateType.Jumping)
 		return
 	end
-	-- Pushing into a wall: grab on and climb (hold jump).
+	-- pushing into a wall: grab on and climb (hold jump).
 	if climbUsed < CLIMB_TIME and wallAhead(root, hum) then
 		climbing = true
 		return
@@ -548,12 +548,12 @@ local function airJump()
 	tryDoubleJump()
 end
 
--- Seconds until the pounce is ready again (0 when ready).
+-- seconds until the pounce is ready again (0 when ready).
 function MovementController.PounceCooldown(): number
 	return math.max(0, pounceReadyAt - os.clock())
 end
 
--- Pounce: a cat leap forward and up (ground only).
+-- pounce: a cat leap forward and up (ground only).
 function MovementController.Pounce()
 	local root, hum = parts()
 	if not root or not hum or os.clock() < pounceReadyAt or isAirborne(hum) then
@@ -575,8 +575,8 @@ function MovementController.Pounce()
 	moveFx("Pounce")
 end
 
--- Jump from the mobile button: a normal jump on the ground, a double jump in the air.
--- (Roblox's touch controls reset Humanoid.Jump every frame, so setting it
+-- jump from the mobile button: a normal jump on the ground, a double jump in the air.
+-- (roblox's touch controls reset humanoid.jump every frame, so setting it
 -- from our button did nothing: the button changes state directly.)
 function MovementController.Jump()
 	local root, hum = parts()
@@ -585,7 +585,7 @@ function MovementController.Jump()
 	end
 	lastJumpRequest = os.clock()
 	if MovementController.Swimming then
-		return -- holding jump swims up (see SetJumpHeld)
+		return -- holding jump swims up (see setjumpheld)
 	end
 	if hum.FloorMaterial ~= Enum.Material.Air then
 		jumpedSinceGround = true
@@ -597,16 +597,16 @@ function MovementController.Jump()
 	end
 end
 
--- The on-screen jump button held down (swims up, climbs, flies up).
+-- the on-screen jump button held down (swims up, climbs, flies up).
 function MovementController.SetJumpHeld(on: boolean)
 	jumpHeld = on
 end
 
--- A new cat can arrive before the ground under it has loaded (far-off lobby
+-- a new cat can arrive before the ground under it has loaded (far-off lobby
 -- and duel maps): hold it still until there's something to stand on.
 -- ── rope swings ──────────────────────────────────────────────────────────────
--- Walk into a rope's knot: you hang on and swing along an arc under its
--- pivot to the far side, then let go just over the landing spot. A hit
+-- walk into a rope's knot: you hang on and swing along an arc under its
+-- pivot to the far side, then let go just over the landing spot. a hit
 -- knocks you off.
 local swings: { [BasePart]: boolean } = {}
 type Swing = { rope: BasePart, line: Part, mover: LinearVelocity, pivot: Vector3, u: Vector3, a0: number, a1: number, r0: number, r1: number, t0: number, dur: number,
@@ -616,7 +616,7 @@ local swingReadyAt = 0
 
 local function swingPoint(s: Swing, t: number): Vector3
 	if s.zip then
-		-- Zipline: up to the cable, then along it (picking up speed).
+		-- zipline: up to the cable, then along it (picking up speed).
 		if t < s.lift then
 			return s.start:Lerp(s.za, t / s.lift)
 		end
@@ -642,7 +642,7 @@ local function endSwing(letGo: boolean)
 	moveFx("SwingEnd")
 	local root, hum = parts()
 	if letGo and root and hum then
-		-- A little hop forward onto the landing.
+		-- a little hop forward onto the landing.
 		root.AssemblyLinearVelocity = s.u * 14 + Vector3.new(0, 12, 0)
 		hum:ChangeState(Enum.HumanoidStateType.Freefall)
 		holdHorizontal(root, s.u * 14, 0.4, "pad")
@@ -721,7 +721,7 @@ local function checkSwings(root: BasePart, hum: Humanoid)
 	end
 end
 
--- Returns true while swinging (the rest of the movement step waits).
+-- returns true while swinging (the rest of the movement step waits).
 local function swingStep(root: BasePart, dt: number): boolean
 	local s = swing
 	if not s then
@@ -732,7 +732,7 @@ local function swingStep(root: BasePart, dt: number): boolean
 		endSwing(t >= 1)
 		return false
 	end
-	-- Chase the next point on the arc.
+	-- chase the next point on the arc.
 	local goal = swingPoint(s, t + dt / s.dur)
 	local v = (goal - root.Position) / math.max(dt, 1 / 120)
 	if v.Magnitude > 140 then
@@ -755,7 +755,7 @@ local swimMover: LinearVelocity? = nil
 local swimSince = 0 -- when this stay in a column began (0 = not in one)
 local swimLastIn = 0
 local swimIgnoreUntil = 0
-local touchDown = false -- the on-screen ▼ button (phones)
+local touchDown = false -- the on-screen down button (phones)
 local swimUI: { gui: ScreenGui, warn: TextLabel, hint: TextLabel, down: TextButton }? = nil
 
 MovementController.Swimming = false
@@ -793,7 +793,7 @@ local function getSwimUI()
 	down.Size = UDim2.fromOffset(72, 72)
 	down.BackgroundColor3 = Color3.fromRGB(17, 21, 34)
 	down.BackgroundTransparency = 0.25
-	down.Text = "▼"
+	down.Text = "DOWN"
 	down.Font = Enum.Font.GothamBold
 	down.TextSize = 30
 	down.TextColor3 = Color3.new(1, 1, 1)
@@ -831,7 +831,7 @@ local function showSwimUI(kind: string?, stay: number, golden: boolean?)
 	ui.down.Visible = touch
 	ui.hint.Visible = stay < 4 or golden == true
 	ui.hint.Text = golden and "GOLDEN COLUMN  ·  +5 coins a second"
-		or touch and "JUMP to go up  ·  ▼ to go down" or "SPACE to go up  ·  SHIFT to go down"
+		or touch and "JUMP to go up  ·  DOWN to go down" or "SPACE to go up  ·  SHIFT to go down"
 	ui.hint.TextColor3 = golden and Color3.fromRGB(255, 214, 80) or Color3.new(1, 1, 1)
 	ui.warn.Visible = stay >= SWIM_WARN
 	if ui.warn.Visible then
@@ -895,7 +895,7 @@ local function swimFling(root: BasePart, hum: Humanoid)
 	holdHorizontal(root, flat / t, t, "pad")
 end
 
--- Returns true while swimming (the rest of the movement step waits).
+-- returns true while swimming (the rest of the movement step waits).
 local function swimStep(root: BasePart, hum: Humanoid): boolean
 	local now = os.clock()
 	local zone = now >= swimIgnoreUntil and zoneAt(root.Position) or nil
@@ -936,7 +936,7 @@ local function swimStep(root: BasePart, hum: Humanoid): boolean
 	local down = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift)
 		or UserInputService:IsGamepadButtonDown(Enum.UserInputType.Gamepad1, Enum.KeyCode.DPadDown) or touchDown
 	if up and lp.Y > half.Y - 2.5 then
-		-- Up at the top hops you out onto the island (the column's back faces it).
+		-- up at the top hops you out onto the island (the column's back faces it).
 		endSwim()
 		local inward = -zone.CFrame.LookVector
 		inward = Vector3.new(inward.X, 0, inward.Z).Unit
@@ -1034,7 +1034,7 @@ end
 local function padLaunch(pad: BasePart, root: BasePart, hum: Humanoid)
 	local bounce = pad:GetAttribute("Bounce")
 	if typeof(bounce) == "number" then
-		-- A spring: straight up, keeping (and steering) your run-up.
+		-- a spring: straight up, keeping (and steering) your run-up.
 		local v = root.AssemblyLinearVelocity
 		padReadyAt = os.clock() + 0.6
 		doubleUsed = false
@@ -1101,13 +1101,13 @@ local function windStep(root: BasePart, hum: Humanoid)
 		windMover = planeMover(root, "WindPush", root.AssemblyMass * 350)
 	end
 	local wm = windMover :: LinearVelocity
-	-- Knockback, dashes and pad flights take priority over the wind.
+	-- knockback, dashes and pad flights take priority over the wind.
 	wm.Enabled = activeLaunch == nil and mover == nil and carryMover == nil
 	local walk = hum.MoveDirection * hum.WalkSpeed
 	local push = walk + wind.dir * wind.strength
 	wm.PlaneVelocity = Vector2.new(push.X, push.Z)
 
-	-- Streaks of wind flying past the camera.
+	-- streaks of wind flying past the camera.
 	if not windFx then
 		local p = Instance.new("Part")
 		p.Name = "WindFX"
@@ -1156,7 +1156,7 @@ local function carryStep(root: BasePart, hum: Humanoid, dt: number)
 	end
 	local cm = carryMover :: LinearVelocity
 	cm.Enabled = true
-	-- You can still steer a little against the flight.
+	-- you can still steer a little against the flight.
 	local v = carryVel + hum.MoveDirection * hum.WalkSpeed * 0.6
 	cm.PlaneVelocity = Vector2.new(v.X, v.Z)
 end
@@ -1208,7 +1208,7 @@ local function step(dt: number)
 		lastGroundAt = os.clock()
 	end
 	carryStep(root, hum, dt)
-	-- A pad flight ends early once you touch down.
+	-- a pad flight ends early once you touch down.
 	if mover and moverKind == "pad" and os.clock() - moverStart > 0.25 and hum.FloorMaterial ~= Enum.Material.Air then
 		mover:Destroy()
 		mover = nil
@@ -1275,7 +1275,7 @@ function MovementController.Start()
 		pads[inst :: BasePart] = nil
 	end)
 
-	-- Swim columns, each with its looping sound.
+	-- swim columns, each with its looping sound.
 	local function addZone(inst: Instance)
 		if inst:IsA("BasePart") and not zones[inst] then
 			zones[inst] = true
@@ -1286,7 +1286,7 @@ function MovementController.Start()
 				spot.Parent = inst
 				require(script.Parent.SoundController).Loop(sound, spot)
 			end
-			-- The golden column (Mayhem Mode): a gold glow and sparkles.
+			-- the golden column (mayhem mode): a gold glow and sparkles.
 			local function paintGolden()
 				local old = inst:FindFirstChild("GoldenGlow")
 				if inst:GetAttribute("Golden") == true then

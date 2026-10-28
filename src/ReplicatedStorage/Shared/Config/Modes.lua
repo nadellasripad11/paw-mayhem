@@ -1,10 +1,10 @@
 --!strict
--- Modes: the game modes players can vote for in the map picker.
---   TDM      Team Deathmatch: eliminations score for your team.
---   FFA      Free For All: everyone is an enemy; first cat to the target wins.
---   KOTH     King of the Hill: stand in the glowing hill to score each second.
---   Ringout  Blasters do no damage, only knockback: knock cats off the map.
---   CTF      Capture the Flag: bring the enemy flag to yours; knock carriers off!
+-- modes: the game modes players can vote for in the map picker.
+--   tdm      team deathmatch: eliminations score for your team.
+--   ffa      free for all: everyone is an enemy; first cat to the target wins.
+--   koth     king of the hill: stand in the glowing hill to score each second.
+--   ringout  blasters do no damage, only knockback: knock cats off the map.
+--   ctf      capture the flag: bring the enemy flag to yours; knock carriers off!
 
 local Modes = {}
 

@@ -1,11 +1,11 @@
 --!strict
--- MonetizationService: Game Passes and Developer Products.
---   * Game Passes are checked on join (and when bought in-game) and published
---     as player attributes (VIP, DoubleCoins, EmotePack, TrailPack) that the
---     rest of the game reads. Pass rewards (VIP skin + fur, pass emotes) are
+-- monetizationservice: game passes and developer products.
+--   * game passes are checked on join (and when bought in-game) and published
+--     as player attributes (vip, doublecoins, emotepack, trailpack) that the
+--     rest of the game reads. pass rewards (vip skin + fur, pass emotes) are
 --     added to the player's unlocks.
---   * ProcessReceipt grants Developer Products exactly once: each purchase id
---     is recorded in the profile and saved before Roblox is told it's granted.
+--   * processreceipt grants developer products exactly once: each purchase id
+--     is recorded in the profile and saved before roblox is told it's granted.
 
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -30,7 +30,7 @@ local function announce(title: string, sub: string?, color: Color3?)
 	Remotes.Get("Announce"):FireAllClients({ title = title, sub = sub, color = color })
 end
 
--- Every catalog item locked behind `passKey`.
+-- every catalog item locked behind `passkey`.
 local function passItems(passKey: string): { { kind: string, id: string } }
 	local out = {}
 	for _, s in ipairs(Weapons.Skins) do
@@ -119,7 +119,7 @@ local function grantProduct(player: Player, key: string): boolean
 			profile.LostStreak = nil
 			Remotes.Get("Notify"):FireClient(player, { text = string.format("Streak saved! %d in a row", stats.WinStreak), kind = "success" })
 		else
-			-- Nothing left to save (it expired): gems instead, never nothing.
+			-- nothing left to save (it expired): gems instead, never nothing.
 			EconomyService.AddGems(player, cfg.FallbackGems)
 			Remotes.Get("Notify"):FireClient(player, { text = string.format("No streak to save, so here's %d gems!", cfg.FallbackGems), kind = "success" })
 		end
@@ -138,7 +138,7 @@ local function processReceipt(info): Enum.ProductPurchaseDecision
 	local player = Players:GetPlayerByUserId(info.PlayerId)
 	local profile = player and DataService.Get(player)
 	if not player or not profile then
-		-- They left or haven't loaded; Roblox retries later.
+		-- they left or haven't loaded; roblox retries later.
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	local receiptId = tostring(info.PurchaseId)
@@ -152,7 +152,7 @@ local function processReceipt(info): Enum.ProductPurchaseDecision
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	profile.Receipts[receiptId] = os.time()
-	-- Keep the receipt log bounded: drop the oldest entries.
+	-- keep the receipt log bounded: drop the oldest entries.
 	local ids = {}
 	for id, t in pairs(profile.Receipts) do
 		table.insert(ids, { id = id, t = t })

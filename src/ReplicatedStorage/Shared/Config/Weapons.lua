@@ -1,15 +1,15 @@
 --!strict
--- Weapons: original blaster definitions for PAW MAYHEM.
--- Each weapon has a distinct gameplay identity via fire rate, knockback,
--- range, spread (accuracy) and cooldown. Knockback is expressed as a
--- multiplier applied on top of GameConfig.Knockback so weapons feel different
+-- weapons: original blaster definitions for paw mayhem.
+-- each weapon has a distinct gameplay identity via fire rate, knockback,
+-- range, spread (accuracy) and cooldown. knockback is expressed as a
+-- multiplier applied on top of gameconfig.knockback so weapons feel different
 -- while sharing one physics model.
 
 export type WeaponDef = {
 	Id: string,
 	Name: string,
 	Rarity: string,
-	Class: string, -- Balanced / Epic / Heavy / Fast / Ice / Legendary / Fun / Premium
+	Class: string, -- balanced / epic / heavy / fast / ice / legendary / fun / premium
 	Damage: number, -- "fluff" damage that builds knockback scaling
 	FireRate: number, -- shots per second
 	Knockback: number, -- multiplier vs base knockback impulse
@@ -19,7 +19,7 @@ export type WeaponDef = {
 	ProjectileSpeed: number, -- studs/sec (0 = hitscan)
 	MuzzleColor: Color3,
 	TrailColor: Color3,
-	-- UI stat bars are 0..1 normalised for the loadout screen.
+	-- ui stat bars are 0..1 normalised for the loadout screen.
 	Bars: { Damage: number, FireRate: number, Knockback: number, Range: number, Accuracy: number },
 	UnlockLevel: number,
 	CoinCost: number,
@@ -64,7 +64,7 @@ Weapons.List = {
 		Id = "FrostBlaster", Name = "Frost Blaster", Rarity = "Rare", Class = "Ice", Icon = "GunIce",
 		Damage = 12, FireRate = 3.5, Knockback = 1.1, Range = 170, Spread = 2.0, Pellets = 1,
 		ProjectileSpeed = 300, MuzzleColor = c(120, 220, 255), TrailColor = c(150, 230, 255),
-		-- Slows the target briefly (handled server-side as a status effect).
+		-- slows the target briefly (handled server-side as a status effect).
 		SlowFactor = 0.6, SlowSeconds = 1.2,
 		Bars = { Damage = 0.45, FireRate = 0.55, Knockback = 0.55, Range = 0.6, Accuracy = 0.75 },
 		UnlockLevel = 8, CoinCost = 1500, RobuxPrice = 149,
@@ -90,7 +90,7 @@ Weapons.List = {
 		Bars = { Damage = 0.8, FireRate = 0.7, Knockback = 0.8, Range = 0.8, Accuracy = 0.95 },
 		UnlockLevel = 20, CoinCost = 6000, RobuxPrice = 399,
 	},
-	-- Exclusives: gems or Robux only (sidegrades, never stronger than Golden Purr).
+	-- exclusives: gems or robux only (sidegrades, never stronger than golden purr).
 	{
 		Id = "CometClaw", Name = "Comet Claw", Rarity = "Mythic", Class = "Exclusive", Icon = "GunSniper",
 		Damage = 22, FireRate = 3.2, Knockback = 1.4, Range = 230, Spread = 1.2, Pellets = 1,
@@ -107,7 +107,7 @@ Weapons.List = {
 	},
 }
 
--- Cosmetic skins (recolor/aura only — never affect stats). Applied by id.
+-- cosmetic skins (recolor/aura only — never affect stats). applied by id.
 Weapons.Skins = {
 	{ Id = "Default", Name = "Default", Tint = c(235, 235, 245), CoinCost = 0 },
 	{ Id = "Ocean", Name = "Ocean", Tint = c(90, 170, 255), CoinCost = 300 },
@@ -117,11 +117,11 @@ Weapons.Skins = {
 	{ Id = "Neon", Name = "Neon", Tint = c(120, 255, 200), CoinCost = 800 },
 	{ Id = "Candy", Name = "Candy", Tint = c(255, 150, 220), CoinCost = 500 },
 	{ Id = "Void", Name = "Void", Tint = c(120, 70, 200), CoinCost = 1200 },
-	-- Gem-only and pass-only skins.
+	-- gem-only and pass-only skins.
 	{ Id = "Aurora", Name = "Aurora", Tint = c(90, 230, 200), CoinCost = 0, GemCost = 120 },
 	{ Id = "Molten", Name = "Molten", Tint = c(255, 110, 40), CoinCost = 0, GemCost = 120 },
 	{ Id = "VIPGold", Name = "VIP Gold", Tint = c(255, 206, 60), CoinCost = 0, PassOnly = "VIP" },
-	-- Season 1 exclusives (earned in the season pass only)
+	-- season 1 exclusives (earned in the season pass only)
 	{ Id = "Sakura", Name = "Sakura", Tint = c(255, 170, 205), CoinCost = 0, Season = 1 },
 	{ Id = "Glitch", Name = "Glitch", Tint = c(60, 255, 200), CoinCost = 0, Season = 1 },
 	{ Id = "Starlight", Name = "Starlight", Tint = c(150, 170, 255), CoinCost = 0, Season = 1 },

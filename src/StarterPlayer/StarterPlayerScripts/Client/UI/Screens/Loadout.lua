@@ -1,10 +1,10 @@
 --!strict
--- Loadout: the weapons screen, laid out like Rivals. A list of blasters down
+-- loadout: the weapons screen, laid out like rivals. a list of blasters down
 -- the left (yours in white, the equipped one highlighted, locked ones in gold
--- with a lock either side), the selected blaster big in the middle in 3D,
+-- with a lock either side), the selected blaster big in the middle in 3d,
 -- its details and stat bars on the right, and along the bottom the action
--- (EQUIP / unlock for coins or gems / R$) and SKINS, which opens a strip of
--- skins for it. Selecting a blaster only shows it; the bottom button equips.
+-- (equip / unlock for coins or gems / r$) and skins, which opens a strip of
+-- skins for it. selecting a blaster only shows it; the bottom button equips.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
@@ -168,7 +168,7 @@ function Loadout.Build(parent)
 			local own = ClientState.Owns("Weapon", id)
 			r.button.BackgroundTransparency = isSel and 0.1 or 1
 			r.name.TextColor3 = own and (isEq and EQUIP_GREEN or Color3.new(1, 1, 1)) or GOLD
-			r.name.Text = own and r.def.Name or ("🔒  " .. r.def.Name .. "  🔒")
+			r.name.Text = own and r.def.Name or ("LOCKED  ·  " .. r.def.Name)
 		end
 	end
 
@@ -202,7 +202,7 @@ function Loadout.Build(parent)
 		end
 	end)
 
-	-- Skins for the blaster you're looking at.
+	-- skins for the blaster you're looking at.
 	local skinCards = {}
 	for order, skin in ipairs(Weapons.Skins) do
 		local card = UIUtil.make("TextButton", {

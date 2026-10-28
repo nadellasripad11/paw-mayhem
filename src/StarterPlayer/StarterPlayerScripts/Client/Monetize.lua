@@ -1,6 +1,6 @@
 --!strict
--- Monetize: client helpers for Robux purchases. Opens Roblox's own purchase
--- prompt (the server grants the item in MonetizationService); items whose Id
+-- monetize: client helpers for robux purchases. opens roblox's own purchase
+-- prompt (the server grants the item in monetizationservice); items whose id
 -- isn't set yet show a friendly "coming soon" instead.
 
 local Players = game:GetService("Players")
@@ -53,13 +53,13 @@ function Monetize.PromptProduct(key: string)
 	MarketplaceService:PromptProductPurchase(player, product.Id)
 end
 
--- "Buy with R$" key for an item, if it has one.
+-- "buy with r$" key for an item, if it has one.
 function Monetize.UnlockKey(kind: string, id: string): string?
 	local key = kind .. "_" .. id
 	return Monetization.Products[key] and key or nil
 end
 
--- Price button text + colour for a catalog item (coins, gems or a pass).
+-- price button text + colour for a catalog item (coins, gems or a pass).
 function Monetize.PriceTag(item: any): (string, Color3)
 	if item.Season then
 		return "SEASON PASS", Color3.fromRGB(150, 110, 255)
@@ -73,8 +73,8 @@ function Monetize.PriceTag(item: any): (string, Color3)
 	return tostring(item.CoinCost or 0) .. " COINS", Color3.fromRGB(255, 207, 72)
 end
 
--- Buy a catalog item: coins/gems first, then fall back to Robux (the pass
--- that unlocks it, or its "Unlock" product when the player is short).
+-- buy a catalog item: coins/gems first, then fall back to robux (the pass
+-- that unlocks it, or its "unlock" product when the player is short).
 function Monetize.Buy(kind: string, id: string, item: any): boolean
 	if item and item.Season then
 		if Monetize.OnUnavailable then

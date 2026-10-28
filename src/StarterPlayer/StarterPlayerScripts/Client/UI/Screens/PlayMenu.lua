@@ -1,9 +1,9 @@
 --!strict
--- PlayMenu: the PLAY screen, laid out like Rivals. Top left: 1v1, 2v2, 3v3,
+-- playmenu: the play screen, laid out like rivals. top left: 1v1, 2v2, 3v3,
 -- then 4v4 and 5v5 (pick one and you start searching; bots fill in after 15
--- seconds). Top right: RANKED (locked until level 50). Below: the ARENA
+-- seconds). top right: ranked (locked until level 50). below: the arena
 -- match everyone in the server plays, and under it every arena gamemode to
--- jump straight in with. Each tile shows a real map in 3D behind its name.
+-- jump straight in with. each tile shows a real map in 3d behind its name.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -45,7 +45,7 @@ function PlayMenu.Open(arena: () -> ())
 	end
 end
 
--- A map from the server's snapshots, seen from above, filling \`parent\`.
+-- a map from the server's snapshots, seen from above, filling \`parent\`.
 local function mapShot(parent: GuiObject, mapId: string, sky: Color3, turn: number)
 	task.spawn(function()
 		local folder = ReplicatedStorage:WaitForChild("MapPreviews", 30)
@@ -79,7 +79,7 @@ local function mapShot(parent: GuiObject, mapId: string, sky: Color3, turn: numb
 	end)
 end
 
--- A tile: a 3D map behind, a dark fade, a big outlined title (+ a line under).
+-- a tile: a 3d map behind, a dark fade, a big outlined title (+ a line under).
 local function tile(parent: Instance, name: string, pos: UDim2, size: UDim2, mapId: string, turn: number, tint: Color3, title: string, sub: string?, titleScale: number?): TextButton
 	local b = UIUtil.make("TextButton", {
 		Parent = parent, Name = name, Text = "", AutoButtonColor = false, BorderSizePixel = 0, Position = pos, Size = size,
@@ -120,7 +120,7 @@ local function tile(parent: Instance, name: string, pos: UDim2, size: UDim2, map
 	return b
 end
 
--- A padlock drawn from shapes (fonts don't all have the symbol).
+-- a padlock drawn from shapes (fonts don't all have the symbol).
 local function padlock(parent: Instance, pos: UDim2, size: UDim2)
 	local holder = UIUtil.make("Frame", { Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = pos, Size = size, BackgroundTransparency = 1, ZIndex = 6 })
 	local ar = Instance.new("UIAspectRatioConstraint")
@@ -147,7 +147,7 @@ local function padlock(parent: Instance, pos: UDim2, size: UDim2)
 	UIUtil.corner(UDim.new(1, 0), hole)
 end
 
--- A red close button with an X made of two bars (to the right of the tiles).
+-- a red close button with an x made of two bars (to the right of the tiles).
 local function closeButton(parent: Instance)
 	local x = UIUtil.make("TextButton", {
 		Parent = parent, Text = "", Position = UDim2.new(1, 18, 0, 0), Size = UDim2.fromOffset(84, 46),
@@ -174,7 +174,7 @@ function PlayMenu.Build()
 	local bg = UIUtil.make("Frame", { Parent = g, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.08, BorderSizePixel = 0 })
 	UIUtil.gradient(Color3.fromRGB(40, 90, 40), Color3.fromRGB(12, 30, 14), 90, bg)
 
-	-- The content keeps its shape and fits the screen.
+	-- the content keeps its shape and fits the screen.
 	local box = UIUtil.make("Frame", {
 		Parent = g, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.47, 0.52), Size = UDim2.fromScale(0.74, 0.86),
 		BackgroundTransparency = 1,
@@ -194,7 +194,7 @@ function PlayMenu.Build()
 		Remotes.Get("DuelQueue"):FireServer({ join = kind })
 	end
 
-	-- Duels: three across, then two across.
+	-- duels: three across, then two across.
 	local gap = 0.006
 	local leftW = 0.745
 	local row1W = (leftW - gap * 2) / 3
@@ -214,7 +214,7 @@ function PlayMenu.Build()
 		end)
 	end
 
-	-- Ranked: tall on the right, locked until level 50.
+	-- ranked: tall on the right, locked until level 50.
 	local ranked = tile(box, "Ranked", at(leftW + gap * 1.5, 0), sz(W - leftW - gap * 1.5, 0.36), "Volcano", 5.2, Color3.fromRGB(30, 30, 40), "Ranked", nil, 0.16)
 	local rankedTitle = ranked:FindFirstChild("Title") :: TextLabel
 	rankedTitle.Position = UDim2.fromScale(0.5, 0.11)
@@ -241,7 +241,7 @@ function PlayMenu.Build()
 		end
 	end)
 
-	-- Arena: a wide banner.
+	-- arena: a wide banner.
 	local arena = tile(box, "Arena", at(0, 0.375), sz(W, 0.17), "SkyIslands", 0.9, Color3.fromRGB(40, 110, 70), "ARENA", "Everyone in the server  ·  vote the map", 0.5)
 	arena.MouseButton1Click:Connect(function()
 		close()
@@ -250,7 +250,7 @@ function PlayMenu.Build()
 		end
 	end)
 
-	-- The arena's gamemodes: pick one and jump in.
+	-- the arena's gamemodes: pick one and jump in.
 	local header = UIUtil.make("Frame", {
 		Parent = box, Position = at(0, 0.555), Size = sz(W, 0.038), BackgroundColor3 = Color3.fromRGB(14, 20, 16),
 		BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 2,

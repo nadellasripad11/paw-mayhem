@@ -1,5 +1,5 @@
-// Checks assets/LobbyMeshes.glb against the glTF 2.0 rules Studio's importer
-// relies on, and against Roblox's mesh limits.   node tools/lobby/validate.js
+// checks assets/lobbymeshes.glb against the gltf 2.0 rules studio's importer
+// relies on, and against roblox's mesh limits.   node tools/lobby/validate.js
 const fs = require('fs');
 const path = require('path');
 

@@ -1,8 +1,8 @@
 --!strict
--- MapPreviews: at server start every map is built once and a lightweight copy
+-- mappreviews: at server start every map is built once and a lightweight copy
 -- (its biggest visible parts, no scripts / effects / tags) is saved to
--- ReplicatedStorage.MapPreviews, so the map picker can show the REAL map in
--- 3D instead of a drawing. Runs before any service starts, so the throwaway
+-- replicatedstorage.mappreviews, so the map picker can show the real map in
+-- 3d instead of a drawing. runs before any service starts, so the throwaway
 -- builds never trigger gameplay (drops, jump pads, lava).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -15,7 +15,7 @@ local MapPreviews = {}
 
 local MAP_IDS = { "SkyIslands", "Volcano", "Toybox", "Rooftops" }
 local MAX_PARTS = 2600
--- Scenery that would swamp the preview (sky clutter, the endless lava sea).
+-- scenery that would swamp the preview (sky clutter, the endless lava sea).
 local SKIP_NAMES = { Cloud = true, CloudHigh = true, LavaSea = true, ArenaSky = true }
 
 local function skipped(p: BasePart): boolean
@@ -33,7 +33,7 @@ local function skipped(p: BasePart): boolean
 end
 
 local function snapshot(arena: Instance, id: string, focusAt: Vector3?): Model
-	-- The play area: every island floor players can stand on.
+	-- the play area: every island floor players can stand on.
 	local minV, maxV = Vector3.one * math.huge, -Vector3.one * math.huge
 	for _, f in ipairs(CollectionService:GetTagged("DropZone")) do
 		if f:IsA("BasePart") and f:IsDescendantOf(arena) then
@@ -43,7 +43,7 @@ local function snapshot(arena: Instance, id: string, focusAt: Vector3?): Model
 		end
 	end
 	if focusAt then
-		-- (Duel maps: the islands sit round their build origin.)
+		-- (duel maps: the islands sit round their build origin.)
 		minV = focusAt - Vector3.new(58, 30, 62)
 		maxV = focusAt + Vector3.new(58, 40, 62)
 	end
@@ -59,7 +59,7 @@ local function snapshot(arena: Instance, id: string, focusAt: Vector3?): Model
 			end
 		end
 	end
-	-- Keep the biggest pieces: they carry the map's silhouette.
+	-- keep the biggest pieces: they carry the map's silhouette.
 	table.sort(parts, function(a, b)
 		return a.Size.X * a.Size.Y * a.Size.Z > b.Size.X * b.Size.Y * b.Size.Z
 	end)
@@ -107,7 +107,7 @@ function MapPreviews.Build()
 			warn("[PAW MAYHEM] Map preview failed for " .. id .. ": " .. tostring(err))
 		end
 	end
-	-- The duel maps too (1v1 - 5v5 votes show them in 3D).
+	-- the duel maps too (1v1 - 5v5 votes show them in 3d).
 	for _, def in ipairs(DuelMaps.List) do
 		local ok, err = pcall(function()
 			local temp = Instance.new("Folder")

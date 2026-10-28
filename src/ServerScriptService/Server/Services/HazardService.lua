@@ -1,7 +1,7 @@
 --!strict
--- HazardService: damage + knockback from the environment (meteors, stampede
--- balls, burning ground) for players and bots alike. Honours spawn
--- protection and the Mayhem Mode knockback multiplier.
+-- hazardservice: damage + knockback from the environment (meteors, stampede
+-- balls, burning ground) for players and bots alike. honours spawn
+-- protection and the mayhem mode knockback multiplier.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -19,7 +19,7 @@ local BotService = require(script.Parent.BotService)
 
 local HazardService = {}
 
--- Every live cat model (players + bots) in the world.
+-- every live cat model (players + bots) in the world.
 function HazardService.Cats(): { Model }
 	local out = {}
 	for _, m in ipairs(CollectionService:GetTagged(CatBuilder.Tag)) do
@@ -30,7 +30,7 @@ function HazardService.Cats(): { Model }
 	return out
 end
 
--- `dV` is a velocity change in studs/s.
+-- `dv` is a velocity change in studs/s.
 function HazardService.Hit(model: Model, damage: number, dV: Vector3)
 	local mult = Runtime.Mayhem and GameConfig.Mayhem.KnockbackMult or 1
 	local launch = dV * mult
@@ -61,7 +61,7 @@ function HazardService.Hit(model: Model, damage: number, dV: Vector3)
 	end
 end
 
--- Knock every cat within `radius` of `center` outward and up.
+-- knock every cat within `radius` of `center` outward and up.
 function HazardService.Blast(center: Vector3, radius: number, damage: number, power: number)
 	for _, m in ipairs(HazardService.Cats()) do
 		local root = m.PrimaryPart :: BasePart

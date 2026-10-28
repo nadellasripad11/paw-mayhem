@@ -1,5 +1,5 @@
 --!strict
--- RateLimiter: token-bucket per key (used to throttle remote spam per player).
+-- ratelimiter: token-bucket per key (used to throttle remote spam per player).
 
 local RateLimiter = {}
 RateLimiter.__index = RateLimiter
@@ -12,7 +12,7 @@ function RateLimiter.new(ratePerSecond: number, burst: number)
 	}, RateLimiter)
 end
 
--- Returns true if the action is allowed for `key`, false if rate-limited.
+-- returns true if the action is allowed for `key`, false if rate-limited.
 function RateLimiter:Check(key: any): boolean
 	local now = os.clock()
 	local b = self._buckets[key]

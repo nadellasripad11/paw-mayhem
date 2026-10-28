@@ -1,17 +1,17 @@
 --!strict
--- MapFeatureService: the living bits of each map that need the server. The
--- maps build them (ArenaKit); this runs them.
---   * Volcano lava geysers (tag Geyser): they rumble and glow for 2 seconds,
+-- mapfeatureservice: the living bits of each map that need the server. the
+-- maps build them (arenakit); this runs them.
+--   * volcano lava geysers (tag geyser): they rumble and glow for 2 seconds,
 --     then blast anyone standing on them sky-high
---   * Rooftops neon billboards (tag Billboard): one flickers and buzzes, then
+--   * rooftops neon billboards (tag billboard): one flickers and buzzes, then
 --     surges and knocks back every cat near it
---   * Rooftops window-cleaner lifts (tag Lift, a PrismaticConstraint): ride
+--   * rooftops window-cleaner lifts (tag lift, a prismaticconstraint): ride
 --     up and down between a step roof and a high perch
---   * Toybox ball pits (tag BallPit): cats inside are Hidden (no name tag,
+--   * toybox ball pits (tag ballpit): cats inside are hidden (no name tag,
 --     bots don't spot them from afar, and they wade slowly)
---   * the golden column: in Mayhem Mode one swim column glows gold and pays
+--   * the golden column: in mayhem mode one swim column glows gold and pays
 --     coins every second to anyone riding it
--- Geysers and billboards only go off while a match is being played.
+-- geysers and billboards only go off while a match is being played.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -55,7 +55,7 @@ local function geyserLoop(vent: BasePart)
 	task.wait(rng:NextNumber(3, 10))
 	while live(vent) do
 		if PlayerService.MatchActive then
-			-- Warning: smoke, a rumble and the vent glowing brighter.
+			-- warning: smoke, a rumble and the vent glowing brighter.
 			if smoke then
 				smoke.Enabled = true
 			end
@@ -70,7 +70,7 @@ local function geyserLoop(vent: BasePart)
 			if not live(vent) then
 				return
 			end
-			-- Blast: a jet of lava and everyone on the vent goes flying.
+			-- blast: a jet of lava and everyone on the vent goes flying.
 			if burst then
 				burst:Emit(60)
 			end
@@ -126,7 +126,7 @@ local function billboardLoop(panel: BasePart)
 	task.wait(rng:NextNumber(8, 20))
 	while live(panel) do
 		if PlayerService.MatchActive then
-			-- Flicker and buzz...
+			-- flicker and buzz...
 			if buzz then
 				buzz:Play()
 			end
@@ -159,7 +159,7 @@ local function billboardLoop(panel: BasePart)
 			if typeof(center) == "Vector3" then
 				HazardService.Blast(center, 16, 10, 80)
 			end
-			-- Dark for a moment, then back on.
+			-- dark for a moment, then back on.
 			panel.Material = Enum.Material.SmoothPlastic
 			panel.Color = baseColor:Lerp(Color3.new(0, 0, 0), 0.8)
 			task.wait(3)
@@ -200,7 +200,7 @@ local function watch(tag: string, class: string, loop: (any) -> ())
 		add(inst)
 	end
 	CollectionService:GetInstanceAddedSignal(tag):Connect(function(inst)
-		-- (After the map builder has finished setting it up.)
+		-- (after the map builder has finished setting it up.)
 		task.defer(add, inst)
 	end)
 end

@@ -1,13 +1,13 @@
 --!strict
--- Intro: what a brand-new player sees first.
---   1. A short cinematic in the lobby: cats trading shots until one gets
+-- intro: what a brand-new player sees first.
+--   1. a short cinematic in the lobby: cats trading shots until one gets
 --      blasted off the edge (letterboxed, skippable).
---   2. A hands-on lesson at the lobby's practice range with Mochi, a mentor
+--   2. a hands-on lesson at the lobby's practice range with mochi, a mentor
 --      cat who talks you through each move and demonstrates it: walk to the
 --      ring, jump, double jump, shoot a target, knock one off, dash, pounce.
---      Each step completes when you actually do it. Skippable; finishing marks
+--      each step completes when you actually do it. skippable; finishing marks
 --      the tutorial done.
--- Everything here is local to the new player (the lobby itself is shared).
+-- everything here is local to the new player (the lobby itself is shared).
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -28,7 +28,7 @@ local SoundController = require(Controllers.SoundController)
 local MovementController = require(Controllers.MovementController)
 
 local Intro = {}
-Intro.Running = false -- the lobby UI leaves the screen alone while it's on
+Intro.Running = false -- the lobby ui leaves the screen alone while it's on
 
 local player = Players.LocalPlayer
 
@@ -36,8 +36,8 @@ local function isMobile(): boolean
 	return UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 end
 
--- The lobby folder and one of its staging points ("Stage" for the
--- cinematic, "Range" for the lesson), plus the ground height.
+-- the lobby folder and one of its staging points ("stage" for the
+-- cinematic, "range" for the lesson), plus the ground height.
 local function lobby(point: string): (Folder?, Vector3, number)
 	local f = Workspace:FindFirstChild("Lobby") :: Folder?
 	local c = f and f:GetAttribute(point)
@@ -48,7 +48,7 @@ local function lobby(point: string): (Folder?, Vector3, number)
 	return f, c :: Vector3, s :: number
 end
 
--- A local, anchored cat standing at `pos` facing `lookAt`.
+-- a local, anchored cat standing at `pos` facing `lookat`.
 local function actor(custom: any, name: string, weaponId: string?, pos: Vector3, lookAt: Vector3, parent: Instance): Model
 	local m = CatBuilder.Build(custom, name, weaponId and { Id = weaponId } or nil)
 	m.Name = name
@@ -136,7 +136,7 @@ local function cinematic(done: () -> ())
 	for _, m in ipairs({ a, b, cc, d }) do
 		base[m] = m:GetPivot()
 	end
-	-- B's launch trail.
+	-- b's launch trail.
 	local broot = b.PrimaryPart :: BasePart
 	local a0, a1 = Instance.new("Attachment"), Instance.new("Attachment")
 	a0.Position, a1.Position = Vector3.new(0, 1.1, 0), Vector3.new(0, -0.9, 0)
@@ -172,7 +172,7 @@ local function cinematic(done: () -> ())
 	local launchFrom = base[b]
 	conn = RunService.RenderStepped:Connect(function(dt)
 		t += dt
-		-- Everyone strafes a little while they fight.
+		-- everyone strafes a little while they fight.
 		for i, m in ipairs({ a, cc, d }) do
 			m:PivotTo(base[m] * CFrame.new(math.sin(t * 2 + i) * 1.2, 0, 0))
 		end
@@ -201,7 +201,7 @@ local function cinematic(done: () -> ())
 			end
 			b:PivotTo(base[b] * CFrame.new(math.sin(t * 2) * 1.2, 0, 0))
 			launchFrom = b:GetPivot()
-			-- Over A's right shoulder, looking at B (not through A's head).
+			-- over a's right shoulder, looking at b (not through a's head).
 			local ap = (a.PrimaryPart :: BasePart).Position
 			local bp = (b.PrimaryPart :: BasePart).Position
 			local back = ((ap - bp) * Vector3.new(1, 0, 1)).Unit
@@ -215,7 +215,7 @@ local function cinematic(done: () -> ())
 				SoundController.Launch(broot.Position)
 				shoot(a, b, "BoomPaw")
 			end
-			-- An arc up and away from A, off the edge.
+			-- an arc up and away from a, off the edge.
 			local u = t - 6
 			local away = (launchFrom.Position - (a.PrimaryPart :: BasePart).Position) * Vector3.new(1, 0, 1)
 			away = away.Magnitude > 0.1 and away.Unit or Vector3.xAxis
@@ -244,7 +244,7 @@ local function lesson(done: (finished: boolean) -> ())
 		done(false)
 		return
 	end
-	-- Wait for our cat in the lobby.
+	-- wait for our cat in the lobby.
 	local function inLobby(): boolean
 		return player:GetAttribute("Context") == "Lobby" and player.Character ~= nil and player.Character.PrimaryPart ~= nil
 	end
@@ -266,7 +266,7 @@ local function lesson(done: (finished: boolean) -> ())
 	local mentor = actor({ Fur = "White", Outfit = "Hoodie", Hat = "Cap" }, "Mochi", "PawBlaster", mentorPos, c + Vector3.new(-6, 0, 14), folder)
 	local mentorBase = mentor:GetPivot()
 
-	-- Dialogue panel (bottom): name + text, typed out.
+	-- dialogue panel (bottom): name + text, typed out.
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "PawLesson"
 	gui.IgnoreGuiInset = true
@@ -302,7 +302,7 @@ local function lesson(done: (finished: boolean) -> ())
 		end)
 	end
 
-	-- Mochi demonstrates: a hop, or a few shots at a target.
+	-- mochi demonstrates: a hop, or a few shots at a target.
 	local function hop()
 		task.spawn(function()
 			for k = 0, 10 do
@@ -336,7 +336,7 @@ local function lesson(done: (finished: boolean) -> ())
 		end)
 	end
 
-	-- What each step waits for.
+	-- what each step waits for.
 	local ring = Instance.new("Part")
 	ring.Name = "LessonRing"
 	ring.Shape = Enum.PartType.Cylinder
@@ -437,7 +437,7 @@ local function lesson(done: (finished: boolean) -> ())
 	end)
 end
 
--- Run the whole intro; `after` runs once it's over (or skipped).
+-- run the whole intro; `after` runs once it's over (or skipped).
 function Intro.Run(after: () -> ())
 	Intro.Running = true
 	cinematic(function()

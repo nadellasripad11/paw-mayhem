@@ -1,4 +1,4 @@
-# Renders every blaster from src/ReplicatedStorage/Shared/Character/BlasterDesigns.json
+# renders every blaster from src/replicatedstorage/shared/character/blasterdesigns.json
 # (the same data the game builds them from) into tools/blender/preview_blasters.png.
 #   blender --background --python tools/blender/preview_blasters.py
 import bpy
@@ -13,7 +13,7 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 DATA = json.load(open(os.path.join(ROOT, "src", "ReplicatedStorage", "Shared", "Character", "BlasterDesigns.json")))
 OUT = os.path.join(HERE, "preview_blasters.png")
 
-C3 = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # Roblox -> Blender axes
+C3 = Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0)))  # roblox -> blender axes
 
 
 def R(x, y, z):
@@ -76,7 +76,7 @@ def add_mesh(verts, faces):
 def cylinder_x(length, d):
     bpy.ops.mesh.primitive_cylinder_add(vertices=40, radius=d / 2, depth=length)
     o = bpy.context.active_object
-    o.data.transform(Matrix.Rotation(math.radians(90), 4, "Y"))  # axis Z -> X
+    o.data.transform(Matrix.Rotation(math.radians(90), 4, "Y"))  # axis z -> x
     return o
 
 
@@ -110,7 +110,7 @@ def build_piece(piece, pal, offset):
         objs.append(o)
     elif k == "wedge":
         sx, sy, sz = piece["size"]
-        # Roblox wedge: full bottom, full back (+Z) face, slope down to the front.
+        # roblox wedge: full bottom, full back (+z) face, slope down to the front.
         pts = [(-sx / 2, -sy / 2, -sz / 2), (sx / 2, -sy / 2, -sz / 2), (sx / 2, -sy / 2, sz / 2), (-sx / 2, -sy / 2, sz / 2),
                (-sx / 2, sy / 2, sz / 2), (sx / 2, sy / 2, sz / 2)]
         verts = [tuple(R(*p)) for p in pts]

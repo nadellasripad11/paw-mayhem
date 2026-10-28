@@ -1,12 +1,12 @@
 --!strict
--- DuelService: 1v1 and 2v2 duels from the lobby's duel pads (straight ahead
--- of spawn). Stand on a glowing slot; once every slot on a pad is taken a
+-- duelservice: 1v1 and 2v2 duels from the lobby's duel pads (straight ahead
+-- of spawn). stand on a glowing slot; once every slot on a pad is taken a
 -- short countdown starts (step off to cancel) and everyone on it is sent to
--- their own duel on a random duel map (DuelMaps). First side to 5 knockouts
--- wins, or whoever leads when the clock runs out. Trophies, coins and XP like
--- a match, then everyone's back in the lobby. Duels run side by side, each on
+-- their own duel on a random duel map (duelmaps). first side to 5 knockouts
+-- wins, or whoever leads when the clock runs out. trophies, coins and xp like
+-- a match, then everyone's back in the lobby. duels run side by side, each on
 -- its own copy of a map far from the lobby and the arena.
--- Nobody coming? After 15 seconds on a pad, bots fill the empty slots. Bot
+-- nobody coming? after 15 seconds on a pad, bots fill the empty slots. bot
 -- duels pay half and never move your trophies (no farming bots for rank).
 
 local Players = game:GetService("Players")
@@ -72,7 +72,7 @@ local function other(team: string): string
 end
 
 -- ── the pads in the lobby ────────────────────────────────────────────────────
--- Pad look (Rivals-style, our colours): a flat dark plate with a light rim,
+-- pad look (rivals-style, our colours): a flat dark plate with a light rim,
 -- split across the middle into two sides (blue towards the spawn, red
 -- towards the far end, matching the screen above); each player spot is a round emblem
 -- that fills with its team colour when someone stands on it.
@@ -84,7 +84,7 @@ local SPOT_EMPTY = Color3.fromRGB(40, 50, 92)
 local SPOT_DARK = Color3.fromRGB(16, 18, 26)
 local SCREEN_BLUE = Color3.fromRGB(90, 170, 255)
 
--- A pad like Rivals': a dark plate, a glowing target emblem for each spot
+-- a pad like rivals': a dark plate, a glowing target emblem for each spot
 -- (it lights up in the team colour when someone's on it), bright team lines
 -- along the edges; above it on the wall a big angled screen with a glowing
 -- blue frame showing each side's count, and the countdown when it's full.
@@ -108,11 +108,11 @@ local function buildPad(def: any, parent: Instance)
 		return p
 	end
 
-	-- The plate.
+	-- the plate.
 	flat("PadSkirt", Vector3.new(w + 0.6, 0.16, d + 0.6), Vector3.new(0, 0.08, 0), Color3.fromRGB(12, 13, 18))
 	flat("PadPlate", Vector3.new(w, 0.3, d), Vector3.new(0, 0.15, 0), Color3.fromRGB(24, 26, 36), Enum.Material.DiamondPlate)
 	flat("PadSplit", Vector3.new(w - 0.6, 0.32, 0.14), Vector3.new(0, 0.16, 0), Color3.fromRGB(70, 74, 92))
-	-- Team lines along the two long edges, each half in its colour.
+	-- team lines along the two long edges, each half in its colour.
 	for _, side in ipairs({ { "Blue", -1 }, { "Red", 1 } }) do
 		for _, x in ipairs({ -w / 2 + 0.25, w / 2 - 0.25 }) do
 			flat("PadEdge", Vector3.new(0.28, 0.33, d / 2 - 0.4), Vector3.new(x, 0.165, side[2] * d / 4), TEAM_COLOR[side[1]], Enum.Material.Neon)
@@ -124,7 +124,7 @@ local function buildPad(def: any, parent: Instance)
 	local offsets = is2v2 and { { "Blue", -2.6, -3.1 }, { "Blue", 2.6, -3.1 }, { "Red", -2.6, 3.1 }, { "Red", 2.6, 3.1 } }
 		or { { "Blue", 0, -3 }, { "Red", 0, 3 } }
 	for _, o in ipairs(offsets) do
-		-- A target: glowing outer ring, dark, glowing inner ring, dark, and a
+		-- a target: glowing outer ring, dark, glowing inner ring, dark, and a
 		-- centre that lights up when someone's in this spot.
 		local col = TEAM_COLOR[o[1]]
 		ring("SpotOuter", 4, 0.32, o[2], o[3], col, Enum.Material.Neon)
@@ -135,7 +135,7 @@ local function buildPad(def: any, parent: Instance)
 		table.insert(pad.slots, { team = o[1], pos = center + Vector3.new(o[2], 0, o[3]), part = fill, player = nil })
 	end
 
-	-- The screen: big, high on the wall, turned toward you as you walk in.
+	-- the screen: big, high on the wall, turned toward you as you walk in.
 	local wallX = def.screenX or def.wall * 16.75
 	local screenPos = at(wallX - def.wall * 0.6, def.z, 8.6)
 	local face = CFrame.lookAt(screenPos, screenPos + Vector3.new(-def.wall, 0, -0.45)) * CFrame.Angles(math.rad(-10), 0, 0)
@@ -178,8 +178,8 @@ local function buildPad(def: any, parent: Instance)
 	end
 	local need = #pad.slots // 2
 	label(string.upper(def.kind), 0, 0.05, 1, 0.16, Enum.Font.FredokaOne, Color3.fromRGB(200, 225, 255))
-	-- (Facing a left-wall screen the spawn end is on your left; facing a
-	-- right-wall one it's on your right. Each count sits over its own half.)
+	-- (facing a left-wall screen the spawn end is on your left; facing a
+	-- right-wall one it's on your right. each count sits over its own half.)
 	local blueLeft = def.wall > 0
 	pad.counts.Blue = label("0/" .. need, blueLeft and 0.04 or 0.52, 0.24, 0.44, 0.5, Enum.Font.FredokaOne, Color3.fromRGB(150, 205, 255))
 	pad.counts.Red = label("0/" .. need, blueLeft and 0.52 or 0.04, 0.24, 0.44, 0.5, Enum.Font.FredokaOne, Color3.fromRGB(255, 160, 170))
@@ -189,14 +189,14 @@ local function buildPad(def: any, parent: Instance)
 	bar.Position = UDim2.fromScale(0.495, 0.28)
 	bar.Size = UDim2.fromScale(0.01, 0.42)
 	bar.Parent = gui
-	-- The countdown: one huge number over everything when the pad is full.
+	-- the countdown: one huge number over everything when the pad is full.
 	pad.big = label("", 0, 0.12, 1, 0.66, Enum.Font.FredokaOne, Color3.fromRGB(255, 220, 90))
 	pad.big.Visible = false
 	pad.sub = label("Step on a pad", 0, 0.8, 1, 0.14, Enum.Font.GothamBold, Color3.fromRGB(190, 210, 240))
 	table.insert(pads, pad)
 end
 
--- Can this player take a pad slot right now?
+-- can this player take a pad slot right now?
 local function eligible(p: Player): boolean
 	local s = Runtime.Get(p)
 	return s ~= nil and s.Alive and s.Context == "Lobby" and p:GetAttribute("Queued") ~= true
@@ -246,7 +246,7 @@ local function spawnIn(duel: Duel, p: Player)
 	local list = duel.teams[team]
 	local index = table.find(list, p) or 1
 	local spots = duel.map.spawns[team]
-	-- Bigger teams than spawn spots: spread out sideways.
+	-- bigger teams than spawn spots: spread out sideways.
 	local spot = spots[(index - 1) % #spots + 1] * CFrame.new(((index - 1) // #spots) * 3, 0, 0)
 	PlayerService.Spawn(p, { context = "Duel", team = team, duelId = duel.id, cframe = spot })
 end
@@ -276,7 +276,7 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 			local delta = 0
 			local profile = DataService.Get(p)
 			local stats = profile and profile.Stats
-			-- A draw (or a duel with bots) leaves trophies alone.
+			-- a draw (or a duel with bots) leaves trophies alone.
 			if stats and winner and not duel.withBots then
 				local before = stats.Trophies or 0
 				stats.Trophies = math.max(0, before + Ranks.Delta(won, duel.kos[p] or 0))
@@ -298,7 +298,7 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 			})
 		end
 	end
-	-- Time for the final score and the winner (EndScreen), then everyone's
+	-- time for the final score and the winner (endscreen), then everyone's
 	-- back in the lobby.
 	task.delay(7.5, function()
 		for p in pairs(duel.members) do
@@ -312,12 +312,12 @@ local function finish(duel: Duel, winner: string?, forfeit: boolean?)
 	end)
 end
 
--- Someone on `team` was knocked out (HP or off the map): the other side
--- scores. Returns true while the duel goes on (so they respawn).
+-- someone on `team` was knocked out (hp or off the map): the other side
+-- scores. returns true while the duel goes on (so they respawn).
 local function scoreKO(duel: Duel, team: string, victimName: string, killer: Player?, ringout: boolean): boolean
 	local scorer = other(team)
 	if duel.ringoutOnly and not ringout then
-		-- (Ringout mode: only knock-offs count; they still respawn.)
+		-- (ringout mode: only knock-offs count; they still respawn.)
 		send(duel, { ko = victimName })
 		return true
 	end
@@ -330,7 +330,7 @@ local function scoreKO(duel: Duel, team: string, victimName: string, killer: Pla
 	for p in pairs(duel.members) do
 		if p.Parent then
 			Remotes.Get("KillFeed"):FireClient(p, {
-				killer = killer and killer.DisplayName or botKiller or "☠", killerTeam = scorer,
+				killer = killer and killer.DisplayName or botKiller or "the void", killerTeam = scorer,
 				victim = victimName, victimTeam = team, ringout = ringout,
 			})
 		end
@@ -368,7 +368,7 @@ local function onDuelKO(victim: Player, killer: Player?, ringout: boolean)
 	end
 end
 
--- Bring a duel's bot (back) in on its side.
+-- bring a duel's bot (back) in on its side.
 local function spawnBot(duel: Duel, team: string, index: number, name: string?)
 	if duel.over then
 		return
@@ -421,7 +421,7 @@ local function leave(p: Player)
 	end
 end
 
--- Gamemodes you can vote for after a queue match is found.
+-- gamemodes you can vote for after a queue match is found.
 local MODES = {
 	{ id = "Classic", name = "CLASSIC", desc = "First to 5 knockouts", target = 5 },
 	{ id = "Quick", name = "QUICK", desc = "First to 3 - fast and furious", target = 3 },
@@ -437,8 +437,8 @@ local function modeById(id: string?): any
 	return MODES[1]
 end
 
--- Set up and start a duel. `teams` holds the players on each side; empty
--- places up to `perTeam` are filled with bots.
+-- set up and start a duel. `teams` holds the players on each side; empty
+-- places up to `perteam` are filled with bots.
 local function createDuel(kind: string, teams: { [string]: { Player } }, perTeam: number, mapId: string?, modeId: string?)
 	local members: { [Player]: string } = {}
 	for team, list in pairs(teams) do
@@ -494,10 +494,10 @@ local function startDuel(pad: Pad)
 	createDuel(pad.kind, teams, #pad.slots // 2, nil, "Classic")
 end
 
--- ── the PLAY queue: 1v1 to 5v5 from the menu ─────────────────────────────────
--- Search for a kind; once enough players are searching (or the first has
--- waited QUEUE_BOT_WAIT seconds) a match is found and bots fill the gaps.
--- Everyone in it then votes a map, then a gamemode (VOTE_TIME each), and
+-- ── the play queue: 1v1 to 5v5 from the menu ─────────────────────────────────
+-- search for a kind; once enough players are searching (or the first has
+-- waited queue_bot_wait seconds) a match is found and bots fill the gaps.
+-- everyone in it then votes a map, then a gamemode (vote_time each), and
 -- the duel starts.
 local QUEUE_KINDS = { ["1v1"] = 1, ["2v2"] = 2, ["3v3"] = 3, ["4v4"] = 4, ["5v5"] = 5 }
 local QUEUE_BOT_WAIT = 15
@@ -562,7 +562,7 @@ local function modeOptions(): { any }
 	return opts
 end
 
--- The most-voted option (a random one on a tie, or when nobody voted).
+-- the most-voted option (a random one on a tie, or when nobody voted).
 local function winner(l: VoteLobby): string
 	local counts: { [string]: number } = {}
 	local best, bestN = {}, 0
@@ -628,7 +628,7 @@ local function tickVotes()
 				sendVote(l)
 			else
 				closeVote(l)
-				-- Split the players into two teams (bots fill the rest).
+				-- split the players into two teams (bots fill the rest).
 				local per = QUEUE_KINDS[l.kind] or 1
 				local teams: { [string]: { Player } } = { Blue = {}, Red = {} }
 				for n, p in ipairs(l.players) do
@@ -704,7 +704,7 @@ end
 local function tickPads()
 	local now = os.clock()
 	local taken: { [Player]: boolean } = {}
-	-- Standing anywhere on a pad counts (not just the exact circle): which
+	-- standing anywhere on a pad counts (not just the exact circle): which
 	-- half you're on, or nil if you're off it.
 	local function onPad(p: Player, pad: Pad): number?
 		local root = p.Character and p.Character.PrimaryPart
@@ -732,7 +732,7 @@ local function tickPads()
 			for _, pad in ipairs(pads) do
 				local side = not taken[p] and onPad(p, pad)
 				if side then
-					-- A free spot on the half you're on, else any free spot.
+					-- a free spot on the half you're on, else any free spot.
 					local want = side < 0 and "Blue" or "Red"
 					local pick: Slot? = nil
 					for _, slot in ipairs(pad.slots) do
@@ -810,7 +810,7 @@ local function tickDuels()
 	local now = os.clock()
 	for _, duel in pairs(duels) do
 		if not duel.over then
-			-- Off the map = knocked out.
+			-- off the map = knocked out.
 			for p in pairs(duel.members) do
 				local s = Runtime.Get(p)
 				local root = p.Character and p.Character.PrimaryPart
@@ -826,8 +826,8 @@ local function tickDuels()
 	end
 end
 
--- The duels being played right now, for the lobby's DUELS LIVE board:
--- "Mochi  3 - 1  Bob" (2v2: "A & B  2 - 2  C & D").
+-- the duels being played right now, for the lobby's duels live board:
+-- "mochi  3 - 1  bob" (2v2: "a & b  2 - 2  c & d").
 function DuelService.Live(): { string }
 	local out = {}
 	for _, d in pairs(duels) do
@@ -877,7 +877,7 @@ function DuelService.Start()
 			tickVotes()
 		end
 	end)
-	-- The clock for everyone in a duel, once a second.
+	-- the clock for everyone in a duel, once a second.
 	task.spawn(function()
 		while true do
 			task.wait(1)

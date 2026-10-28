@@ -1,8 +1,8 @@
 --!strict
--- Quests: the DAILY TASKS screen. One clean card per task: its name, a thick
+-- quests: the daily tasks screen. one clean card per task: its name, a thick
 -- progress bar with the count, and on the right the coin reward over a
--- button (CLAIM when it's done, a tick once claimed, the progress while it
--- isn't). The time until they reset sits at the top.
+-- button (claim when it's done, a tick once claimed, the progress while it
+-- isn't). the time until they reset sits at the top.
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
@@ -59,7 +59,7 @@ local function rebuild()
 			TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Left,
 			Position = UDim2.new(1, -244, 0, 45), Size = UDim2.fromOffset(70, 20),
 		})
-		-- Right: the reward and the button.
+		-- right: the reward and the button.
 		local reward = UIUtil.make("Frame", {
 			Parent = card, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 10), Size = UDim2.fromOffset(150, 24), BackgroundTransparency = 1,
 		})

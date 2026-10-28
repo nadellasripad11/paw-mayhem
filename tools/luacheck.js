@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Lightweight Lua block-balance + return sanity checker for PAW MAYHEM.
-// Not a full parser: strips comments/strings, then balances block openers
-// against `end`/`until`. Catches the most common "missing end" mistakes.
+// lightweight lua block-balance + return sanity checker for paw mayhem.
+// not a full parser: strips comments/strings, then balances block openers
+// against `end`/`until`. catches the most common "missing end" mistakes.
 const fs = require("fs");
 const path = require("path");
 
@@ -14,7 +14,7 @@ function walk(dir, out) {
   }
 }
 
-// Strip long brackets, line comments, and quoted strings (approx).
+// strip long brackets, line comments, and quoted strings (approx).
 function strip(src) {
   let s = src;
   // long comments/strings [[ ]] and [=[ ]=]
@@ -42,14 +42,14 @@ for (const f of files) {
   const toks = tokens(s);
   let depth = 0;
   let ret = false;
-  // Track function/if/for/while/do/repeat vs end/until.
-  // Note: `elseif`/`else`/`then` don't change depth. `do` after for/while
+  // track function/if/for/while/do/repeat vs end/until.
+  // note: `elseif`/`else`/`then` don't change depth. `do` after for/while
   // is part of the same block, so we only count the leading keyword and treat
-  // standalone `do` (rare here) as +1; matching `end` closes it. To avoid the
+  // standalone `do` (rare here) as +1; matching `end` closes it. to avoid the
   // for..do double count, we skip `do` when preceded by a `)` is hard — instead
-  // we DON'T count `do` at all and DON'T count the trailing `end` for those...
-  // Simpler + reliable here: count function/if/for/while/repeat as openers and
-  // `do` NOT as opener; `end` closes function/if/for/while; `until` closes repeat.
+  // we don't count `do` at all and don't count the trailing `end` for those...
+  // simpler + reliable here: count function/if/for/while/repeat as openers and
+  // `do` not as opener; `end` closes function/if/for/while; `until` closes repeat.
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
     if (t === "function" || t === "if" || t === "for" || t === "while") depth++;
@@ -67,7 +67,7 @@ for (const f of files) {
     console.log(`? ${path.relative(process.cwd(), f)}: unbalanced blocks (depth ${depth})`);
     hadError = true;
   }
-  // Luau refuses to compile any statement after `return` in the same block,
+  // luau refuses to compile any statement after `return` in the same block,
   // which kills the whole script (and every script that requires it).
   const lines = s.split("\n");
   for (let i = 0; i < lines.length; i++) {

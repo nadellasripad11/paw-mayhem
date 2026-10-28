@@ -1,6 +1,6 @@
 --!strict
--- ClientActions: thin wrappers around the purchase/equip/claim RemoteFunctions.
--- Keeps menu screens free of raw remote plumbing. All results are validated by
+-- clientactions: thin wrappers around the purchase/equip/claim remotefunctions.
+-- keeps menu screens free of raw remote plumbing. all results are validated by
 -- the server; these just relay the request and return the server's answer.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,7 +25,7 @@ function ClientActions.SetEmoteSlot(slot: number, id: string)
 	return ok and res or { ok = false }
 end
 
--- The six emote slots ("" = empty).
+-- the six emote slots ("" = empty).
 function ClientActions.EmoteSlots(): { string }
 	local p = require(script.Parent.ClientState).Profile
 	local s = p and p.Loadout and p.Loadout.EmoteSlots

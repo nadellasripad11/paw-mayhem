@@ -1,10 +1,10 @@
 --!strict
--- Map 4/4: Neon Rooftops - skyscraper roofs at dusk over a foggy drop. Its
--- own layout (not the shared island one): a tall centre tower roof (the King
--- of the Hill spot), raised flank roofs, stepping-stone rooftops and two team
--- bases with a side roof each way (three spawns per team). Plank bridges link
--- the roofs and jump pads fling you up to the tower. Fall between buildings
--- and you're out. AC units and water tanks are solid cover.
+-- map 4/4: neon rooftops - skyscraper roofs at dusk over a foggy drop. its
+-- own layout (not the shared island one): a tall centre tower roof (the king
+-- of the hill spot), raised flank roofs, stepping-stone rooftops and two team
+-- bases with a side roof each way (three spawns per team). plank bridges link
+-- the roofs and jump pads fling you up to the tower. fall between buildings
+-- and you're out. ac units and water tanks are solid cover.
 
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
@@ -51,7 +51,7 @@ local LINKS = {
 
 type Roof = { name: string, x: number, z: number, top: number, sx: number, sz: number, team: string?, folder: Folder }
 
--- Point on roof `a`'s top, `inset` studs inside its edge, on the way to `b`.
+-- point on roof `a`'s top, `inset` studs inside its edge, on the way to `b`.
 local function edgeToward(a: Roof, b: Roof, inset: number): Vector3
 	local d = Vector3.new(b.x - a.x, 0, b.z - a.z)
 	local tx = math.abs(d.X) > 1e-3 and (a.sx / 2) / math.abs(d.X) or math.huge
@@ -63,14 +63,14 @@ end
 local function building(r: Roof)
 	local f = r.folder
 	local facade = FACADES[rng:NextInteger(1, #FACADES)]
-	-- The walkable roof (the only thing you stand on) and the tower below it.
+	-- the walkable roof (the only thing you stand on) and the tower below it.
 	NP("Floor", Vector3.new(r.sx, 1, r.sz), CFrame.new(r.x, r.top - 0.5, r.z), PALETTE.Top, Enum.Material.Concrete, f)
 	NP("Building", Vector3.new(r.sx - 0.4, 150, r.sz - 0.4), CFrame.new(r.x, r.top - 1 - 75, r.z), facade, Enum.Material.Concrete, f)
-	-- Low parapet round the edge (decoration: you can still be knocked off).
+	-- low parapet round the edge (decoration: you can still be knocked off).
 	for _, e in ipairs({ { 0, r.sz / 2, r.sx, 0.4 }, { 0, -r.sz / 2, r.sx, 0.4 }, { r.sx / 2, 0, 0.4, r.sz }, { -r.sx / 2, 0, 0.4, r.sz } }) do
 		NP("Parapet", Vector3.new(e[3], 0.8, e[4]), CFrame.new(r.x + e[1], r.top + 0.4, r.z + e[2]), PALETTE.TopDark, Enum.Material.Concrete, f)
 	end
-	-- Glowing window rows down every face.
+	-- glowing window rows down every face.
 	local glow = NEON[rng:NextInteger(1, #NEON)]
 	for row = 1, 6 do
 		local y = r.top - 4 - row * 7
@@ -83,11 +83,11 @@ local function building(r: Roof)
 	end
 end
 
--- Rooftop cover: an AC unit (with a fan grille) or a water tank on legs.
+-- rooftop cover: an ac unit (with a fan grille) or a water tank on legs.
 local function acUnit(pos: Vector3, parent: Instance)
 	local box = NP("Crate", Vector3.new(4.5, 3, 3.4), CFrame.new(pos + Vector3.new(0, 1.5, 0)), Color3.fromRGB(180, 186, 196), Enum.Material.Metal, parent)
 	if MeshLib.Has("ACBody") then
-		-- A real AC unit: finned sides, a fan in a ring on top.
+		-- a real ac unit: finned sides, a fan in a ring on top.
 		MeshLib.Hide(box)
 		MeshLib.Place("ACBody", CFrame.new(pos), 1, Color3.fromRGB(180, 186, 196), Enum.Material.Metal, parent)
 		MeshLib.Place("ACFan", CFrame.new(pos), 1, Color3.fromRGB(60, 64, 74), Enum.Material.Metal, parent)
@@ -100,7 +100,7 @@ end
 
 local function waterTank(pos: Vector3, parent: Instance)
 	if MeshLib.Has("TankWood") then
-		-- A wooden water tank: staves with iron bands, a cone roof, braced legs.
+		-- a wooden water tank: staves with iron bands, a cone roof, braced legs.
 		local tank = NP("Barrel", Vector3.new(4.5, 4, 4), CFrame.new(pos + Vector3.new(0, 5, 0)) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(150, 104, 76), Enum.Material.WoodPlanks, parent)
 		tank.Shape = Enum.PartType.Cylinder
 		MeshLib.Hide(tank)
@@ -125,7 +125,7 @@ local function antenna(pos: Vector3, h: number, parent: Instance)
 	light.Shape = Enum.PartType.Ball
 end
 
--- A glowing sign hung on a building face.
+-- a glowing sign hung on a building face.
 local function sign(r: Roof, side: number, text: string)
 	local color = NEON[rng:NextInteger(1, #NEON)]
 	local board = NP("Banner", Vector3.new(12, 3.2, 0.3), CFrame.new(r.x, r.top - 4, r.z + side * (r.sz / 2 + 0.25)), Color3.fromRGB(20, 20, 30), Enum.Material.SmoothPlastic, r.folder)
@@ -145,7 +145,7 @@ local function sign(r: Roof, side: number, text: string)
 	label.Parent = gui
 end
 
--- A random clear spot on a roof, away from its middle and the given points.
+-- a random clear spot on a roof, away from its middle and the given points.
 local function roofSpot(r: Roof, avoid: { Vector3 }): Vector3?
 	for _ = 1, 20 do
 		local p = Vector3.new(r.x + rng:NextNumber(-0.38, 0.38) * r.sx, r.top, r.z + rng:NextNumber(-0.38, 0.38) * r.sz)
@@ -163,8 +163,8 @@ local function roofSpot(r: Roof, avoid: { Vector3 }): Vector3?
 	return nil
 end
 
--- A window-cleaner lift beside step roof `step` (`sx`, `sz` = which corner):
--- a yellow deck on a slider (MapFeatureService drives it) riding from the
+-- a window-cleaner lift beside step roof `step` (`sx`, `sz` = which corner):
+-- a yellow deck on a slider (mapfeatureservice drives it) riding from the
 -- roof up to a high perch over the tower, with cables and a pulley beam.
 local function makeLift(step: Roof, sx: number, sz: number, parent: Instance)
 	local x, zDeck, zPerch = 30.5 * sx, 33.5 * sz, 26.5 * sz
@@ -179,7 +179,7 @@ local function makeLift(step: Roof, sx: number, sz: number, parent: Instance)
 		NP("StringCable", Vector3.new(0.15, high + 4 - low, 0.15), CFrame.new(x + cx, (high + 4 + low) / 2, zDeck), metal, Enum.Material.Metal, parent).CanCollide = false
 	end
 	NP("ArmPulley", Vector3.new(6.2, 0.6, 0.6), CFrame.new(x, high + 4, zDeck), metal, Enum.Material.Metal, parent).CanCollide = false
-	-- The deck on its slider (it starts flush with the step roof).
+	-- the deck on its slider (it starts flush with the step roof).
 	local guide = NP("LiftGuide", Vector3.one * 0.4, CFrame.new(x, low - 0.3, zDeck), metal, Enum.Material.Metal, parent)
 	guide.Transparency = 1
 	guide.CanCollide = false
@@ -194,7 +194,7 @@ local function makeLift(step: Roof, sx: number, sz: number, parent: Instance)
 		weld.Part1 = rail
 		weld.Parent = deck
 	end
-	local up = CFrame.fromMatrix(Vector3.zero, Vector3.yAxis, Vector3.zAxis) -- the slide axis (X) points up
+	local up = CFrame.fromMatrix(Vector3.zero, Vector3.yAxis, Vector3.zAxis) -- the slide axis (x) points up
 	local a0 = Instance.new("Attachment")
 	a0.CFrame = up
 	a0.Parent = guide
@@ -229,8 +229,8 @@ function Rooftops.Build(): Folder
 		ArenaKit.MarkPlayable(folder)
 	end
 
-	-- Bridges: planks from roof edge to roof edge (the kit's ramp handles
-	-- the height difference). Remember where they land so props keep clear.
+	-- bridges: planks from roof edge to roof edge (the kit's ramp handles
+	-- the height difference). remember where they land so props keep clear.
 	local keepClear: { [string]: { Vector3 } } = {}
 	local bridges = Instance.new("Folder")
 	bridges.Name = "Bridges"
@@ -245,7 +245,7 @@ function Rooftops.Build(): Folder
 		table.insert(keepClear[b.name], pb)
 	end
 
-	-- Spawns: each team's base plus both of its side roofs.
+	-- spawns: each team's base plus both of its side roofs.
 	for _, team in ipairs({ "Blue", "Red" }) do
 		local keys = team == "Blue" and { "baseB", "sideBL", "sideBR" } or { "baseR", "sideRL", "sideRR" }
 		for _, key in ipairs(keys) do
@@ -254,19 +254,19 @@ function Rooftops.Build(): Folder
 			ArenaKit.AddTeamSpawnPoint(pos, team, spawns, r.folder)
 			table.insert(keepClear[key], Vector3.new(pos.X, r.top, pos.Z))
 		end
-		-- Team-coloured light strip along the base's front edge.
+		-- team-coloured light strip along the base's front edge.
 		local base = R[keys[1]]
 		local front = team == "Blue" and 1 or -1
 		NP("TeamStrip", Vector3.new(base.sx * 0.9, 0.2, 0.5), CFrame.new(base.x, base.top + 0.05, base.z + front * (base.sz / 2 - 1)), TEAM[team], Enum.Material.Neon, base.folder).CanCollide = false
 	end
 
-	-- Fan shafts off the outer side of both flank roofs: ride the updraft.
+	-- fan shafts off the outer side of both flank roofs: ride the updraft.
 	for _, key in ipairs({ "flankL", "flankR" }) do
 		local r = R[key]
 		ArenaKit.AddSwimColumn("Wind", ArenaKit.NewIsle(Vector3.new(r.x, r.top - ArenaKit.SURFACE, r.z), r.sx / 2, r.folder), r.x < 0 and math.pi or 0, r.folder)
 	end
 
-	-- Jump pads: from each base up onto the tower roof, and from the tower
+	-- jump pads: from each base up onto the tower roof, and from the tower
 	-- out to the flanks.
 	local pads = Instance.new("Folder")
 	pads.Name = "JumpPads"
@@ -293,14 +293,14 @@ function Rooftops.Build(): Folder
 		ArenaKit.AddJumpPad(centerIsle, math.atan2(0, r.x), 9, Vector3.new(r.x, r.top, 6), pads)
 	end
 
-	-- Power-ups on the flanks and the stepping roofs.
+	-- power-ups on the flanks and the stepping roofs.
 	for _, key in ipairs({ "flankL", "flankR", "stepBL", "stepRR" }) do
 		local r = R[key]
 		ArenaKit.AddPowerPad(Vector3.new(r.x, r.top - ArenaKit.SURFACE, r.z), powerPads)
 		table.insert(keepClear[key], Vector3.new(r.x, r.top, r.z))
 	end
 
-	-- Rooftop cover and clutter, kept off bridges, spawns and pads.
+	-- rooftop cover and clutter, kept off bridges, spawns and pads.
 	for _, r in pairs(R) do
 		local avoid = keepClear[r.name] or {}
 		local count = math.floor(r.sx * r.sz / 260)
@@ -321,7 +321,7 @@ function Rooftops.Build(): Folder
 		end
 	end
 
-	-- The tower: a helipad ring and signs.
+	-- the tower: a helipad ring and signs.
 	local ring = NP("Helipad", Vector3.new(0.1, 16, 16), CFrame.new(center.x, center.top + 0.02, center.z) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(255, 214, 90), Enum.Material.Neon, center.folder)
 	ring.Shape = Enum.PartType.Cylinder
 	ring.Transparency = 0.55
@@ -331,7 +331,7 @@ function Rooftops.Build(): Folder
 	sign(R.flankL, 1, "FISH 24/7")
 	sign(R.flankR, -1, "NINE LIVES")
 
-	-- Distant skyline (scenery only) sinking into the fog.
+	-- distant skyline (scenery only) sinking into the fog.
 	local skyline = Instance.new("Folder")
 	skyline.Name = "Scenery"
 	skyline.Parent = arena
@@ -353,8 +353,8 @@ function Rooftops.Build(): Folder
 		Glare = 0.4, Haze = 2.2, Ambient = Color3.fromRGB(120, 110, 150), OutdoorAmbient = Color3.fromRGB(150, 130, 180),
 		ClockTime = 18.2, FogColor = Color3.fromRGB(120, 90, 160), FogEnd = 900, Brightness = 2.2,
 	})
-	-- Falls between buildings end quickly: out well before the fog floor.
-	-- Rooftop life: a helipad on the tower, string lights, neon edges,
+	-- falls between buildings end quickly: out well before the fog floor.
+	-- rooftop life: a helipad on the tower, string lights, neon edges,
 	-- satellite dishes, planters; traffic glowing far below.
 	do
 		local c = R.center
@@ -369,12 +369,12 @@ function Rooftops.Build(): Folder
 		end
 	end
 	for _, r in pairs(R) do
-		-- Neon trim along the parapet.
+		-- neon trim along the parapet.
 		local trim = NEON[rng:NextInteger(1, #NEON)]
 		for _, e in ipairs({ { 0, r.sz / 2, r.sx, 0.2 }, { 0, -r.sz / 2, r.sx, 0.2 }, { r.sx / 2, 0, 0.2, r.sz }, { -r.sx / 2, 0, 0.2, r.sz } }) do
 			NP("Parapet", Vector3.new(e[3], 0.12, e[4]), CFrame.new(r.x + e[1], r.top + 0.86, r.z + e[2]), trim, Enum.Material.Neon, r.folder).CanCollide = false
 		end
-		-- String lights corner to corner.
+		-- string lights corner to corner.
 		local h = r.top + 4.5
 		local corners = { Vector3.new(r.x - r.sx / 2 + 1, h, r.z - r.sz / 2 + 1), Vector3.new(r.x + r.sx / 2 - 1, h, r.z + r.sz / 2 - 1) }
 		NP("Post", Vector3.new(0.25, 4.6, 0.25), CFrame.new(corners[1] - Vector3.new(0, 2.3, 0)), Color3.fromRGB(60, 60, 70), Enum.Material.Metal, r.folder).CanCollide = false
@@ -387,7 +387,7 @@ function Rooftops.Build(): Folder
 			b.Shape = Enum.PartType.Ball
 			b.CanCollide = false
 		end
-		-- A satellite dish or a planter in a free corner.
+		-- a satellite dish or a planter in a free corner.
 		local spot = Vector3.new(r.x + r.sx / 2 - 2.5, r.top, r.z - r.sz / 2 + 2.5)
 		if rng:NextNumber() < 0.5 then
 			NP("Post", Vector3.new(0.4, 2, 0.4), CFrame.new(spot + Vector3.new(0, 1, 0)), Color3.fromRGB(170, 176, 186), Enum.Material.Metal, r.folder).CanCollide = false
@@ -403,7 +403,7 @@ function Rooftops.Build(): Folder
 			end
 		end
 	end
-	-- Traffic streaming through the streets far below.
+	-- traffic streaming through the streets far below.
 	for k = 1, 16 do
 		local along = rng:NextNumber() < 0.5
 		local off = rng:NextNumber(-150, 150)
@@ -413,12 +413,12 @@ function Rooftops.Build(): Folder
 		streak.Transparency = 0.3
 	end
 
-	-- Window-cleaner lifts from each step roof up to a high perch over the tower.
+	-- window-cleaner lifts from each step roof up to a high perch over the tower.
 	for _, key in ipairs({ "stepBL", "stepBR", "stepRL", "stepRR" }) do
 		local r = R[key]
 		makeLift(r, r.x > 0 and 1 or -1, r.z > 0 and 1 or -1, r.folder)
 	end
-	-- Neon billboards on the flank roofs: they flicker, then surge.
+	-- neon billboards on the flank roofs: they flicker, then surge.
 	ArenaKit.AddBillboard(Vector3.new(R.flankL.x, R.flankL.top, 8), Vector3.zero, Color3.fromRGB(255, 90, 200), "MEOW COLA", R.flankL.folder)
 	ArenaKit.AddBillboard(Vector3.new(R.flankR.x, R.flankR.top, -8), Vector3.zero, Color3.fromRGB(80, 220, 255), "FISH TV", R.flankR.folder)
 

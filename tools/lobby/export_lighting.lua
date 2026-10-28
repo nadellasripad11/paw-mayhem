@@ -1,13 +1,13 @@
--- PAW MAYHEM — run in Studio's command bar WHILE PLAYING, on the Server view
--- (Home > Test > "Current: Client" button switches to Server), after tuning
--- the lobby lights by eye. Prints the whole of
--- src/ReplicatedStorage/Shared/LobbyLighting.lua to the Output window: copy it
+-- paw mayhem — run in studio's command bar while playing, on the server view
+-- (home > test > "current: client" button switches to server), after tuning
+-- the lobby lights by eye. prints the whole of
+-- src/replicatedstorage/shared/lobbylighting.lua to the output window: copy it
 -- all and send it over (or paste it over that file).
---   * Lights: every light under Workspace.Lobby.Plaza.LightRig (move, copy,
+--   * lights: every light under workspace.lobby.plaza.lightrig (move, copy,
 --     add or delete holders and lights there freely).
---   * Lighting (Brightness, Ambient, ...): read from Lighting. Tick the
---     LobbyTuning attribute on Lighting first (on the Server view) so the game
---     stops putting its own values back; your changes then show on the Client.
+--   * lighting (brightness, ambient, ...): read from lighting. tick the
+--     lobbytuning attribute on lighting first (on the server view) so the game
+--     stops putting its own values back; your changes then show on the client.
 local Lighting = game:GetService("Lighting")
 local lobby = workspace:FindFirstChild("Lobby")
 assert(lobby, "Press Play first (the lobby is built when the game runs)")

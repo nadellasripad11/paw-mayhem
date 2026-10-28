@@ -1,7 +1,7 @@
 --!strict
--- Cats: base cat roster + customization catalog for PAW MAYHEM.
--- Cats are purely cosmetic (never pay-to-win). Each entry drives a procedural
--- R15-scaled cat model built at runtime by Shared/Character/CatBuilder.
+-- cats: base cat roster + customization catalog for paw mayhem.
+-- cats are purely cosmetic (never pay-to-win). each entry drives a procedural
+-- r15-scaled cat model built at runtime by shared/character/catbuilder.
 
 local function c(r, g, b)
 	return Color3.fromRGB(r, g, b)
@@ -9,7 +9,7 @@ end
 
 local Cats = {}
 
--- Fur variations (base body color + accent, optional eye colour). Names mirror the design sheet
+-- fur variations (base body color + accent, optional eye colour). names mirror the design sheet
 -- but colors/values are original tuning for this game.
 Cats.Fur = {
 	{ Id = "Orange", Name = "Orange", Desc = "Default", Pattern = "Solid", Body = c(240, 150, 70), Accent = c(255, 200, 140), UnlockLevel = 0, CoinCost = 0 },
@@ -26,7 +26,7 @@ Cats.Fur = {
 	{ Id = "RoyalGold", Name = "Royal Gold", Desc = "VIP", Pattern = "Solid", Body = c(250, 200, 70), Accent = c(255, 244, 210), Eye = c(70, 150, 255), UnlockLevel = 0, CoinCost = 0, PassOnly = "VIP" },
 }
 
--- Outfits (torso/limb overlay color + tag).
+-- outfits (torso/limb overlay color + tag).
 Cats.Outfits = {
 	{ Id = "None", Name = "None", Desc = "Classic", Color = c(200, 200, 200), UnlockLevel = 0, CoinCost = 0 },
 	{ Id = "Hoodie", Name = "Hoodie", Desc = "Classic", Color = c(52, 46, 66), UnlockLevel = 0, CoinCost = 250 },
@@ -37,7 +37,7 @@ Cats.Outfits = {
 	{ Id = "Space", Name = "Space", Desc = "Explorer", Color = c(220, 230, 245), UnlockLevel = 15, CoinCost = 2500 },
 }
 
--- Hats / head accessories (procedural shapes drawn by CatBuilder).
+-- hats / head accessories (procedural shapes drawn by catbuilder).
 Cats.Hats = {
 	{ Id = "None", Name = "None", Shape = "None", Color = c(255, 255, 255), UnlockLevel = 0, CoinCost = 0 },
 	{ Id = "Cap", Name = "Cap", Shape = "Cap", Color = c(70, 130, 220), UnlockLevel = 0, CoinCost = 150 },
@@ -50,7 +50,7 @@ Cats.Hats = {
 	{ Id = "Halo", Name = "Halo", Shape = "Halo", Color = c(255, 236, 150), UnlockLevel = 0, CoinCost = 0, GemCost = 250 },
 }
 
--- Accessories (face/back items).
+-- accessories (face/back items).
 Cats.Accessories = {
 	{ Id = "None", Name = "None", Shape = "None", Color = c(255, 255, 255), UnlockLevel = 0, CoinCost = 0 },
 	{ Id = "Sunglasses", Name = "Sunglasses", Desc = "Chill", Shape = "Glasses", Color = c(30, 30, 35), UnlockLevel = 0, CoinCost = 200 },
@@ -58,7 +58,7 @@ Cats.Accessories = {
 	{ Id = "Jetpack", Name = "Jetpack", Shape = "Jetpack", Color = c(150, 160, 180), UnlockLevel = 9, CoinCost = 1400 },
 }
 
--- Emotes (client-side anim triggers; ids referenced by the emote wheel).
+-- emotes (client-side anim triggers; ids referenced by the emote wheel).
 Cats.Emotes = {
 	{ Id = "Happy", Name = "Happy", UnlockLevel = 0, CoinCost = 0 },
 	{ Id = "Sit", Name = "Sit", UnlockLevel = 0, CoinCost = 0 },
@@ -87,7 +87,7 @@ Cats.Default = {
 	Emote = "Happy",
 }
 
--- Lookup helpers -------------------------------------------------------------
+-- lookup helpers -------------------------------------------------------------
 local function indexBy(list)
 	local t = {}
 	for _, v in ipairs(list) do

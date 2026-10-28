@@ -1,7 +1,7 @@
 --!strict
--- Trove: track objects/connections and clean them all up at once.
--- Handles RBXScriptConnection, Instances, functions, and objects with
--- :Destroy() or :Disconnect().
+-- trove: track objects/connections and clean them all up at once.
+-- handles rbxscriptconnection, instances, functions, and objects with
+-- :destroy() or :disconnect().
 
 local Trove = {}
 Trove.__index = Trove

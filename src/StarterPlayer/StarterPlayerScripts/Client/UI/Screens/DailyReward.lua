@@ -1,7 +1,7 @@
 --!strict
--- DailyReward: the 7-day login calendar popup. Opens by itself once per
--- session when today's reward is waiting (and from the DAILY button). Days
--- already claimed this cycle show a check, today glows, Day 7 is a chest.
+-- dailyreward: the 7-day login calendar popup. opens by itself once per
+-- session when today's reward is waiting (and from the daily button). days
+-- already claimed this cycle show a check, today glows, day 7 is a chest.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -106,7 +106,7 @@ function DailyReward.Build()
 		local stroke = UIUtil.stroke(Color3.fromRGB(60, 90, 140), 1.5, f)
 		UIUtil.label({ Parent = f, Text = "DAY " .. i, Font = Theme.Font.Title, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 8), Size = UDim2.new(1, 0, 0, 20) })
 		local art = UIUtil.make("Frame", { Parent = f, Position = UDim2.fromOffset(6, 32), Size = UDim2.new(1, -12, 0, 118), BackgroundTransparency = 1 })
-		-- 3D art is decoration: never let it break the popup.
+		-- 3d art is decoration: never let it break the popup.
 		pcall(function()
 			if big then
 				ShopArt.Prop(art, "Gift")

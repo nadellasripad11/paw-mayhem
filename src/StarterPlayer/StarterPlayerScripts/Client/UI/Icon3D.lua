@@ -1,9 +1,9 @@
 --!strict
--- Icon3D: chunky 3D icons for the menu (Rivals-style), each a little model of
--- parts in a ViewportFrame - no uploaded images. Kinds:
---   Clipboard (tasks), Basket (shop), WingShield (pass), CatHead (customize,
---   in your cat's colours), Coin, Gem.
--- Icon3D.Create(kind, parent, size, position, opts) -> ViewportFrame
+-- icon3d: chunky 3d icons for the menu (rivals-style), each a little model of
+-- parts in a viewportframe - no uploaded images. kinds:
+--   clipboard (tasks), basket (shop), wingshield (pass), cathead (customize,
+--   in your cat's colours), coin, gem.
+-- icon3d.create(kind, parent, size, position, opts) -> viewportframe
 
 local Icon3D = {}
 
@@ -47,7 +47,7 @@ end
 local C = Color3.fromRGB
 local BUILD: { [string]: (Model, { [string]: any }) -> CFrame } = {}
 
--- A clipboard with a ticked list (tasks).
+-- a clipboard with a ticked list (tasks).
 BUILD.Clipboard = function(model)
 	local part = builder(model)
 	part(Vector3.new(3, 3.9, 0.22), CFrame.new(), C(176, 112, 62), { material = Enum.Material.Wood })
@@ -64,7 +64,7 @@ BUILD.Clipboard = function(model)
 	return CFrame.Angles(0, math.rad(-22), math.rad(-10))
 end
 
--- A red shopping basket with a handle (shop).
+-- a red shopping basket with a handle (shop).
 BUILD.Basket = function(model)
 	local part = builder(model)
 	local red, dark = C(232, 52, 58), C(170, 30, 38)
@@ -92,7 +92,7 @@ BUILD.Basket = function(model)
 	return CFrame.Angles(math.rad(20), math.rad(-28), 0)
 end
 
--- A shield with wings (pass).
+-- a shield with wings (pass).
 BUILD.WingShield = function(model)
 	local part = builder(model)
 	local blue, rim = C(150, 190, 240), C(225, 235, 250)
@@ -114,7 +114,7 @@ BUILD.WingShield = function(model)
 	return CFrame.Angles(0, math.rad(-18), 0)
 end
 
--- Your cat's head (customize).
+-- your cat's head (customize).
 BUILD.CatHead = function(model, o)
 	local part = builder(model)
 	local fur, accent = o.fur or C(255, 170, 80), o.accent or C(255, 236, 222)
@@ -130,7 +130,7 @@ BUILD.CatHead = function(model, o)
 	return CFrame.Angles(math.rad(-6), math.rad(-22), 0)
 end
 
--- A gold coin with a paw on it.
+-- a gold coin with a paw on it.
 BUILD.Coin = function(model)
 	local part = builder(model)
 	local gold = C(255, 196, 50)
@@ -145,7 +145,7 @@ BUILD.Coin = function(model)
 	return CFrame.Angles(0, math.rad(-25), math.rad(8))
 end
 
--- A purple gem.
+-- a purple gem.
 BUILD.Gem = function(model)
 	local part = builder(model)
 	local p = C(200, 90, 255)
@@ -154,7 +154,7 @@ BUILD.Gem = function(model)
 	return CFrame.Angles(0, math.rad(20), 0)
 end
 
--- A grey gear (settings).
+-- a grey gear (settings).
 BUILD.Gear = function(model)
 	local part = builder(model)
 	local steel, dark = C(196, 204, 220), C(70, 76, 92)
@@ -167,7 +167,7 @@ BUILD.Gear = function(model)
 	return CFrame.Angles(math.rad(-15), math.rad(-25), 0)
 end
 
--- A gold / silver / bronze podium (leaderboard).
+-- a gold / silver / bronze podium (leaderboard).
 BUILD.Podium = function(model)
 	local part = builder(model)
 	part(Vector3.new(1.1, 2.2, 1.1), CFrame.new(0, 1.1, 0), C(255, 200, 60), { material = Enum.Material.Metal, reflectance = 0.1 })
@@ -177,7 +177,7 @@ BUILD.Podium = function(model)
 	return CFrame.Angles(math.rad(12), math.rad(-25), 0)
 end
 
--- A yellow smiley (emotes).
+-- a yellow smiley (emotes).
 BUILD.Smiley = function(model)
 	local part = builder(model)
 	part(Vector3.new(2.4, 2.4, 2.4), CFrame.new(), C(255, 214, 60), { sphere = true })
@@ -203,7 +203,7 @@ local function frame(vf: ViewportFrame, model: Model, aspect: number, fill: numb
 	vf.CurrentCamera = cam
 end
 
--- Draws (or redraws) \`kind\` in a viewport. opts: fur / accent (CatHead),
+-- draws (or redraws) \`kind\` in a viewport. opts: fur / accent (cathead),
 -- fill (how much of the frame it fills, default 0.95).
 function Icon3D.Set(vf: ViewportFrame, kind: string, opts: { [string]: any }?)
 	for _, c in ipairs(vf:GetChildren()) do

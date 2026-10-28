@@ -1,6 +1,6 @@
 --!strict
--- ClientState: single shared store for the local client. Holds the latest
--- profile snapshot + match state, and exposes signals so controllers and UI
+-- clientstate: single shared store for the local client. holds the latest
+-- profile snapshot + match state, and exposes signals so controllers and ui
 -- screens stay in sync without tightly coupling to each other.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,7 +8,7 @@ local Signal = require(ReplicatedStorage.Shared.Util.Signal)
 
 local ClientState = {}
 
-ClientState.Profile = nil :: any -- {Coins, Gems, Level, XP, Stats, Unlocks, Loadout, Quests}
+ClientState.Profile = nil :: any -- {coins, gems, level, xp, stats, unlocks, loadout, quests}
 ClientState.Match = { phase = "Intermission", timeLeft = 0, scores = { Blue = 0, Red = 0 }, board = {} }
 ClientState.Settings = {
 	MusicVolume = 0.6,
@@ -22,7 +22,7 @@ ClientState.Settings = {
 	InvertY = false,
 	AutoSprint = false,
 	AutoFire = true, -- touch only: shoot when the crosshair is on an enemy
-	FirstPerson = false, -- camera: first person instead of over the shoulder (V)
+	FirstPerson = false, -- camera: first person instead of over the shoulder (v)
 	ShowFPS = false,
 	Crosshair = "White",
 }
@@ -48,7 +48,7 @@ function ClientState.UpdateSettings(patch)
 	ClientState.SettingsChanged:Fire(ClientState.Settings)
 end
 
--- Ownership + equip helpers used by menus.
+-- ownership + equip helpers used by menus.
 function ClientState.Owns(kind: string, id: string): boolean
 	local p = ClientState.Profile
 	if not p then

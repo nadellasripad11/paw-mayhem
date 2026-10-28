@@ -1,7 +1,7 @@
 --!strict
--- Tutorial: a short step-by-step intro for first-time players (shown once,
--- before their first match). Each step has a posed 3D cat and a tip, with
--- controls matched to the device. Finishing or skipping tells the server.
+-- tutorial: a short step-by-step intro for first-time players (shown once,
+-- before their first match). each step has a posed 3d cat and a tip, with
+-- controls matched to the device. finishing or skipping tells the server.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -125,7 +125,7 @@ local function open(finished: (() -> ())?)
 	show()
 end
 
--- Never leave a half-built dark overlay on screen if something fails.
+-- never leave a half-built dark overlay on screen if something fails.
 function Tutorial.Open(finished: (() -> ())?)
 	local ok, err = pcall(open, finished)
 	if not ok then

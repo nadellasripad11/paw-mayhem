@@ -1,9 +1,9 @@
 --!strict
--- Results: shown during the Results phase while the camera looks at the
--- winners' podium. A VICTORY / DEFEAT banner with the final score sits on top,
+-- results: shown during the results phase while the camera looks at the
+-- winners' podium. a victory / defeat banner with the final score sits on top,
 -- the full match scoreboard (real avatar headshots, team colours, bots
 -- included) runs down the left, and your round summary + the countdown back
--- to the lobby sit at the bottom. Confetti on a win.
+-- to the lobby sit at the bottom. confetti on a win.
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -129,20 +129,20 @@ function Results.Show(match)
 		end
 	end
 	statLabel.Text = myStats and string.format("YOUR ROUND:  %d ELIMINATIONS  •  %d SCORE", myStats.Elims or 0, myStats.Score or 0) or "MATCH COMPLETE"
-	-- Win streak (the server has already counted this match).
+	-- win streak (the server has already counted this match).
 	local stats = ClientState.Profile and ClientState.Profile.Stats
 	local streak = stats and tonumber(stats.WinStreak) or 0
 	if won and streak >= 2 then
 		statLabel.Text ..= string.format("   •   WIN STREAK x%d  (+%d%% COINS)", streak, math.min(streak - 1, 5) * 10)
 	end
-	-- Trophy change from this match and the tier you're now in.
+	-- trophy change from this match and the tier you're now in.
 	if stats and myStats then
 		local delta = tonumber(stats.LastTrophies) or 0
 		local tier = Ranks.For(tonumber(stats.Trophies) or 0)
 		statLabel.Text ..= string.format("   •   %s%d TROPHIES (%s)", delta >= 0 and "+" or "", delta, string.upper(tier.Name))
 	end
 	Results.Update(match)
-	-- First the final score and the winner (EndScreen), then the scoreboard
+	-- first the final score and the winner (endscreen), then the scoreboard
 	-- and your round slide in round the podium.
 	banner.Visible = false
 	confettiLayer:ClearAllChildren()
@@ -183,7 +183,7 @@ function Results.Show(match)
 			local sc = r:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 			sc.Scale = 0
 			sc.Parent = r
-			-- the KO count ticks up from 0 as the row lands
+			-- the ko count ticks up from 0 as the row lands
 			local ko = r:FindFirstChild("KOCount") :: TextLabel?
 			local target = ko and tonumber(ko.Text) or 0
 			if ko then
@@ -250,7 +250,7 @@ function Results.Build()
 	}) :: ScreenGui
 	gui = g
 
-	-- Soft vignette only at the edges so the podium stays visible.
+	-- soft vignette only at the edges so the podium stays visible.
 	local shade = UIUtil.make("Frame", { Parent = g, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(4, 10, 24), BorderSizePixel = 0 })
 	local grad = Instance.new("UIGradient")
 	grad.Transparency = NumberSequence.new({
@@ -260,7 +260,7 @@ function Results.Build()
 	grad.Parent = shade
 	confettiLayer = UIUtil.make("Frame", { Parent = g, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 5 }) :: Frame
 
-	-- Top banner
+	-- top banner
 	banner = UIUtil.make("Frame", {
 		Parent = g, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, UIUtil.topInset() + 8),
 		Size = UDim2.fromOffset(520, 124), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0,
@@ -272,7 +272,7 @@ function Results.Build()
 	scoreLabel = UIUtil.label({ Parent = banner, Text = "", RichText = true, Font = Theme.Font.Title, TextSize = 30, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 62), Size = UDim2.new(1, 0, 0, 34) })
 	subLabel = UIUtil.label({ Parent = banner, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 98), Size = UDim2.new(1, 0, 0, 18) })
 
-	-- Match scoreboard (left)
+	-- match scoreboard (left)
 	local panel = UIUtil.make("Frame", {
 		Parent = g, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 20, 0.6, 0), Size = UDim2.new(0, 300, 0.48, 0),
 		BackgroundColor3 = Color3.fromRGB(10, 18, 36), BackgroundTransparency = 0.15, BorderSizePixel = 0,
@@ -287,7 +287,7 @@ function Results.Build()
 	}) :: ScrollingFrame
 	UIUtil.listLayout(boardList, 6)
 
-	-- Bottom: your round + countdown
+	-- bottom: your round + countdown
 	statLabel = UIUtil.label({
 		Parent = g, Text = "", Font = Theme.Font.Title, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Center,
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -44), Size = UDim2.new(0.92, 0, 0, 30),
@@ -300,7 +300,7 @@ function Results.Build()
 		Parent = g, Text = "", TextSize = 15, TextXAlignment = Enum.TextXAlignment.Center, TextColor3 = Color3.new(1, 1, 1),
 		AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -18), Size = UDim2.fromOffset(400, 22), TextStrokeTransparency = 0.4,
 	})
-	-- Phones: shrink the banner and the scoreboard with the screen height.
+	-- phones: shrink the banner and the scoreboard with the screen height.
 	local bannerScale = Instance.new("UIScale")
 	bannerScale.Parent = banner
 	local panelScale = Instance.new("UIScale")

@@ -1,7 +1,7 @@
 --!strict
--- CommunityService: the group reward (members get +10% coins) and Weekend
--- Mayhem (Sat + Sun UTC: lower gravity and bonus coins). Also logs the
--- "Joined" onboarding step.
+-- communityservice: the group reward (members get +10% coins) and weekend
+-- mayhem (sat + sun utc: lower gravity and bonus coins). also logs the
+-- "joined" onboarding step.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -20,8 +20,8 @@ local function isWeekend(): boolean
 	return wday == 1 or wday == 7
 end
 
--- Workspace attributes the rest of the game reads: BaseGravity (EventService
--- returns to it after its own gravity events) and CoinBoost (EconomyService).
+-- workspace attributes the rest of the game reads: basegravity (eventservice
+-- returns to it after its own gravity events) and coinboost (economyservice).
 local function applyWeekend()
 	local on = isWeekend()
 	if Workspace:GetAttribute("Weekend") == on then

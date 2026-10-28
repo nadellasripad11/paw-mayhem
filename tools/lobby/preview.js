@@ -1,6 +1,6 @@
-// Renders each lobby mesh group to tools/lobby/preview_<Group>.png (flat
+// renders each lobby mesh group to tools/lobby/preview_<group>.png (flat
 // material colours, one key light) so the shapes can be checked without
-// Studio.   node tools/lobby/preview.js [Group]
+// studio.   node tools/lobby/preview.js [group]
 const fs = require('fs');
 const path = require('path');
 const { encode } = require('./png');

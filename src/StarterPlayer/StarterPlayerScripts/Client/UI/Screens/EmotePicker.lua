@@ -1,8 +1,8 @@
 --!strict
--- EmotePicker: a small window of your six emote slots (tap one to play it;
--- change them in Customize -> Emotes).
--- Opened by the EMOTES button in the lobby's top right and by the emote
--- button in the phone controls during a match; X or picking one closes it.
+-- emotepicker: a small window of your six emote slots (tap one to play it;
+-- change them in customize -> emotes).
+-- opened by the emotes button in the lobby's top right and by the emote
+-- button in the phone controls during a match; x or picking one closes it.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,7 +41,7 @@ local function fill()
 		end
 	end
 	local order = 0
-	-- Your six emote slots (set in Customize).
+	-- your six emote slots (set in customize).
 	local slots = require(script.Parent.Parent.Parent.ClientActions).EmoteSlots()
 	for _, id in ipairs(slots) do
 		local e = Cats.EmoteById[id]

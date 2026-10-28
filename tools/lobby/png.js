@@ -1,4 +1,4 @@
-// Tiny PNG encoder + noise helpers for the lobby texture generator (no deps).
+// tiny png encoder + noise helpers for the lobby texture generator (no deps).
 const zlib = require('zlib');
 
 const CRC = (() => {
@@ -23,7 +23,7 @@ function chunk(type, data) {
   crc.writeUInt32BE(crc32(td));
   return Buffer.concat([len, td, crc]);
 }
-// rgba: Uint8Array of w*h*4
+// rgba: uint8array of w*h*4
 function encode(w, h, rgba) {
   const raw = Buffer.alloc((w * 4 + 1) * h);
   for (let y = 0; y < h; y++) {
@@ -34,7 +34,7 @@ function encode(w, h, rgba) {
   ihdr.writeUInt32BE(w, 0);
   ihdr.writeUInt32BE(h, 4);
   ihdr[8] = 8;
-  ihdr[9] = 6; // RGBA
+  ihdr[9] = 6; // rgba
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', ihdr),
@@ -43,7 +43,7 @@ function encode(w, h, rgba) {
   ]);
 }
 
-// Seeded random + tileable value noise / fbm.
+// seeded random + tileable value noise / fbm.
 function rng(seed) {
   let s = seed >>> 0 || 1;
   return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -76,7 +76,7 @@ function fbm(seed, p, oct) {
   };
 }
 
-// Height field (Float32 w*h, 0..1) -> tangent-space normal map RGBA (OpenGL / glTF: +Y up).
+// height field (float32 w*h, 0..1) -> tangent-space normal map rgba (opengl / gltf: +y up).
 function normalFromHeight(w, h, H, strength) {
   const out = new Uint8Array(w * h * 4);
   const at = (x, y) => H[((y + h) % h) * w + ((x + w) % w)];

@@ -1,12 +1,12 @@
 --!strict
--- CatAnimator: every cat's animation (players, bots and the 3D menu
--- previews), posed locally each frame with CatBuilder.Pose. On top of the
+-- catanimator: every cat's animation (players, bots and the 3d menu
+-- previews), posed locally each frame with catbuilder.pose. on top of the
 -- walk / idle / mid-air pose it works out what each cat is doing and layers
 -- that in:
 --   * movement: a gallop when sprinting, a stretch on take-off, a squash and
 --     a dust puff on landing (harder for bigger falls), leaning into turns,
 --     legs paddling on the way down
---   * moves (Trigger, also sent to everyone else through MoveFx): the
+--   * moves (trigger, also sent to everyone else through movefx): the
 --     double-jump front flip, the low dash dart, the pounce leap, the wall
 --     kick and hanging on to a rope swing
 --   * swimming in a swim column (paddling in water and bubble tubes, spread
@@ -17,8 +17,8 @@
 --   * life: random blinks and ear twitches, idle moves after standing still
 --     (look around, stretch, scratch, lick a paw), and in the lobby sitting
 --     down after a while, then sleeping if you're away
---   * props for some emotes (Purr's hearts, Box Sit's box)
--- A cat flying from a big hit streaks a speed trail; one blasted off the map
+--   * props for some emotes (purr's hearts, box sit's box)
+-- a cat flying from a big hit streaks a speed trail; one blasted off the map
 -- goes out with a star twinkle and a ding.
 
 local Players = game:GetService("Players")
@@ -47,7 +47,7 @@ local HEAVY = { BoomPaw = true, VoidCannon = true, Starfall = true, GoldenPurr =
 local trails: { [Model]: Trail } = setmetatable({}, { __mode = "k" }) :: any
 local twinkled: { [Model]: number } = setmetatable({}, { __mode = "k" }) :: any
 
--- What each cat is up to (only what the pose needs).
+-- what each cat is up to (only what the pose needs).
 type Motion = {
 	wasAir: boolean, minVy: number, landAt: number, landAmt: number, takeoffAt: number,
 	moves: { [string]: number }, recoilAt: number, recoilAmt: number,
@@ -99,7 +99,7 @@ local function puff(pos: Vector3, color: Color3, count: number, speed: number)
 	Debris:AddItem(a, 1)
 end
 
--- "Blasted off!" twinkle where a launched cat leaves the arena.
+-- "blasted off!" twinkle where a launched cat leaves the arena.
 local function blastOff(pos: Vector3)
 	local star = Instance.new("Part")
 	star.Shape = Enum.PartType.Ball
@@ -167,7 +167,7 @@ local function trailFor(model: Model, root: BasePart): Trail
 	return trail
 end
 
--- Little stars circling a dazed cat's head.
+-- little stars circling a dazed cat's head.
 local function dizzyStars(model: Model)
 	local head = model:FindFirstChild("Head", true)
 	if not head or not head:IsA("BasePart") then
@@ -284,8 +284,8 @@ local function emoteProps(model: Model, mo: Motion, emote: string?, root: BasePa
 end
 
 -- ── public ───────────────────────────────────────────────────────────────────
--- A move just happened on `model`: "Flip" (double jump), "Dash", "Pounce",
--- "WallKick", "Swing" / "SwingEnd" (rope swing), "Recoil" (amount = 1 normal,
+-- a move just happened on `model`: "flip" (double jump), "dash", "pounce",
+-- "wallkick", "swing" / "swingend" (rope swing), "recoil" (amount = 1 normal,
 -- more for heavy blasters).
 function CatAnimator.Trigger(model: Model?, kind: string, amount: number?)
 	if not model then
@@ -359,7 +359,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		add[name] = (add[name] or CFrame.identity) * cf
 	end
 
-	-- Landing / take-off.
+	-- landing / take-off.
 	if isAir then
 		mo.minVy = math.min(mo.minVy, v.Y)
 		if not mo.wasAir and v.Y > 15 then
@@ -382,7 +382,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 	end
 	mo.wasAir = isAir
 
-	-- Getting hit (the server raises Fluff on every hit).
+	-- getting hit (the server raises fluff on every hit).
 	local fluffAttr = model:GetAttribute("Fluff")
 	local fluff = typeof(fluffAttr) == "number" and fluffAttr or 0
 	if fluff > mo.fluff + 0.5 then
@@ -399,7 +399,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		end
 	end
 
-	-- Leaning into turns.
+	-- leaning into turns.
 	local look = root.CFrame.LookVector
 	local yaw = math.atan2(-look.X, -look.Z)
 	local dyaw = yaw - mo.yaw
@@ -412,7 +412,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 	local leanTarget = math.clamp(-dyaw / math.max(dt, 1 / 240) * 0.04, -0.3, 0.3) * math.clamp(move, 0, 1.4)
 	mo.lean += (leanTarget - mo.lean) * math.min(1, dt * 10)
 
-	-- Standing still (idle moves, lobby sit / sleep).
+	-- standing still (idle moves, lobby sit / sleep).
 	if move > 0.15 or isAir or emoting then
 		mo.stillSince = now
 		mo.act = nil
@@ -422,7 +422,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 	local owner = Players:GetPlayerFromCharacter(model)
 	local inLobby = owner ~= nil and owner:GetAttribute("Context") == "Lobby"
 
-	-- Blinks (sometimes twice) and ear twitches.
+	-- blinks (sometimes twice) and ear twitches.
 	if now >= mo.nextBlink then
 		mo.blinkAt = now
 		mo.nextBlink = now + (math.random() < 0.2 and 0.25 or math.random() * 3 + 1.6)
@@ -441,10 +441,10 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 	local swing = mo.moves.Swing and now - mo.moves.Swing < 3
 
 	if emoting then
-		-- The emote has the pose (CatBuilder.Pose layers it); keep it simple.
+		-- the emote has the pose (catbuilder.pose layers it); keep it simple.
 		mo.tumbling = false
 	elseif swing then
-		-- Hanging on to the rope: both paws up, legs dangling, swinging.
+		-- hanging on to the rope: both paws up, legs dangling, swinging.
 		replace.PawShoulderL = CFrame.Angles(0, 0, -2.9)
 		replace.PawShoulderR = CFrame.Angles(0, 0, 2.9)
 		local fwd = root.CFrame:VectorToObjectSpace(flat)
@@ -452,7 +452,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		replace.PawHipR = CFrame.Angles(math.clamp(-fwd.Z * 0.01, -0.5, 0.5) + 0.1, 0, 0)
 		body = CFrame.Angles(math.clamp(fwd.Z * 0.006, -0.4, 0.4), 0, 0)
 	elseif mo.moves.Fly and now - mo.moves.Fly < 4 then
-		-- Flying (the Fly ability): stretched out like a superhero.
+		-- flying (the fly ability): stretched out like a superhero.
 		body = CFrame.Angles(-1.15, 0, math.sin(now * 3) * 0.08)
 		replace.PawShoulderL = CFrame.Angles(-2.8, 0, -0.15)
 		replace.PawShoulderR = CFrame.Angles(-2.8, 0, 0.15)
@@ -463,14 +463,14 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 	elseif zone then
 		local p = now * 10
 		if zone == "Water" or zone == "Bubbles" then
-			-- Kitty-paddle: tipped forward, paws and legs going.
+			-- kitty-paddle: tipped forward, paws and legs going.
 			body = CFrame.Angles(-1.1, 0, 0) * CFrame.new(0, 0, 0.2)
 			replace.PawShoulderL = CFrame.Angles(-1.4 + math.sin(p) * 0.7, 0, -0.2)
 			replace.PawShoulderR = CFrame.Angles(-1.4 - math.sin(p) * 0.7, 0, 0.2)
 			replace.PawHipL = CFrame.Angles(math.sin(p + 1) * 0.5, 0, 0)
 			replace.PawHipR = CFrame.Angles(-math.sin(p + 1) * 0.5, 0, 0)
 		else
-			-- Riding the updraft: spread out, drifting round.
+			-- riding the updraft: spread out, drifting round.
 			body = CFrame.Angles(0, 0, math.sin(now * 2) * 0.15)
 			replace.PawShoulderL = CFrame.Angles(0, 0, -1.9 + math.sin(now * 3) * 0.1)
 			replace.PawShoulderR = CFrame.Angles(0, 0, 1.9 - math.sin(now * 3) * 0.1)
@@ -480,7 +480,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		end
 		mo.tumbling = false
 	elseif mo.tumbling then
-		-- Launched: a cartoon tumble until it lands.
+		-- launched: a cartoon tumble until it lands.
 		mo.tumble += dt * 13
 		body = CFrame.fromAxisAngle(mo.tumbleAxis.Magnitude > 0.1 and mo.tumbleAxis.Unit or Vector3.xAxis, mo.tumble)
 		replace.PawShoulderL = CFrame.Angles(math.sin(now * 20) * 0.6, 0, -1.8)
@@ -489,7 +489,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 		replace.PawHipR = CFrame.Angles(-math.sin(now * 18) * 0.7, 0, 0.2)
 		blink = true
 	else
-		-- Moves.
+		-- moves.
 		local flipK = mo.moves.Flip and (now - mo.moves.Flip) / 0.45
 		local dashK = mo.moves.Dash and (now - mo.moves.Dash) / 0.32
 		local pounceK = mo.moves.Pounce and (now - mo.moves.Pounce) / 0.7
@@ -504,7 +504,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 				replace.PawShoulderR = CFrame.Angles(-0.8, 0, 0.3)
 			end
 		elseif dashK and dashK < 1 then
-			-- A low, flat dart, ears pinned back.
+			-- a low, flat dart, ears pinned back.
 			local e = ease(dashK * 0.5 + 0.25)
 			body = CFrame.new(0, -0.25 * e, 0) * CFrame.Angles(-0.5 * e, 0, 0)
 			replace.PawHipL = CFrame.Angles(-1.0 * e, 0, 0)
@@ -515,7 +515,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 			end
 			ears.flat = 1
 		elseif pounceK and pounceK < 1 then
-			-- A cat leap: front paws reaching, back legs kicking.
+			-- a cat leap: front paws reaching, back legs kicking.
 			local e = ease(pounceK)
 			body = CFrame.Angles(0.35 * (1 - pounceK) - 0.45 * pounceK, 0, 0)
 			replace.PawHipL = CFrame.Angles(-1.1 * e, 0, 0)
@@ -532,14 +532,14 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 			replace.PawHipL = CFrame.Angles(0.9 * e, 0, -0.5 * e)
 			replace.PawHipR = CFrame.Angles(0.6 * e, 0, 0.3 * e)
 		elseif wading then
-			-- Wading through a ball pit: sunk in to the shoulders, bobbing.
+			-- wading through a ball pit: sunk in to the shoulders, bobbing.
 			body = CFrame.new(0, -0.7 + math.sin(now * 3) * 0.08, 0)
 			if not armed then
 				replace.PawShoulderL = CFrame.Angles(-0.4, 0, -0.7)
 				replace.PawShoulderR = CFrame.Angles(-0.4, 0, 0.7)
 			end
 		else
-			-- Ordinary movement: gallop, take-off stretch, landing squash,
+			-- ordinary movement: gallop, take-off stretch, landing squash,
 			-- leaning, paddling legs on the way down.
 			local gallop = math.clamp((move - 1.1) / 0.4, 0, 1) * (isAir and 0 or 1)
 			if gallop > 0 then
@@ -575,10 +575,10 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 			end
 			body = body * CFrame.Angles(0, 0, mo.lean)
 
-			-- Idle life.
+			-- idle life.
 			if not isAir and move < 0.15 then
 				if inLobby and still > 45 then
-					-- Away: curled up asleep (with a Zzz).
+					-- away: curled up asleep (with a zzz).
 					body = body * CFrame.new(0, -0.55, 0)
 					replace.PawHipL = CFrame.Angles(1.5, 0, -0.1)
 					replace.PawHipR = CFrame.Angles(1.5, 0, 0.1)
@@ -589,10 +589,10 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 					end
 					blink = true
 					if not mo.props.Lazy then
-						mo.props.Lazy = Instance.new("Folder") -- (marks "sleeping"; the Zzz goes up below)
+						mo.props.Lazy = Instance.new("Folder") -- (marks "sleeping"; the zzz goes up below)
 					end
 				elseif inLobby and still > 12 then
-					-- Been standing a while in the lobby: sit down.
+					-- been standing a while in the lobby: sit down.
 					body = body * CFrame.new(0, -0.45, 0)
 					replace.PawHipL = CFrame.Angles(1.4, 0, -0.1)
 					replace.PawHipR = CFrame.Angles(1.4, 0, 0.1)
@@ -635,7 +635,7 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 			end
 		end
 
-		-- Combat on top of whatever it's doing.
+		-- combat on top of whatever it's doing.
 		local recK = (now - mo.recoilAt) / 0.18
 		if recK < 1 then
 			local e = (1 - recK) * mo.recoilAmt
@@ -653,20 +653,20 @@ local function buildFx(model: Model, root: BasePart, mo: Motion, now: number, dt
 			ears.flat = math.max(ears.flat, e)
 		end
 		if fluff >= 100 and not isAir and move < 0.5 then
-			-- Nervous at high %: puffed-up tail, ears back, a little shiver.
+			-- nervous at high %: puffed-up tail, ears back, a little shiver.
 			replace.PawTail = CFrame.Angles(0.8, math.sin(now * 30) * 0.06, 0)
 			body = body * CFrame.Angles(0, 0, math.sin(now * 38) * 0.012)
 			ears.flat = math.max(ears.flat, 0.7)
 		end
 	end
 
-	-- Spawning in: a quick shake-off.
+	-- spawning in: a quick shake-off.
 	local spawnK = (now - mo.spawnAt) / 0.9
 	if spawnK < 1 and not emoting then
 		body = body * CFrame.Angles(0, 0, math.sin(spawnK * 30) * 0.25 * (1 - spawnK))
 	end
 
-	-- Sleep-in-the-lobby Zzz (and clear it on waking).
+	-- sleep-in-the-lobby zzz (and clear it on waking).
 	if mo.props.Lazy and not (inLobby and still > 45 and not emoting) then
 		mo.props.Lazy:Destroy()
 		mo.props.Lazy = nil
@@ -679,13 +679,13 @@ function CatAnimator.Start()
 	Remotes.Get("YouWereHit").OnClientEvent:Connect(function()
 		lastHurtAt = os.clock()
 	end)
-	-- Other players' moves.
+	-- other players' moves.
 	Remotes.Get("MoveFx").OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" and typeof(data.char) == "Instance" and data.char:IsA("Model") and type(data.kind) == "string" then
 			CatAnimator.Trigger(data.char, data.kind)
 		end
 	end)
-	-- Other cats' shots kick their arms (the shot starts at their muzzle).
+	-- other cats' shots kick their arms (the shot starts at their muzzle).
 	Remotes.Get("PlayEffect").OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" or data.kind ~= "Tracers" or typeof(data.from) ~= "Vector3" then
 			return
@@ -703,7 +703,7 @@ function CatAnimator.Start()
 			CatAnimator.Trigger(best, "Recoil", HEAVY[data.weapon] and 1.6 or 1)
 		end
 	end)
-	-- A new cat appearing (spawn): a puff of sparkle dust.
+	-- a new cat appearing (spawn): a puff of sparkle dust.
 	CollectionService:GetInstanceAddedSignal(CatBuilder.Tag):Connect(function(inst)
 		task.defer(function()
 			if inst:IsA("Model") and inst.PrimaryPart and inst:IsDescendantOf(Workspace) and inst:GetAttribute("Replay") == nil then
@@ -742,7 +742,7 @@ function CatAnimator.Start()
 						local trail = trails[model]
 						if speed > TRAIL_ON then
 							local tr = trailFor(model, root)
-							-- Only real launches thump: going up fast, and for your own cat only
+							-- only real launches thump: going up fast, and for your own cat only
 							-- right after a hit (not your own dash / pounce).
 							local mine = model == player.Character
 							if not tr.Enabled and v.Y > 12 and model:GetAttribute("Replay") == nil and (not mine or os.clock() - lastHurtAt < 0.5) then

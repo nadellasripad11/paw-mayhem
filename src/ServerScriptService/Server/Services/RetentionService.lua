@@ -1,11 +1,11 @@
 --!strict
--- RetentionService: daily login rewards, Roblox badges and the first-time
+-- retentionservice: daily login rewards, roblox badges and the first-time
 -- tutorial flag.
---   * ClaimDaily: once per UTC day; the streak grows when you come back the
---     next day and resets if you skip one. Day 7 is a big chest, then it loops.
---   * Badges: after every profile push each milestone in Config.Badges is
---     checked and awarded once (skipped while its Id is still 0).
---   * TutorialDone: the client reports when the tutorial is finished/skipped.
+--   * claimdaily: once per utc day; the streak grows when you come back the
+--     next day and resets if you skip one. day 7 is a big chest, then it loops.
+--   * badges: after every profile push each milestone in config.badges is
+--     checked and awarded once (skipped while its id is still 0).
+--   * tutorialdone: the client reports when the tutorial is finished/skipped.
 
 local BadgeService = game:GetService("BadgeService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -59,7 +59,7 @@ local function claimDaily(player: Player)
 	local streak = status.Streak + 1
 	local reward = DailyRewards.Days[((streak - 1) % #DailyRewards.Days) + 1]
 	profile.Daily = { LastDay = today, Streak = streak }
-	-- Lucky Gift doubles it.
+	-- lucky gift doubles it.
 	local mult = player:GetAttribute("LuckyGift") == true and Monetization.LuckyGiftMult or 1
 	local coins = reward.Coins and reward.Coins * mult
 	local gems = reward.Gems and reward.Gems * mult

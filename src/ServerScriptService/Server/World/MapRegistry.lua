@@ -1,6 +1,6 @@
 --!strict
--- MapRegistry: the full map list. Add a new map by dropping a module in
--- World/Maps/ (Id, Name, Build()) and adding one line here.
+-- mapregistry: the full map list. add a new map by dropping a module in
+-- world/maps/ (id, name, build()) and adding one line here.
 
 local MapRegistry = {}
 

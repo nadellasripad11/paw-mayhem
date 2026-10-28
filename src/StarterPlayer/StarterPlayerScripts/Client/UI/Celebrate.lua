@@ -1,13 +1,13 @@
 --!strict
--- Celebrate: the big moments, animated.
---   Celebrate.LevelUp(level)              - LEVEL UP! burst: rays, the new level
+-- celebrate: the big moments, animated.
+--   celebrate.levelup(level)              - level up! burst: rays, the new level
 --                                            number slamming in, sparkles
---   Celebrate.CoinFly(from, to, amount)   - coins arc from a button into the
+--   celebrate.coinfly(from, to, amount)   - coins arc from a button into the
 --                                            coin counter, which bumps on arrival
---   Celebrate.Versus(left, right, map)    - duel intro: your side and theirs
---                                            slide in, VS slams down, the map
---                                            name, then FIGHT!
--- (Its own ScreenGui on top of everything; nothing here blocks clicks.)
+--   celebrate.versus(left, right, map)    - duel intro: your side and theirs
+--                                            slide in, vs slams down, the map
+--                                            name, then fight!
+-- (its own screengui on top of everything; nothing here blocks clicks.)
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -45,7 +45,7 @@ local function fit(f: GuiObject)
 	s.Parent = f
 end
 
--- ── LEVEL UP ─────────────────────────────────────────────────────────────────
+-- ── level up ─────────────────────────────────────────────────────────────────
 function Celebrate.LevelUp(level: number)
 	if not gui then
 		return
@@ -143,8 +143,8 @@ function Celebrate.CoinFly(from: Vector2, to: GuiObject?, amount: number?)
 	end)
 end
 
--- ── duel intro: VS ───────────────────────────────────────────────────────────
--- left / right: { { name, userId } } (your side is on the left).
+-- ── duel intro: vs ───────────────────────────────────────────────────────────
+-- left / right: { { name, userid } } (your side is on the left).
 local function side(parent: Instance, people: { any }, color: Color3, dir: number, title: string): Frame
 	local f = UIUtil.make("Frame", {
 		Parent = parent, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, dir * 1100, 0.5, 0), Size = UDim2.fromOffset(420, 260),
@@ -215,7 +215,7 @@ function Celebrate.Versus(left: { any }, right: { any }, map: string?)
 	task.delay(0.7, function()
 		tween(mapLabel, 0.3, { TextTransparency = 0, TextStrokeTransparency = 0.3 })
 	end)
-	-- out: the sides fly apart, then FIGHT!
+	-- out: the sides fly apart, then fight!
 	task.delay(1.9, function()
 		tween(l, 0.3, { Position = UDim2.new(0.5, -1100, 0.5, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 		tween(r, 0.3, { Position = UDim2.new(0.5, 1100, 0.5, 0) }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)

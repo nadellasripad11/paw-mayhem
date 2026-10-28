@@ -1,15 +1,15 @@
 --!strict
--- LobbyLook: calmer lighting while you're in the lobby. Each arena map sets
+-- lobbylook: calmer lighting while you're in the lobby. each arena map sets
 -- bright, hazy lighting (which turns the lobby's stone white and glowing), so
 -- in the lobby this client uses its own: less ambient light, a touch less
--- exposure, no haze or glare, softer bloom. Leaving the lobby puts the map's
--- lighting back. If the server changes the lighting meanwhile (a new map
--- loading), the new values are remembered and come back instead. It also
--- turns the lobby's floating displays (tagged LobbySpin) while you're there.
+-- exposure, no haze or glare, softer bloom. leaving the lobby puts the map's
+-- lighting back. if the server changes the lighting meanwhile (a new map
+-- loading), the new values are remembered and come back instead. it also
+-- turns the lobby's floating displays (tagged lobbyspin) while you're there.
 
--- The values themselves live in Shared/LobbyLighting. Tick the LobbyTuning
--- attribute on Lighting (Studio, while playing) and this stops holding them,
--- so they can be tuned by eye (docs/LOBBY_ART.md).
+-- the values themselves live in shared/lobbylighting. tick the lobbytuning
+-- attribute on lighting (studio, while playing) and this stops holding them,
+-- so they can be tuned by eye (docs/lobby_art.md).
 
 local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
@@ -57,7 +57,7 @@ local function bloom(on: boolean)
 		b.Intensity = on and LobbyLighting.Bloom.Intensity or 0.18
 		b.Threshold = on and LobbyLighting.Bloom.Threshold or 2.4
 	end
-	-- A touch more contrast in the lobby so it reads in 3D.
+	-- a touch more contrast in the lobby so it reads in 3d.
 	local cc = Lighting:FindFirstChild("PawLobbyGrade")
 	if on and not cc then
 		local c = Instance.new("ColorCorrectionEffect")
@@ -110,13 +110,13 @@ function LobbyLook.Start()
 			set(Lighting, prop, value)
 		end)
 	end
-	-- A new map brings a new Atmosphere: tame it too while in the lobby.
+	-- a new map brings a new atmosphere: tame it too while in the lobby.
 	Lighting.ChildAdded:Connect(function(c)
 		if active and c:IsA("Atmosphere") then
 			task.defer(takeAtmosphere, c)
 		end
 	end)
-	-- Floating displays: a slow turn and a gentle bob round where they were built.
+	-- floating displays: a slow turn and a gentle bob round where they were built.
 	RunService.RenderStepped:Connect(function()
 		if not active then
 			return

@@ -1,8 +1,8 @@
 --!strict
--- DuelVote: once a duel is found, everyone in it votes - first PICK A MAP,
--- then PICK A GAMEMODE - on the same picture-tile screen as the arena vote
--- (three big tiles across the top, RANDOM and the rest below), the time
--- left at the top. Click a tile to vote; you can change it until time's up.
+-- duelvote: once a duel is found, everyone in it votes - first pick a map,
+-- then pick a gamemode - on the same picture-tile screen as the arena vote
+-- (three big tiles across the top, random and the rest below), the time
+-- left at the top. click a tile to vote; you can change it until time's up.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -20,7 +20,7 @@ local gui: ScreenGui? = nil
 local endsAt = 0
 
 local GREEN = Color3.fromRGB(70, 200, 70)
--- Picture colours for the duel maps and modes (they have no 3D snapshot).
+-- picture colours for the duel maps and modes (they have no 3d snapshot).
 local COLOR = {
 	Meadow = Color3.fromRGB(90, 170, 70), Sakura = Color3.fromRGB(240, 150, 190), Autumn = Color3.fromRGB(220, 120, 40),
 	Frost = Color3.fromRGB(150, 200, 240), Classic = Color3.fromRGB(70, 140, 230), Quick = Color3.fromRGB(240, 170, 50),
@@ -68,7 +68,7 @@ function DuelVote.Build()
 			end
 			tiles = {}
 			title.Text = (data.stage == "Map" and "PICK A MAP" or "PICK A GAMEMODE") .. "  ·  " .. string.upper(tostring(data.kind or ""))
-			-- Three across the top, then RANDOM first on the row below.
+			-- three across the top, then random first on the row below.
 			local options = {}
 			local random = nil
 			for _, o in ipairs(data.options or {}) do

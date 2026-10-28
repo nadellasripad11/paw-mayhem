@@ -1,5 +1,5 @@
 --!strict
--- QuestService: rolls a fresh set of daily quests per player once per UTC day.
+-- questservice: rolls a fresh set of daily quests per player once per utc day.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Progression = require(ReplicatedStorage.Shared.Config.Progression)
@@ -15,12 +15,12 @@ local function currentDay(): number
 	return math.floor(os.time() / SECONDS_PER_DAY)
 end
 
--- How many tasks a day: one more with Task Master.
+-- how many tasks a day: one more with task master.
 local function taskCount(player: Player): number
 	return Progression.DailyQuestCount + (player:GetAttribute("TaskMaster") == true and Monetization.TaskMaster.ExtraTasks or 0)
 end
 
--- Up to `count` random tasks from the pool, skipping ids in `exclude`.
+-- up to `count` random tasks from the pool, skipping ids in `exclude`.
 local function rollQuests(count: number, exclude: { [string]: boolean }?)
 	local pool = {}
 	for _, t in ipairs(Progression.QuestPool) do
@@ -70,7 +70,7 @@ local function idsOf(list: { any }): { [string]: boolean }
 	return ids
 end
 
--- Task Master bought (or found on join): top today's tasks up to the new count.
+-- task master bought (or found on join): top today's tasks up to the new count.
 function QuestService.TopUp(player: Player)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -86,8 +86,8 @@ function QuestService.TopUp(player: Player)
 	end
 end
 
--- Reroll Tasks: every task not yet done is swapped for a new one (finished
--- ones stay so they can still be claimed). Returns how many were swapped.
+-- reroll tasks: every task not yet done is swapped for a new one (finished
+-- ones stay so they can still be claimed). returns how many were swapped.
 function QuestService.Reroll(player: Player): number
 	local profile = DataService.Get(player)
 	if not profile then

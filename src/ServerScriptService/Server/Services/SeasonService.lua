@@ -1,10 +1,10 @@
 --!strict
--- SeasonService: season pass progress + reward claims.
---   * Season XP comes from playing (see Config.Season.XP).
---   * Free rewards can be claimed by anyone who reaches the tier; premium
---     rewards need the "SeasonPass" game pass (player attribute).
---   * Claimed tiers are stored with string keys ("t12") so the profile saves
---     cleanly to DataStores.
+-- seasonservice: season pass progress + reward claims.
+--   * season xp comes from playing (see config.season.xp).
+--   * free rewards can be claimed by anyone who reaches the tier; premium
+--     rewards need the "seasonpass" game pass (player attribute).
+--   * claimed tiers are stored with string keys ("t12") so the profile saves
+--     cleanly to datastores.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -20,7 +20,7 @@ local SeasonService = {}
 local function seasonOf(profile: any): any
 	local s = profile.Season
 	if typeof(s) ~= "table" or s.Id ~= Season.Id then
-		-- New season: progress starts over.
+		-- new season: progress starts over.
 		s = { Id = Season.Id, XP = 0, Free = {}, Premium = {} }
 		profile.Season = s
 	end
@@ -29,7 +29,7 @@ local function seasonOf(profile: any): any
 	return s
 end
 
--- Add Season XP for an action ("MatchPlayed", "Win", ...) or a raw amount.
+-- add season xp for an action ("matchplayed", "win", ...) or a raw amount.
 function SeasonService.AddXP(player: Player, action: string | number)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -59,7 +59,7 @@ local function grant(player: Player, reward: any): boolean
 		EconomyService.AddGems(player, reward.Amount or 0)
 		return true
 	elseif reward.Id then
-		-- Already owning a cosmetic still counts as claimed.
+		-- already owning a cosmetic still counts as claimed.
 		EconomyService.Grant(player, reward.Kind, reward.Id)
 		return true
 	end
@@ -96,7 +96,7 @@ local function claim(player: Player, payload: any)
 	return { ok = true }
 end
 
--- Robux "+5 tiers" product.
+-- robux "+5 tiers" product.
 function SeasonService.SkipTiers(player: Player, tiers: number)
 	SeasonService.AddXP(player, tiers * Season.XPPerTier)
 end

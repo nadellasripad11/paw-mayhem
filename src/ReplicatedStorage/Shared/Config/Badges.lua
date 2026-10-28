@@ -1,11 +1,11 @@
 --!strict
--- Badges: Roblox badges awarded for milestones. `Id` is the badge id from the
--- Creator Dashboard (Paw Mayhem > Engagement > Badges). While an Id is 0 the
+-- badges: roblox badges awarded for milestones. `id` is the badge id from the
+-- creator dashboard (paw mayhem > engagement > badges). while an id is 0 the
 -- badge is simply skipped.
 
 local Badges = {}
 
--- key -> { Id, Name, Desc, check(profile, level) }
+-- key -> { id, name, desc, check(profile, level) }
 Badges.List = {
 	{ Key = "Welcome", Id = 591544196598175, Name = "Welcome to Paw Mayhem", Desc = "Join the game for the first time.", Check = function(_p, _lvl) return true end },
 	{ Key = "FirstElim", Id = 3219859362059727, Name = "First Knockout", Desc = "Eliminate your first cat.", Check = function(p) return (p.Stats.Eliminations or 0) >= 1 end },

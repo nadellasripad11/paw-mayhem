@@ -1,14 +1,14 @@
-// PAW MAYHEM lobby — procedural PBR textures.
+// paw mayhem lobby — procedural pbr textures.
 //
 //   node tools/lobby/textures.js
 //
-// Writes tools/lobby/textures/<Set>_{color,normal,orm}.png. Two kinds:
-//   * tiling sets (Stone, Plaster, Metal, Marble, Fabric): near-white colour
-//     maps that the part's own Color tints, turned into MaterialVariants
-//     (PawStone, PawPlaster, ...) by tools/lobby/setup_lobby.lua;
-//   * baked sets (Gold, StoneBlock, Navy): real colours for the lobby meshes.
-// "orm" is glTF's metallicRoughness map: G = roughness, B = metalness.
-// Everything tiles seamlessly.
+// writes tools/lobby/textures/<set>_{color,normal,orm}.png. two kinds:
+//   * tiling sets (stone, plaster, metal, marble, fabric): near-white colour
+//     maps that the part's own color tints, turned into materialvariants
+//     (pawstone, pawplaster, ...) by tools/lobby/setup_lobby.lua;
+//   * baked sets (gold, stoneblock, navy): real colours for the lobby meshes.
+// "orm" is gltf's metallicroughness map: g = roughness, b = metalness.
+// everything tiles seamlessly.
 
 const fs = require('fs');
 const path = require('path');
@@ -19,7 +19,7 @@ fs.mkdirSync(OUT, { recursive: true });
 
 const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 
-// A set is a function (u, v) -> { h, c: [r,g,b] 0..1, rough, metal }.
+// a set is a function (u, v) -> { h, c: [r,g,b] 0..1, rough, metal }.
 function bake(name, size, fn, normalStrength) {
   const H = new Float32Array(size * size);
   const col = new Uint8Array(size * size * 4);
@@ -47,7 +47,7 @@ function bake(name, size, fn, normalStrength) {
 
 const tint = (k, rgb) => rgb.map((c) => c * k);
 
-// ── Stone: 2 x 2 slabs per tile (6 studs each at 12 studs per tile), bevelled
+// ── stone: 2 x 2 slabs per tile (6 studs each at 12 studs per tile), bevelled
 // grout, per-slab tone, fine grain and a few pits.
 function stone(base) {
   const grain = fbm(11, 8, 6), cloud = fbm(12, 2, 3), pits = fbm(13, 256, 1), speck = fbm(15, 128, 2);
@@ -74,7 +74,7 @@ function stone(base) {
   };
 }
 
-// ── Stone block (columns, pilasters, the dais): the same grain, no slabs.
+// ── stone block (columns, pilasters, the dais): the same grain, no slabs.
 function stoneBlock(base) {
   const grain = fbm(21, 8, 5), cloud = fbm(22, 2, 3), fleck = fbm(23, 128, 1);
   return (u, v) => {
@@ -84,7 +84,7 @@ function stoneBlock(base) {
   };
 }
 
-// ── Plaster: soft trowel marks.
+// ── plaster: soft trowel marks.
 function plaster(base) {
   const big = fbm(31, 3, 4), fine = fbm(32, 32, 3);
   return (u, v) => {
@@ -94,7 +94,7 @@ function plaster(base) {
   };
 }
 
-// ── Brushed metal: long fine streaks along U, soft smudges, a little wear.
+// ── brushed metal: long fine streaks along u, soft smudges, a little wear.
 function brushed(base, metal, roughBase) {
   const smudge = fbm(41, 2, 3);
   const streakN = fbm(42, 4, 1);
@@ -114,7 +114,7 @@ function brushed(base, metal, roughBase) {
   };
 }
 
-// ── Marble: soft veins.
+// ── marble: soft veins.
 function marble(base) {
   const warp = fbm(51, 2, 6), warp2 = fbm(53, 4, 5), fine = fbm(52, 16, 3), strength = fbm(54, 3, 3);
   return (u, v) => {
@@ -127,7 +127,7 @@ function marble(base) {
   };
 }
 
-// ── Fabric: a plain weave.
+// ── fabric: a plain weave.
 function fabric(base) {
   const fuzz = fbm(61, 32, 3);
   const n = 96;

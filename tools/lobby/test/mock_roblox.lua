@@ -1,5 +1,5 @@
--- A small stand-in for the Roblox API (just what the lobby scripts touch), so
--- they can be run with the Luau CLI. tools/lobby/test/run.sh.
+-- a small stand-in for the roblox api (just what the lobby scripts touch), so
+-- they can be run with the luau cli. tools/lobby/test/run.sh.
 local Vector3 = {}
 Vector3.__index = Vector3
 local function v3(x, y, z)
@@ -30,7 +30,7 @@ end
 function Vector3.Dot(a, b) return a.X * b.X + a.Y * b.Y + a.Z * b.Z end
 function Vector3.Cross(a, b) return v3(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X) end
 
--- CFrame: position + rotation columns (right, up, back)
+-- cframe: position + rotation columns (right, up, back)
 local CFrame = {}
 local function cf(p, r, u, b)
 	return setmetatable({ p = p, r = r, u = u, b = b, __cframe = true }, CFrame)
@@ -55,7 +55,7 @@ function CFrame.fromMatrix(p, r, u, b)
 	return cf(p, r, u, b)
 end
 function CFrame.Angles(x, y, z)
-	-- only Y turns are needed here
+	-- only y turns are needed here
 	local c, s = math.cos(y), math.sin(y)
 	return cf(Vector3.zero, v3(c, 0, -s), v3(0, 1, 0), v3(s, 0, c))
 end
@@ -102,7 +102,7 @@ local Enum = {
 	NormalId = enumOf({ "Bottom", "Top" }),
 }
 
--- Instances
+-- instances
 local Instance = {}
 local CLASS_IS = {
 	MeshPart = { MeshPart = true, BasePart = true },
