@@ -1,8 +1,9 @@
 --!strict
--- lobbyservice: the lobby everyone spawns into: one closed, connected steel
--- bunker (rivals-style hub), dark plate floors and wall panels under a steel
--- roof with light panels. signs and displays are the only things that glow.
---   * the middle: a round grated platform where everyone spawns, facing the
+-- lobbyservice: the lobby everyone spawns into: one closed, connected room
+-- in a light retro 70s look (shared/lobbypalette): patterned carpet, cream
+-- walls with the orange and peach triple stripe, walnut boards, a cream
+-- ceiling on wood beams. only globe bulbs and lamps glow.
+--   * the middle: a round ringed platform where everyone spawns, facing the
 --     hall; featured blasters float over lit pedestals round it (f to equip),
 --     with today's free gift and an arcade machine for codes
 --   * ahead: the big duels sign over the matchmaking hall you walk through -
@@ -34,6 +35,7 @@ local Weapons = require(Shared.Config.Weapons)
 local Ranks = require(Shared.Config.Ranks)
 local LobbyLighting = require(Shared.LobbyLighting)
 local LobbyMeshData = require(Shared.LobbyMeshData)
+local LobbyPalette = require(Shared.LobbyPalette)
 
 local PlayerService = require(script.Parent.PlayerService)
 local DataService = require(script.Parent.DataService)
@@ -76,31 +78,31 @@ for _, side in ipairs({ 1, -1 }) do
 	end
 end
 
--- colours (your reference): warm mid-tone stone floors and pillars, deep
--- navy walls and ceiling, gold trim and beams, blue / purple light.
-local FLOOR_PLATE = Color3.fromRGB(150, 140, 124) -- warm stone floor
-local SEAM = Color3.fromRGB(138, 128, 112)
--- one palette: night navy, warm stone, and one accent - real gold, used
--- thin (edges, caps, inlays). only signs, screens and duel pads glow.
-local PANEL = Color3.fromRGB(22, 27, 48) -- night-navy wall panels
-local STEEL_DARK = Color3.fromRGB(14, 18, 34) -- deepest navy (frames, posts)
-local BEAM = Color3.fromRGB(168, 126, 54) -- deep warm gold (metal)
-local ROOF_BEAM = Color3.fromRGB(24, 29, 50) -- dark navy girders
-local STONE_DARK_TONE = Color3.fromRGB(122, 114, 100) -- darker stone for inlays
-local STONE = Color3.fromRGB(184, 174, 156) -- stone pillars
-local CAUTION = Color3.fromRGB(255, 196, 40)
-local NAVY = Color3.fromRGB(20, 25, 46)
-local NAVY_LIGHT = Color3.fromRGB(36, 46, 86)
-local HALL_FLOOR = Color3.fromRGB(38, 42, 60)
-local BLUE = Color3.fromRGB(70, 165, 255)
-local PURPLE = Color3.fromRGB(165, 105, 255)
-local CYAN = Color3.fromRGB(90, 220, 255)
-local GOLD = Color3.fromRGB(214, 164, 74) -- warm gold, not lemon (design/features/lobby-home)
+-- colours: a light, warm retro 70s room (see shared/lobbypalette): cream
+-- walls and pillars, patterned carpet, orange and peach stripes, walnut wood
+-- for boards and frames, warm globe bulbs. the old names stay so every
+-- builder below keeps working; they all point at the palette now.
+local FLOOR_PLATE = LobbyPalette.Carpet -- the carpet (pawcarpet when imported)
+local SEAM = LobbyPalette.Carpet
+local PANEL = LobbyPalette.Wall -- cream wall panels
+local STEEL_DARK = LobbyPalette.Frame -- walnut frames, posts
+local BEAM = LobbyPalette.Trim -- burnt-orange trim (matte paint)
+local ROOF_BEAM = LobbyPalette.CeilingBeam -- light wood beams
+local STONE_DARK_TONE = LobbyPalette.Peach -- inlays
+local STONE = LobbyPalette.Pillar -- cream pillars
+local CAUTION = LobbyPalette.Orange -- ring-out edges: orange / walnut stripes
+local NAVY = LobbyPalette.Board -- walnut sign boards
+local NAVY_LIGHT = LobbyPalette.BoardLight
+local HALL_FLOOR = LobbyPalette.Carpet
+local BLUE = LobbyPalette.Orange
+local PURPLE = LobbyPalette.Trim
+local CYAN = LobbyPalette.Peach
+local GOLD = LobbyPalette.Orange
 local WOOD = Color3.fromRGB(122, 84, 56)
-local METAL = Color3.fromRGB(60, 64, 82)
-local INK = Color3.fromRGB(14, 18, 34)
-local GLASS = Color3.fromRGB(190, 220, 255)
-local WHITE = Color3.new(1, 1, 1)
+local METAL = LobbyPalette.Metal
+local INK = LobbyPalette.Ink
+local GLASS = LobbyPalette.Glass
+local WHITE = LobbyPalette.Cream
 
 local rng = Random.new(20261018)
 
@@ -218,10 +220,10 @@ local function sign(parent: BasePart, face: Enum.NormalId, lines: { { text: stri
 	return gui
 end
 
--- a navy board facing `toward`, with a glowing edge and (optional) text.
+-- a walnut board facing `toward`, with an orange painted edge and (optional) text.
 local function board(name: string, pos: Vector3, toward: Vector3, w: number, h: number, edge: Color3, lines: any, parent: Instance): BasePart
 	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z))
-	part(name .. "Edge", Vector3.new(w + 0.5, h + 0.5, 0.2), face * CFrame.new(0, 0, 0.25), edge:Lerp(NAVY, 0.55), Enum.Material.SmoothPlastic, parent)
+	part(name .. "Edge", Vector3.new(w + 0.6, h + 0.6, 0.2), face * CFrame.new(0, 0, 0.25), edge, Enum.Material.SmoothPlastic, parent)
 	local b = part(name, Vector3.new(w, h, 0.5), face, NAVY, Enum.Material.SmoothPlastic, parent)
 	if lines then
 		sign(b, Enum.NormalId.Front, lines)
@@ -258,10 +260,10 @@ end
 -- letters. signs and displays are the only things in the lobby that glow.
 local function neonSign(name: string, pos: Vector3, toward: Vector3, w: number, h: number, color: Color3, text: string, parent: Instance, tilt: number?): BasePart
 	local face = CFrame.lookAt(pos, Vector3.new(toward.X, pos.Y, toward.Z)) * CFrame.Angles(0, 0, math.rad(tilt or 0))
-	local back = part(name, Vector3.new(w, h, 0.4), face, Color3.fromRGB(20, 26, 54), Enum.Material.SmoothPlastic, parent)
+	local back = part(name, Vector3.new(w, h, 0.4), face, NAVY, Enum.Material.SmoothPlastic, parent)
 	local t = 0.2
 	for _, e in ipairs({ { 0, h / 2 - t, w - t, t }, { 0, -h / 2 + t, w - t, t }, { w / 2 - t, 0, t, h - t }, { -w / 2 + t, 0, t, h - t } }) do
-		part(name .. "Tube", Vector3.new(e[3], e[4], 0.14), face * CFrame.new(e[1], e[2], -0.26), BEAM, Enum.Material.Metal, parent).CastShadow = false
+		part(name .. "Tube", Vector3.new(e[3], e[4], 0.14), face * CFrame.new(e[1], e[2], -0.26), color, Enum.Material.SmoothPlastic, parent).CastShadow = false
 	end
 	local gui = sign(back, Enum.NormalId.Front, { { text = text, size = 100, color = WHITE } })
 	for _, l in ipairs(gui:GetChildren()) do
@@ -274,12 +276,12 @@ local function neonSign(name: string, pos: Vector3, toward: Vector3, w: number, 
 	return back
 end
 
--- yellow and black caution stripes along the floor (`cf`'s x axis).
+-- orange and walnut warning stripes along the floor (`cf`'s x axis).
 local function caution(name: string, cf: CFrame, length: number, width: number, parent: Instance)
 	local n = math.max(2, math.floor(length / 1.2))
 	local step = length / n
 	for i = 0, n - 1 do
-		part(name, Vector3.new(step, 0.05, width), cf * CFrame.new(-length / 2 + step * (i + 0.5), 0, 0), i % 2 == 0 and CAUTION or Color3.fromRGB(24, 24, 28), Enum.Material.SmoothPlastic, parent)
+		part(name, Vector3.new(step, 0.05, width), cf * CFrame.new(-length / 2 + step * (i + 0.5), 0, 0), i % 2 == 0 and CAUTION or LobbyPalette.Frame, Enum.Material.SmoothPlastic, parent)
 	end
 end
 
@@ -391,48 +393,48 @@ local function shopkeeper(look: any, pos: Vector3, toward: Vector3, line: string
 	prompt(root, "Talk", line, panel)
 end
 
--- ── the ground: steel plate floors, the steel roof, the rock underneath ─────
+-- the 70s triple stripe (burnt orange, orange, peach) along a wall face.
+-- `along` sits on the wall face at floor level, looking down the wall.
+local function stripeBand(along: CFrame, len: number, y: number, parent: Instance)
+	for i, col in ipairs({ LobbyPalette.Trim, LobbyPalette.Orange, LobbyPalette.Peach }) do
+		local band = part("Stripe", Vector3.new(0.12, 0.55, len), along * CFrame.new(0, y + (i - 1) * 0.7, 0), col, Enum.Material.SmoothPlastic, parent)
+		band.CastShadow = false
+	end
+end
+
+-- ── the ground: carpet floors, a cream ceiling, the rock underneath ─────────
 local function buildGround(f: Instance)
 	for i, r in ipairs(AREAS) do
 		local w, d = r[2] - r[1], r[4] - r[3]
 		local mid = at((r[1] + r[2]) / 2, (r[3] + r[4]) / 2)
-		local hall = r == MATCH_HALL
-		local room = r == GUNS_ROOM or r == COLLECTION_ROOM
-		solid("Floor" .. i, Vector3.new(w + 0.2, 2, d + 0.2), CFrame.new(mid - Vector3.new(0, 1, 0)), hall and HALL_FLOOR or room and Color3.fromRGB(156, 146, 128) or FLOOR_PLATE,
-			hall and Enum.Material.SmoothPlastic or Enum.Material.Slate, f)
-		-- a steel roof on girders (it casts no shadow, so the daylight still
-		-- lights the inside).
-		local roof = solid("Roof" .. i, Vector3.new(w + 2, 1, d + 2), CFrame.new(mid + Vector3.new(0, HEIGHT + 0.5, 0)), Color3.fromRGB(10, 12, 22), Enum.Material.SmoothPlastic, f)
-		roof.CastShadow = false
+		-- patterned 70s carpet everywhere (the pawcarpet material, see
+		-- applymaterials; plain rust until it is imported).
+		solid("Floor" .. i, Vector3.new(w + 0.2, 2, d + 0.2), CFrame.new(mid - Vector3.new(0, 1, 0)), FLOOR_PLATE, Enum.Material.Fabric, f)
+		-- a warm cream ceiling on light wood beams. it keeps the sun out (with
+		-- the light carpet and cream walls, daylight through the roof blew the
+		-- room out white); the room lights do the lighting inside.
+		local roof = solid("Roof" .. i, Vector3.new(w + 2, 1, d + 2), CFrame.new(mid + Vector3.new(0, HEIGHT + 0.5, 0)), LobbyPalette.Ceiling, Enum.Material.SmoothPlastic, f)
+		roof.CastShadow = true
 		roof.CanQuery = false
 		local long = w >= d
 		local span = long and w or d
 		for k = 4, span - 4, 8 do
 			local off = long and Vector3.new(r[1] + k - (r[1] + r[2]) / 2, 0, 0) or Vector3.new(0, 0, r[3] + k - (r[3] + r[4]) / 2)
-			part("RoofBeam", long and Vector3.new(1.4, 1.6, d) or Vector3.new(w, 1.6, 1.4), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.8, 0)), ROOF_BEAM, Enum.Material.Metal, f).CastShadow = false
+			part("RoofBeam", long and Vector3.new(1.4, 1.6, d) or Vector3.new(w, 1.6, 1.4), CFrame.new(mid + off + Vector3.new(0, HEIGHT - 0.8, 0)), ROOF_BEAM, Enum.Material.WoodPlanks, f).CastShadow = false
 		end
 		-- light panels in the ceiling.
 		for x = r[1] + 11, r[2] - 5, 22 do
 			for z = r[3] + 11, r[4] - 5, 22 do
-				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), Color3.fromRGB(178, 166, 144), Enum.Material.SmoothPlastic, f)
+				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), LobbyPalette.Cream, Enum.Material.SmoothPlastic, f)
 				lp.CastShadow = false
 				local sl = Instance.new("SurfaceLight")
 				sl.Face = Enum.NormalId.Bottom
 				sl.Range = 40
-				sl.Brightness = 0.8
+				sl.Brightness = 0.3
 				sl.Angle = 110
 				sl.Color = Color3.fromRGB(255, 240, 214)
 				sl.Shadows = false
 				sl.Parent = lp
-			end
-		end
-		if not hall and not room then
-			-- plate seams.
-			for x = r[1] + 6, r[2] - 1, 6 do
-				part("Grout", Vector3.new(0.12, 0.04, d), CFrame.new(at(x, (r[3] + r[4]) / 2, 0.02)), SEAM, Enum.Material.SmoothPlastic, f)
-			end
-			for z = r[3] + 6, r[4] - 1, 6 do
-				part("Grout", Vector3.new(w, 0.04, 0.12), CFrame.new(at((r[1] + r[2]) / 2, z, 0.02)), SEAM, Enum.Material.SmoothPlastic, f)
 			end
 		end
 		-- rock underneath, tapering away.
@@ -456,18 +458,20 @@ local function buildGround(f: Instance)
 		local base = at(midXZ.X, midXZ.Z)
 		local navy = math.min(a[2], b[2]) >= 30 and not (a[2] == 30 and b[2] == 30)
 		local c = base + Vector3.new(0, HEIGHT / 2, 0) - normal
-		solid("Wall", Vector3.new(2, HEIGHT, len + 2), CFrame.lookAt(c, c + dir), navy and NAVY or PANEL, Enum.Material.Plaster, f)
+		solid("Wall", Vector3.new(2, HEIGHT, len + 2), CFrame.lookAt(c, c + dir), PANEL, Enum.Material.Plaster, f)
 		local face = base + normal * 0.02
 		local along = CFrame.lookAt(face, face + dir)
-		part("WallBase", Vector3.new(0.2, 2.4, len), along * CFrame.new(0, 1.2, 0), navy and PANEL or STEEL_DARK, Enum.Material.Metal, f)
+		-- a walnut skirting board, then the 70s triple stripe all the way round.
+		part("WallBase", Vector3.new(0.2, 1.6, len), along * CFrame.new(0, 0.8, 0), STEEL_DARK, Enum.Material.WoodPlanks, f)
+		stripeBand(along, len, navy and 6 or 4.4, f)
 		if not navy then
-			-- a rail along the wall and girder pillars every 16 studs.
-			part("WallRail", Vector3.new(0.4, 0.6, len), along * CFrame.new(0, 4.2, 0), BEAM, Enum.Material.Metal, f)
-			part("WallCap", Vector3.new(0.6, 1, len), along * CFrame.new(0, HEIGHT - 2, 0), BEAM, Enum.Material.Metal, f)
+			-- a cap along the top and pillars every 16 studs.
+			part("WallCap", Vector3.new(0.6, 1, len), along * CFrame.new(0, HEIGHT - 2, 0), BEAM, Enum.Material.SmoothPlastic, f)
 			for k = 8, len - 4, 16 do
 				local at2 = face + normal * 0.6 - dir * (k - len / 2) + Vector3.new(0, (HEIGHT - 2.4) / 2 + 2.4, 0)
 				part("Pillar", Vector3.new(1.4, HEIGHT - 2.4, 2.2), CFrame.lookAt(at2, at2 + dir), STONE, Enum.Material.Slate, f)
-				part("PillarCap", Vector3.new(1.8, 0.6, 2.6), CFrame.lookAt(at2, at2 + dir) * CFrame.new(0, (HEIGHT - 2.4) / 2, 0), BEAM, Enum.Material.Metal, f)
+				part("PillarCap", Vector3.new(1.8, 0.6, 2.6), CFrame.lookAt(at2, at2 + dir) * CFrame.new(0, (HEIGHT - 2.4) / 2, 0), BEAM, Enum.Material.SmoothPlastic, f)
+				part("PillarBand", Vector3.new(1.5, 0.5, 2.3), CFrame.lookAt(at2, at2 + dir) * CFrame.new(0, -(HEIGHT - 2.4) / 2 + 3.4, 0), LobbyPalette.Orange, Enum.Material.SmoothPlastic, f)
 			end
 		end
 	end
@@ -476,7 +480,7 @@ local function buildGround(f: Instance)
 	-- caution stripes across the floor.
 	for _, h in ipairs({ { 44, -1, "WEAPONS", BLUE }, { -44, 1, "MARKET", GOLD } }) do
 		local x, side = h[1], h[2]
-		solid("Header", Vector3.new(2, HEIGHT - 14, 36), CFrame.new(at(x, 0, 14 + (HEIGHT - 14) / 2)), PANEL, Enum.Material.Metal, f)
+		solid("Header", Vector3.new(2, HEIGHT - 14, 36), CFrame.new(at(x, 0, 14 + (HEIGHT - 14) / 2)), PANEL, Enum.Material.Plaster, f)
 		neonSign(h[3] .. "Sign", at(x + side * 1.3, 0, 17.6), at(0, 0, 17.6), 22, 4.6, h[4], h[3], f)
 		caution("DoorStripe", CFrame.new(at(x, 0, 0.03)) * CFrame.Angles(0, math.rad(90), 0), 34, 1, f)
 		for _, z in ipairs({ -18.5, 18.5 }) do
@@ -488,39 +492,53 @@ local function buildGround(f: Instance)
 end
 
 -- ── the middle: spawn ────────────────────────────────────────────────────────
+-- warm globe bulbs (the 70s marquee look): a bulb on a small walnut base.
+-- only every few get a real light (phones).
+local function globe(pos: Vector3, d: number, lit: boolean, parent: Instance): BasePart
+	disc("GlobeBase", d * 0.7, 0.16, pos + Vector3.new(0, 0.08, 0), STEEL_DARK, Enum.Material.SmoothPlastic, parent).CastShadow = false
+	local b = ball("GlobeBulb", d, pos + Vector3.new(0, d / 2 + 0.1, 0), LobbyPalette.Bulb, parent)
+	b.Material = Enum.Material.Neon
+	if lit then
+		light(b, LobbyPalette.Lamp, 10, 0.5)
+	end
+	return b
+end
+
+local function globeRing(centre: Vector3, r: number, n: number, parent: Instance)
+	for k = 0, n - 1 do
+		local a = k / n * math.pi * 2
+		globe(centre + Vector3.new(math.cos(a) * r, 0, math.sin(a) * r), 0.7, k % 7 == 0, parent)
+	end
+end
+
+-- bulbs along a line (the arch, sign edges), facing out of a wall.
+local function globeLine(from: Vector3, to: Vector3, n: number, parent: Instance)
+	for k = 0, n - 1 do
+		local p = from:Lerp(to, n == 1 and 0.5 or k / (n - 1))
+		local b = ball("GlobeBulb", 0.6, p, LobbyPalette.Bulb, parent)
+		b.Material = Enum.Material.Neon
+		if k % 6 == 0 then
+			light(b, LobbyPalette.Lamp, 8, 0.4)
+		end
+	end
+end
+
 local function buildSpawn(f: Instance)
-	-- like a rivals spawn: a stepped round platform, dark grate panels split
-	-- by steel ribs (every third one lit thin blue), a raised inner ring, and
-	-- paw mayhem written big on the floor in the middle, facing the duel hall
-	-- so it reads the right way round as you spawn. light posts round the rim.
+	-- a stepped round platform in rings, like a 70s rug in the carpet's own
+	-- tones (cream blew out white under the spawn light): a walnut step, a thin
+	-- peach line, a walnut band and a burnt-orange middle with paw mayhem on it,
+	-- facing the duel hall so it reads the right way round as you spawn.
+	-- warm globe bulbs all round the rim.
 	local c = at(0, 0)
-	local rib = STONE_DARK_TONE -- stone ribs and ring (gold only as thin inlay)
-	local grate = Color3.fromRGB(140, 131, 115) -- stone panels
+	local rib = LobbyPalette.Peach -- the inner ring round the logo
 	-- the step all round, then the platform (both walkable).
-	ArenaKit.NewDisc("SpawnStep", 35, 0.3, c + Vector3.new(0, 0.15, 0), Color3.fromRGB(150, 140, 124), Enum.Material.Slate, f)
-	ArenaKit.NewDisc("SpawnPlatform", 30, 0.6, c + Vector3.new(0, 0.3, 0), Color3.fromRGB(172, 162, 144), Enum.Material.Slate, f)
-	disc("SpawnRim", 30.8, 0.5, c + Vector3.new(0, 0.3, 0), BEAM, Enum.Material.Metal, f)
-	disc("SpawnGlow", 29.4, 0.08, c + Vector3.new(0, 0.62, 0), BEAM, Enum.Material.Metal, f).CastShadow = false
-	disc("SpawnGrate", 28.6, 0.1, c + Vector3.new(0, 0.64, 0), grate, Enum.Material.Slate, f)
-	-- grate texture: thin bars across each panel.
-	for k = 0, 23 do
-		local a = (k + 0.5) / 24 * math.pi * 2
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		for r = 8.2, 13.6, 1.1 do
-			local p = c + dir * r + Vector3.new(0, 0.7, 0)
-			part("GrateBar", Vector3.new(0.16, 0.04, 2 * math.pi * r / 24 * 0.8), CFrame.lookAt(p, p + Vector3.new(-dir.Z, 0, dir.X)), Color3.fromRGB(126, 118, 104), Enum.Material.Slate, f).CastShadow = false
-		end
-	end
-	-- ribs.
-	for k = 0, 11 do
-		local a = k / 12 * math.pi * 2
-		local dir = Vector3.new(math.cos(a), 0, math.sin(a))
-		local mid = c + dir * 10.8 + Vector3.new(0, 0.72, 0)
-		part("SpawnRib", Vector3.new(0.6, 0.12, 7.4), CFrame.lookAt(mid, mid + dir), rib, Enum.Material.Slate, f).CastShadow = false
-		if k % 3 == 0 then
-			part("SpawnRibGlow", Vector3.new(0.1, 0.13, 7.2), CFrame.lookAt(mid, mid + dir), BEAM, Enum.Material.Metal, f).CastShadow = false
-		end
-	end
+	ArenaKit.NewDisc("SpawnStep", 35, 0.3, c + Vector3.new(0, 0.15, 0), STEEL_DARK, Enum.Material.WoodPlanks, f)
+	ArenaKit.NewDisc("SpawnPlatform", 30, 0.6, c + Vector3.new(0, 0.3, 0), LobbyPalette.Cream, Enum.Material.SmoothPlastic, f)
+	disc("SpawnRim", 30.8, 0.5, c + Vector3.new(0, 0.3, 0), BEAM, Enum.Material.SmoothPlastic, f)
+	disc("SpawnGlow", 29.4, 0.08, c + Vector3.new(0, 0.62, 0), LobbyPalette.Peach, Enum.Material.SmoothPlastic, f).CastShadow = false
+	disc("SpawnGrate", 28, 0.1, c + Vector3.new(0, 0.64, 0), STEEL_DARK, Enum.Material.WoodPlanks, f).CastShadow = false
+	disc("SpawnCentre", 22, 0.1, c + Vector3.new(0, 0.66, 0), LobbyPalette.Trim, Enum.Material.Fabric, f).CastShadow = false
+	globeRing(c + Vector3.new(0, 0.62, 0), 16.4, 28, f)
 	-- the raised inner ring the logo sits in.
 	local r = 7.4
 	local n = 36
@@ -530,7 +548,7 @@ local function buildSpawn(f: Instance)
 		part("SpawnRing", Vector3.new(0.7, 0.28, 2 * math.pi * r / n + 0.06), CFrame.lookAt(p, p + Vector3.new(-math.sin(a), 0, math.cos(a))), rib, Enum.Material.Slate, f).CastShadow = false
 	end
 	-- the floor logo.
-	disc("LogoDisc", 14.2, 0.1, c + Vector3.new(0, 0.66, 0), Color3.fromRGB(22, 30, 64), Enum.Material.SmoothPlastic, f)
+	disc("LogoDisc", 14.2, 0.1, c + Vector3.new(0, 0.68, 0), LobbyPalette.Ink, Enum.Material.SmoothPlastic, f)
 	local logo = part("SpawnLogo", Vector3.new(12, 0.05, 12), CFrame.lookAt(c + Vector3.new(0, 0.74, 0), c + Vector3.new(0, 0.74, 1)), Color3.fromRGB(20, 22, 30), Enum.Material.SmoothPlastic, f)
 	logo.Transparency = 1
 	local gui = Instance.new("SurfaceGui")
@@ -652,6 +670,15 @@ local function buildMatchHall(f: Instance)
 	-- the big duels sign over the way in, bolted up slightly crooked.
 	neonSign("DuelsSign", at(0, 28.3, 17.6), at(0, 0, 17.6), 22, 6, BLUE, "DUELS", f, -4)
 	neonSign("LobbySign", at(0, 31.4, 17.6), at(0, 60, 17.6), 16, 4, CYAN, "LOBBY", f)
+	-- the 70s stripe across the arch and a row of globe bulbs under it and up
+	-- both pillars (a marquee round the way in).
+	for i, col in ipairs({ LobbyPalette.Trim, LobbyPalette.Orange, LobbyPalette.Peach }) do
+		part("ArchStripe", Vector3.new(40, 0.5, 0.12), CFrame.new(at(0, 28.95, 14.6 + (i - 1) * 0.65)), col, Enum.Material.SmoothPlastic, f).CastShadow = false
+	end
+	globeLine(at(-19.4, 28.8, 13.6), at(19.4, 28.8, 13.6), 27, f)
+	for _, x in ipairs({ -1, 1 }) do
+		globeLine(at(x * 20.9, 26.35, 1.2), at(x * 20.9, 26.35, 12.8), 9, f)
+	end
 	-- painted arrows on the floor from the spawn to the arch.
 	for _, z in ipairs({ 18, 22.5, 27 }) do
 		for _, s in ipairs({ -1, 1 }) do
@@ -1630,9 +1657,9 @@ end
 
 local function buildGrand(f: Instance)
 	-- duel hall: runner, pilasters with lamps, pennants, trophy.
-	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), Color3.fromRGB(22, 24, 30), Enum.Material.Asphalt, f)
-	for _, e in ipairs({ { -4.2, Color3.fromRGB(150, 90, 255) }, { 4.2, Color3.fromRGB(255, 200, 60) } }) do
-		local line = part("RunnerTrim", Vector3.new(0.3, 0.08, 76), CFrame.new(at(e[1], 70, 0.06)), e[2], Enum.Material.Neon, f)
+	part("Runner", Vector3.new(8, 0.07, 76), CFrame.new(at(0, 70, 0.05)), LobbyPalette.Peach, Enum.Material.Fabric, f)
+	for _, e in ipairs({ { -4.2, LobbyPalette.Frame }, { 4.2, LobbyPalette.Frame } }) do
+		local line = part("RunnerTrim", Vector3.new(0.4, 0.08, 76), CFrame.new(at(e[1], 70, 0.06)), e[2], Enum.Material.WoodPlanks, f)
 		line.CastShadow = false
 	end
 	for _, z in ipairs({ 35, 49, 63, 77.5, 92.5, 107 }) do
@@ -1720,11 +1747,60 @@ local function buildHallDepth(f: Instance)
 		end
 	end
 	-- polished marble down the hall (over the old flat floor).
-	part("HallMarble", Vector3.new(39.6, 0.04, 81.6), CFrame.new(at(0, 71, 0.02)), Color3.fromRGB(36, 38, 48), Enum.Material.Concrete, f)
-	for z = 34, 110, 6 do
-		part("HallSeam", Vector3.new(39.6, 0.05, 0.1), CFrame.new(at(0, z, 0.025)), Color3.fromRGB(60, 68, 108), Enum.Material.SmoothPlastic, f)
+	-- (the hall is carpeted like the rest; the runner down the middle has
+	-- walnut edges, see buildgrand)
+end
+
+-- one pass over everything built: any old navy / blue / cyan / purple / gold
+-- shade a builder still uses becomes its palette colour (lobbypalette.remap),
+-- shiny metal and glowing strips turn to matte paint (only bulbs and lamps
+-- glow now), sign text follows, and every light goes warm. cats and blasters
+-- (models) and the rank gems keep their own colours.
+local KEEP = { TierGem = true }
+local function inModel(d: Instance, root: Instance): boolean
+	local p = d.Parent
+	while p and p ~= root do
+		if p:IsA("Model") then
+			return true
+		end
+		p = p.Parent
+	end
+	return false
+end
+local function palettePass(root: Instance)
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("BasePart") then
+			if not KEEP[d.Name] and not inModel(d, root) then
+				local c, m = LobbyPalette.Remap(d.Color, d.Material)
+				if c then
+					d.Color = c
+				end
+				if m then
+					d.Material = m
+				elseif d.Material == Enum.Material.Metal or d.Material == Enum.Material.DiamondPlate then
+					d.Material = Enum.Material.SmoothPlastic
+				elseif d.Material == Enum.Material.Neon then
+					-- only warm white bulbs, flames and lamps glow; coloured strips are paint
+					local _, sat = d.Color:ToHSV()
+					if sat > 0.4 then
+						d.Material = Enum.Material.SmoothPlastic
+					end
+				end
+			end
+		elseif d:IsA("Light") then
+			d.Color = LobbyPalette.LightColor(d.Color)
+		elseif d:IsA("TextLabel") or d:IsA("TextButton") then
+			d.TextColor3 = LobbyPalette.RemapColor(d.TextColor3)
+			d.TextStrokeColor3 = LobbyPalette.RemapColor(d.TextStrokeColor3)
+			d.BackgroundColor3 = LobbyPalette.RemapColor(d.BackgroundColor3)
+		elseif d:IsA("Frame") then
+			d.BackgroundColor3 = LobbyPalette.RemapColor(d.BackgroundColor3)
+		elseif d:IsA("UIStroke") then
+			d.Color = LobbyPalette.RemapColor(d.Color)
+		end
 	end
 end
+LobbyService.PalettePass = palettePass -- (duelservice runs it over its pads)
 
 -- every surface gets material shading and casts shadows (flat plastic with
 -- no shadows is what made it all read as 2d). signs and glass keep theirs.
@@ -1735,7 +1811,7 @@ local function depthPass(root: Instance)
 				p.Material = Enum.Material.Plastic
 			end
 			local big = math.max(p.Size.X, p.Size.Y, p.Size.Z) > 1.2
-			if big and string.sub(p.Name, 1, 4) ~= "Roof" and p.Name ~= "Dust" then
+			if big and p.Name ~= "Dust" then
 				p.CastShadow = true
 			end
 		end
@@ -1805,6 +1881,9 @@ local function applyMaterials(lib: Instance, roots: { Instance })
 		for _, p in ipairs(root:GetDescendants()) do
 			if p:IsA("BasePart") and not p:IsA("MeshPart") and p.Transparency < 1 then
 				local name = VARIANT_FOR[p.Material]
+				if p.Material == Enum.Material.Fabric and (string.sub(p.Name, 1, 5) == "Floor" or string.sub(p.Name, 1, 6) == "Carpet") then
+					name = "PawCarpet"
+				end
 				if p.Material == Enum.Material.Slate then
 					name = string.sub(p.Name, 1, 5) == "Floor" and "PawStone" or "PawGrain"
 				end
@@ -1823,11 +1902,14 @@ end
 -- if the importer's textures didn't come through, a piece still looks right
 -- in roblox's own material and the lobby's colours.
 local FALLBACK: { [string]: { any } } = {
-	Gold = { BEAM, Enum.Material.Metal },
-	StoneBlock = { STONE, Enum.Material.Slate },
-	Navy = { NAVY, Enum.Material.Plaster },
-	Cream = { Color3.fromRGB(246, 236, 214), Enum.Material.SmoothPlastic },
+	Gold = { LobbyPalette.Orange, Enum.Material.SmoothPlastic }, -- (the "gold" pieces are orange paint now)
+	StoneBlock = { STONE, Enum.Material.Plaster },
+	Navy = { LobbyPalette.Peach, Enum.Material.Plaster }, -- (the arch: peach plaster)
+	Cream = { LobbyPalette.Cream, Enum.Material.SmoothPlastic },
 }
+-- the imported textures match this palette (setup_lobby.lua, version 2).
+local TEX_VERSION = 2
+local texCurrent = false
 
 -- one model piece: `size` and `cf` in the lobby's axes. the importer may
 -- have turned a mesh inside its part (setup_lobby.lua stores that turn as
@@ -1851,9 +1933,13 @@ local function spawnPiece(src: MeshPart, mat: string?, size: Vector3, cf: CFrame
 	m.CFrame = cf * t
 	local fb = mat and FALLBACK[mat]
 	local sa = m:FindFirstChildOfClass("SurfaceAppearance")
-	if sa and mat == "Gold" then
-		-- (the brushed gold reads lemon under the room lights: pull it to #C9963F)
-		sa.Color = Color3.fromRGB(226, 206, 176)
+	if sa and not texCurrent then
+		-- an import from before the retro recolour: its baked textures are
+		-- the old gold and navy, so use the palette colours until the new
+		-- glb is imported (setup_lobby.lua stamps texversion).
+		sa:Destroy()
+		sa = nil
+		m.TextureID = ""
 	end
 	if fb and not sa then
 		m.Color = if m.TextureID ~= "" then Color3.new(1, 1, 1) else fb[1]
@@ -1898,7 +1984,10 @@ end
 -- fit a group to the part it replaces: its bottom centre, scaled to its size.
 local function onto(lib: Instance, group: string, target: BasePart, parent: Instance)
 	local box = LobbyMeshData[group].Box :: Vector3
-	placeGroup(lib, group, target.CFrame * CFrame.new(0, -target.Size.Y / 2, 0), target.Size / box, parent)
+	-- one scale on every axis (from the height), so a model keeps its real
+	-- proportions instead of being squeezed to the part's footprint.
+	local k = target.Size.Y / box.Y
+	placeGroup(lib, group, target.CFrame * CFrame.new(0, -target.Size.Y / 2, 0), Vector3.one * k, parent)
 	retire(target)
 end
 
@@ -1918,6 +2007,20 @@ local function applyMeshes(lib: Instance, plaza: Instance)
 	models.Parent = plaza
 	-- spawn dais.
 	placeGroup(lib, "Dais", CFrame.new(at(0, 0)), Vector3.one, models)
+	-- (a walnut step with a burnt-orange rim, under the rug rings: a cream
+	-- dais read as a white glare across the whole floor)
+	for name, look in pairs({ DaisStone = { STEEL_DARK, Enum.Material.WoodPlanks }, DaisGold = { BEAM, Enum.Material.SmoothPlastic } }) do
+		local m = models:FindFirstChild(name)
+		if m and m:IsA("MeshPart") then
+			local sa = m:FindFirstChildOfClass("SurfaceAppearance")
+			if sa then
+				sa:Destroy()
+			end
+			m.TextureID = ""
+			m.Color = look[1]
+			m.Material = look[2]
+		end
+	end
 	for _, p in ipairs(named(plaza, { SpawnStep = true, SpawnPlatform = true, SpawnRim = true })) do
 		retire(p)
 	end
@@ -1973,6 +2076,7 @@ local function applyLobbyArt(f: Instance, plaza: Instance)
 	if not lib then
 		return
 	end
+	texCurrent = lib:GetAttribute("TexVersion") == TEX_VERSION
 	applyMeshes(lib, plaza)
 	applyMaterials(lib, { plaza, f:FindFirstChild("Guns") or plaza, f:FindFirstChild("Collection") or plaza })
 end
@@ -2004,6 +2108,7 @@ local function buildLobby()
 	buildGuns(f)
 	buildCollection(f)
 	buildPractice(f)
+	palettePass(f)
 	depthPass(plaza)
 	for _, room in ipairs({ "Guns", "Collection" }) do
 		local r = f:FindFirstChild(room)

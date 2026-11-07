@@ -234,7 +234,7 @@ function mouldings() {
 // surfaceappearances into materialvariants). never placed in the world.
 function swatches() {
   const out = {};
-  ['Stone', 'Grain', 'Plaster', 'Metal', 'Marble', 'Fabric'].forEach((s, i) => {
+  ['Stone', 'Grain', 'Plaster', 'Metal', 'Marble', 'Fabric', 'Carpet'].forEach((s, i) => {
     out['Swatch_Paw' + s] = ['Sw' + s, roundedBox([4, 4, 4], 0.3, [i * 6, 2, 0], 3, 4)];
   });
   return out;
@@ -257,7 +257,7 @@ const BOX = { Column: [4, 22, 4], Pilaster: [1.4, 19.6, 2.2], Planter: [3.4, 1.6
 
 const MATERIALS = {
   Gold: 'Gold', StoneBlock: 'StoneBlock', Navy: 'Navy', Cream: 'Cream',
-  SwStone: 'Stone', SwGrain: 'Grain', SwPlaster: 'Plaster', SwMetal: 'Metal', SwMarble: 'Marble', SwFabric: 'Fabric',
+  SwStone: 'Stone', SwGrain: 'Grain', SwPlaster: 'Plaster', SwMetal: 'Metal', SwMarble: 'Marble', SwFabric: 'Fabric', SwCarpet: 'Carpet',
 };
 
 module.exports = { GROUPS, BOX, MATERIALS };

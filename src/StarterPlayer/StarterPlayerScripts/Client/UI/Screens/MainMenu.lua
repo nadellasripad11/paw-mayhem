@@ -101,7 +101,7 @@ local function switchTo(id: string?)
 		local on = pid == id
 		entry.button.BackgroundTransparency = 1
 		entry.underline.Visible = on
-		entry.label.TextColor3 = on and Theme.Color.Gold or Theme.Color.Text
+		entry.label.TextColor3 = on and Theme.Color.Accent or Theme.Color.Text
 	end
 	if id and panels[id] and id ~= currentPanel then
 		require(script.Parent.Parent.UIJuice).Enter(panels[id])
@@ -306,7 +306,7 @@ local function navButton(parent: Instance, item, order: number)
 	-- the selected screen gets a short gold line under its name.
 	local underline = UIUtil.make("Frame", {
 		Parent = b, Name = "Underline", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(36, 4),
-		BackgroundColor3 = Theme.Color.Gold, BorderSizePixel = 0, Visible = false, ZIndex = 13,
+		BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0, Visible = false, ZIndex = 13,
 	})
 	underline:SetAttribute("NoPolish", true)
 	UIUtil.corner(UDim.new(1, 0), underline)
@@ -394,7 +394,7 @@ function MainMenu.Build()
 	levelLabel = UIUtil.label({
 		Parent = avatarBtn, Text = "LV 1", Font = Theme.Font.Title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
 		Position = UDim2.fromOffset(-6, -6), Size = UDim2.fromOffset(40, 16), BackgroundTransparency = 0,
-		BackgroundColor3 = Theme.Color.Gold, TextColor3 = Color3.fromRGB(46, 30, 6), ZIndex = 14,
+		BackgroundColor3 = Theme.Color.Accent, TextColor3 = Color3.fromRGB(46, 30, 6), ZIndex = 14,
 	})
 	UIUtil.corner(UDim.new(1, 0), levelLabel)
 	local track = UIUtil.make("Frame", {
@@ -402,7 +402,7 @@ function MainMenu.Build()
 		BackgroundColor3 = Theme.Color.Surface3, BorderSizePixel = 0, ZIndex = 12,
 	})
 	UIUtil.corner(UDim.new(1, 0), track)
-	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Theme.Color.Gold, BorderSizePixel = 0, ZIndex = 13 })
+	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0, ZIndex = 13 })
 	UIUtil.corner(UDim.new(1, 0), levelFill)
 	xpLabel = nil
 
@@ -427,7 +427,7 @@ function MainMenu.Build()
 	-- duels: a small gold link under play, not a second big button.
 	local duelsLink = UIUtil.make("TextButton", {
 		Parent = playGroup, Name = "ToDuels", Text = "DUELS  1V1 - 5V5  >", Font = Theme.Font.Title, TextSize = 16,
-		TextColor3 = Theme.Color.Gold, BackgroundTransparency = 1, AutoButtonColor = false,
+		TextColor3 = Theme.Color.Accent, BackgroundTransparency = 1, AutoButtonColor = false,
 		Position = UDim2.fromOffset(76, 66), Size = UDim2.fromOffset(240, 22), ZIndex = 11,
 		TextStrokeTransparency = 0.5, TextStrokeColor3 = Color3.fromRGB(10, 12, 20),
 	}) :: TextButton
@@ -667,7 +667,7 @@ function MainMenu.Build()
 	}) :: TextButton
 	reroll:SetAttribute("NoPolish", true)
 	reroll.MouseEnter:Connect(function()
-		reroll.TextColor3 = Theme.Color.Gold
+		reroll.TextColor3 = Theme.Color.Accent
 	end)
 	reroll.MouseLeave:Connect(function()
 		reroll.TextColor3 = Theme.Color.TextDim
@@ -742,7 +742,7 @@ function MainMenu.Build()
 		local coin = UIUtil.make("Frame", { Parent = reward, Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = z })
 		Icon3D.Create("Coin", coin, UDim2.fromOffset(24, 24), UDim2.fromOffset(-2, -2)).ZIndex = z + 1
 		UIUtil.label({
-			Parent = reward, Text = tostring(amount), Font = Theme.Font.Title, TextSize = 16, TextColor3 = Theme.Color.Gold,
+			Parent = reward, Text = tostring(amount), Font = Theme.Font.Title, TextSize = 16, TextColor3 = Theme.Color.Accent,
 			AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), LayoutOrder = 2, ZIndex = z,
 		})
 	end
@@ -806,7 +806,7 @@ function MainMenu.Build()
 		UIUtil.corner(UDim.new(1, 0), bar)
 		local fill = UIUtil.make("Frame", {
 			Parent = bar, Size = UDim2.fromScale(math.clamp(progress / target, 0, 1), 1),
-			BackgroundColor3 = q.Claimed and Theme.Color.TextDim or Theme.Color.Gold, BorderSizePixel = 0, ZIndex = 13,
+			BackgroundColor3 = q.Claimed and Theme.Color.TextDim or Theme.Color.Accent, BorderSizePixel = 0, ZIndex = 13,
 		})
 		UIUtil.corner(UDim.new(1, 0), fill)
 		local right = UIUtil.make("Frame", { Parent = row, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(62, 24), BackgroundTransparency = 1, ZIndex = 12 })
@@ -890,7 +890,7 @@ function MainMenu.Build()
 			tasksTitle.Text = "DAILY TASKS"
 		end
 		-- something to claim while folded: the title goes gold.
-		tasksTitle.TextColor3 = (collapsed and ready > 0) and Theme.Color.Gold or Theme.Color.Text
+		tasksTitle.TextColor3 = (collapsed and ready > 0) and Theme.Color.Accent or Theme.Color.Text
 		resetLabel.Visible = not pill
 		tasksCard.Size = UDim2.fromOffset(w, h)
 		tasksGroup.Size = UDim2.fromOffset(w, h)

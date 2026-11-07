@@ -4,7 +4,7 @@ Status: approved
 
 ## direction
 
-a **cartoon brawler**, not a tactical shooter and not a web dashboard. chunky, readable, warm. the lobby is a navy and gold palace, so the ui borrows that and stops fighting it.
+a **cartoon brawler**, not a tactical shooter and not a web dashboard. chunky, readable, warm. the lobby is a light retro 70s room (cream walls, orange and peach stripes, patterned carpet, walnut wood; see `src/ReplicatedStorage/Shared/LobbyPalette.lua`), so the ui borrows its walnut and orange. no gold, no purple, no neon.
 
 rule of thumb: **one thing on the screen is loud (the main action). everything else is quiet.**
 
@@ -12,12 +12,12 @@ rule of thumb: **one thing on the screen is loud (the main action). everything e
 
 | token | colour | used for |
 |---|---|---|
-| surface | navy `#141A2E` at 92% opaque | every panel. solid enough that the room never shows through text |
-| surface-raised | `#1E2640` | rows, cards and tabs inside a panel |
+| surface | walnut `#4A3428`, solid | every panel. solid enough that the room never shows through text |
+| surface-raised | `#5C4233` | rows, cards and tabs inside a panel |
 | line | white at 10% | 1px dividers and panel edges only |
-| text | `#F4F6FB` | main text |
-| text-dim | `#9AA6C2` | secondary text, timers, labels |
-| gold (the one accent) | `#E8B64C` | selected tab, rewards, coin numbers, the current item |
+| text | cream `#FFF4E6` | main text |
+| text-dim | `#D9C3AE` | secondary text, timers, labels |
+| orange (the one accent) | `#F2933A` | selected tab, rewards, coin numbers, the current item |
 | play green | `#4CC45C` | **only** the Play button and real "buy / claim" actions |
 | danger red | `#FF4E5B` | notification dots, errors |
 | gem purple | `#C46BFF` | gem amounts only |
@@ -52,7 +52,7 @@ one style: the 3d viewport icons, all built to the same rules. same camera angle
 | kind | look | example |
 |---|---|---|
 | primary | play green, gloss, 60 px tall | Play, BUY, CLAIM |
-| secondary | surface-raised, gold text, 44 px | TO DUELS, SKINS, NEW TASKS |
+| secondary | surface-raised, orange text, 44 px | TO DUELS, SKINS, NEW TASKS |
 | quiet | no background, text-dim, icon | close X, filters |
 | owned / disabled | surface-raised, text-dim, a tick icon | OWNED, EQUIPPED |
 

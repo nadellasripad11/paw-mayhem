@@ -1,121 +1,22 @@
 --!strict
--- lobbylook: calmer lighting while you're in the lobby. each arena map sets
--- bright, hazy lighting (which turns the lobby's stone white and glowing), so
--- in the lobby this client uses its own: less ambient light, a touch less
--- exposure, no haze or glare, softer bloom. leaving the lobby puts the map's
--- lighting back. if the server changes the lighting meanwhile (a new map
--- loading), the new values are remembered and come back instead. it also
--- turns the lobby's floating displays (tagged lobbyspin) while you're there.
+-- lobbylook: turns the lobby's floating displays (tagged lobbyspin) while
+-- you're in the lobby. it used to swap in its own lobby lighting too; that
+-- made the room too bright, so the lobby now keeps the lighting you spawn in
+-- with (the place's own, plus the room lights lobbyservice hangs from
+-- shared/lobbylighting).
 
--- the values themselves live in shared/lobbylighting. tick the lobbytuning
--- attribute on lighting (studio, while playing) and this stops holding them,
--- so they can be tuned by eye (docs/lobby_art.md).
-
-local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local LobbyLighting = require(ReplicatedStorage.Shared.LobbyLighting)
 
 local LobbyLook = {}
 
-local LIGHTING: { [string]: any } = LobbyLighting.Lighting
-local ATMOSPHERE = { Density = 0.15, Haze = 0, Glare = 0 }
-
 local active = false
-local applying = false
-local savedLighting: { [string]: any } = {}
-local atmosphere: Atmosphere? = nil
-local savedAtmosphere: { [string]: any } = {}
-
-local function set(obj: Instance, prop: string, value: any)
-	applying = true
-	(obj :: any)[prop] = value
-	applying = false
-end
-
-local function takeAtmosphere(a: Atmosphere)
-	atmosphere = a
-	savedAtmosphere = {}
-	for prop, value in pairs(ATMOSPHERE) do
-		savedAtmosphere[prop] = (a :: any)[prop]
-		set(a, prop, value)
-		a:GetPropertyChangedSignal(prop):Connect(function()
-			if applying or not active or atmosphere ~= a or Lighting:GetAttribute("LobbyTuning") then
-				return
-			end
-			savedAtmosphere[prop] = (a :: any)[prop] -- the server's new value
-			set(a, prop, value)
-		end)
-	end
-end
-
-local function bloom(on: boolean)
-	local b = Lighting:FindFirstChild("PawBloom")
-	if b and b:IsA("BloomEffect") then
-		b.Intensity = on and LobbyLighting.Bloom.Intensity or 0.18
-		b.Threshold = on and LobbyLighting.Bloom.Threshold or 2.4
-	end
-	-- a touch more contrast in the lobby so it reads in 3d.
-	local cc = Lighting:FindFirstChild("PawLobbyGrade")
-	if on and not cc then
-		local c = Instance.new("ColorCorrectionEffect")
-		c.Name = "PawLobbyGrade"
-		c.Contrast = LobbyLighting.Grade.Contrast
-		c.Saturation = LobbyLighting.Grade.Saturation
-		c.Brightness = LobbyLighting.Grade.Brightness
-		c.Parent = Lighting
-	elseif not on and cc then
-		cc:Destroy()
-	end
-end
 
 function LobbyLook.Set(on: boolean)
-	if on == active then
-		return
-	end
 	active = on
-	if on then
-		for prop, value in pairs(LIGHTING) do
-			savedLighting[prop] = (Lighting :: any)[prop]
-			set(Lighting, prop, value)
-		end
-		local a = Lighting:FindFirstChildOfClass("Atmosphere")
-		if a then
-			takeAtmosphere(a)
-		end
-	else
-		for prop, value in pairs(savedLighting) do
-			set(Lighting, prop, value)
-		end
-		local a = atmosphere
-		if a and a.Parent then
-			for prop, value in pairs(savedAtmosphere) do
-				set(a, prop, value)
-			end
-		end
-		atmosphere = nil
-	end
-	bloom(on)
 end
 
 function LobbyLook.Start()
-	for prop, value in pairs(LIGHTING) do
-		Lighting:GetPropertyChangedSignal(prop):Connect(function()
-			if applying or not active or Lighting:GetAttribute("LobbyTuning") then
-				return
-			end
-			savedLighting[prop] = (Lighting :: any)[prop] -- the server's new value
-			set(Lighting, prop, value)
-		end)
-	end
-	-- a new map brings a new atmosphere: tame it too while in the lobby.
-	Lighting.ChildAdded:Connect(function(c)
-		if active and c:IsA("Atmosphere") then
-			task.defer(takeAtmosphere, c)
-		end
-	end)
 	-- floating displays: a slow turn and a gentle bob round where they were built.
 	RunService.RenderStepped:Connect(function()
 		if not active then

@@ -6,7 +6,8 @@
 //   * tiling sets (stone, plaster, metal, marble, fabric): near-white colour
 //     maps that the part's own color tints, turned into materialvariants
 //     (pawstone, pawplaster, ...) by tools/lobby/setup_lobby.lua;
-//   * baked sets (gold, stoneblock, navy): real colours for the lobby meshes.
+//   * baked sets (gold, stoneblock, navy, carpet): real colours (orange paint,
+//     cream stone, peach plaster, the patterned carpet).
 // "orm" is gltf's metallicroughness map: g = roughness, b = metalness.
 // everything tiles seamlessly.
 
@@ -139,6 +140,45 @@ function fabric(base) {
   };
 }
 
+// ── carpet: a 70s honeycomb, baked in real colours (not tinted). small
+// hexagons packed edge to edge, each drawn as concentric hex rings (brown
+// outline, orange, rust, peach, rust, a brown centre) like an old cinema
+// carpet, with a soft pile and a little mottling. 7 x 8 hexagons per tile
+// (the rows are 1% short of a true hex grid, so it tiles seamlessly).
+function carpet() {
+  const pile = fbm(71, 64, 3), mottle = fbm(72, 3, 3);
+  const N = 7, M = 8;
+  const brown = lin(104, 56, 34), orange = lin(214, 112, 48), rust = lin(168, 74, 38), peach = lin(232, 160, 102);
+  const S3 = Math.sqrt(3);
+  return (u, v) => {
+    // nearest hexagon centre (rows offset by half a cell on odd rows)
+    let best = 1e9, bx = 0, by = 0;
+    const j0 = Math.floor(v * M);
+    for (let dj = -1; dj <= 1; dj++) {
+      const j = j0 + dj;
+      const off = (((j % 2) + 2) % 2) * 0.5;
+      const i0 = Math.floor(u * N - off);
+      for (let di = -1; di <= 1; di++) {
+        const cx = (i0 + di + off + 0.5) / N, cy = (j + 0.5) / M;
+        const x = (u - cx) * N, y = (v - cy) * N;
+        const d = x * x + y * y;
+        if (d < best) { best = d; bx = x; by = y; }
+      }
+    }
+    const ax = Math.abs(bx), ay = Math.abs(by);
+    const t = Math.max(ax, (ax + S3 * ay) / 2) / 0.5; // 0 centre .. 1 edge
+    let c;
+    if (t > 0.86) c = brown;
+    else if (t > 0.68) c = orange;
+    else if (t > 0.5) c = rust;
+    else if (t > 0.33) c = peach;
+    else if (t > 0.18) c = rust;
+    else c = brown;
+    const f = pile(u, v), m = mottle(u, v);
+    return { h: f * 0.7 + (t > 0.86 ? -0.15 : 0), c: tint(0.88 + f * 0.12 + (m - 0.5) * 0.06, c), rough: 0.96, metal: 0 };
+  };
+}
+
 const NEUTRAL = [0.97, 0.96, 0.94];
 const lin = (r, g, b) => [r / 255, g / 255, b / 255];
 
@@ -149,8 +189,12 @@ bake('Metal', 1024, brushed(NEUTRAL, 1, 0.34), 0.8);
 bake('Grain', 1024, stoneBlock(NEUTRAL), 1.6);
 bake('Marble', 1024, marble(NEUTRAL), 0.6);
 bake('Fabric', 512, fabric(NEUTRAL), 1.6);
+bake('Carpet', 1024, carpet(), 1.2);
 console.log('baked sets:');
-bake('Gold', 1024, brushed(lin(214, 164, 74), 1, 0.28), 0.8);
-bake('StoneBlock', 1024, stoneBlock(lin(184, 174, 156)), 1.6);
-bake('Navy', 512, plaster(lin(26, 32, 58)), 1.0);
+// (the names stay so lobbymeshdata keeps working; the colours are the retro
+// palette now: "gold" is matte orange paint, "stoneblock" cream stone, "navy"
+// peach plaster. see shared/lobbypalette.)
+bake('Gold', 1024, plaster(lin(242, 147, 58)), 0.6);
+bake('StoneBlock', 1024, stoneBlock(lin(239, 224, 202)), 1.6);
+bake('Navy', 512, plaster(lin(248, 192, 138)), 1.0);
 bake('Cream', 256, stoneBlock(lin(246, 236, 214)), 0.3);

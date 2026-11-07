@@ -449,7 +449,7 @@ function UIUtil.tabRail(parent: Instance, tabs: { { id: string, label: string } 
 		for tid, b in pairs(buttons) do
 			local on = tid == id
 			b.BackgroundColor3 = on and Theme.Color.Surface3 or Theme.Color.Surface2
-			b.TextColor3 = on and Theme.Color.Gold or Theme.Color.TextDim
+			b.TextColor3 = on and Theme.Color.Accent or Theme.Color.TextDim
 			local edge = b:FindFirstChild("Edge")
 			if edge then
 				(edge :: GuiObject).Visible = on
@@ -468,7 +468,7 @@ function UIUtil.tabRail(parent: Instance, tabs: { { id: string, label: string } 
 		-- (the gold edge sits outside the padding, so it is not a child of it)
 		local edge = UIUtil.make("Frame", {
 			Parent = b, Name = "Edge", Size = UDim2.new(0, 4, 1, -12), Position = UDim2.new(0, -14, 0, 6),
-			BackgroundColor3 = Theme.Color.Gold, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex + 1,
+			BackgroundColor3 = Theme.Color.Accent, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex + 1,
 		})
 		UIUtil.corner(UDim.new(1, 0), edge)
 		local pad = Instance.new("UIPadding")
@@ -507,7 +507,7 @@ function UIUtil.currencyPill(props: { [string]: any }, icon: string, iconColor: 
 			Size = UDim2.fromOffset(26, 26), BackgroundColor3 = Theme.Color.Surface3, BorderSizePixel = 0, ZIndex = pill.ZIndex + 1,
 		}) :: TextButton
 		UIUtil.corner(UDim.new(1, 0), p)
-		Icons.Place("Plus", p, 14, Theme.Color.Gold)
+		Icons.Place("Plus", p, 14, Theme.Color.Accent)
 		UIUtil.feedback(p, 1.12)
 		plus = p
 	end
@@ -700,7 +700,7 @@ function UIUtil.buttonKind(b: TextButton, kind: string)
 	end
 	local buy, owned = kind == "buy", kind == "owned"
 	b.BackgroundColor3 = buy and Theme.Color.PlayGreen or Theme.Color.Surface2
-	b.TextColor3 = buy and Color3.new(1, 1, 1) or owned and Theme.Color.TextDim or Theme.Color.Gold
+	b.TextColor3 = buy and Color3.new(1, 1, 1) or owned and Theme.Color.TextDim or Theme.Color.Accent
 	b.TextStrokeTransparency = buy and 0.3 or 1
 	b.Active = not owned
 	local shine = b:FindFirstChild("Shine") :: GuiObject?

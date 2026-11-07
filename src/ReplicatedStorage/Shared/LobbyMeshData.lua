@@ -71,6 +71,7 @@ return {
 			{ Name = "Swatch_PawMetal", Mat = "SwMetal", Center = Vector3.new(18.0000, 2.0000, 0.0000), Size = Vector3.new(4.0000, 4.0000, 4.0000) },
 			{ Name = "Swatch_PawMarble", Mat = "SwMarble", Center = Vector3.new(24.0000, 2.0000, 0.0000), Size = Vector3.new(4.0000, 4.0000, 4.0000) },
 			{ Name = "Swatch_PawFabric", Mat = "SwFabric", Center = Vector3.new(30.0000, 2.0000, 0.0000), Size = Vector3.new(4.0000, 4.0000, 4.0000) },
+			{ Name = "Swatch_PawCarpet", Mat = "SwCarpet", Center = Vector3.new(36.0000, 2.0000, 0.0000), Size = Vector3.new(4.0000, 4.0000, 4.0000) },
 		},
 	},
 }

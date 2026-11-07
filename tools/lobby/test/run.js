@@ -14,6 +14,7 @@ const mock = fs.readFileSync(path.join(__dirname, 'mock_roblox.lua'), 'utf8');
 const setup = fs.readFileSync(path.join(ROOT, 'tools', 'lobby', 'setup_lobby.lua'), 'utf8');
 const lobby = fs.readFileSync(path.join(ROOT, 'src', 'ServerScriptService', 'Server', 'Services', 'LobbyService.lua'), 'utf8').replace(/\r\n/g, '\n');
 const meshData = fs.readFileSync(path.join(ROOT, 'src', 'ReplicatedStorage', 'Shared', 'LobbyMeshData.lua'), 'utf8').replace('--!strict', '');
+const paletteSrc = fs.readFileSync(path.join(ROOT, 'src', 'ReplicatedStorage', 'Shared', 'LobbyPalette.lua'), 'utf8').replace('--!strict', '');
 
 const prelude = `
 local M = (function()\n${mock}\nend)()
@@ -95,11 +96,16 @@ if (start < 0 || end < 0) throw new Error('placement code not found in LobbyServ
 const placement = lobby.slice(start, end);
 
 const placeTest = prelude + `
-local BEAM, STONE, NAVY = Color3.fromRGB(168, 126, 54), Color3.fromRGB(184, 174, 156), Color3.fromRGB(20, 25, 46)
+local LobbyPalette = (function()
+${paletteSrc}
+end)()
+local BEAM, STONE, NAVY = LobbyPalette.Trim, LobbyPalette.Pillar, LobbyPalette.Board
 local LobbyMeshData = (function()\n${meshData}\nend)()
 ${placement}
-for _, turned in ipairs({ false, true }) do
-	print("-- placing every group, import " .. (turned and "turned 180" or "unturned"))
+for run = 1, 4 do
+	local turned = run % 2 == 0
+	texCurrent = run > 2 -- (old import first: its textures are dropped)
+	print("-- placing every group, import " .. (turned and "turned 180" or "unturned") .. (texCurrent and ", current textures" or ", old textures"))
 	local lib = Instance.new("Folder")
 	for group, data in pairs(LobbyMeshData) do
 		for _, piece in ipairs(data.Pieces) do
@@ -126,10 +132,12 @@ for _, turned in ipairs({ false, true }) do
 				local w = piece.Size * scale
 				check(math.abs(math.abs(s.X) - w.X) < 1e-4 and math.abs(math.abs(s.Y) - w.Y) < 1e-4 and math.abs(math.abs(s.Z) - w.Z) < 1e-4, "size of " .. piece.Name)
 				check(m.Anchored and not m.CanCollide and not m.CanQuery, "flags on " .. piece.Name)
-				if piece.Name == "ColumnStone" then
-					check(m.Material == Enum.Material.Plastic, "textured piece keeps its own look")
+				if piece.Name == "ColumnStone" and texCurrent then
+					check(m.Material == Enum.Material.Plastic and m:FindFirstChildOfClass("SurfaceAppearance") ~= nil, "textured piece keeps its own look")
+				elseif piece.Name == "ColumnStone" then
+					check(m:FindFirstChildOfClass("SurfaceAppearance") == nil and m.Color == STONE, "old textures are dropped for the palette colour")
 				elseif piece.Mat == "Gold" then
-					check(m.Material == Enum.Material.Metal and m.Color == BEAM, "untextured gold falls back to gold metal: " .. piece.Name)
+					check(m.Material == Enum.Material.SmoothPlastic and m.Color == LobbyPalette.Orange, "untextured trim falls back to orange paint: " .. piece.Name)
 				end
 			end
 		end

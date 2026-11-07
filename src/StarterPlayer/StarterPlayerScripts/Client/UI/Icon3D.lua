@@ -177,10 +177,10 @@ BUILD.Podium = function(model)
 	return CFrame.Angles(math.rad(12), math.rad(-25), 0)
 end
 
--- a warm gold trophy cup (ranks).
+-- a copper-orange trophy cup (ranks).
 BUILD.Trophy = function(model)
 	local part = builder(model)
-	local gold, dark = C(232, 182, 76), C(120, 78, 30)
+	local gold, dark = C(226, 128, 60), C(92, 63, 46)
 	local metal = { material = Enum.Material.Metal, reflectance = 0.12 }
 	local function cyl(h: number, d: number, y: number, color: Color3)
 		part(Vector3.new(h, d, d), CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), color, {
@@ -192,7 +192,7 @@ BUILD.Trophy = function(model)
 	cyl(0.9, 0.38, -0.7, gold) -- stem
 	cyl(0.3, 1.0, -0.25, gold) -- cup bottom
 	cyl(1.3, 1.8, 0.5, gold) -- cup
-	cyl(0.12, 1.9, 1.18, C(248, 214, 120)) -- rim
+	cyl(0.12, 1.9, 1.18, C(246, 176, 110)) -- rim
 	for _, s in ipairs({ -1, 1 }) do
 		-- handles: three short bars bent into a loop
 		part(Vector3.new(0.5, 0.18, 0.18), CFrame.new(s * 1.12, 0.95, 0), gold, metal)

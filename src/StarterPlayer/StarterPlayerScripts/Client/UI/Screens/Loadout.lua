@@ -23,7 +23,7 @@ local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
 
 local Loadout = {}
 
-local GOLD = Theme.Color.Gold
+local GOLD = Theme.Color.Accent
 local DIM = Theme.Color.TextDim
 
 local STATS = {

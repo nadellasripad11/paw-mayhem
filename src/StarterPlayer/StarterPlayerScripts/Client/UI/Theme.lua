@@ -1,25 +1,25 @@
 --!strict
 -- theme: shared colors, fonts, and sizing for the paw mayhem ui. one place to
--- retune the whole look. palette echoes the reference: dark navy panels, cyan
--- accents, playful highlights, a green "play" call-to-action.
+-- retune the whole look. it matches the retro lobby (shared/lobbypalette):
+-- walnut brown panels, cream text, one orange accent, a green "play".
 
 local Theme = {}
 
 Theme.Color = {
-	-- deep sky/navy surfaces from the reference ui. keep these opaque so
-	-- every screen remains legible over the illustrated world backdrop.
-	Bg = Color3.fromRGB(8, 21, 43),
-	Panel = Color3.fromRGB(13, 36, 67),
-	PanelLight = Color3.fromRGB(22, 57, 91),
-	PanelDark = Color3.fromRGB(8, 28, 55),
-	Stroke = Color3.fromRGB(54, 108, 150),
+	-- older names some screens still use (walnut now; uiutil.restyle maps any
+	-- old navy left in a screen onto the surfaces below).
+	Bg = Color3.fromRGB(56, 39, 30),
+	Panel = Color3.fromRGB(74, 52, 40),
+	PanelLight = Color3.fromRGB(112, 82, 64),
+	PanelDark = Color3.fromRGB(60, 42, 32),
+	Stroke = Color3.fromRGB(150, 112, 88),
 
-	Text = Color3.fromRGB(244, 246, 251),
-	TextDim = Color3.fromRGB(154, 166, 194),
-	TextMuted = Color3.fromRGB(123, 158, 185),
+	Text = Color3.fromRGB(255, 244, 230), -- cream (#FFF4E6)
+	TextDim = Color3.fromRGB(217, 195, 174), -- (#D9C3AE)
+	TextMuted = Color3.fromRGB(176, 150, 128),
 
-	Accent = Color3.fromRGB(232, 182, 76), -- the one accent: warm gold (see design/DESIGN.md)
-	Accent2 = Color3.fromRGB(171, 91, 255), -- blaster purple
+	Accent = Color3.fromRGB(242, 147, 58), -- the one accent: orange (#F2933A, see design/DESIGN.md)
+	Accent2 = Color3.fromRGB(217, 98, 43), -- burnt orange (bar gradients)
 	Play = Color3.fromRGB(108, 225, 104), -- green cta
 	PlayDark = Color3.fromRGB(51, 158, 91),
 	Coin = Color3.fromRGB(255, 207, 72),
@@ -29,13 +29,12 @@ Theme.Color = {
 	Success = Color3.fromRGB(108, 225, 104),
 	Warn = Color3.fromRGB(255, 186, 67),
 
-	-- the clean set (design/DESIGN.md): three navy surface levels, hairline
-	-- outlines (white at low opacity) and one gold accent. blue is only for
-	-- the blue team in matches now, never for buttons.
-	Surface = Color3.fromRGB(20, 26, 46), -- panels, bars (#141A2E)
-	Surface2 = Color3.fromRGB(30, 38, 64), -- rows, cards, buttons (#1E2640)
-	Surface3 = Color3.fromRGB(44, 54, 84), -- hover / selected backgrounds
-	Gold = Color3.fromRGB(232, 182, 76), -- selected things, rewards (#E8B64C)
+	-- the clean set (design/DESIGN.md): three walnut surface levels, hairline
+	-- outlines (white at low opacity) and one orange accent. blue is only for
+	-- the blue team in matches, never for buttons.
+	Surface = Color3.fromRGB(74, 52, 40), -- panels, bars (walnut #4A3428)
+	Surface2 = Color3.fromRGB(92, 66, 51), -- rows, cards, buttons (#5C4233)
+	Surface3 = Color3.fromRGB(112, 82, 64), -- hover / selected backgrounds (#705240)
 	Line = Color3.fromRGB(255, 255, 255), -- used at linealpha
 	Blue = Color3.fromRGB(64, 156, 255),
 	PlayGreen = Color3.fromRGB(76, 196, 92),

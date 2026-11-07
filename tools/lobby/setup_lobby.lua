@@ -3,8 +3,8 @@ if game:GetService("RunService"):IsRunning() then
 end
 local RS = game:GetService("ReplicatedStorage")
 local MS = game:GetService("MaterialService")
-local NAMES = { "DaisStone", "DaisGold", "ColumnStone", "ColumnGold", "PilasterStone", "PilasterGold", "ArchNavy", "ArchGold", "ArchKeystone", "ChandelierGold", "ChandelierCandles", "TrophyGold", "PlanterStone", "PlanterGold", "CrownMould", "RailMould", "Swatch_PawStone", "Swatch_PawGrain", "Swatch_PawPlaster", "Swatch_PawMetal", "Swatch_PawMarble", "Swatch_PawFabric" }
-local VARIANTS = { PawStone = { Enum.Material.Slate, 12 }, PawGrain = { Enum.Material.Slate, 8 }, PawPlaster = { Enum.Material.Plaster, 16 }, PawMetal = { Enum.Material.Metal, 6 }, PawMarble = { Enum.Material.Marble, 16 }, PawFabric = { Enum.Material.Fabric, 4 } }
+local NAMES = { "DaisStone", "DaisGold", "ColumnStone", "ColumnGold", "PilasterStone", "PilasterGold", "ArchNavy", "ArchGold", "ArchKeystone", "ChandelierGold", "ChandelierCandles", "TrophyGold", "PlanterStone", "PlanterGold", "CrownMould", "RailMould", "Swatch_PawStone", "Swatch_PawGrain", "Swatch_PawPlaster", "Swatch_PawMetal", "Swatch_PawMarble", "Swatch_PawFabric", "Swatch_PawCarpet" }
+local VARIANTS = { PawStone = { Enum.Material.Slate, 12 }, PawGrain = { Enum.Material.Slate, 8 }, PawPlaster = { Enum.Material.Plaster, 16 }, PawMetal = { Enum.Material.Metal, 6 }, PawMarble = { Enum.Material.Marble, 16 }, PawFabric = { Enum.Material.Fabric, 4 }, PawCarpet = { Enum.Material.Fabric, 10 } }
 local lib = RS:FindFirstChild("LobbyMeshes")
 if not lib then
 	lib = Instance.new("Folder")
@@ -147,10 +147,12 @@ for name, def in pairs(VARIANTS) do
 		mv:Destroy()
 	end
 end
+-- the textures match the retro palette (lobbyservice checks this).
+lib:SetAttribute("TexVersion", 2)
 print("==== PAW MAYHEM lobby setup ====")
 print(("Models found: %d / %d"):format(found, #NAMES))
 print(("With full PBR textures: %d   colour texture only: %d   no texture (uses built-in materials): %d"):format(textured, colourOnly, found - textured - colourOnly))
-print(("Lobby materials made: %d / 6"):format(made))
+print(("Lobby materials made: %d / 7"):format(made))
 if #missing > 0 then
 	warn("MISSING: " .. table.concat(missing, ", ") .. "  -> import assets/LobbyMeshes.glb (Home > Import 3D) and run this again")
 elseif made < 6 then

@@ -28,7 +28,7 @@ local Shop = {}
 local player = Players.LocalPlayer
 -- (see design/features/weapons-and-shop: green only for things you can buy,
 -- owned things step back, gold is the one accent)
-local GOLD = Theme.Color.Gold
+local GOLD = Theme.Color.Accent
 local CARD_BG = Theme.Color.Surface
 local CARD_STROKE = Theme.Color.Line
 local RARITY_COLOR = {
