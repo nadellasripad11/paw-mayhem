@@ -14,7 +14,7 @@ i wanted to make something that felt genuinely fun to play — not another obby 
 
 i also wanted to prove to myself i could ship something complete. that meant a full match flow, a real economy, persistent progression, a working shop — not just a proof of concept. every system in this game was built from scratch in luau without buying anything from the toolbox, because i wanted to actually understand what i was building.
 
-this was my project for [hack club stardance](https://stardance.hackclub.com/projects/64622), where i had a few weeks to take it from idea to playable. the tight deadline forced a lot of good decisions — scope it down, get the core loop fun first, then layer everything else on top.
+i gave myself a few weeks to take it from idea to playable. the tight deadline forced a lot of good decisions — scope it down, get the core loop fun first, then layer everything else on top.
 
 ---
 
@@ -57,7 +57,7 @@ all tunable values — weapon stats, knockback curves, progression tables, match
 
 the server owns everything that matters: shooting, hit detection, knockback math, xp rewards. the client asks and renders. this means no exploits can mess with outcomes, which turned out to matter a lot once real people started playing.
 
-the project uses [rojo](https://github.com/rojo-rbx/rojo) to sync files from the filesystem into studio, which made version control actually work. `aftman.toml` pins the toolchain so anyone who clones this gets the same rojo version.
+the project syncs files from the filesystem into studio, which made version control actually work.
 
 ---
 
@@ -70,4 +70,4 @@ the project uses [rojo](https://github.com/rojo-rbx/rojo) to sync files from the
 
 ---
 
-built by [@sripin](https://stardance.hackclub.com/@sripin) for hack club stardance.
+built by sripad.
