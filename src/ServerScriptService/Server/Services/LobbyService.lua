@@ -1802,6 +1802,24 @@ local function palettePass(root: Instance)
 end
 LobbyService.PalettePass = palettePass -- (duelservice runs it over its pads)
 
+-- the room's lights: the rig and the ceiling panels stay off unless
+-- lobbylighting.roomlights is on (they washed the cream room yellow); every
+-- other lamp, bulb and sign light is turned down to a soft glow.
+local function lightPass(root: Instance)
+	local scale = LobbyLighting.DecorLightScale or 1
+	for _, d in ipairs(root:GetDescendants()) do
+		if d:IsA("Light") then
+			local p = d.Parent
+			local rig = p and p.Parent and p.Parent.Name == "LightRig"
+			if rig or (p and p.Name == "LightPanel") then
+				d.Enabled = LobbyLighting.RoomLights == true
+			else
+				d.Brightness *= scale
+			end
+		end
+	end
+end
+
 -- every surface gets material shading and casts shadows (flat plastic with
 -- no shadows is what made it all read as 2d). signs and glass keep theirs.
 local function depthPass(root: Instance)
@@ -1876,12 +1894,18 @@ local function applyMaterials(lib: Instance, roots: { Instance })
 			end
 		end
 	end
+	-- bigger hexagons, so the pattern reads from across the room.
+	local carpetMat = MaterialService:FindFirstChild("PawCarpet")
+	if carpetMat and carpetMat:IsA("MaterialVariant") then
+		carpetMat.StudsPerTile = 18
+	end
 	local stone = MaterialService:FindFirstChild("PawStone") ~= nil
 	for _, root in ipairs(roots) do
 		for _, p in ipairs(root:GetDescendants()) do
 			if p:IsA("BasePart") and not p:IsA("MeshPart") and p.Transparency < 1 then
 				local name = VARIANT_FOR[p.Material]
-				if p.Material == Enum.Material.Fabric and (string.sub(p.Name, 1, 5) == "Floor" or string.sub(p.Name, 1, 6) == "Carpet") then
+				local carpet = p.Material == Enum.Material.Fabric and (string.sub(p.Name, 1, 5) == "Floor" or string.sub(p.Name, 1, 6) == "Carpet")
+				if carpet then
 					name = "PawCarpet"
 				end
 				if p.Material == Enum.Material.Slate then
@@ -1889,6 +1913,11 @@ local function applyMaterials(lib: Instance, roots: { Instance })
 				end
 				if name and MaterialService:FindFirstChild(name) then
 					p.MaterialVariant = name
+					if carpet then
+						-- (the carpet texture has its own colours; a variant's
+						-- texture is multiplied by the part colour, so it must be white)
+						p.Color = Color3.new(1, 1, 1)
+					end
 				end
 				-- the stone texture has its own joints
 				if stone and p.Name == "Grout" then
@@ -2109,6 +2138,7 @@ local function buildLobby()
 	buildCollection(f)
 	buildPractice(f)
 	palettePass(f)
+	lightPass(f)
 	depthPass(plaza)
 	for _, room in ipairs({ "Guns", "Collection" }) do
 		local r = f:FindFirstChild(room)

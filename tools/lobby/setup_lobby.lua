@@ -4,7 +4,7 @@ end
 local RS = game:GetService("ReplicatedStorage")
 local MS = game:GetService("MaterialService")
 local NAMES = { "DaisStone", "DaisGold", "ColumnStone", "ColumnGold", "PilasterStone", "PilasterGold", "ArchNavy", "ArchGold", "ArchKeystone", "ChandelierGold", "ChandelierCandles", "TrophyGold", "PlanterStone", "PlanterGold", "CrownMould", "RailMould", "Swatch_PawStone", "Swatch_PawGrain", "Swatch_PawPlaster", "Swatch_PawMetal", "Swatch_PawMarble", "Swatch_PawFabric", "Swatch_PawCarpet" }
-local VARIANTS = { PawStone = { Enum.Material.Slate, 12 }, PawGrain = { Enum.Material.Slate, 8 }, PawPlaster = { Enum.Material.Plaster, 16 }, PawMetal = { Enum.Material.Metal, 6 }, PawMarble = { Enum.Material.Marble, 16 }, PawFabric = { Enum.Material.Fabric, 4 }, PawCarpet = { Enum.Material.Fabric, 10 } }
+local VARIANTS = { PawStone = { Enum.Material.Slate, 12 }, PawGrain = { Enum.Material.Slate, 8 }, PawPlaster = { Enum.Material.Plaster, 16 }, PawMetal = { Enum.Material.Metal, 6 }, PawMarble = { Enum.Material.Marble, 16 }, PawFabric = { Enum.Material.Fabric, 4 }, PawCarpet = { Enum.Material.Fabric, 18 } }
 local lib = RS:FindFirstChild("LobbyMeshes")
 if not lib then
 	lib = Instance.new("Folder")
