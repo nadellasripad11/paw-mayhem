@@ -448,23 +448,29 @@ function UIUtil.tabRail(parent: Instance, tabs: { { id: string, label: string } 
 	local function select(id: string)
 		for tid, b in pairs(buttons) do
 			local on = tid == id
-			b.BackgroundColor3 = on and Theme.Color.Blue or Theme.Color.Surface2
-			b.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
-			local st = b:FindFirstChildOfClass("UIStroke")
-			if st then
-				st.Transparency = on and 1 or Theme.LineAlpha
+			b.BackgroundColor3 = on and Theme.Color.Surface3 or Theme.Color.Surface2
+			b.TextColor3 = on and Theme.Color.Gold or Theme.Color.TextDim
+			local edge = b:FindFirstChild("Edge")
+			if edge then
+				(edge :: GuiObject).Visible = on
 			end
 		end
 		onSelect(id)
 	end
 	for i, t in ipairs(tabs) do
 		local b = UIUtil.make("TextButton", {
-			Parent = parent, Name = t.id, LayoutOrder = i, Size = UDim2.new(1, 0, 0, 40), Text = t.label,
-			Font = Theme.Font.Bold, TextSize = Theme.Text.Body, AutoButtonColor = false, BorderSizePixel = 0,
+			Parent = parent, Name = t.id, LayoutOrder = i, Size = UDim2.new(1, 0, 0, 40), Text = string.upper(t.label),
+			Font = Theme.Font.Title, TextSize = Theme.Text.Label, AutoButtonColor = false, BorderSizePixel = 0,
 			BackgroundColor3 = Theme.Color.Surface2, TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Left,
 		}) :: TextButton
 		UIUtil.corner(Theme.CornerSmall, b)
 		UIUtil.hairline(b)
+		-- (the gold edge sits outside the padding, so it is not a child of it)
+		local edge = UIUtil.make("Frame", {
+			Parent = b, Name = "Edge", Size = UDim2.new(0, 4, 1, -12), Position = UDim2.new(0, -14, 0, 6),
+			BackgroundColor3 = Theme.Color.Gold, BorderSizePixel = 0, Visible = false, ZIndex = b.ZIndex + 1,
+		})
+		UIUtil.corner(UDim.new(1, 0), edge)
 		local pad = Instance.new("UIPadding")
 		pad.PaddingLeft = UDim.new(0, 14)
 		pad.Parent = b
@@ -498,10 +504,10 @@ function UIUtil.currencyPill(props: { [string]: any }, icon: string, iconColor: 
 	if withPlus then
 		local p = UIUtil.make("TextButton", {
 			Parent = pill, Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0),
-			Size = UDim2.fromOffset(26, 26), BackgroundColor3 = Theme.Color.Blue, BorderSizePixel = 0, ZIndex = pill.ZIndex + 1,
+			Size = UDim2.fromOffset(26, 26), BackgroundColor3 = Theme.Color.Surface3, BorderSizePixel = 0, ZIndex = pill.ZIndex + 1,
 		}) :: TextButton
 		UIUtil.corner(UDim.new(1, 0), p)
-		Icons.Place("Plus", p, 14, Color3.new(1, 1, 1))
+		Icons.Place("Plus", p, 14, Theme.Color.Gold)
 		UIUtil.feedback(p, 1.12)
 		plus = p
 	end
@@ -528,9 +534,9 @@ end
 
 local function surfaceFor(c: Color3): Color3
 	local l = luminance(c)
-	if l < 0.09 then
+	if l < 0.12 then
 		return Theme.Color.Surface
-	elseif l < 0.15 then
+	elseif l < 0.18 then
 		return Theme.Color.Surface2
 	end
 	return Theme.Color.Surface3
@@ -541,7 +547,7 @@ local function restyleOne(d: Instance)
 		local function fix()
 			local c = d.BackgroundColor3
 			if c == OLD_CYAN then
-				d.BackgroundColor3 = Theme.Color.Blue
+				d.BackgroundColor3 = Theme.Color.Surface3
 			elseif isNavy(c) then
 				local want = surfaceFor(c)
 				if want ~= c then
@@ -578,22 +584,17 @@ function UIUtil.restyle(root: Instance)
 	end)
 end
 
--- ── polish: the raised, glossy look for whole screens ───────────────────────
+-- ── polish: one finish for whole screens (design/DESIGN.md) ─────────────────
 -- screens build their own buttons and cards; this goes over a screen and
 -- finishes them in one style:
---   * coloured action buttons (buy, equip, claim, vote...) get a gloss: lighter
---     at the top, a soft shine across the upper half, a darker outline and an
---     outlined label;
---   * dark buttons and cards get a gentle top-lit gradient so they read as
---     raised panels, not flat boxes.
--- anything with its own gradient, inside a 3d view, or marked nopolish is
--- left alone. uiutil.polish(root) also catches cards made later.
+--   * green action buttons (play, buy, claim) get a gloss: lighter at the
+--     top, a soft shine across the upper half, a darker outline;
+--   * everything else stays flat, and dark rounded panels become solid so
+--     the room never shows through text.
+-- anything inside a 3d view or marked nopolish is left alone.
+-- uiutil.polish(root) also catches cards made later.
 local function lum(c: Color3): number
 	return 0.3 * c.R + 0.59 * c.G + 0.11 * c.B
-end
-
-local function sat(c: Color3): number
-	return math.max(c.R, c.G, c.B) - math.min(c.R, c.G, c.B)
 end
 
 function UIUtil.gloss(b: GuiObject, color: Color3?)
@@ -645,11 +646,10 @@ function UIUtil.gloss(b: GuiObject, color: Color3?)
 	end
 end
 
-local function raise(f: GuiObject)
-	if f:FindFirstChildOfClass("UIGradient") then
-		return
-	end
-	UIUtil.gradient(Color3.new(1, 1, 1), Color3.new(0.72, 0.72, 0.76), 90, f)
+-- gloss is only for the real "do it" buttons: play, buy, claim (green).
+local function isGreen(c: Color3): boolean
+	local h, s, v = c:ToHSV()
+	return h > 0.22 and h < 0.45 and s > 0.35 and v > 0.4
 end
 
 local function polishOne(inst: Instance)
@@ -673,13 +673,12 @@ local function polishOne(inst: Instance)
 	end
 	local c = g.BackgroundColor3
 	if g:IsA("GuiButton") then
-		if sat(c) > 0.22 and lum(c) > 0.22 then
+		if isGreen(c) then
 			UIUtil.gloss(g)
-		else
-			raise(g)
 		end
-	elseif g:IsA("Frame") and size.Y >= 40 and size.X >= 60 and lum(c) < 0.3 then
-		raise(g)
+	elseif g:IsA("Frame") and size.Y >= 40 and size.X >= 60 and lum(c) < 0.3 and g.BackgroundTransparency > 0.05 then
+		-- panels are solid enough that the room never shows through text.
+		g.BackgroundTransparency = 0.08
 	end
 end
 

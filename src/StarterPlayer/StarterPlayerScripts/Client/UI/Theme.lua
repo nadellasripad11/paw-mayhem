@@ -14,26 +14,28 @@ Theme.Color = {
 	PanelDark = Color3.fromRGB(8, 28, 55),
 	Stroke = Color3.fromRGB(54, 108, 150),
 
-	Text = Color3.fromRGB(246, 250, 255),
-	TextDim = Color3.fromRGB(185, 211, 232),
+	Text = Color3.fromRGB(244, 246, 251),
+	TextDim = Color3.fromRGB(154, 166, 194),
 	TextMuted = Color3.fromRGB(123, 158, 185),
 
-	Accent = Color3.fromRGB(64, 156, 255), -- the one accent blue (same as blue)
+	Accent = Color3.fromRGB(232, 182, 76), -- the one accent: warm gold (see design/DESIGN.md)
 	Accent2 = Color3.fromRGB(171, 91, 255), -- blaster purple
 	Play = Color3.fromRGB(108, 225, 104), -- green cta
 	PlayDark = Color3.fromRGB(51, 158, 91),
 	Coin = Color3.fromRGB(255, 207, 72),
-	Gem = Color3.fromRGB(224, 96, 255),
+	Gem = Color3.fromRGB(196, 107, 255),
 	Danger = Color3.fromRGB(255, 89, 111),
 	Red = Color3.fromRGB(255, 78, 91),
 	Success = Color3.fromRGB(108, 225, 104),
 	Warn = Color3.fromRGB(255, 186, 67),
 
-	-- the clean set the ui is moving to (flat, rivals-like): three surface
-	-- levels, hairline outlines (white at low opacity) and one blue accent.
-	Surface = Color3.fromRGB(17, 21, 34), -- screens, bars
-	Surface2 = Color3.fromRGB(26, 31, 48), -- cards, buttons
-	Surface3 = Color3.fromRGB(38, 45, 68), -- hover / selected backgrounds
+	-- the clean set (design/DESIGN.md): three navy surface levels, hairline
+	-- outlines (white at low opacity) and one gold accent. blue is only for
+	-- the blue team in matches now, never for buttons.
+	Surface = Color3.fromRGB(20, 26, 46), -- panels, bars (#141A2E)
+	Surface2 = Color3.fromRGB(30, 38, 64), -- rows, cards, buttons (#1E2640)
+	Surface3 = Color3.fromRGB(44, 54, 84), -- hover / selected backgrounds
+	Gold = Color3.fromRGB(232, 182, 76), -- selected things, rewards (#E8B64C)
 	Line = Color3.fromRGB(255, 255, 255), -- used at linealpha
 	Blue = Color3.fromRGB(64, 156, 255),
 	PlayGreen = Color3.fromRGB(76, 196, 92),

@@ -193,6 +193,7 @@ local function refresh()
 	end
 	if ctx == "Match" or ctx == "Duel" then
 		trace("fighting")
+		MainMenu.FoldTasks()
 		flyoverUntil = 0
 		if fallbackGui then fallbackGui.Enabled = false end
 		if not MainMenu.InGameOpen() then

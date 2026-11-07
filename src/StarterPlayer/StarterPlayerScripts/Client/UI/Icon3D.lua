@@ -2,7 +2,7 @@
 -- icon3d: chunky 3d icons for the menu (rivals-style), each a little model of
 -- parts in a viewportframe - no uploaded images. kinds:
 --   clipboard (tasks), basket (shop), wingshield (pass), cathead (customize,
---   in your cat's colours), coin, gem.
+--   in your cat's colours), coin, gem, trophy (ranks).
 -- icon3d.create(kind, parent, size, position, opts) -> viewportframe
 
 local Icon3D = {}
@@ -175,6 +175,32 @@ BUILD.Podium = function(model)
 	part(Vector3.new(1.1, 1.0, 1.1), CFrame.new(1.15, 0.5, 0), C(205, 130, 70), { material = Enum.Material.Metal })
 	part(Vector3.new(0.5, 0.5, 0.5), CFrame.new(0, 2.6, 0) * CFrame.Angles(0, 0, math.rad(45)), C(255, 230, 120))
 	return CFrame.Angles(math.rad(12), math.rad(-25), 0)
+end
+
+-- a warm gold trophy cup (ranks).
+BUILD.Trophy = function(model)
+	local part = builder(model)
+	local gold, dark = C(232, 182, 76), C(120, 78, 30)
+	local metal = { material = Enum.Material.Metal, reflectance = 0.12 }
+	local function cyl(h: number, d: number, y: number, color: Color3)
+		part(Vector3.new(h, d, d), CFrame.new(0, y, 0) * CFrame.Angles(0, 0, math.rad(90)), color, {
+			shape = Enum.PartType.Cylinder, material = Enum.Material.Metal, reflectance = 0.12,
+		})
+	end
+	part(Vector3.new(1.9, 0.45, 1.2), CFrame.new(0, -1.55, 0), dark) -- base block
+	cyl(0.25, 1.2, -1.2, gold) -- foot
+	cyl(0.9, 0.38, -0.7, gold) -- stem
+	cyl(0.3, 1.0, -0.25, gold) -- cup bottom
+	cyl(1.3, 1.8, 0.5, gold) -- cup
+	cyl(0.12, 1.9, 1.18, C(248, 214, 120)) -- rim
+	for _, s in ipairs({ -1, 1 }) do
+		-- handles: three short bars bent into a loop
+		part(Vector3.new(0.5, 0.18, 0.18), CFrame.new(s * 1.12, 0.95, 0), gold, metal)
+		part(Vector3.new(0.18, 0.75, 0.18), CFrame.new(s * 1.32, 0.6, 0), gold, metal)
+		part(Vector3.new(0.5, 0.18, 0.18), CFrame.new(s * 1.12, 0.25, 0), gold, metal)
+	end
+	part(Vector3.new(0.5, 0.5, 0.12), CFrame.new(0, 0.5, 0.88) * CFrame.Angles(0, 0, math.rad(45)), C(255, 240, 190)) -- star plate
+	return CFrame.Angles(math.rad(10), math.rad(-20), 0)
 end
 
 -- a yellow smiley (emotes).

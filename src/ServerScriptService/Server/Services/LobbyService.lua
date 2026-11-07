@@ -95,7 +95,7 @@ local HALL_FLOOR = Color3.fromRGB(38, 42, 60)
 local BLUE = Color3.fromRGB(70, 165, 255)
 local PURPLE = Color3.fromRGB(165, 105, 255)
 local CYAN = Color3.fromRGB(90, 220, 255)
-local GOLD = Color3.fromRGB(255, 200, 90)
+local GOLD = Color3.fromRGB(214, 164, 74) -- warm gold, not lemon (design/features/lobby-home)
 local WOOD = Color3.fromRGB(122, 84, 56)
 local METAL = Color3.fromRGB(60, 64, 82)
 local INK = Color3.fromRGB(14, 18, 34)
@@ -414,7 +414,7 @@ local function buildGround(f: Instance)
 		-- light panels in the ceiling.
 		for x = r[1] + 11, r[2] - 5, 22 do
 			for z = r[3] + 11, r[4] - 5, 22 do
-				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), Color3.fromRGB(236, 226, 206), Enum.Material.SmoothPlastic, f)
+				local lp = part("LightPanel", Vector3.new(6, 0.3, 2), CFrame.new(at(x, z, HEIGHT - 1.8)), Color3.fromRGB(178, 166, 144), Enum.Material.SmoothPlastic, f)
 				lp.CastShadow = false
 				local sl = Instance.new("SurfaceLight")
 				sl.Face = Enum.NormalId.Bottom
@@ -1850,7 +1850,12 @@ local function spawnPiece(src: MeshPart, mat: string?, size: Vector3, cf: CFrame
 	m.Size = Vector3.new(math.abs(s.X), math.abs(s.Y), math.abs(s.Z))
 	m.CFrame = cf * t
 	local fb = mat and FALLBACK[mat]
-	if fb and not m:FindFirstChildOfClass("SurfaceAppearance") then
+	local sa = m:FindFirstChildOfClass("SurfaceAppearance")
+	if sa and mat == "Gold" then
+		-- (the brushed gold reads lemon under the room lights: pull it to #C9963F)
+		sa.Color = Color3.fromRGB(226, 206, 176)
+	end
+	if fb and not sa then
 		m.Color = if m.TextureID ~= "" then Color3.new(1, 1, 1) else fb[1]
 		m.Material = fb[2]
 	end

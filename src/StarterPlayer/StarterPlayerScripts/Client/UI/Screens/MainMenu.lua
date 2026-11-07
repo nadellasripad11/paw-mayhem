@@ -51,10 +51,12 @@ local MainMenu = {}
 local player = Players.LocalPlayer
 
 local gui, content, panels, coinLabel, gemLabel, levelLabel, levelFill, xpLabel, avatarSlot
+local avatarView: ViewportFrame? = nil -- your cat head, 3d, in your colours
 local panelBackdrop: Frame? = nil
 local homeGroups: { GuiObject } = {}
 local headerTitle: TextLabel? = nil
 local relayoutFn: (() -> ())? = nil
+local foldTasks: (() -> ())? = nil -- folds the tasks card (after a match)
 
 local SCREEN_TITLES = {
 	Loadout = "LOADOUT", Shop = "SHOP", Customize = "CUSTOMIZE",
@@ -97,9 +99,9 @@ local function switchTo(id: string?)
 	end
 	for pid, entry in pairs(navButtons) do
 		local on = pid == id
-		entry.button.BackgroundColor3 = Theme.Color.Blue
-		entry.button.BackgroundTransparency = on and 0.35 or 1
-		entry.label.TextColor3 = Color3.new(1, 1, 1)
+		entry.button.BackgroundTransparency = 1
+		entry.underline.Visible = on
+		entry.label.TextColor3 = on and Theme.Color.Gold or Theme.Color.Text
 	end
 	if id and panels[id] and id ~= currentPanel then
 		require(script.Parent.Parent.UIJuice).Enter(panels[id])
@@ -206,9 +208,17 @@ local function refreshCurrency()
 	end
 
 	if avatarSlot then
-		avatarSlot:ClearAllChildren()
 		local fur = Cats.FurById[p.Loadout.Cat.Fur] or Cats.FurById[Cats.Default.Fur]
-		Icons.Place("CatFace", avatarSlot, 42, fur.Body, fur.Accent)
+		if avatarView then
+			Icon3D.Set(avatarView, "CatHead", { fur = fur.Body, accent = fur.Accent, fill = 0.95 })
+		end
+	end
+end
+
+-- a match or duel started: fold the tasks card for when you come back.
+function MainMenu.FoldTasks()
+	if foldTasks then
+		foldTasks()
 	end
 end
 
@@ -288,16 +298,23 @@ local function navButton(parent: Instance, item, order: number)
 		Icon3D.Create(item.icon3d, b, iconSize, iconPos, { fill = 0.92 }).ZIndex = 12
 	end
 	local label = UIUtil.label({
-		Parent = b, Name = "NavLabel", Text = item.label, Font = Theme.Font.Title, TextSize = 17,
-		TextColor3 = white, TextXAlignment = Enum.TextXAlignment.Center, TextStrokeTransparency = 0.2,
+		Parent = b, Name = "NavLabel", Text = string.upper(item.label), Font = Theme.Font.Title, TextSize = 16,
+		TextColor3 = white, TextXAlignment = Enum.TextXAlignment.Center, TextStrokeTransparency = 0.5,
 		TextStrokeColor3 = Color3.fromRGB(10, 12, 20),
 		Position = UDim2.new(0, 0, 1, -24), Size = UDim2.new(1, 0, 0, 20), ZIndex = 13,
 	})
+	-- the selected screen gets a short gold line under its name.
+	local underline = UIUtil.make("Frame", {
+		Parent = b, Name = "Underline", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 2), Size = UDim2.fromOffset(36, 4),
+		BackgroundColor3 = Theme.Color.Gold, BorderSizePixel = 0, Visible = false, ZIndex = 13,
+	})
+	underline:SetAttribute("NoPolish", true)
+	UIUtil.corner(UDim.new(1, 0), underline)
 	UIUtil.feedback(b)
 	b.MouseButton1Click:Connect(function()
 		switchTo(item.id)
 	end)
-	navButtons[item.id] = { button = b, stroke = stroke, label = label }
+	navButtons[item.id] = { button = b, stroke = stroke, label = label, underline = underline }
 end
 
 
@@ -345,8 +362,7 @@ function MainMenu.Build()
 	local barW = #NAV * TILE + (#NAV - 1) * GAP + PAD * 2
 	local barGroup, barScale = scaled({ Parent = gui, Name = "NavBar", AnchorPoint = Vector2.new(0.5, 1), Size = UDim2.fromOffset(barW, 72 + PAD * 2), ZIndex = 10 })
 	local bar = UIUtil.surface({ Parent = barGroup, Size = UDim2.fromScale(1, 1), ZIndex = 10, BackgroundColor3 = Theme.Color.Surface }, 1, UDim.new(0, 16))
-	bar.BackgroundTransparency = 0.25
-	UIUtil.gradient(Color3.fromRGB(46, 52, 74), Color3.fromRGB(14, 16, 26), 90, bar)
+	bar.BackgroundTransparency = 0.08
 	local tiles = UIUtil.make("Frame", { Parent = bar, Position = UDim2.fromOffset(PAD, PAD), Size = UDim2.new(1, -PAD * 2, 1, -PAD * 2), BackgroundTransparency = 1, ZIndex = 10 })
 	UIUtil.listLayout(tiles, GAP, Enum.FillDirection.Horizontal)
 	for i, item in ipairs(NAV) do
@@ -373,11 +389,12 @@ function MainMenu.Build()
 		Parent = avatarBtn, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, -2),
 		Size = UDim2.fromOffset(42, 42), BackgroundTransparency = 1, ZIndex = 12,
 	})
-	Icons.Place("CatFace", avatarSlot, 42, Color3.fromRGB(255, 236, 222), Color3.fromRGB(255, 248, 242))
+	avatarView = Icon3D.Create("CatHead", avatarSlot, UDim2.fromOffset(58, 58), UDim2.fromOffset(-8, -6), { fill = 0.95 })
+	;(avatarView :: ViewportFrame).ZIndex = 13
 	levelLabel = UIUtil.label({
-		Parent = avatarBtn, Text = "LV 1", Font = Theme.Font.Bold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center,
+		Parent = avatarBtn, Text = "LV 1", Font = Theme.Font.Title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
 		Position = UDim2.fromOffset(-6, -6), Size = UDim2.fromOffset(40, 16), BackgroundTransparency = 0,
-		BackgroundColor3 = Theme.Color.Blue, ZIndex = 14,
+		BackgroundColor3 = Theme.Color.Gold, TextColor3 = Color3.fromRGB(46, 30, 6), ZIndex = 14,
 	})
 	UIUtil.corner(UDim.new(1, 0), levelLabel)
 	local track = UIUtil.make("Frame", {
@@ -385,13 +402,13 @@ function MainMenu.Build()
 		BackgroundColor3 = Theme.Color.Surface3, BorderSizePixel = 0, ZIndex = 12,
 	})
 	UIUtil.corner(UDim.new(1, 0), track)
-	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Theme.Color.Blue, BorderSizePixel = 0, ZIndex = 13 })
+	levelFill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.04, 1), BackgroundColor3 = Theme.Color.Gold, BorderSizePixel = 0, ZIndex = 13 })
 	UIUtil.corner(UDim.new(1, 0), levelFill)
 	xpLabel = nil
 
 	local play, playLabel = UIUtil.primaryButton({
 		Parent = playGroup, Name = "Play", Position = UDim2.fromOffset(76, 0), Size = UDim2.fromOffset(240, 62), ZIndex = 11, TextSize = 34, CornerRadius = UDim.new(0, 14),
-	}, "Play")
+	}, "PLAY")
 	gloss(play, Theme.Color.PlayGreen, playLabel)
 	local queueGlow = UIUtil.make("Frame", {
 		Parent = playGroup, Name = "QueueGlow", Position = play.Position - UDim2.fromOffset(6, 6), Size = play.Size + UDim2.fromOffset(12, 12),
@@ -403,10 +420,22 @@ function MainMenu.Build()
 	TweenService:Create(queueStroke, TweenInfo.new(0.7, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.85, Thickness = 6 }):Play()
 	local playSub = UIUtil.label({
 		Parent = playGroup, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
-		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(46, 70), Size = UDim2.fromOffset(300, 18),
+		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(46, -24), Size = UDim2.fromOffset(300, 18),
 		TextStrokeTransparency = 0.55, ZIndex = 11,
 	})
 	play.MouseButton1Click:Connect(onPlay)
+	-- duels: a small gold link under play, not a second big button.
+	local duelsLink = UIUtil.make("TextButton", {
+		Parent = playGroup, Name = "ToDuels", Text = "DUELS  1V1 - 5V5  >", Font = Theme.Font.Title, TextSize = 16,
+		TextColor3 = Theme.Color.Gold, BackgroundTransparency = 1, AutoButtonColor = false,
+		Position = UDim2.fromOffset(76, 66), Size = UDim2.fromOffset(240, 22), ZIndex = 11,
+		TextStrokeTransparency = 0.5, TextStrokeColor3 = Color3.fromRGB(10, 12, 20),
+	}) :: TextButton
+	duelsLink:SetAttribute("NoPolish", true)
+	UIUtil.feedback(duelsLink, 1.05)
+	duelsLink.MouseButton1Click:Connect(function()
+		Remotes.Get("LobbyTravel"):FireServer("Duels")
+	end)
 
 	-- searching for a duel: a pill over play with the mode, the time and a
 	-- cancel button.
@@ -482,7 +511,7 @@ function MainMenu.Build()
 				local left = (m.timeLeft or 0) + (m.phase == "Intermission" and GameConfig.Match.CountdownSeconds or 0)
 				playSub.Text = m.phase == "Countdown" and "Dropping in..." or ("Match starts in " .. clock(left) .. "  ·  click to change vote")
 			else
-				playLabel.Text = "Play"
+				playLabel.Text = "PLAY"
 				playSub.Text = m.phase == "Playing" and "Match in progress  ·  jump in"
 					or m.phase == "Results" and "Next match soon"
 					or ""
@@ -566,7 +595,7 @@ function MainMenu.Build()
 	end)
 
 	-- leaderboard + settings at the far right.
-	for i, spec in ipairs({ { "Leaderboard", "Podium", "Leaderboard" }, { "Settings", "Gear", "Settings" } }) do
+	for i, spec in ipairs({ { "Leaderboard", "Trophy", "Ranks" }, { "Settings", "Gear", "Settings" } }) do
 		roundButton(spec[1] .. "Icon", 10 + i, spec[3], function(slot: Frame)
 			Icon3D.Create(spec[2], slot, UDim2.fromScale(1.5, 1.5), UDim2.fromScale(-0.25, -0.25)).ZIndex = slot.ZIndex + 1
 		end, function()
@@ -606,57 +635,61 @@ function MainMenu.Build()
 		end
 	end)
 
-	-- middle left: today's tasks (progress, coin reward, claim when done) and
-	-- to duels, which takes you straight to the duel pads.
-	local TASKS_W, ROW_H, HEAD_H = 290, 46, 50
-	local tasksGroup, tasksScale = scaled({ Parent = gui, Name = "TasksGroup", AnchorPoint = Vector2.new(0, 0.5), Size = UDim2.fromOffset(TASKS_W, 300), ZIndex = 10 })
-	local tasksCard = UIUtil.surface({ Parent = tasksGroup, Size = UDim2.new(1, 0, 0, HEAD_H), ZIndex = 10, BackgroundColor3 = Theme.Color.Surface }, 1, UDim.new(0, 14))
-	tasksCard.BackgroundTransparency = 0.3
-	UIUtil.gradient(Color3.fromRGB(34, 40, 60), Color3.fromRGB(12, 14, 22), 90, tasksCard)
-	-- open on every screen (tap the header to fold it).
+	-- top left, under the roblox buttons: today's tasks (see
+	-- design/features/lobby-home). a solid card: progress, the coin reward, and
+	-- a finished task turns into a green claim row. it folds down to its header
+	-- after your first match (on phones it starts folded, as a small pill); tap
+	-- the header to open it.
+	local TASKS_W, ROW_H, HEAD_H, FOOT_H, PILL_W = 260, 44, 44, 30, 150
 	local phone = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
-	local collapsed = false
-	Icon3D.Create("Clipboard", tasksCard, UDim2.fromOffset(46, 52), UDim2.fromOffset(4, -6)).ZIndex = 12
+	local collapsed = phone
+	local tasksGroup, tasksScale = scaled({ Parent = gui, Name = "TasksGroup", AnchorPoint = Vector2.new(0, 0), Size = UDim2.fromOffset(TASKS_W, HEAD_H), ZIndex = 10 })
+	local tasksCard = UIUtil.surface({ Parent = tasksGroup, Size = UDim2.new(1, 0, 0, HEAD_H), ZIndex = 10, BackgroundColor3 = Theme.Color.Surface }, 1, UDim.new(0, 10))
+	tasksCard.BackgroundTransparency = 0
+	Icon3D.Create("Clipboard", tasksCard, UDim2.fromOffset(34, 38), UDim2.fromOffset(6, 3)).ZIndex = 12
 	local tasksTitle = UIUtil.label({
-		Parent = tasksCard, Text = "Daily Tasks", Font = Theme.Font.Title, TextSize = 24, Position = UDim2.fromOffset(52, 0),
-		Size = UDim2.new(0.6, 0, 0, HEAD_H), ZIndex = 11, TextStrokeTransparency = 0.5,
+		Parent = tasksCard, Text = "DAILY TASKS", Font = Theme.Font.Title, TextSize = 20, Position = UDim2.fromOffset(44, 0),
+		Size = UDim2.new(1, -52, 0, HEAD_H), ZIndex = 11,
+	})
+	local resetLabel = UIUtil.label({
+		Parent = tasksCard, Text = "", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.TextDim,
+		TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0.5, -12, 0, HEAD_H), ZIndex = 11,
 	})
 	local fold = UIUtil.make("TextButton", {
 		Parent = tasksCard, Name = "Fold", Text = "", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, HEAD_H), ZIndex = 13,
 	}) :: TextButton
-	local resetLabel = UIUtil.label({
-		Parent = tasksCard, Text = "", Font = Theme.Font.Bold, TextSize = 11, TextColor3 = Theme.Color.TextDim,
-		TextXAlignment = Enum.TextXAlignment.Right, Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.new(0.5, -12, 0, HEAD_H), ZIndex = 11,
-	})
+	-- new tasks (r$): a quiet line at the foot of the card, swaps the ones you
+	-- haven't finished.
+	local reroll = UIUtil.make("TextButton", {
+		Parent = tasksCard, Name = "Reroll", Text = "NEW TASKS   R$ " .. tostring(Monetization.Products.RerollTasks.Price),
+		Font = Theme.Font.Title, TextSize = 14, TextColor3 = Theme.Color.TextDim, BackgroundTransparency = 1, AutoButtonColor = false,
+		Size = UDim2.new(1, -24, 0, FOOT_H - 4), Position = UDim2.fromOffset(12, 0), ZIndex = 12, Visible = false,
+	}) :: TextButton
+	reroll:SetAttribute("NoPolish", true)
+	reroll.MouseEnter:Connect(function()
+		reroll.TextColor3 = Theme.Color.Gold
+	end)
+	reroll.MouseLeave:Connect(function()
+		reroll.TextColor3 = Theme.Color.TextDim
+	end)
+	reroll.MouseButton1Click:Connect(function()
+		Monetize.PromptProduct("RerollTasks")
+	end)
+	local function untilReset(): string
+		local left = 86400 - os.time() % 86400
+		return string.format("%dh %02dm", left // 3600, (left % 3600) // 60)
+	end
+	local allDoneLabel: TextLabel? = nil
 	-- tasks reset at midnight utc.
 	task.spawn(function()
 		while gui.Parent do
-			local left = 86400 - os.time() % 86400
-			resetLabel.Text = string.format("%dh %02dm", left // 3600, (left % 3600) // 60)
+			resetLabel.Text = "resets " .. untilReset()
+			if allDoneLabel and allDoneLabel.Parent then
+				allDoneLabel.Text = "All done, new tasks in " .. untilReset()
+			end
 			task.wait(30)
 		end
 	end)
-	-- new tasks (r$): swap the ones you haven't finished.
-	local reroll = UIUtil.secondaryButton({
-		Parent = tasksGroup, Name = "Reroll", Size = UDim2.fromOffset(TASKS_W, 30), ZIndex = 11, TextSize = 13, Visible = false,
-	}, "NEW TASKS   R$ " .. tostring(Monetization.Products.RerollTasks.Price), function()
-		Monetize.PromptProduct("RerollTasks")
-	end)
-	local duelsHolder = UIUtil.make("Frame", { Parent = tasksGroup, Size = UDim2.fromOffset(TASKS_W, 48), BackgroundTransparency = 1, ZIndex = 10 })
-	local DUELS_W = 210
-	local toDuels, toDuelsLabel = UIUtil.primaryButton({
-		Parent = duelsHolder, Name = "ToDuels", Position = UDim2.fromOffset(18, 0), Size = UDim2.fromOffset(DUELS_W, 44), ZIndex = 11, TextSize = 22, CornerRadius = UDim.new(0, 12),
-	}, "To Duels", function()
-		Remotes.Get("LobbyTravel"):FireServer("Duels")
-	end, Theme.Color.Blue, Color3.fromRGB(38, 100, 186))
-	gloss(toDuels, Theme.Color.Blue, toDuelsLabel)
-	for _, x in ipairs({ 0.1, 0.9 }) do
-		local spark = UIUtil.make("Frame", {
-			Parent = toDuels, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(x, 0.5), Size = UDim2.fromOffset(22, 22),
-			BackgroundTransparency = 1, ZIndex = 14,
-		})
-		Icons.Place("Burst", spark, 22, Color3.new(1, 1, 1))
-	end
 
 	-- the tasks tile shows how many are ready to claim.
 	local questBadge: TextLabel? = nil
@@ -678,7 +711,14 @@ function MainMenu.Build()
 		collapsed = not collapsed
 		rebuildTasks()
 	end)
-	-- a white icon for each kind of task.
+	-- back from your first match: fold the card so the room shows.
+	foldTasks = function()
+		if not collapsed then
+			collapsed = true
+			rebuildTasks()
+		end
+	end
+	-- a white glyph for each kind of task.
 	local function taskIcon(text: string): string
 		local t = string.lower(text)
 		if string.find(t, "elim") or string.find(t, "knock") then
@@ -694,55 +734,43 @@ function MainMenu.Build()
 		end
 		return "Check"
 	end
-	local function taskRow(q: any, y: number)
-		local row = UIUtil.make("Frame", {
-			Parent = tasksCard, Name = "TaskRow", Position = UDim2.fromOffset(10, y), Size = UDim2.new(1, -20, 0, ROW_H - 4),
-			BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 11,
+	local function coinReward(parent: Instance, amount: number, z: number)
+		local reward = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = z })
+		local l = UIUtil.listLayout(reward, 4, Enum.FillDirection.Horizontal)
+		l.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		l.VerticalAlignment = Enum.VerticalAlignment.Center
+		local coin = UIUtil.make("Frame", { Parent = reward, Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = z })
+		Icon3D.Create("Coin", coin, UDim2.fromOffset(24, 24), UDim2.fromOffset(-2, -2)).ZIndex = z + 1
+		UIUtil.label({
+			Parent = reward, Text = tostring(amount), Font = Theme.Font.Title, TextSize = 16, TextColor3 = Theme.Color.Gold,
+			AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), LayoutOrder = 2, ZIndex = z,
 		})
+	end
+	local function taskRow(q: any, y: number)
 		local progress, target = tonumber(q.Progress) or 0, math.max(tonumber(q.Target) or 1, 1)
 		local done = progress >= target
-		local dim = q.Claimed and Theme.Color.TextDim or Color3.new(1, 1, 1)
-		local icon = UIUtil.make("Frame", { Parent = row, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, -3), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, ZIndex = 12 })
-		Icons.Place(taskIcon(tostring(q.Text)), icon, 24, dim)
-		UIUtil.label({
-			Parent = row, Name = "TaskName", Text = tostring(q.Text), Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(34, 2),
-			Size = UDim2.new(1, -182, 0, 24), TextScaled = true, ZIndex = 12,
-			TextColor3 = dim, TextStrokeTransparency = 0.6,
-		})
-		local fit = Instance.new("UITextSizeConstraint")
-		fit.MaxTextSize = 16
-		fit.MinTextSize = 10
-		fit.Parent = row:FindFirstChild("TaskName")
-		-- a thin progress line under the name
-		local bar = UIUtil.make("Frame", {
-			Parent = row, Position = UDim2.fromOffset(34, 30), Size = UDim2.new(1, -182, 0, 4),
-			BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.85, BorderSizePixel = 0, ZIndex = 12,
-		})
-		UIUtil.corner(UDim.new(1, 0), bar)
-		local fill = UIUtil.make("Frame", {
-			Parent = bar, Size = UDim2.fromScale(math.clamp(progress / target, 0, 1), 1),
-			BackgroundColor3 = done and Theme.Color.PlayGreen or Theme.Color.Blue, BorderSizePixel = 0, ZIndex = 13,
-		})
-		UIUtil.corner(UDim.new(1, 0), fill)
-		UIUtil.label({
-			Parent = row, Text = string.format("%d / %d", math.min(progress, target), target), Font = Theme.Font.Title, TextSize = 16,
-			TextColor3 = dim, TextXAlignment = Enum.TextXAlignment.Right, TextStrokeTransparency = 0.6,
-			Position = UDim2.new(1, -140, 0, 6), Size = UDim2.fromOffset(56, 22), ZIndex = 12,
-		})
-		-- right side: the reward, a claim button once done, a tick once claimed.
-		local right = UIUtil.make("Frame", {
-			Parent = row, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(74, 32),
-			BackgroundTransparency = 1, ZIndex = 12,
-		})
-		if q.Claimed then
-			Icons.Place("Check", right, 20, Theme.Color.PlayGreen)
-		elseif done then
+		local coins = tonumber(q.Coins) or 0
+		if done and not q.Claimed then
+			-- the whole row is the claim button.
 			local claim = UIUtil.make("TextButton", {
-				Parent = right, Text = "CLAIM", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.new(1, 1, 1),
-				Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Color.PlayGreen, AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 13,
+				Parent = tasksCard, Name = "TaskRow", Text = "", AutoButtonColor = false, Position = UDim2.fromOffset(8, y + 2),
+				Size = UDim2.new(1, -16, 0, ROW_H - 6), BackgroundColor3 = Theme.Color.PlayGreen, BorderSizePixel = 0, ZIndex = 11,
 			}) :: TextButton
 			UIUtil.corner(Theme.CornerSmall, claim)
-			UIUtil.feedback(claim, 1.06)
+			UIUtil.feedback(claim, 1.03)
+			local tick = UIUtil.make("Frame", { Parent = claim, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 13 })
+			Icons.Place("Check", tick, 20, Color3.new(1, 1, 1))
+			UIUtil.label({
+				Parent = claim, Text = "CLAIM", Font = Theme.Font.Title, TextSize = 18, Position = UDim2.fromOffset(38, 0),
+				Size = UDim2.new(1, -110, 1, 0), ZIndex = 13,
+			})
+			local right = UIUtil.make("Frame", { Parent = claim, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(70, 24), BackgroundTransparency = 1, ZIndex = 13 })
+			coinReward(right, coins, 13)
+			for _, d in ipairs(right:GetDescendants()) do
+				if d:IsA("TextLabel") then
+					d.TextColor3 = Color3.new(1, 1, 1)
+				end
+			end
 			claim.MouseButton1Click:Connect(function()
 				if claiming then
 					return
@@ -751,24 +779,50 @@ function MainMenu.Build()
 				local res = ClientActions.ClaimQuest(q.Id)
 				claiming = false
 				if type(res) == "table" and res.ok then
-					local amount = tonumber(res.coins) or tonumber(q.Coins) or 0
+					local amount = tonumber(res.coins) or coins
 					showToast(string.format("+%d coins", amount))
 					require(script.Parent.Parent.Celebrate).CoinFly(claim.AbsolutePosition + claim.AbsoluteSize / 2, coinPill, amount)
 				end
 				rebuildTasks()
 			end)
-		else
-			local reward = UIUtil.make("Frame", { Parent = right, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 })
-			local l = UIUtil.listLayout(reward, 4, Enum.FillDirection.Horizontal)
-			l.HorizontalAlignment = Enum.HorizontalAlignment.Right
-			l.VerticalAlignment = Enum.VerticalAlignment.Center
-			local coin = UIUtil.make("Frame", { Parent = reward, Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 12 })
-			Icon3D.Create("Coin", coin, UDim2.fromOffset(26, 26), UDim2.fromOffset(-1, -1)).ZIndex = 13
-			UIUtil.label({
-				Parent = reward, Text = tostring(q.Coins or 0), Font = Theme.Font.Title, TextSize = 15, TextColor3 = Theme.Color.Coin,
-				AutomaticSize = Enum.AutomaticSize.X, Size = UDim2.fromOffset(0, 18), LayoutOrder = 2, ZIndex = 12,
-			})
+			return
 		end
+		local row = UIUtil.make("Frame", {
+			Parent = tasksCard, Name = "TaskRow", Position = UDim2.fromOffset(12, y), Size = UDim2.new(1, -24, 0, ROW_H),
+			BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 11,
+		})
+		local dim = q.Claimed and Theme.Color.TextDim or Theme.Color.Text
+		local icon = UIUtil.make("Frame", { Parent = row, Position = UDim2.fromOffset(0, 8), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 12 })
+		Icons.Place(q.Claimed and "Check" or taskIcon(tostring(q.Text)), icon, 20, q.Claimed and Theme.Color.PlayGreen or dim)
+		UIUtil.label({
+			Parent = row, Name = "TaskName", Text = tostring(q.Text), Font = Theme.Font.Bold, TextSize = 14, Position = UDim2.fromOffset(28, 4),
+			Size = UDim2.new(1, -96, 0, 20), TextColor3 = dim, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12,
+		})
+		-- a thin gold progress line under the name, the count beside it.
+		local bar = UIUtil.make("Frame", {
+			Parent = row, Position = UDim2.fromOffset(28, 30), Size = UDim2.new(1, -96, 0, 4),
+			BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.88, BorderSizePixel = 0, ZIndex = 12,
+		})
+		UIUtil.corner(UDim.new(1, 0), bar)
+		local fill = UIUtil.make("Frame", {
+			Parent = bar, Size = UDim2.fromScale(math.clamp(progress / target, 0, 1), 1),
+			BackgroundColor3 = q.Claimed and Theme.Color.TextDim or Theme.Color.Gold, BorderSizePixel = 0, ZIndex = 13,
+		})
+		UIUtil.corner(UDim.new(1, 0), fill)
+		local right = UIUtil.make("Frame", { Parent = row, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), Size = UDim2.fromOffset(62, 24), BackgroundTransparency = 1, ZIndex = 12 })
+		if q.Claimed then
+			UIUtil.label({
+				Parent = right, Text = "DONE", Font = Theme.Font.Title, TextSize = 14, TextColor3 = Theme.Color.TextDim,
+				TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.fromScale(1, 1), ZIndex = 12,
+			})
+		else
+			coinReward(right, coins, 12)
+		end
+		UIUtil.label({
+			Parent = row, Text = string.format("%d/%d", math.min(progress, target), target), Font = Theme.Font.Title, TextSize = 14,
+			TextColor3 = Theme.Color.TextDim, TextXAlignment = Enum.TextXAlignment.Right,
+			AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 24), Size = UDim2.fromOffset(62, 16), ZIndex = 12,
+		})
 	end
 	rebuildTasks = function()
 		for _, c in ipairs(tasksCard:GetChildren()) do
@@ -776,37 +830,70 @@ function MainMenu.Build()
 				c:Destroy()
 			end
 		end
+		allDoneLabel = nil
 		local p = ClientState.Profile
-		local list = (p and p.Quests and p.Quests.Active) or {}
-		local ready, open, finished = 0, 0, 0
-		for i, q in ipairs(list) do
-			if not collapsed then
-				taskRow(q, HEAD_H + (i - 1) * ROW_H)
-			end
+		local list = p and p.Quests and p.Quests.Active
+		local ready, open, finished, claimed = 0, 0, 0, 0
+		for _, q in ipairs(list or {}) do
 			local done = (tonumber(q.Progress) or 0) >= (tonumber(q.Target) or 1)
 			if done then
 				finished += 1
 			end
-			if not q.Claimed and done then
+			if q.Claimed then
+				claimed += 1
+			elseif done then
 				ready += 1
-			elseif not done then
+			else
 				open += 1
 			end
 		end
-		tasksTitle.Text = collapsed and string.format("Daily Tasks  %d/%d", finished, #list) or "Daily Tasks"
-		local h = HEAD_H + (collapsed and 0 or #list * ROW_H) + 4
-		tasksCard.Size = UDim2.new(1, 0, 0, h)
-		-- (new tasks only while there's something left to swap.)
-		reroll.Visible = open > 0 and not collapsed
-		local y = h + 8
-		if reroll.Visible then
-			reroll.Position = UDim2.fromOffset(0, y)
-			y += 38
-		else
-			y += 4
+		local rowsH = 0
+		if not collapsed then
+			if not list then
+				-- still loading: three grey placeholder rows, not an empty box.
+				for i = 1, 3 do
+					local ph = UIUtil.make("Frame", {
+						Parent = tasksCard, Name = "TaskRow", Position = UDim2.fromOffset(12, HEAD_H + (i - 1) * ROW_H + 6),
+						Size = UDim2.new(1, -24, 0, ROW_H - 14), BackgroundColor3 = Theme.Color.Surface2, BorderSizePixel = 0, ZIndex = 11,
+					})
+					UIUtil.corner(Theme.CornerSmall, ph)
+				end
+				rowsH = 3 * ROW_H
+			elseif #list == 0 or claimed == #list then
+				local row = UIUtil.make("Frame", {
+					Parent = tasksCard, Name = "TaskRow", Position = UDim2.fromOffset(12, HEAD_H), Size = UDim2.new(1, -24, 0, ROW_H - 8),
+					BackgroundTransparency = 1, ZIndex = 11,
+				})
+				local tick = UIUtil.make("Frame", { Parent = row, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 12 })
+				Icons.Place("Check", tick, 20, Theme.Color.PlayGreen)
+				allDoneLabel = UIUtil.label({
+					Parent = row, Text = "All done, new tasks in " .. untilReset(), Font = Theme.Font.Bold, TextSize = 14,
+					TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -28, 1, 0), ZIndex = 12,
+				}) :: TextLabel
+				rowsH = ROW_H - 8
+			else
+				for i, q in ipairs(list) do
+					taskRow(q, HEAD_H + (i - 1) * ROW_H)
+				end
+				rowsH = #list * ROW_H
+			end
 		end
-		duelsHolder.Position = UDim2.fromOffset(0, y)
-		tasksGroup.Size = UDim2.fromOffset(TASKS_W, y + 48)
+		reroll.Visible = not collapsed and open > 0 and list ~= nil
+		reroll.Position = UDim2.fromOffset(12, HEAD_H + rowsH)
+		local h = HEAD_H + rowsH + (reroll.Visible and FOOT_H or (collapsed and 0 or 8))
+		local pill = collapsed and phone
+		local w = pill and PILL_W or TASKS_W
+		local total = list and #list or 0
+		if collapsed then
+			tasksTitle.Text = string.format(pill and "TASKS %d/%d" or "DAILY TASKS  %d/%d", finished, total)
+		else
+			tasksTitle.Text = "DAILY TASKS"
+		end
+		-- something to claim while folded: the title goes gold.
+		tasksTitle.TextColor3 = (collapsed and ready > 0) and Theme.Color.Gold or Theme.Color.Text
+		resetLabel.Visible = not pill
+		tasksCard.Size = UDim2.fromOffset(w, h)
+		tasksGroup.Size = UDim2.fromOffset(w, h)
 		if questBadge then
 			questBadge.Text = tostring(ready)
 			questBadge.Visible = ready > 0
@@ -894,13 +981,13 @@ function MainMenu.Build()
 		barScale.Scale = s
 		barGroup.Position = UDim2.new(0, cx, 1, -12 * s)
 		playScale.Scale = s
-		playGroup.Position = UDim2.new(0, cx, 1, -(12 + 80 + 12) * s)
+		playGroup.Position = UDim2.new(0, cx, 1, -(12 + 80 + 26) * s)
 		currScale.Scale = s
 		currGroup.Position = UDim2.new(0.5, 0, 0, 12 * s)
 		iconScale.Scale = s
 		iconGroup.Position = UDim2.new(1, -16 * s, 0, 12 * s)
 		tasksScale.Scale = s
-		tasksGroup.Position = UDim2.new(0, 16 * s, 0.5, 0)
+		tasksGroup.Position = UDim2.new(0, 16 * s, 0, inset + 8 * s)
 
 		-- screens fill the display under the header bar.
 		local side = 24 * s
