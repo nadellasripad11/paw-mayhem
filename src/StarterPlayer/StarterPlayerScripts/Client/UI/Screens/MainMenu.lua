@@ -59,7 +59,7 @@ local relayoutFn: (() -> ())? = nil
 local foldTasks: (() -> ())? = nil -- folds the tasks card (after a match)
 
 local SCREEN_TITLES = {
-	Loadout = "LOADOUT", Shop = "SHOP", Customize = "CUSTOMIZE",
+	Loadout = "WEAPONS", Shop = "SHOP", Customize = "CUSTOMIZE",
 	Leaderboard = "LEADERBOARD", Settings = "SETTINGS", Quests = "DAILY TASKS", Season = "SEASON PASS",
 }
 local navButtons = {}

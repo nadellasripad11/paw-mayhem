@@ -17,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Net.Remotes)
 
 local Theme = require(script.Parent.Parent.Theme)
 local UIUtil = require(script.Parent.Parent.UIUtil)
+local Icons = require(script.Parent.Parent.Icons)
 local ShopArt = require(script.Parent.Parent.ShopArt)
 local ClientState = require(script.Parent.Parent.Parent.ClientState)
 local ClientActions = require(script.Parent.Parent.Parent.ClientActions)
@@ -25,10 +26,11 @@ local Monetize = require(script.Parent.Parent.Parent.Monetize)
 local Shop = {}
 
 local player = Players.LocalPlayer
-local ROBUX_GREEN = Color3.fromRGB(52, 196, 104)
-local EQUIP_GREEN = Color3.fromRGB(96, 226, 150)
-local CARD_BG = Color3.fromRGB(22, 38, 68)
-local CARD_STROKE = Color3.fromRGB(54, 84, 132)
+-- (see design/features/weapons-and-shop: green only for things you can buy,
+-- owned things step back, gold is the one accent)
+local GOLD = Theme.Color.Gold
+local CARD_BG = Theme.Color.Surface
+local CARD_STROKE = Theme.Color.Line
 local RARITY_COLOR = {
 	Common = Color3.fromRGB(180, 190, 205), Uncommon = Color3.fromRGB(110, 220, 130), Rare = Color3.fromRGB(90, 170, 255),
 	Epic = Color3.fromRGB(190, 110, 255), Legendary = Color3.fromRGB(255, 170, 60), Mythic = Color3.fromRGB(255, 90, 140),
@@ -52,41 +54,45 @@ end
 -- a card with a 3d art area on top, name + subtitle and an action button.
 local function cardShell(parent: Instance, accent: Color3, title: string, subtitle: string, subColor: Color3?)
 	local card = UIUtil.make("Frame", { Parent = parent, BackgroundColor3 = CARD_BG, BorderSizePixel = 0 }) :: Frame
-	UIUtil.corner(UDim.new(0, 14), card)
-	local stroke = UIUtil.stroke(CARD_STROKE, 1.5, card)
+	UIUtil.corner(UDim.new(0, 10), card)
+	local stroke = UIUtil.stroke(CARD_STROKE, 1, card)
+	stroke.Transparency = Theme.LineAlpha
 	local art = UIUtil.make("Frame", {
-		Parent = card, Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -78),
+		Parent = card, Position = UDim2.fromOffset(6, 6), Size = UDim2.new(1, -12, 1, -94),
 		BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ClipsDescendants = true,
 	}) :: Frame
-	UIUtil.corner(UDim.new(0, 10), art)
-	UIUtil.gradient(accent:Lerp(Color3.fromRGB(40, 60, 100), 0.45), Color3.fromRGB(14, 24, 46), 90, art)
+	UIUtil.corner(UDim.new(0, 8), art)
+	UIUtil.gradient(accent:Lerp(Color3.fromRGB(30, 38, 64), 0.5), Color3.fromRGB(16, 20, 36), 90, art)
 	local glow = UIUtil.make("Frame", {
 		Parent = art, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.58), Size = UDim2.fromScale(0.8, 0.8),
 		BackgroundColor3 = accent, BackgroundTransparency = 0.8, BorderSizePixel = 0,
 	})
 	UIUtil.corner(UDim.new(1, 0), glow)
 	UIUtil.label({
-		Parent = card, Text = title, Font = Theme.Font.Title, TextSize = 16, TextTruncate = Enum.TextTruncate.AtEnd,
-		Position = UDim2.new(0, 10, 1, -70), Size = UDim2.new(1, -20, 0, 20),
+		Parent = card, Text = string.upper(title), Font = Theme.Font.Title, TextSize = 16, TextTruncate = Enum.TextTruncate.AtEnd,
+		Position = UDim2.new(0, 10, 1, -86), Size = UDim2.new(1, -20, 0, 20),
 	})
 	UIUtil.label({
-		Parent = card, Text = subtitle, Font = Theme.Font.Bold, TextSize = 11, TextColor3 = subColor or Theme.Color.TextDim,
-		Position = UDim2.new(0, 10, 1, -50), Size = UDim2.new(1, -20, 0, 14), TextTruncate = Enum.TextTruncate.AtEnd,
+		Parent = card, Text = subtitle, Font = Theme.Font.Bold, TextSize = 12, TextColor3 = subColor or Theme.Color.TextDim,
+		Position = UDim2.new(0, 10, 1, -66), Size = UDim2.new(1, -20, 0, 28), TextWrapped = true,
+		TextYAlignment = Enum.TextYAlignment.Top, TextTruncate = Enum.TextTruncate.AtEnd,
 	})
 	local btn = UIUtil.make("TextButton", {
-		Parent = card, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 28),
+		Parent = card, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 30),
 		Text = "", Font = Theme.Font.Title, TextSize = 15, TextColor3 = Color3.new(1, 1, 1),
-		AutoButtonColor = true, BorderSizePixel = 0, BackgroundColor3 = ROBUX_GREEN,
+		AutoButtonColor = false, BorderSizePixel = 0, BackgroundColor3 = Theme.Color.PlayGreen,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(0, 9), btn)
+	UIUtil.corner(Theme.CornerSmall, btn)
+	UIUtil.buttonKind(btn, "buy")
+	UIUtil.feedback(btn, 1.03)
 	return card, art, btn, stroke
 end
 
 local function tag(parent: Instance, text: string, color: Color3)
 	local t = UIUtil.label({
-		Parent = parent, Text = text, Font = Theme.Font.Bold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center,
+		Parent = parent, Text = text, Font = Theme.Font.Title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
 		AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X,
-		BackgroundTransparency = 0, BackgroundColor3 = color, TextColor3 = Color3.new(1, 1, 1), ZIndex = 3,
+		BackgroundTransparency = 0, BackgroundColor3 = color, TextColor3 = Color3.fromRGB(46, 30, 6), ZIndex = 3,
 	})
 	UIUtil.corner(UDim.new(1, 0), t)
 	local pad = Instance.new("UIPadding")
@@ -101,7 +107,7 @@ local function robuxCard(parent: Instance, spec: any)
 	if not def then
 		return
 	end
-	local card, art, btn = cardShell(parent, spec.color, string.upper(def.Name), spec.pass and "GAME PASS  •  FOREVER" or def.Desc, spec.color)
+	local card, art, btn = cardShell(parent, spec.color, string.upper(def.Name), spec.pass and "GAME PASS  ·  FOREVER" or def.Desc, Theme.Color.TextDim)
 	ShopArt.Prop(art, spec.art, spec.tier)
 	if spec.overlay then
 		UIUtil.label({
@@ -111,7 +117,7 @@ local function robuxCard(parent: Instance, spec: any)
 		})
 	end
 	if spec.tag then
-		tag(art, spec.tag, Color3.fromRGB(255, 70, 100))
+		tag(art, spec.tag, GOLD)
 	end
 	btn.MouseButton1Click:Connect(function()
 		if spec.pass then
@@ -124,8 +130,7 @@ local function robuxCard(parent: Instance, spec: any)
 		if spec.pass then
 			local owned = Monetize.OwnsPass(spec.pass)
 			btn.Text = owned and "OWNED" or ("R$ " .. tostring(def.Price))
-			btn.Active = not owned
-			btn.BackgroundColor3 = owned and Color3.fromRGB(40, 90, 70) or ROBUX_GREEN
+			UIUtil.buttonKind(btn, owned and "owned" or "buy")
 		else
 			btn.Text = "R$ " .. tostring(def.Price)
 			if spec.product == "StarterPack" then
@@ -148,23 +153,27 @@ local function itemCard(parent: Instance, it: any)
 	local card, art, btn, stroke = cardShell(parent, it.accent or Theme.Color.Accent, it.def.Name, it.sub, subColor)
 	it.render(art)
 	if it.def.Exclusive then
-		tag(art, "EXCLUSIVE", Color3.fromRGB(255, 70, 140))
+		tag(art, "EXCLUSIVE", GOLD)
 	elseif it.def.PassOnly then
 		local pass = Monetization.Passes[it.def.PassOnly]
-		tag(art, pass and string.upper(pass.Name) or "PASS", Color3.fromRGB(230, 160, 20))
+		tag(art, pass and string.upper(pass.Name) or "PASS", GOLD)
 	end
 	local function refresh()
 		local owned = ClientState.Owns(it.kind, it.def.Id)
 		local equipped = ClientState.Equipped(it.kind) == it.def.Id
-		stroke.Color = equipped and EQUIP_GREEN or CARD_STROKE
-		stroke.Thickness = equipped and 2.5 or 1.5
+		stroke.Color = equipped and GOLD or CARD_STROKE
+		stroke.Transparency = equipped and 0 or Theme.LineAlpha
+		stroke.Thickness = equipped and 2 or 1
 		if equipped then
-			btn.Text, btn.BackgroundColor3 = "EQUIPPED", Color3.fromRGB(40, 110, 80)
+			btn.Text = "EQUIPPED"
+			UIUtil.buttonKind(btn, "owned")
 		elseif owned then
-			btn.Text, btn.BackgroundColor3 = "EQUIP", Theme.Color.Accent
+			-- (emotes have nothing to equip: they're just yours)
+			btn.Text = it.kind == "Emote" and "OWNED" or "EQUIP"
+			UIUtil.buttonKind(btn, it.kind == "Emote" and "owned" or "secondary")
 		else
-			local price, color = Monetize.PriceTag(it.def)
-			btn.Text, btn.BackgroundColor3 = price, color:Lerp(Color3.new(0, 0, 0), 0.15)
+			btn.Text = (Monetize.PriceTag(it.def))
+			UIUtil.buttonKind(btn, "buy")
 		end
 	end
 	btn.MouseButton1Click:Connect(function()
@@ -228,8 +237,8 @@ end
 local claiming = false
 local function dayCard(parent: Instance, index: number, reward: any)
 	local f = UIUtil.make("Frame", { Parent = parent, LayoutOrder = index, BackgroundColor3 = CARD_BG, BorderSizePixel = 0 }) :: Frame
-	UIUtil.corner(UDim.new(0, 14), f)
-	local stroke = UIUtil.stroke(CARD_STROKE, 1.5, f)
+	UIUtil.corner(UDim.new(0, 10), f)
+	local stroke = UIUtil.stroke(CARD_STROKE, 1, f)
 	UIUtil.label({
 		Parent = f, Text = index == #DailyRewards.Days and "DAY 7  ·  CHEST" or ("DAY " .. index), Font = Theme.Font.Title, TextSize = 20,
 		TextXAlignment = Enum.TextXAlignment.Center, Position = UDim2.fromOffset(0, 14), Size = UDim2.new(1, 0, 0, 26),
@@ -241,19 +250,24 @@ local function dayCard(parent: Instance, index: number, reward: any)
 	})
 	local state = UIUtil.make("TextButton", {
 		Parent = f, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14), Size = UDim2.new(1, -28, 0, 40),
-		Font = Theme.Font.Title, TextSize = 17, TextColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, AutoButtonColor = true,
+		Font = Theme.Font.Title, TextSize = 16, TextColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, AutoButtonColor = false,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(0, 12), state)
+	UIUtil.corner(Theme.CornerSmall, state)
+	UIUtil.feedback(state, 1.03)
 	local function refresh()
 		local st = dailyStatus()
 		local done = (st.CanClaim and index < st.NextIndex) or (not st.CanClaim and index <= st.NextIndex)
 		local today = st.CanClaim and index == st.NextIndex
-		stroke.Color = today and Color3.fromRGB(255, 214, 90) or CARD_STROKE
-		stroke.Thickness = today and 3 or 1.5
-		f.BackgroundColor3 = today and Color3.fromRGB(44, 64, 110) or CARD_BG
+		stroke.Color = today and GOLD or CARD_STROKE
+		stroke.Transparency = today and 0 or Theme.LineAlpha
+		stroke.Thickness = today and 2 or 1
+		f.BackgroundColor3 = today and Theme.Color.Surface2 or CARD_BG
 		state.Text = today and "CLAIM FREE" or done and "CLAIMED" or "LATER"
-		state.BackgroundColor3 = today and EQUIP_GREEN or Color3.fromRGB(40, 54, 84)
-		state.Active = today
+		UIUtil.buttonKind(state, today and "buy" or "owned")
+		local tick = state:FindFirstChild("OwnedTick") :: GuiObject?
+		if tick then
+			tick.Visible = done and not today
+		end
 	end
 	state.MouseButton1Click:Connect(function()
 		local st = dailyStatus()
@@ -360,6 +374,43 @@ function Shop.Build(parent)
 	UIUtil.listLayout(rail, 8)
 
 	local pages: { [string]: ScrollingFrame } = {}
+	-- a tab where you own everything says so instead of showing a wall of
+	-- owned cards with nothing to do.
+	local currentTab = ""
+	local empty = UIUtil.make("Frame", {
+		Parent = root, Name = "AllOwned", Position = UDim2.fromOffset(188, 2), Size = UDim2.fromOffset(300, 48),
+		BackgroundColor3 = Theme.Color.Surface2, BorderSizePixel = 0, Visible = false, ZIndex = 5,
+	}) :: Frame
+	UIUtil.corner(Theme.CornerSmall, empty)
+	local emptyTick = UIUtil.make("Frame", { Parent = empty, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 16, 0.5, 0), Size = UDim2.fromOffset(20, 20), BackgroundTransparency = 1, ZIndex = 6 })
+	Icons.Place("Check", emptyTick, 20, Theme.Color.PlayGreen)
+	UIUtil.label({
+		Parent = empty, Text = "You own everything here", Font = Theme.Font.Bold, TextSize = 15, Position = UDim2.fromOffset(46, 0),
+		Size = UDim2.new(1, -56, 1, 0), ZIndex = 6,
+	})
+	local function paintEmpty()
+		local all = false
+		for _, tab in ipairs(TABS) do
+			if tab.id == currentTab and tab.items then
+				all = true
+				for _, it in ipairs(tab.items()) do
+					if not ClientState.Owns(it.kind, it.def.Id) then
+						all = false
+						break
+					end
+				end
+			end
+		end
+		empty.Visible = all
+		local page = pages[currentTab]
+		if page then
+			-- (the owned cards stay, under the note)
+			local pad = page:FindFirstChildOfClass("UIPadding")
+			if pad then
+				pad.PaddingTop = UDim.new(0, all and 64 or 2)
+			end
+		end
+	end
 	local built: { [string]: boolean } = {}
 	local tabButtons: { [string]: TextButton } = {}
 
@@ -367,7 +418,7 @@ function Shop.Build(parent)
 		local page = UIUtil.make("ScrollingFrame", {
 			Parent = root, Position = UDim2.fromOffset(186, 0), Size = UDim2.new(1, -186, 1, 0), Visible = false,
 			BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 5,
-			ScrollBarImageColor3 = Theme.Color.Stroke, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollBarImageColor3 = Theme.Color.Surface3, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		}) :: ScrollingFrame
 		local pad = Instance.new("UIPadding")
 		pad.PaddingTop = UDim.new(0, 2)
@@ -389,8 +440,12 @@ function Shop.Build(parent)
 	local function show(id: string)
 		for tid, b in pairs(tabButtons) do
 			local on = tid == id
-			b.BackgroundColor3 = on and Color3.fromRGB(64, 200, 255) or Color3.fromRGB(22, 38, 68)
-			b.TextColor3 = on and Color3.new(1, 1, 1) or Theme.Color.TextDim
+			b.BackgroundColor3 = on and Theme.Color.Surface3 or Theme.Color.Surface2
+			b.TextColor3 = on and GOLD or Theme.Color.TextDim
+			local edge = b:FindFirstChild("Edge") :: GuiObject?
+			if edge then
+				edge.Visible = on
+			end
 		end
 		for _, tab in ipairs(TABS) do
 			if tab.id == id and not built[id] then
@@ -417,15 +472,27 @@ function Shop.Build(parent)
 		for pid, page in pairs(pages) do
 			page.Visible = pid == id
 		end
+		currentTab = id
+		paintEmpty()
 	end
 
 	for order, tab in ipairs(TABS) do
 		pages[tab.id] = buildPage(tab)
 		local b = UIUtil.make("TextButton", {
 			Parent = rail, LayoutOrder = order, Size = UDim2.new(1, 0, 0, 44), Text = tab.label,
-			Font = Theme.Font.Title, TextSize = 17, AutoButtonColor = true, BorderSizePixel = 0,
+			Font = Theme.Font.Title, TextSize = 16, AutoButtonColor = false, BorderSizePixel = 0,
+			TextXAlignment = Enum.TextXAlignment.Left,
 		}) :: TextButton
-		UIUtil.corner(UDim.new(0, 12), b)
+		b:SetAttribute("NoPolish", true)
+		UIUtil.corner(Theme.CornerSmall, b)
+		local tabPad = Instance.new("UIPadding")
+		tabPad.PaddingLeft = UDim.new(0, 18)
+		tabPad.Parent = b
+		local edge = UIUtil.make("Frame", {
+			Parent = b, Name = "Edge", Size = UDim2.new(0, 4, 1, -14), Position = UDim2.new(0, -18, 0, 7),
+			BackgroundColor3 = GOLD, BorderSizePixel = 0, Visible = false, ZIndex = 2,
+		})
+		UIUtil.corner(UDim.new(1, 0), edge)
 		b.MouseButton1Click:Connect(function()
 			show(tab.id)
 		end)
@@ -438,6 +505,7 @@ function Shop.Build(parent)
 		for _, c in ipairs(cards) do
 			c.refresh()
 		end
+		paintEmpty()
 	end)
 	Shop.Root = root
 	return root

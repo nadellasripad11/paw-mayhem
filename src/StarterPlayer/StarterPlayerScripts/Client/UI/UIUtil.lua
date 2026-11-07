@@ -682,6 +682,47 @@ local function polishOne(inst: Instance)
 	end
 end
 
+-- one button, three looks (design/DESIGN.md): "buy" (green with gloss: play,
+-- buy, claim), "secondary" (raised surface, gold text: equip, skins) and
+-- "owned" (raised surface, dim text and a tick; not clickable). screens flip
+-- a card's button between them as things get bought and equipped.
+function UIUtil.buttonKind(b: TextButton, kind: string)
+	if not b:GetAttribute("KindReady") then
+		b:SetAttribute("KindReady", true)
+		b:SetAttribute("NoPolish", true)
+		b.AutoButtonColor = false
+		UIUtil.gloss(b, Theme.Color.PlayGreen)
+		local tick = UIUtil.make("Frame", {
+			Parent = b, Name = "OwnedTick", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0),
+			Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1, Visible = false, ZIndex = b.ZIndex + 1,
+		})
+		Icons.Place("Check", tick, 16, Theme.Color.TextDim)
+	end
+	local buy, owned = kind == "buy", kind == "owned"
+	b.BackgroundColor3 = buy and Theme.Color.PlayGreen or Theme.Color.Surface2
+	b.TextColor3 = buy and Color3.new(1, 1, 1) or owned and Theme.Color.TextDim or Theme.Color.Gold
+	b.TextStrokeTransparency = buy and 0.3 or 1
+	b.Active = not owned
+	local shine = b:FindFirstChild("Shine") :: GuiObject?
+	if shine then
+		shine.Visible = buy
+	end
+	local grad = b:FindFirstChildOfClass("UIGradient")
+	if grad then
+		grad.Enabled = buy
+	end
+	local stroke = b:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Color = buy and Theme.Color.PlayGreen:Lerp(Color3.new(0, 0, 0), 0.5) or Theme.Color.Line
+		stroke.Transparency = buy and 0.1 or Theme.LineAlpha
+		stroke.Thickness = buy and 2.6 or 1
+	end
+	local tick = b:FindFirstChild("OwnedTick") :: GuiObject?
+	if tick then
+		tick.Visible = owned
+	end
+end
+
 function UIUtil.polish(root: Instance)
 	for _, d in ipairs(root:GetDescendants()) do
 		polishOne(d)

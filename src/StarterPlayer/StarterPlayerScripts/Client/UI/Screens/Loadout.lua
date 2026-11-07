@@ -1,10 +1,12 @@
 --!strict
--- loadout: the weapons screen, laid out like rivals. a list of blasters down
--- the left (yours in white, the equipped one highlighted, locked ones in gold
--- with a lock either side), the selected blaster big in the middle in 3d,
--- its details and stat bars on the right, and along the bottom the action
--- (equip / unlock for coins or gems / r$) and skins, which opens a strip of
--- skins for it. selecting a blaster only shows it; the bottom button equips.
+-- loadout: the weapons screen (see design/features/weapons-and-shop). a list
+-- of blasters down the left (a rarity strip on each row, the equipped one in
+-- gold, locked ones dimmed with a lock and their price), the selected blaster
+-- big in the middle in 3d over a soft glow in its rarity colour, its details
+-- on the right (rarity chip, gold stat bars, what it's good at, the skins you
+-- own for it), and along the bottom the action (equip / buy) and skins, which
+-- opens a strip of skins for it. selecting a blaster only shows it; the
+-- bottom button equips.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Weapons = require(ReplicatedStorage.Shared.Config.Weapons)
@@ -21,23 +23,32 @@ local Monetization = require(ReplicatedStorage.Shared.Config.Monetization)
 
 local Loadout = {}
 
-local GOLD = Color3.fromRGB(255, 196, 60)
-local EQUIP_GREEN = Color3.fromRGB(150, 235, 110)
-local PANEL = Color3.fromRGB(14, 18, 28)
-
-local CLASS_COLOR = {
-	Balanced = Color3.fromRGB(196, 156, 255), Epic = Color3.fromRGB(170, 124, 255), Heavy = Color3.fromRGB(255, 152, 72),
-	Fast = Color3.fromRGB(255, 124, 230), Ice = Color3.fromRGB(120, 222, 255), Legendary = Color3.fromRGB(196, 112, 255),
-	Fun = Color3.fromRGB(255, 152, 216), Premium = Color3.fromRGB(255, 206, 82), Exclusive = Color3.fromRGB(255, 90, 160),
-}
+local GOLD = Theme.Color.Gold
+local DIM = Theme.Color.TextDim
 
 local STATS = {
-	{ key = "Damage", label = "Damage" },
-	{ key = "FireRate", label = "Fire Rate" },
-	{ key = "Knockback", label = "Knockback" },
-	{ key = "Range", label = "Range" },
-	{ key = "Accuracy", label = "Accuracy" },
+	{ key = "Damage", label = "DAMAGE" },
+	{ key = "FireRate", label = "FIRE RATE" },
+	{ key = "Knockback", label = "KNOCKBACK" },
+	{ key = "Range", label = "RANGE" },
+	{ key = "Accuracy", label = "ACCURACY" },
 }
+
+-- one line that says what the numbers mean: from the blaster's best stat.
+local BEST_FOR = {
+	Damage = "big hits that end fights fast",
+	FireRate = "spraying up close",
+	Knockback = "launching cats off the map",
+	Range = "long range",
+	Accuracy = "picking off far targets",
+}
+
+local function rarityColor(r: string?): Color3
+	if r == "Legendary" then
+		return GOLD
+	end
+	return (r and Theme.Rarity[r]) or Theme.Rarity.Common
+end
 
 local function equippedWeapon(): string
 	return ClientState.Equipped("Weapon") or Weapons.DefaultLoadout
@@ -45,12 +56,28 @@ end
 
 local function panel(props: { [string]: any }): Frame
 	local f = UIUtil.make("Frame", props) :: Frame
-	f.BackgroundColor3 = PANEL
-	f.BackgroundTransparency = 0.15
+	f.BackgroundColor3 = Theme.Color.Surface
+	f.BackgroundTransparency = 0.04
 	f.BorderSizePixel = 0
-	UIUtil.corner(UDim.new(0, 12), f)
+	UIUtil.corner(UDim.new(0, 10), f)
 	UIUtil.hairline(f)
 	return f
+end
+
+-- a small padlock drawn from frames (body + shackle).
+local function lock(parent: Instance, color: Color3, z: number): Frame
+	local holder = UIUtil.make("Frame", { Parent = parent, Size = UDim2.fromOffset(14, 16), BackgroundTransparency = 1, ZIndex = z }) :: Frame
+	local shackle = UIUtil.make("Frame", {
+		Parent = holder, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(9, 10),
+		BackgroundTransparency = 1, ZIndex = z,
+	})
+	UIUtil.corner(UDim.new(1, 0), shackle)
+	UIUtil.stroke(color, 2, shackle)
+	local body = UIUtil.make("Frame", {
+		Parent = holder, Position = UDim2.fromOffset(0, 6), Size = UDim2.fromOffset(14, 10), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = z + 1,
+	})
+	UIUtil.corner(UDim.new(0, 3), body)
+	return holder
 end
 
 function Loadout.Build(parent)
@@ -60,30 +87,37 @@ function Loadout.Build(parent)
 	-- ── left: the list ────────────────────────────────────────────────────────
 	local listPanel = panel({ Parent = root, Size = UDim2.new(0.26, 0, 1, 0) })
 	UIUtil.label({
-		Parent = listPanel, Text = "BLASTERS", Font = Theme.Font.Title, TextSize = 18, TextColor3 = Theme.Color.TextDim,
-		TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 40),
+		Parent = listPanel, Text = "BLASTERS", Font = Theme.Font.Title, TextSize = 16, TextColor3 = DIM,
+		Position = UDim2.fromOffset(16, 0), Size = UDim2.new(1, -32, 0, 40),
 	})
 	local list = UIUtil.make("ScrollingFrame", {
-		Parent = listPanel, Position = UDim2.fromOffset(0, 40), Size = UDim2.new(1, 0, 1, -48), BackgroundTransparency = 1,
-		BorderSizePixel = 0, ScrollBarThickness = 4, ScrollBarImageColor3 = Theme.Color.Stroke, CanvasSize = UDim2.new(),
+		Parent = listPanel, Position = UDim2.fromOffset(8, 40), Size = UDim2.new(1, -12, 1, -48), BackgroundTransparency = 1,
+		BorderSizePixel = 0, ScrollBarThickness = 4, ScrollBarImageColor3 = Theme.Color.Surface3, CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	}) :: ScrollingFrame
-	UIUtil.listLayout(list, 4)
-	local rows: { [string]: { button: TextButton, name: TextLabel, def: any } } = {}
+	UIUtil.listLayout(list, 8)
+	local rows: { [string]: { button: TextButton, name: TextLabel, tag: TextLabel, lock: Frame, stroke: UIStroke, gun: ViewportFrame, def: any } } = {}
 
 	-- ── middle: the blaster ───────────────────────────────────────────────────
 	local stage = UIUtil.make("Frame", {
 		Parent = root, Position = UDim2.new(0.27, 0, 0, 0), Size = UDim2.new(0.46, 0, 1, -76), BackgroundTransparency = 1,
 	}) :: Frame
+	-- a soft glow on the floor under the gun, in its rarity colour (no circle).
 	local glow = UIUtil.make("Frame", {
-		Parent = stage, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.8, 0.8),
-		BackgroundTransparency = 0.9, BorderSizePixel = 0,
+		Parent = stage, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.8), Size = UDim2.fromScale(0.7, 0.07),
+		BackgroundTransparency = 0.6, BorderSizePixel = 0,
 	}) :: Frame
+	glow:SetAttribute("NoPolish", true)
 	UIUtil.corner(UDim.new(1, 0), glow)
-	local vf = GunView.Create(stage, selected, ClientState.Equipped("Skin"), UDim2.fromScale(1, 1), UDim2.new())
+	local fade = Instance.new("UIGradient")
+	fade.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1),
+	})
+	fade.Parent = glow
+	local vf = GunView.Create(stage, selected, ClientState.Equipped("Skin"), UDim2.fromScale(0.9, 0.9), UDim2.fromScale(0.05, 0.02))
 	Orbit.Enable(stage, vf) -- drag to look all round it, wheel to zoom
 	UIUtil.label({
-		Parent = stage, Text = "Drag to look around", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = Theme.Color.TextDim,
+		Parent = stage, Text = "Drag to look around", Font = Theme.Font.Bold, TextSize = 12, TextColor3 = DIM,
 		TextXAlignment = Enum.TextXAlignment.Center, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -4), Size = UDim2.new(1, 0, 0, 16),
 	})
 
@@ -92,20 +126,27 @@ function Loadout.Build(parent)
 		Parent = root, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.fromOffset(420, 64),
 		BackgroundTransparency = 1,
 	}) :: Frame
-	local actBg = panel({ Parent = actions, Size = UDim2.fromScale(1, 1) })
-	actBg.ZIndex = 1
 	local action = UIUtil.make("TextButton", {
 		Parent = actions, Text = "", Font = Theme.Font.Title, TextSize = 20, TextColor3 = Color3.new(1, 1, 1),
-		Position = UDim2.fromOffset(10, 10), Size = UDim2.new(0.62, -15, 1, -20), BackgroundColor3 = Theme.Color.PlayGreen,
-		AutoButtonColor = true, BorderSizePixel = 0, ZIndex = 2,
+		Position = UDim2.fromOffset(0, 4), Size = UDim2.new(0.62, -6, 1, -8), BackgroundColor3 = Theme.Color.PlayGreen,
+		AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 2,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(0, 10), action)
+	UIUtil.corner(Theme.CornerSmall, action)
+	-- (the gloss is ours to switch: only a real equip / buy shines)
+	action:SetAttribute("NoPolish", true)
+	UIUtil.gloss(action, Theme.Color.PlayGreen)
+	UIUtil.feedback(action, 1.03)
+	local actionStroke = action:FindFirstChildOfClass("UIStroke") :: UIStroke
+	local actionShine = action:FindFirstChild("Shine") :: GuiObject?
+	local actionGrad = action:FindFirstChildOfClass("UIGradient")
 	local skinsBtn = UIUtil.make("TextButton", {
-		Parent = actions, Text = "SKINS", Font = Theme.Font.Title, TextSize = 18, TextColor3 = Color3.new(1, 1, 1),
-		Position = UDim2.new(0.62, 5, 0, 10), Size = UDim2.new(0.38, -15, 1, -20), BackgroundColor3 = Theme.Color.Blue,
-		AutoButtonColor = true, BorderSizePixel = 0, ZIndex = 2,
+		Parent = actions, Text = "SKINS", Font = Theme.Font.Title, TextSize = 16, TextColor3 = GOLD,
+		Position = UDim2.new(0.62, 6, 0, 10), Size = UDim2.new(0.38, -6, 1, -20), BackgroundColor3 = Theme.Color.Surface2,
+		AutoButtonColor = false, BorderSizePixel = 0, ZIndex = 2,
 	}) :: TextButton
-	UIUtil.corner(UDim.new(0, 10), skinsBtn)
+	UIUtil.corner(Theme.CornerSmall, skinsBtn)
+	UIUtil.hairline(skinsBtn)
+	UIUtil.feedback(skinsBtn, 1.03)
 
 	local skinStrip = UIUtil.make("ScrollingFrame", {
 		Parent = root, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -72), Size = UDim2.new(0.46, 0, 0, 120),
@@ -115,20 +156,87 @@ function Loadout.Build(parent)
 	UIUtil.listLayout(skinStrip, 8, Enum.FillDirection.Horizontal)
 
 	-- ── right: details ────────────────────────────────────────────────────────
-	local info = panel({ Parent = root, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.26, 0, 0, 300) })
-	local nameLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Title, TextSize = 24, Position = UDim2.fromOffset(14, 12), Size = UDim2.new(1, -28, 0, 28) })
-	local classLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Bold, TextSize = 13, Position = UDim2.fromOffset(14, 42), Size = UDim2.new(1, -28, 0, 16) })
-	local statusLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(14, 62), Size = UDim2.new(1, -28, 0, 16) })
+	local info = panel({ Parent = root, AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.26, 0, 0, 420) })
+	local nameLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Title, TextSize = 22, Position = UDim2.fromOffset(16, 14), Size = UDim2.new(1, -32, 0, 26) })
+	local chip = UIUtil.label({
+		Parent = info, Text = "", Font = Theme.Font.Title, TextSize = 13, TextColor3 = Color3.fromRGB(20, 18, 28), TextXAlignment = Enum.TextXAlignment.Center,
+		Position = UDim2.fromOffset(16, 46), Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 0,
+	})
+	UIUtil.corner(UDim.new(1, 0), chip)
+	local chipPad = Instance.new("UIPadding")
+	chipPad.PaddingLeft = UDim.new(0, 10)
+	chipPad.PaddingRight = UDim.new(0, 10)
+	chipPad.Parent = chip
+	local classLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = DIM, Position = UDim2.fromOffset(16, 46), Size = UDim2.new(1, -32, 0, 20), TextXAlignment = Enum.TextXAlignment.Right })
+	local statusLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = DIM, Position = UDim2.fromOffset(16, 72), Size = UDim2.new(1, -32, 0, 16), TextTruncate = Enum.TextTruncate.AtEnd })
 	local fills: { [string]: Frame } = {}
 	for i, stat in ipairs(STATS) do
-		local y = 96 + (i - 1) * 38
-		UIUtil.label({ Parent = info, Text = stat.label, Font = Theme.Font.Bold, TextSize = 13, TextColor3 = Theme.Color.TextDim, Position = UDim2.fromOffset(14, y), Size = UDim2.new(1, -28, 0, 16) })
-		local track = UIUtil.make("Frame", { Parent = info, Position = UDim2.fromOffset(14, y + 19), Size = UDim2.new(1, -28, 0, 8), BackgroundColor3 = Color3.fromRGB(30, 36, 50), BorderSizePixel = 0 })
+		local y = 100 + (i - 1) * 36
+		UIUtil.label({ Parent = info, Text = stat.label, Font = Theme.Font.Title, TextSize = 13, TextColor3 = DIM, Position = UDim2.fromOffset(16, y), Size = UDim2.new(1, -32, 0, 16) })
+		local track = UIUtil.make("Frame", { Parent = info, Position = UDim2.fromOffset(16, y + 19), Size = UDim2.new(1, -32, 0, 6), BackgroundColor3 = Theme.Color.Surface3, BorderSizePixel = 0 })
 		UIUtil.corner(UDim.new(1, 0), track)
-		local fill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.5, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }) :: Frame
+		local fill = UIUtil.make("Frame", { Parent = track, Size = UDim2.fromScale(0.5, 1), BackgroundColor3 = GOLD, BorderSizePixel = 0 }) :: Frame
 		UIUtil.corner(UDim.new(1, 0), fill)
-		UIUtil.gradient(Color3.fromRGB(70, 214, 255), Color3.fromRGB(46, 128, 255), 0, fill)
 		fills[stat.key] = fill
+	end
+	local line = UIUtil.make("Frame", { Parent = info, Position = UDim2.fromOffset(16, 286), Size = UDim2.new(1, -32, 0, 1), BackgroundColor3 = Theme.Color.Line, BackgroundTransparency = 0.9, BorderSizePixel = 0 })
+	line:SetAttribute("NoPolish", true)
+	UIUtil.label({ Parent = info, Text = "BEST FOR", Font = Theme.Font.Title, TextSize = 13, TextColor3 = DIM, Position = UDim2.fromOffset(16, 298), Size = UDim2.new(1, -32, 0, 16) })
+	local bestLabel = UIUtil.label({ Parent = info, Text = "", Font = Theme.Font.Bold, TextSize = 15, Position = UDim2.fromOffset(16, 316), Size = UDim2.new(1, -32, 0, 36), TextWrapped = true, TextYAlignment = Enum.TextYAlignment.Top })
+	UIUtil.label({ Parent = info, Text = "YOUR SKINS", Font = Theme.Font.Title, TextSize = 13, TextColor3 = DIM, Position = UDim2.fromOffset(16, 356), Size = UDim2.new(1, -32, 0, 16) })
+	local swatches = UIUtil.make("Frame", { Parent = info, Position = UDim2.fromOffset(16, 376), Size = UDim2.new(1, -32, 0, 24), BackgroundTransparency = 1 }) :: Frame
+	UIUtil.listLayout(swatches, 6, Enum.FillDirection.Horizontal)
+
+	local function paintSwatches(w: any)
+		for _, c in ipairs(swatches:GetChildren()) do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+		local n = 0
+		for _, skin in ipairs(Weapons.Skins) do
+			if ClientState.Owns("Skin", skin.Id) and n < 8 then
+				n += 1
+				local pal = BlasterBuilder.PaletteFor(w.Id, skin.Id)
+				local sw = UIUtil.make("Frame", { Parent = swatches, LayoutOrder = n, Size = UDim2.fromOffset(22, 22), BackgroundColor3 = pal.Body, BorderSizePixel = 0 })
+				UIUtil.corner(UDim.new(0, 6), sw)
+				local on = ClientState.Equipped("Skin") == skin.Id
+				UIUtil.stroke(on and GOLD or Theme.Color.Line, on and 2 or 1, sw).Transparency = on and 0 or 0.8
+			end
+		end
+		if n == 0 then
+			UIUtil.label({ Parent = swatches, Text = "None yet: open SKINS", Font = Theme.Font.Bold, TextSize = 13, TextColor3 = DIM, Size = UDim2.new(1, 0, 1, 0) })
+		end
+	end
+
+	-- the button's look: "go" (green gloss), or owned / disabled (flat, dim).
+	local function actionLook(go: boolean)
+		action.BackgroundColor3 = go and Theme.Color.PlayGreen or Theme.Color.Surface2
+		action.TextColor3 = go and Color3.new(1, 1, 1) or DIM
+		action.Active = go
+		if actionShine then
+			actionShine.Visible = go
+		end
+		if actionGrad then
+			actionGrad.Enabled = go
+		end
+		if actionStroke then
+			actionStroke.Color = go and Theme.Color.PlayGreen:Lerp(Color3.new(0, 0, 0), 0.5) or Theme.Color.Line
+			actionStroke.Transparency = go and 0.1 or Theme.LineAlpha
+			actionStroke.Thickness = go and 2.6 or 1
+		end
+		action.TextStrokeTransparency = go and 0.3 or 1
+	end
+
+	local function canAfford(w: any): boolean
+		local p = ClientState.Profile
+		if not p then
+			return true
+		end
+		if (w.GemCost or 0) > 0 then
+			return (p.Gems or 0) >= w.GemCost
+		end
+		return (p.Coins or 0) >= (w.CoinCost or 0)
 	end
 
 	-- ── behaviour ─────────────────────────────────────────────────────────────
@@ -137,62 +245,113 @@ function Loadout.Build(parent)
 		local owned = ClientState.Owns("Weapon", w.Id)
 		local equipped = ClientState.Equipped("Weapon") == w.Id
 		local skin = ClientState.Equipped("Skin")
+		local rc = rarityColor(w.Rarity)
 		GunView.Set(vf, w.Id, skin)
-		glow.BackgroundColor3 = BlasterBuilder.PaletteFor(w.Id, skin).Glow
-		nameLabel.Text = w.Name
-		classLabel.Text = string.upper(tostring(w.Rarity or "")) .. "  ·  " .. tostring(w.Class)
-		classLabel.TextColor3 = CLASS_COLOR[w.Class] or Theme.Color.Accent
+		glow.BackgroundColor3 = rc
+		nameLabel.Text = string.upper(w.Name)
+		chip.Text = string.upper(tostring(w.Rarity or "Common"))
+		chip.BackgroundColor3 = rc
+		classLabel.Text = tostring(w.Class)
+		local bestKey, bestVal = "Damage", -1
 		for key, fill in pairs(fills) do
-			fill.Size = UDim2.fromScale(math.clamp(w.Bars and w.Bars[key] or 0, 0.04, 1), 1)
+			local v = w.Bars and w.Bars[key] or 0
+			fill.Size = UDim2.fromScale(math.clamp(v, 0.04, 1), 1)
+			if v > bestVal then
+				bestKey, bestVal = key, v
+			end
 		end
+		bestLabel.Text = string.upper(string.sub(BEST_FOR[bestKey], 1, 1)) .. string.sub(BEST_FOR[bestKey], 2)
+		paintSwatches(w)
 		local robuxKey = Monetize.UnlockKey("Weapon", w.Id)
 		local product = robuxKey and Monetization.Products[robuxKey]
 		if equipped then
 			action.Text = "EQUIPPED"
-			action.BackgroundColor3 = Color3.fromRGB(50, 60, 80)
+			actionLook(false)
 			statusLabel.Text = "In your hands"
+			statusLabel.TextColor3 = DIM
 		elseif owned then
 			action.Text = "EQUIP"
-			action.BackgroundColor3 = Theme.Color.PlayGreen
+			actionLook(true)
 			statusLabel.Text = "Owned"
+			statusLabel.TextColor3 = DIM
 		else
 			local price = Monetize.PriceTag(w)
-			action.Text = "UNLOCK  " .. tostring(price)
-			action.BackgroundColor3 = GOLD:Lerp(Color3.new(0, 0, 0), 0.15)
+			action.Text = "BUY  " .. tostring(price)
+			-- (short on coins: still green, buy falls back to robux)
+			actionLook(true)
 			local lvl = w.UnlockLevel and w.UnlockLevel > 0 and ("Level " .. w.UnlockLevel .. "  ·  ") or ""
-			statusLabel.Text = "Locked  ·  " .. lvl .. (product and ("or R$" .. product.Price) or "")
+			local short = not canAfford(w)
+			statusLabel.Text = (short and "Not enough yet  ·  " or "Locked  ·  ") .. lvl .. (product and ("or R$" .. product.Price) or "")
+			statusLabel.TextColor3 = short and Theme.Color.Red or DIM
 		end
 		for id, r in pairs(rows) do
 			local isSel = id == selected
 			local isEq = ClientState.Equipped("Weapon") == id
 			local own = ClientState.Owns("Weapon", id)
-			r.button.BackgroundTransparency = isSel and 0.1 or 1
-			r.name.TextColor3 = own and (isEq and EQUIP_GREEN or Color3.new(1, 1, 1)) or GOLD
-			r.name.Text = own and r.def.Name or ("LOCKED  ·  " .. r.def.Name)
+			r.button.BackgroundTransparency = isSel and 0 or 1
+			r.stroke.Color = isEq and GOLD or Theme.Color.Line
+			r.stroke.Transparency = isEq and 0 or (isSel and 0.8 or 1)
+			r.stroke.Thickness = isEq and 1.5 or 1
+			r.name.TextColor3 = own and Theme.Color.Text or DIM
+			r.lock.Visible = not own
+			r.gun.ImageTransparency = own and 0 or 0.45
+			if isEq then
+				r.tag.Text = "EQUIPPED"
+				r.tag.TextColor3 = GOLD
+			elseif own then
+				r.tag.Text = ""
+			else
+				local price, col = Monetize.PriceTag(r.def)
+				r.tag.Text = tostring(price)
+				r.tag.TextColor3 = canAfford(r.def) and col or Theme.Color.Red
+			end
 		end
 	end
 
 	for order, w in ipairs(Weapons.List) do
 		local b = UIUtil.make("TextButton", {
-			Parent = list, LayoutOrder = order, Text = "", AutoButtonColor = false, Size = UDim2.new(1, -8, 0, 52),
-			BackgroundColor3 = Color3.fromRGB(40, 60, 100), BackgroundTransparency = 1, BorderSizePixel = 0,
+			Parent = list, LayoutOrder = order, Text = "", AutoButtonColor = false, Size = UDim2.new(1, -8, 0, 56),
+			BackgroundColor3 = Theme.Color.Surface2, BackgroundTransparency = 1, BorderSizePixel = 0,
 		}) :: TextButton
-		UIUtil.corner(UDim.new(0, 8), b)
-		GunView.Create(b, w.Id, nil, UDim2.fromOffset(64, 48), UDim2.fromOffset(4, 2))
-		local name = UIUtil.label({
-			Parent = b, Text = w.Name, Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(72, 0),
-			Size = UDim2.new(1, -76, 1, 0), TextTruncate = Enum.TextTruncate.AtEnd,
+		b:SetAttribute("NoPolish", true)
+		UIUtil.corner(Theme.CornerSmall, b)
+		local stroke = UIUtil.hairline(b)
+		stroke.Transparency = 1
+		-- rarity strip on the left edge
+		local strip = UIUtil.make("Frame", {
+			Parent = b, Position = UDim2.fromOffset(0, 8), Size = UDim2.new(0, 4, 1, -16), BackgroundColor3 = rarityColor(w.Rarity), BorderSizePixel = 0, ZIndex = 2,
 		})
+		UIUtil.corner(UDim.new(1, 0), strip)
+		local gun = GunView.Create(b, w.Id, nil, UDim2.fromOffset(64, 48), UDim2.fromOffset(10, 4))
+		local name = UIUtil.label({
+			Parent = b, Text = w.Name, Font = Theme.Font.Title, TextSize = 16, Position = UDim2.fromOffset(80, 8),
+			Size = UDim2.new(1, -88, 0, 20), TextTruncate = Enum.TextTruncate.AtEnd,
+		})
+		local tag = UIUtil.label({
+			Parent = b, Text = "", Font = Theme.Font.Title, TextSize = 13, Position = UDim2.fromOffset(98, 30),
+			Size = UDim2.new(1, -106, 0, 16), TextColor3 = DIM,
+		})
+		local lk = lock(b, DIM, 3)
+		lk.Position = UDim2.fromOffset(80, 30)
 		b.MouseButton1Click:Connect(function()
 			selected = w.Id
 			show()
 		end)
-		rows[w.Id] = { button = b, name = name, def = w }
+		rows[w.Id] = { button = b, name = name, tag = tag, lock = lk, stroke = stroke, gun = gun, def = w }
+	end
+	-- (a row with no lock shows its tag where the lock was)
+	local oldShowRows = show
+	show = function()
+		oldShowRows()
+		for _, r in pairs(rows) do
+			r.tag.Position = UDim2.fromOffset(r.lock.Visible and 98 or 80, 30)
+			r.name.Position = UDim2.fromOffset(80, r.tag.Text == "" and 18 or 8)
+		end
 	end
 
 	action.MouseButton1Click:Connect(function()
 		local w = Weapons.Get(selected)
-		if not w then
+		if not w or ClientState.Equipped("Weapon") == w.Id then
 			return
 		end
 		if ClientState.Owns("Weapon", w.Id) then
@@ -207,19 +366,21 @@ function Loadout.Build(parent)
 	for order, skin in ipairs(Weapons.Skins) do
 		local card = UIUtil.make("TextButton", {
 			Parent = skinStrip, LayoutOrder = order, Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(110, 112),
-			BackgroundColor3 = PANEL, BorderSizePixel = 0,
+			BackgroundColor3 = Theme.Color.Surface, BorderSizePixel = 0,
 		}) :: TextButton
-		UIUtil.corner(UDim.new(0, 10), card)
-		local stroke = UIUtil.stroke(Color3.fromRGB(60, 70, 90), 1.5, card)
+		card:SetAttribute("NoPolish", true)
+		UIUtil.corner(Theme.CornerSmall, card)
+		local stroke = UIUtil.stroke(Theme.Color.Line, 1, card)
 		local svf = GunView.Create(card, selected, skin.Id, UDim2.new(1, 0, 0, 76), UDim2.new())
 		local label = UIUtil.label({
 			Parent = card, Text = skin.Name, Font = Theme.Font.Bold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Center,
 			Position = UDim2.fromOffset(4, 78), Size = UDim2.new(1, -8, 0, 14),
 		})
 		local price = UIUtil.label({
-			Parent = card, Text = "", Font = Theme.Font.Bold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Center,
+			Parent = card, Text = "", Font = Theme.Font.Title, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Center,
 			Position = UDim2.fromOffset(4, 94), Size = UDim2.new(1, -8, 0, 12),
 		})
+		UIUtil.feedback(card, 1.04)
 		card.MouseButton1Click:Connect(function()
 			if ClientState.Owns("Skin", skin.Id) then
 				ClientActions.Equip("Skin", skin.Id)
@@ -234,10 +395,12 @@ function Loadout.Build(parent)
 			GunView.Set(c.vf, selected, c.skin.Id)
 			local owned = ClientState.Owns("Skin", c.skin.Id)
 			local on = ClientState.Equipped("Skin") == c.skin.Id
-			c.stroke.Color = on and EQUIP_GREEN or (owned and Color3.fromRGB(60, 70, 90) or GOLD)
-			c.stroke.Thickness = on and 2.5 or 1.5
-			c.price.Text = on and "EQUIPPED" or owned and "OWNED" or tostring((Monetize.PriceTag(c.skin)))
-			c.price.TextColor3 = on and EQUIP_GREEN or owned and Theme.Color.TextDim or GOLD
+			c.stroke.Color = on and GOLD or Theme.Color.Line
+			c.stroke.Transparency = on and 0 or 0.85
+			c.stroke.Thickness = on and 2 or 1
+			local tagText, tagColor = Monetize.PriceTag(c.skin)
+			c.price.Text = on and "EQUIPPED" or owned and "OWNED" or tostring(tagText)
+			c.price.TextColor3 = on and GOLD or owned and DIM or tagColor
 		end
 	end
 	skinsBtn.MouseButton1Click:Connect(function()
