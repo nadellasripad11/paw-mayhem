@@ -54,4 +54,4 @@ the 3d models get imported into studio once. the steps are in [docs/LOBBY_ART.md
 - `src/StarterPlayer/StarterPlayerScripts/Client` is the client: controllers and every ui screen
 - `tools/` has the model and texture generators, their tests and some code checks
 
-made for [hack club stardance](https://stardance.hackclub.com/projects/64622) by [@sripin](https://stardance.hackclub.com/@sripin).
+made by sripad.

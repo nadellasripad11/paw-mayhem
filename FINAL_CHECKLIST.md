@@ -74,14 +74,9 @@ Work top to bottom. Boxes you can tick without Studio are marked **[offline]**.
 
 ## Publishing
 - [ ] Experience created + named **PAW MAYHEM**.
-- [ ] Thumbnail/banner set (see `assets/stardance-banner.svg`).
+- [ ] Thumbnail/banner set.
 - [ ] Studio API access enabled for DataStore testing (Game Settings → Security).
 - [ ] Republished after the final change (Alt+P).
-
-## Stardance
-- [ ] Devlogs reflect **actual** work completed (no fabricated hours).
-- [ ] Project description set (see README intro paragraph).
-- [ ] Banner uploaded.
 
 ---
 
